@@ -1,0 +1,11 @@
+<div class="main-scroll-wrap" [class.no-header]="isDashboard" id="main-content" (scroll)="onScrolling($event)">
+  <!-- Header & Footer bị ẩn khi ở trang admin dashboard (isDashboard=true)
+       vì DashboardComponent có header/footer riêng trong sidebar layout -->
+  <app-header *ngIf="!isDashboard"></app-header>
+  <router-outlet
+    (activate)="onActivate($event)"
+    (deactivate)="onDeactivate($event)">
+  </router-outlet>
+  <app-footer *ngIf="!isDashboard"> </app-footer>
+</div>
+

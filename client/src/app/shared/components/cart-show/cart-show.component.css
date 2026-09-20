@@ -1,0 +1,18 @@
+:host {
+  display: flex;
+  align-items: center;
+}
+:host .cart_show-wrap {
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+}
+:host .cart_show-icon {
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 25px;
+}
+:host .cart_show-quantity {
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 15px;
+}

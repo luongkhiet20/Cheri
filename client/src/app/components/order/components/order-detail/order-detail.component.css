@@ -1,0 +1,64 @@
+:host {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+}
+@media screen and (max-width: 600px) {
+  :host .container {
+    padding: 0 !important;
+  }
+}
+:host .order-content {
+  display: flex;
+  flex-flow: wrap;
+}
+:host .order-top-content {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+:host h4 {
+  font-size: 20px;
+  line-height: 22px;
+  padding-right: 10px;
+}
+:host .product-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 20px 0;
+}
+:host .product-info .stock {
+  font-size: 16px;
+  color: #1de9b6;
+}
+:host .product-info .price {
+  padding: 0 100px;
+  font-size: 25px;
+  font-weight: 500;
+}
+:host .order-cart {
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+}
+:host .order-cart-title {
+  text-align: center;
+}
+:host .order-cart-img {
+  max-width: 100px;
+  margin: 0 5px;
+}
+:host .order-form {
+  display: flex;
+}
+:host .order-tags {
+  display: flex;
+  justify-content: flex-start;
+  padding-right: 10px;
+  margin: 20px 0;
+  font-size: 16px;
+}
+:host .order-edit-toggle {
+  cursor: pointer;
+}

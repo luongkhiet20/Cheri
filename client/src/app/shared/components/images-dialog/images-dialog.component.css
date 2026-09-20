@@ -1,0 +1,11 @@
+:host {
+  display: block;
+}
+:host .next-btn {
+  float: right;
+  margin: 10px;
+}
+:host .prev-btn {
+  float: left;
+  margin: 10px;
+}

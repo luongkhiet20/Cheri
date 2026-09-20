@@ -1,0 +1,107 @@
+/* =========================================
+   CHÉRI PAGES EDIT – MINIMALIST DESIGN
+   Palette: #74070E / Black / White
+========================================= */
+
+:host {
+  --cheri-red: #74070E;
+  --cheri-red-light: #fdf5f5;
+  --cheri-border: #e5d9d4;
+  --cheri-bg: #fdfbf9;
+  --cheri-text: #2b2b2b;
+  --cheri-muted: #757575;
+  --cheri-radius: 10px;
+}
+
+/* =========================================
+   LAYOUT
+========================================= */
+:host .main {
+  background: #fff;
+}
+
+:host .pages_edit-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+:host .pages_edit-top h2 {
+  color: var(--cheri-red);
+  font-size: 22px;
+  font-weight: 600;
+}
+
+/* =========================================
+   FORM FIELDS
+========================================= */
+:host ::ng-deep .mat-mdc-form-field {
+  --mdc-outlined-text-field-outline-color: var(--cheri-border);
+  --mdc-outlined-text-field-hover-outline-color: var(--cheri-red);
+  --mdc-outlined-text-field-focus-outline-color: var(--cheri-red);
+  --mdc-outlined-text-field-label-text-color: var(--cheri-red);
+  --mdc-outlined-text-field-focus-label-text-color: var(--cheri-red);
+}
+
+:host ::ng-deep .mat-mdc-text-field-wrapper {
+  background: #fff;
+  border-radius: var(--cheri-radius);
+}
+
+:host ::ng-deep .mat-mdc-form-field .mdc-floating-label {
+  color: var(--cheri-red);
+}
+
+:host ::ng-deep .mat-mdc-form-field.mat-focused .mdc-floating-label {
+  color: var(--cheri-red) !important;
+}
+
+/* =========================================
+   BUTTONS
+========================================= */
+:host ::ng-deep button[mat-flat-button][color="primary"] {
+  background: var(--cheri-red) !important;
+  color: #fff !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  margin-right: 10px;
+}
+
+:host ::ng-deep button[mat-flat-button][color="accent"] {
+  background: var(--cheri-red) !important;
+  color: #fff !important;
+  border-radius: 8px !important;
+}
+
+:host ::ng-deep button[mat-raised-button][color="primary"] {
+  background: var(--cheri-red) !important;
+  color: #fff !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+
+/* =========================================
+   AFTER SEND
+========================================= */
+:host .pages_edit-after-send {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 40px 20px;
+  border: 1px solid var(--cheri-border);
+  border-radius: 12px;
+  background: var(--cheri-bg);
+}
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+@media screen and (max-width: 768px) {
+  :host .pages_edit-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

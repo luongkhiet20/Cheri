@@ -1,0 +1,157 @@
+@if (!sendRequest && (choosenLanguageSub$ | async); as chooseLang) {
+
+<div class="categories-title-wrapp">
+  <h2>Chỉnh sửa danh mục</h2>
+  <div>
+    <mat-form-field class="browser-default lang-select">
+      <mat-label>
+        Ngôn ngữ hiển thị danh mục
+      </mat-label>
+      <mat-select [ngModel]="chooseLang" (ngModelChange)="setLang($event)">
+        @for (option of languageOptions; track option) {
+        <mat-option [value]="option">
+          {{ option }}
+        </mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </div>
+</div>
+<form class="category_edit-form" [formGroup]="categoryEditForm" novalidate>
+  <div class="category_edit-full-input">
+    <mat-form-field class="category_edit-field">
+      <input matInput placeholder="Đường dẫn URL danh mục (TitleUrl)" aria-label="TitleUrl" [matAutocomplete]="auto" formControlName="titleUrl" />
+      <mat-autocomplete #auto="matAutocomplete" (optionSelected)="editCategory()">
+        @for (title of filteredTitles$ | async; track title) {
+        <mat-option [value]="title">
+          <span>{{ title }}</span>
+        </mat-option>
+        }
+      </mat-autocomplete>
+    </mat-form-field>
+    <button mat-raised-button color="primary" class="edit-find-button" (click)="editCategory()">
+      Tìm & Chỉnh sửa
+    </button>
+  </div>
+  @if (categoryProductsTitlesUrl.length) {
+  <mat-chip-listbox class="category-tags">
+    @for (productTitleUrl of categoryProductsTitlesUrl; track productTitleUrl) {
+    <mat-chip-option class="clickable">
+      <span>{{ productTitleUrl }}</span>
+    </mat-chip-option>
+    }
+  </mat-chip-listbox>
+  }
+  <ng-container>
+    <h3 class="category_edit-subtitle">Nội dung danh mục (theo ngôn ngữ / thị trường đã chọn)</h3>
+    <div [formGroupName]="chooseLang">
+      <div class="category_edit-full-input">
+        <mat-form-field class="category_edit-field">
+          <mat-label>Tên danh mục</mat-label>
+          <input matInput formControlName="title" type="text" name="title" />
+        </mat-form-field>
+      </div>
+      <div class="category_edit-full-input">
+        <mat-form-field class="category_edit-field">
+          <mat-label>
+            Mô tả ngắn
+          </mat-label>
+          <textarea matInput formControlName="description" name="description"> </textarea>
+        </mat-form-field>
+      </div>
+      <div class="category_edit-full-input">
+        <div class="category_edit-field-small">
+          <div class="check-title">Trạng thái hiển thị</div>
+          <mat-radio-group aria-label="Visibility" formControlName="visibility">
+            <mat-radio-button name="visibility" [value]="true" id="visible">
+              Hiển thị
+            </mat-radio-button>
+            <mat-radio-button name="visibility" [value]="false" id="hidden">
+              Ẩn
+            </mat-radio-button>
+          </mat-radio-group>
+        </div>
+        <div class="category_edit-field-small">
+          <div class="check-title">Ẩn trên thanh Menu</div>
+          <mat-radio-group aria-label="Menu hidden" formControlName="menuHidden">
+            <mat-radio-button name="menuHidden" [value]="true" id="menuHidden">
+              Ẩn
+            </mat-radio-button>
+            <mat-radio-button name="menuHidden" [value]="false" id="menuVisible">
+              Hiển thị
+            </mat-radio-button>
+          </mat-radio-group>
+        </div>
+        <div class="category_edit-field-small">
+          <mat-form-field class="category_edit-field">
+            <mat-label>Vị trí thứ tự</mat-label>
+            <input matInput formControlName="position" type="number" name="position" />
+          </mat-form-field>
+        </div>
+      </div>
+    </div>
+    <div class="category_edit-full-input">
+      <mat-form-field class="category_edit-field">
+        <mat-label>
+          Đường dẫn ảnh chính (URL)
+        </mat-label>
+        <input matInput formControlName="mainImage" name="mainImage" />
+      </mat-form-field>
+      <div class="category_edit-field-small">
+        <div class="check-title">Kiểu hiển thị ảnh</div>
+        <mat-radio-group aria-label="Image type" [(ngModel)]="mainImageType" [ngModelOptions]="{ standalone: true }">
+          <mat-radio-button name="Contain" [value]="false" id="Contain">
+            Vừa khung (Contain)
+          </mat-radio-button>
+          <mat-radio-button name="Cover" [value]="true" id="Cover">
+            Tràn khung (Cover)
+          </mat-radio-button>
+        </mat-radio-group>
+      </div>
+    </div>
+
+    <div class="category_edit-full-input">
+      <mat-form-field class="category_edit-field-small">
+        <mat-label> Danh mục con </mat-label>
+        <input matInput [(ngModel)]="subCategory" [ngModelOptions]="{ standalone: true }" name="subCategory" [matAutocomplete]="autoSubCategories" />
+        <mat-autocomplete #autoSubCategories="matAutocomplete">
+          @for (category of categories$ | async; track category) {
+          <mat-option [value]="category.category.titleUrl">
+            <span>{{ category.category.titleUrl }}</span>
+          </mat-option>
+          }
+        </mat-autocomplete>
+      </mat-form-field>
+      <button mat-raised-button color="primary" class="edit-find-button" (click)="addSubCategory()">Thêm danh mục con</button>
+    </div>
+    @if ((categoryEditForm.get('subCategories').value); as allCategories) {
+    <mat-chip-listbox class="category_edit-subCategories">
+      @if (allCategories && allCategories.length) { @for (subCategory of allCategories; track subCategory) {
+      <mat-chip-option class="clickable" (click)="removeSubCategory(subCategory)">
+        @if (subCategory) {
+        <span>{{ subCategory }} x</span>
+        }
+      </mat-chip-option>
+      } }
+    </mat-chip-listbox>
+    }
+
+    <button mat-raised-button color="primary" (click)="onSubmit()" [disabled]="!categoryEditForm.valid">
+      Lưu danh mục
+    </button>
+  </ng-container>
+
+  <button mat-raised-button color="primary" (click)="onRemove()" [disabled]="!categoryEditForm.valid">
+    Xóa danh mục
+  </button>
+</form>
+
+}
+@if (sendRequest) {
+<div class="category_edit-after-send">
+  <span>Đã gửi yêu cầu thành công!</span>
+  <button class="product_edit-btn-action" mat-raised-button color="primary" (click)="sendRequest = !sendRequest">
+    Tiếp tục chỉnh sửa
+  </button>
+</div>
+}

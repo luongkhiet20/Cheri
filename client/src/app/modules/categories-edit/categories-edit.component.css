@@ -1,0 +1,223 @@
+/* =========================================
+   CHÉRI CATEGORIES EDIT – MINIMALIST DESIGN
+   Palette: #74070E / Black / White
+========================================= */
+
+:host {
+  --cheri-red: #74070E;
+  --cheri-red-light: #fdf5f5;
+  --cheri-border: #e5d9d4;
+  --cheri-bg: #fdfbf9;
+  --cheri-text: #2b2b2b;
+  --cheri-muted: #757575;
+  --cheri-radius: 10px;
+}
+
+/* =========================================
+   HEADER
+========================================= */
+:host .categories-title-wrapp {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 28px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--cheri-border);
+}
+
+:host .categories-title-wrapp h2 {
+  margin: 0;
+  color: var(--cheri-red);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+}
+
+/* =========================================
+   FORM & INPUT
+========================================= */
+:host .category_edit-form {
+  width: 100%;
+  color: var(--cheri-text);
+}
+
+:host .category_edit-full-input {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  width: 100%;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+:host .category_edit-field {
+  width: 100%;
+  margin: 0;
+}
+
+:host .category_edit-field-small {
+  flex: 1;
+  min-width: 200px;
+  margin: 0;
+}
+
+/* Material form field override */
+:host ::ng-deep .mat-mdc-form-field {
+  --mdc-outlined-text-field-outline-color: var(--cheri-border);
+  --mdc-outlined-text-field-hover-outline-color: var(--cheri-red);
+  --mdc-outlined-text-field-focus-outline-color: var(--cheri-red);
+  --mdc-outlined-text-field-label-text-color: var(--cheri-red);
+  --mdc-outlined-text-field-focus-label-text-color: var(--cheri-red);
+  width: 100%;
+}
+
+:host ::ng-deep .mat-mdc-text-field-wrapper {
+  background: #fff;
+  border-radius: var(--cheri-radius);
+}
+
+:host ::ng-deep .mat-mdc-form-field .mdc-floating-label {
+  color: var(--cheri-red);
+}
+
+:host ::ng-deep .mat-mdc-form-field.mat-focused .mdc-floating-label {
+  color: var(--cheri-red) !important;
+}
+
+/* =========================================
+   SECTION TITLE
+========================================= */
+:host .category_edit-subtitle {
+  margin: 30px 0 22px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--cheri-border);
+  color: var(--cheri-red);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+
+:host .category_edit-infotitle {
+  margin: 0 0 10px;
+  color: var(--cheri-red);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+:host .check-title {
+  margin: 0 0 10px;
+  padding: 5px 0;
+  color: var(--cheri-red);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* =========================================
+   BUTTONS
+========================================= */
+:host .edit-find-button {
+  min-height: 48px;
+  border-radius: 8px !important;
+  background: var(--cheri-red) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  white-space: nowrap;
+}
+
+:host ::ng-deep button[mat-raised-button][color="primary"] {
+  background: var(--cheri-red) !important;
+  color: #fff !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+
+:host .product_edit-btn-action,
+:host .category_edit-btn-action {
+  margin: 0 8px;
+}
+
+/* =========================================
+   IMAGES
+========================================= */
+:host .category_edit-add-images {
+  margin: 25px 0;
+}
+
+/* =========================================
+   TAGS / CHIPS
+========================================= */
+:host ::ng-deep .category-tags .mat-mdc-chip {
+  --mdc-chip-elevated-container-color: #fff;
+  --mdc-chip-label-text-color: var(--cheri-red);
+  border: 1px solid var(--cheri-red) !important;
+  border-radius: 18px !important;
+}
+
+:host ::ng-deep .category-tags .mat-mdc-chip:hover {
+  background: var(--cheri-red-light) !important;
+}
+
+:host .category_edit-subCategories {
+  margin: 10px 0 50px 0;
+  display: block;
+}
+
+/* =========================================
+   AFTER SEND
+========================================= */
+:host .category_edit-after-send {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 40px 20px;
+  border: 1px solid var(--cheri-border);
+  border-radius: 12px;
+  background: var(--cheri-bg);
+}
+
+/* =========================================
+   RADIO BUTTONS
+========================================= */
+:host ::ng-deep .mat-mdc-radio-button ~ .mat-radio-button {
+  margin-left: 16px;
+}
+
+:host ::ng-deep .mat-mdc-radio-button .mdc-radio__native-control:checked+.mdc-radio__background .mdc-radio__outer-circle {
+  border-color: var(--cheri-red) !important;
+}
+
+:host ::ng-deep .mat-mdc-radio-button .mdc-radio__native-control:checked+.mdc-radio__background .mdc-radio__inner-circle {
+  border-color: var(--cheri-red) !important;
+  background-color: var(--cheri-red) !important;
+}
+
+:host ::ng-deep .mat-mdc-radio-button .mdc-form-field {
+  color: var(--cheri-text);
+}
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+@media screen and (max-width: 768px) {
+  :host .categories-title-wrapp {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  :host .category_edit-full-input {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  :host .category_edit-field-small {
+    min-width: 100%;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  :host ::ng-deep .mat-mdc-radio-button ~ .mat-radio-button {
+    margin-left: 4px;
+  }
+}

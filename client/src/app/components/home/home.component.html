@@ -1,0 +1,211 @@
+<mat-drawer-container class="home-sidebar-container" autosize hasBackdrop>
+  <mat-drawer #sideBar [(opened)]="sidebarOpened" class="home-sidebar" mode="over">
+    <app-sidebar [class.disabled]="loadingProducts()" [categories]="categories()" [price]="filterPrice()"
+      [maxPrice]="maxPrice()" [minPrice]="minPrice()" [activeCategory]="category()" [sortOptions]="sortOptions"
+      [currency]="currency()" [lang]="lang()" [choosenSort]="sortBy()" (changePrice)="priceRange($event)"
+      (changeSort)="changeSort($event)" (changeCategory)="changeCategory()">
+    </app-sidebar>
+  </mat-drawer>
+
+  <mat-drawer-content>
+    <div class="main">
+
+      <!-- ── Promo bar ── -->
+      @if (cart(); as cart) {
+      <div class="home-promo">
+        <span class="home-promo-basic">{{ 'Home_promo' | translate | async }}</span>
+        <span class="home-promo-shipping">{{ 'Free_shipping_limit' | translate | async }} {{ cart.shippingLimit }} {{
+          currency() }}</span>
+      </div>
+      }
+
+      <!-- ══════════════════════════════════════════
+           SECTION 1 – Hero Banner
+      ══════════════════════════════════════════ -->
+      <section class="home-hero">
+        <img src="https://static.wixstatic.com/media/911b80_56c8defb7ec14d90b9ebb021fa9c4a65~mv2.jpg"
+          alt="Chéri Grand Campaign" referrerpolicy="no-referrer" class="home-hero-img" />
+      </section>
+
+      <!-- ══════════════════════════════════════════
+           SECTION 2 – CTA Virtual Try-On
+      ══════════════════════════════════════════ -->
+      <section class="home-cta-section">
+        <div class="home-cta-card">
+          <!-- Decorative blur blob -->
+          <div class="home-cta-blob"></div>
+
+          <!-- Left: text -->
+          <div class="home-cta-text">
+            <div class="home-cta-badge">
+              <!-- Sparkle SVG -->
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                class="home-cta-badge-icon">
+                <polygon
+                  points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+              <span>TRẢI NGHIỆM MỚI</span>
+            </div>
+            <h3 class="home-cta-title">Phác Họa Vóc Dáng</h3>
+            <p class="home-cta-desc">
+              "Đắm mình trong nét lãng mạn của từng thiết kế, tự tin sải bước
+              cùng những bộ đầm tinh tế. Công nghệ đo form tiên tiến mang đến độ
+              tương hợp với cơ thể chính xác đến 98%."
+            </p>
+          </div>
+
+          <!-- Right: button -->
+          <div class="home-cta-action">
+            <a class="home-cta-btn" [routerLink]="['/' + (lang() || 'vi') + '/virtual-try-on']">
+              <span>Trải Nghiệm</span>
+              <!-- Arrow SVG -->
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════════════════════
+           SECTION 3 – Featured Best-Sellers Slider
+      ══════════════════════════════════════════ -->
+      @if (products(); as products) {
+      <section class="home-featured">
+
+        <!-- Header row -->
+        <div class="home-featured-header">
+          <div class="home-featured-heading">
+            <h3 class="home-featured-title">Sản phẩm tiêu biểu</h3>
+          </div>
+          <div class="home-featured-actions">
+            <a class="home-featured-viewall" (click)="goToCart()" [routerLink]="['/' + (lang() || 'vi') + '/cart']" role="button">
+              <span>Xem Toàn Bộ Cửa Hàng</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </a>
+            <div class="home-featured-nav">
+              <button type="button" class="home-featured-nav-btn" (click)="scrollLane(-1)" aria-label="Previous">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+              </button>
+              <button type="button" class="home-featured-nav-btn" (click)="scrollLane(1)" aria-label="Next">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Horizontal slider -->
+        <div class="home-featured-lane" #featuredLane>
+          @for (product of products | slice: 0:10; track product?._id) {
+          <div class="home-product-card" [routerLink]="['/' + (lang() || 'vi') + '/product/' + product.titleUrl]">
+
+            <!-- Image stage -->
+            <div class="home-product-img-wrap">
+              <img [src]="product.mainImage?.url || (product.images && product.images[0])" [alt]="product.title"
+                class="home-product-img" />
+
+              <!-- Badges -->
+              @if (product.stock === '0') {
+              <span class="home-product-badge home-product-badge--sold">HẾT HÀNG</span>
+              } @else if (product.onSale) {
+              <span class="home-product-badge home-product-badge--sale">ƯU ĐÃI</span>
+              } @else {
+              <span class="home-product-badge home-product-badge--new">NEW</span>
+              }
+
+              <!-- Add to cart overlay -->
+              <div class="home-product-overlay">
+                @if (product.stock !== '0') {
+                <button type="button" class="home-product-add-btn"
+                  (click)="addToCart(product._id); $event.stopPropagation()" title="Thêm vào giỏ">
+                  <!-- ShoppingBag SVG -->
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                    <line x1="3" y1="6" x2="21" y2="6" />
+                    <path d="M16 10a4 4 0 0 1-8 0" />
+                  </svg>
+                </button>
+                }
+              </div>
+            </div>
+
+            <!-- Info block -->
+            <div class="home-product-info">
+              @if (product.tags?.length) {
+              <span class="home-product-category">{{ product.tags[0] }}</span>
+              }
+              <h4 class="home-product-name">{{ product.title }}</h4>
+              <div class="home-product-prices">
+                <span class="home-product-price">{{ product.salePrice || product.regularPrice }} {{ currency() }}</span>
+                @if (product.onSale && product.salePrice) {
+                <span class="home-product-original">{{ product.regularPrice }} {{ currency() }}</span>
+                }
+              </div>
+            </div>
+
+          </div>
+          }
+        </div>
+      </section>
+      }
+
+      <!-- ══════════════════════════════════════════
+           SECTION 4 – Nàng Thơ Của Riêng Bạn (Editorial)
+      ══════════════════════════════════════════ -->
+      <section class="home-muse-section">
+        <div class="home-muse-container">
+          <div class="home-muse-grid">
+
+            <!-- Left Column: Model Imagery -->
+            <div class="home-muse-image-col" [routerLink]="['/' + (lang() || 'vi') + '/cart']">
+              <div class="home-muse-img-wrapper">
+                <img src="https://static.wixstatic.com/media/911b80_c2c4f8245cbc4a1e80c6e871af920c1d~mv2.png"
+                  alt="Nàng thơ Chéri" referrerpolicy="no-referrer" class="home-muse-img" />
+                <div class="home-muse-glow"></div>
+              </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="home-muse-content-col">
+              <div class="home-muse-heading-wrap">
+                <h3 class="home-muse-title">
+                  Nàng thơ của riêng bạn
+                </h3>
+              </div>
+
+              <div class="home-muse-quote-wrap">
+                <p class="home-muse-quote">
+                  Không chạy theo xu hướng nhất thời. Chúng tôi tạo nên những
+                  thiết kế mang vẻ đẹp vượt thời gian.
+                </p>
+              </div>
+
+              <div class="home-muse-tagline-wrap">
+                <div class="home-muse-tagline">
+                  <span>Atelier Chéri</span>
+                  <span>•</span>
+                  <span>Timeless</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+    </div>
+  </mat-drawer-content>
+</mat-drawer-container>

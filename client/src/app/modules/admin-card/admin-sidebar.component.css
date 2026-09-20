@@ -1,0 +1,255 @@
+@import './admin-common.css';
+
+:host {
+  display: block;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════
+   ADMIN SIDEBAR
+   ═══════════════════════════════ */
+.admin-sidebar {
+  width: var(--sidebar-width, 260px);
+  min-height: 100vh;
+  background: #ffffff;
+  border-right: 1px solid var(--surface-3, #e2e8f0);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  z-index: 100;
+  box-shadow: 1px 0 10px rgba(0, 0, 0, 0.03);
+}
+
+.admin-sidebar.collapsed {
+  width: var(--sidebar-collapsed, 72px);
+}
+
+/* ── Brand Header ── */
+.sidebar-brand-header {
+  padding: 16px 18px 16px 20px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--surface-3, #e2e8f0);
+  background: #ffffff;
+  transition: padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 70px;
+  box-sizing: border-box;
+}
+
+.admin-sidebar.collapsed .sidebar-brand-header {
+  padding: 14px 6px 10px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 60px;
+}
+
+.cheri-logo {
+  font-family: var(--font-logo, 'Playfair Display', serif);
+  color: #74070E !important;
+  font-weight: 400;
+  font-size: 32px;
+  line-height: 1;
+  user-select: none;
+  -webkit-user-select: none;
+  text-decoration: none;
+  display: inline-block;
+  transition: font-size 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s ease, opacity 0.2s ease;
+  cursor: pointer;
+  text-align: left;
+}
+
+.cheri-logo:hover {
+  opacity: 0.85;
+  transform: scale(1.03);
+}
+
+.admin-sidebar.collapsed .cheri-logo {
+  font-size: 19px;
+  line-height: 1;
+  max-width: 60px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  text-align: center;
+}
+
+/* ── Toggle button ── */
+.sidebar-toggle {
+  background: #f8fafc;
+  border: 1px solid var(--surface-3, #e2e8f0);
+  color: #64748b;
+  cursor: pointer;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.sidebar-toggle:hover {
+  color: #74070E;
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.sidebar-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
+.admin-sidebar.collapsed .sidebar-toggle {
+  padding: 6px;
+  width: 36px;
+  height: 36px;
+}
+
+/* ── Nav sections ── */
+.nav-section-label {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #94a3b8;
+  font-weight: 700;
+  padding: 14px 20px 6px;
+}
+
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 6px 0;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 3px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 2px;
+}
+
+/* ── Nav item ── */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 20px;
+  color: #475569;
+  text-decoration: none;
+  cursor: pointer;
+  position: relative;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: all 0.2s;
+  border-radius: 0;
+}
+
+.nav-item:hover {
+  color: #0f172a;
+  background: #f8fafc;
+}
+
+.nav-item.active {
+  color: #74070E;
+  background: #fdf2f4;
+  font-weight: 600;
+}
+
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3.5px;
+  background: #74070E;
+  border-radius: 0 3px 3px 0;
+}
+
+.nav-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+}
+
+:host ::ng-deep .nav-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.admin-sidebar.collapsed .nav-item {
+  justify-content: center;
+  padding: 12px 0;
+}
+
+.admin-sidebar.collapsed .nav-icon {
+  margin: 0 auto;
+}
+
+.nav-label {
+  flex: 1;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: inherit;
+  line-height: 1.4;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.nav-badge {
+  background: var(--accent, #74070E);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* ── Sidebar bottom ── */
+.sidebar-bottom {
+  padding-bottom: 16px;
+  background: #ffffff;
+}
+
+.nav-divider {
+  height: 1px;
+  background: var(--surface-3, #e2e8f0);
+  margin: 8px 16px;
+}
+
+.nav-logout {
+  color: #dc2626;
+}
+
+.nav-logout:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}

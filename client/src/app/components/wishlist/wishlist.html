@@ -1,0 +1,92 @@
+<div class="wishlist-wrap animate-fade-in" [class.has-products]="wishlistProducts && wishlistProducts.length > 0">
+
+  @if (wishlistProducts && wishlistProducts.length > 0) {
+  <div class="products-grid">
+    @for (product of wishlistProducts; track (product._id || product.id)) {
+
+    <div class="pcard" (click)="onOpenQuickView(product)">
+
+      <!-- Image -->
+      <div class="pcard-img-wrap">
+        <img class="pcard-img" [src]="product.image || product.mainImage?.url || 'assets/images/placeholder.png'"
+          [alt]="product.name || product.title" />
+
+        <!-- Badges -->
+        @if (product.stock === '0' || product.stock === 'unavailable') {
+        <span class="pcard-badge pcard-badge--sold">Hết hàng</span>
+        } @else {
+        <span class="pcard-badge pcard-badge--new">NEW</span>
+        }
+        @if (hasDiscount(product)) {
+        <span class="pcard-badge pcard-badge--sale pcard-badge--top-right">ƯU ĐÃI</span>
+        }
+
+        <!-- Heart button (remove from wishlist) -->
+        <button type="button" class="pcard-wishlist-btn pcard-wishlist-btn--active"
+          (click)="onRemoveClick($event, product._id || product.id)" title="Bỏ yêu thích">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path
+              d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+          </svg>
+        </button>
+
+        <!-- Hover overlay -->
+        <div class="pcard-overlay">
+          @if (product.stock !== '0') {
+          <button type="button" class="pcard-overlay-btn pcard-overlay-btn--cart"
+            (click)="addToCart(product); $event.stopPropagation()" title="Thêm vào giỏ hàng">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <path d="M16 10a4 4 0 0 1-8 0" />
+            </svg>
+          </button>
+          }
+          <button type="button" class="pcard-overlay-btn pcard-overlay-btn--view"
+            (click)="onOpenQuickView(product); $event.stopPropagation()" title="Xem chi tiết">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Info -->
+      <div class="pcard-info">
+        @if (product.tags?.length || product.categoryName) {
+        <span class="pcard-tag">{{ product.categoryName || product.tags[0] }}</span>
+        }
+        <h4 class="pcard-name">{{ product.name || product.title }}</h4>
+        <div class="pcard-prices">
+          <span class="pcard-price">{{ formatVND(hasDiscount(product) ? (product.salePrice || product.regularPrice) : (product.salePrice || product.regularPrice || product.price || 0)) }}</span>
+          @if (hasDiscount(product)) {
+          <span class="pcard-original">{{ formatVND(product.regularPrice || product.salePrice) }}</span>
+          }
+        </div>
+      </div>
+
+    </div>
+    }
+  </div>
+
+  } @else {
+  <!-- Empty state -->
+  <div class="wishlist-empty">
+    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="wishlist-empty-icon">
+      <path
+        d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+    </svg>
+    <h3 class="wishlist-empty-title">Chưa lưu thiết kế mộng mơ nào</h3>
+    <p class="wishlist-empty-desc">Nhấn vào biểu tượng trái tim trên thẻ sản phẩm để lưu vào đây</p>
+    <button type="button" class="wishlist-empty-btn" (click)="onNavigate('products')">
+      Ghé Thăm Cửa Hàng Chéri
+    </button>
+  </div>
+  }
+
+</div>

@@ -1,0 +1,11 @@
+@if (pagination?.total && pagination?.limit) {
+
+<mat-paginator
+  [length]="pagination.total"
+  [pageIndex]="pagination.page - 1"
+  [pageSize]="pagination.limit"
+  (page)="changePage.emit($event.pageIndex + 1)"
+>
+</mat-paginator>
+
+}

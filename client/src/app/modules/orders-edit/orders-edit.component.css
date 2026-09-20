@@ -1,0 +1,18 @@
+/* =========================================
+   CHÉRI ORDERS EDIT – MINIMALIST DESIGN
+   Palette: #74070E / Black / White
+========================================= */
+
+:host {
+  --cheri-red: #74070E;
+  --cheri-red-light: #fdf5f5;
+  --cheri-border: #e5d9d4;
+  --cheri-bg: #fdfbf9;
+  --cheri-text: #2b2b2b;
+  --cheri-muted: #757575;
+
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  color: var(--cheri-text);
+}

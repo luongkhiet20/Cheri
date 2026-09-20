@@ -1,0 +1,43 @@
+@for (product of products; track product?._id) {
+
+<div class="product_card">
+  <div class="product_card-header">
+    <div class="product_card-top">
+      <h2 class="product_card-title">{{ product?.title }}</h2>
+      <span class="product_card-top-links">
+        <a class="product_card-detail" [routerLink]="['/' + lang + '/product/' + product?.titleUrl]">
+          {{ 'Detail' | translate | async }}
+        </a>
+        @if (showEdit) {
+        <a class="product_card-detail" (click)="onEditProduct(product?.titleUrl)">
+          {{ 'Edit' | translate | async }}
+        </a>
+        }
+      </span>
+    </div>
+    <div class="product_card-info">
+      <p class="product_card-description">{{ product?.description }}</p>
+    </div>
+  </div>
+  <a
+    class="product_card-image"
+    [routerLink]="['/' + lang + '/product/' + product?.titleUrl]"
+    [attr.aria-labelledby]="product?.titleUrl"
+    [style.background]="'url(' + product.mainImage.url + ')'"
+  >
+  </a>
+  @if (product.onSale && product.regularPrice) {
+  <div class="product_card-before-price">{{ product.regularPrice | priceFormat }} {{ currency || 'đ' }}</div>
+  }
+  <div class="product_card-action">
+    <div class="product_card-action-wrap">
+      <div class="product_card-price-info">{{ (product?.salePrice || product?.regularPrice) | priceFormat }} {{ currency || 'đ' }}</div>
+      <p class="product_card-stock">{{ product?.stock | translate | async }}</p>
+      @if (cartIds) {
+      <app-cart-show [items]="cartIds[product?._id]" (add)="onAddProduct(product?._id)" (remove)="onRemoveProduct(product?._id)"> </app-cart-show>
+      }
+    </div>
+  </div>
+</div>
+
+}

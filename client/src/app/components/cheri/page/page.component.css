@@ -1,0 +1,10 @@
+:host {
+  display: block;
+}
+:host .container-mid {
+  background: #fff;
+  position: relative;
+}
+:host .page {
+  margin: 10px;
+}

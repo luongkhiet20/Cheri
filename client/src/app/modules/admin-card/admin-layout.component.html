@@ -1,0 +1,31 @@
+<div class="admin-shell">
+  <!-- Reusable Sidebar -->
+  <app-admin-sidebar
+    [activeSection]="activeSection"
+    [sidebarCollapsed]="sidebarCollapsed"
+    [navItems]="navItems"
+    (sectionChange)="onSetSection($event)"
+    (toggleSidebar)="onToggleSidebar()"
+    (goToDashboard)="onGoToDashboard($event)"
+    (logout)="onLogout()">
+  </app-admin-sidebar>
+
+  <!-- Main Content Area -->
+  <div class="admin-main" [class.expanded]="sidebarCollapsed">
+    <!-- Reusable Top Header -->
+    <app-admin-header
+      [pageTitle]="resolvedTitle"
+      [sidebarCollapsed]="sidebarCollapsed"
+      [searchQuery]="searchQuery"
+      (searchQueryChange)="onSearchChange($event)"
+      (notificationClick)="notificationClick.emit()"
+      (accountClick)="accountClick.emit()">
+      <ng-content select="[header-actions]"></ng-content>
+    </app-admin-header>
+
+    <!-- Page Body -->
+    <main class="admin-content">
+      <ng-content></ng-content>
+    </main>
+  </div>
+</div>

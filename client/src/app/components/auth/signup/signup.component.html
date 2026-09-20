@@ -1,0 +1,150 @@
+<div class="signup-page-wrapper">
+  <div class="signup-container">
+    <div class="sign-form-wrap auth-card">
+
+      <!-- Left Side: Premium Visual Banner -->
+      <div class="auth-banner">
+        <img
+          src="https://static.wixstatic.com/media/911b80_7907b5e433d447698e7ea8bdd57b33e2~mv2.png"
+          alt="Chéri luxury membership visual banner"
+          class="auth-banner-img"
+          referrerpolicy="no-referrer"
+        />
+        <div class="auth-banner-overlay">
+          <h4 class="auth-banner-quote">Bắt đầu hành trình cùng Chéri!</h4>
+        </div>
+      </div>
+
+      <!-- Right Side: Registration Form -->
+      <div class="auth-form-side">
+
+        <div class="auth-header">
+          <h3 class="auth-title">Đăng ký</h3>
+        </div>
+
+        <form class="sign-form auth-inner-form" [formGroup]="signUpForm" (ngSubmit)="submit()">
+
+          <!-- Row 1: Name + Phone (phone is display-only, not in formGroup) -->
+          <div class="form-row-2col">
+            <div class="form-group sign-field">
+              <label class="form-label">Họ và tên</label>
+              <input
+                type="text"
+                placeholder="Ninh Dương Lan Ngọc"
+                formControlName="name"
+                name="name"
+                class="form-input"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Số điện thoại</label>
+              <input
+                type="tel"
+                placeholder="0909 123 456"
+                class="form-input"
+                name="phone"
+              />
+            </div>
+          </div>
+
+          <!-- Email -->
+          <div class="form-group sign-field">
+            <label class="form-label">Địa chỉ Email</label>
+            <input
+              type="email"
+              required
+              placeholder="lanngoc@gmail.com"
+              formControlName="email"
+              name="email"
+              class="form-input"
+            />
+          </div>
+
+          <!-- Address -->
+          <div class="form-group">
+            <label class="form-label">Địa chỉ mặc định</label>
+            <textarea
+              placeholder="79 Đường 3/2, Quận 10, Thành phố Hồ Chí Minh"
+              rows="2"
+              class="form-input form-textarea"
+              name="address"
+            ></textarea>
+          </div>
+
+          <!-- Row 2: Password + Confirm -->
+          <div class="form-row-2col">
+            <div class="form-group sign-field">
+              <label class="form-label">Mật khẩu</label>
+              <input
+                [type]="showRegPassword ? 'text' : 'password'"
+                required
+                minlength="6"
+                placeholder="••••••••"
+                formControlName="password"
+                name="password"
+                class="form-input"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nhập lại mật khẩu</label>
+              <input
+                [type]="showRegPassword ? 'text' : 'password'"
+                required
+                minlength="6"
+                placeholder="••••••••"
+                class="form-input"
+                name="confirmPassword"
+              />
+            </div>
+          </div>
+
+          <!-- Checkbox options -->
+          <div class="form-checkbox-group">
+            <label class="form-checkbox-label">
+              <input
+                type="checkbox"
+                [checked]="showRegPassword"
+                (change)="toggleShowPassword()"
+                class="form-checkbox"
+              />
+              <span>Hiển thị mật khẩu</span>
+            </label>
+
+            <label class="form-checkbox-label">
+              <input
+                type="checkbox"
+                formControlName="agreeTerms"
+                class="form-checkbox"
+              />
+              <span>Chấp nhận điều khoản sử dụng</span>
+            </label>
+          </div>
+
+          <!-- Submit -->
+          <button
+            type="submit"
+            class="submit-sign-button auth-submit-btn"
+            [disabled]="signUpForm.invalid"
+          >
+            <span>ĐĂNG KÝ</span>
+            <svg class="btn-sparkle" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+            </svg>
+          </button>
+
+        </form>
+
+        <!-- Already have account -->
+        <div class="auth-footer">
+          <p class="auth-signup-text">
+            Đã có tài khoản?
+            <a class="signin-link auth-highlight-link" [routerLink]="['/' + (lang$ | async) + '/authorize/signin']">
+              Đăng nhập ngay
+            </a>
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

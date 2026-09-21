@@ -112,10 +112,37 @@ export class HeaderComponent implements OnInit {
     return Array.isArray(roles) && roles.some((r: string) => r && r.toLowerCase() === 'admin');
   }
 
+  isRegularUser(): boolean {
+    const user = this.user$ ? this.user$() : null;
+    if (!user) return false;
+    return !this.isAdmin();
+  }
+
+  getUserDisplayName(): string {
+    const user = this.user$ ? this.user$() : null;
+    if (!user) return '';
+    return user.fullName || user.name || (user.email ? user.email.split('@')[0] : '');
+  }
+
   onLogout(): void {
+    const currentLang = (this.translate as any)?.lang || 'vi';
+    const targetUrl = `/${currentLang}`;
+
     if (isPlatformBrowser(this._platformId)) {
-      localStorage.removeItem(accessTokenKey);
+      try {
+        localStorage.removeItem(accessTokenKey);
+        sessionStorage.clear();
+        document.cookie = 'jwt=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+        document.cookie = 'token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+        document.cookie = 'accessToken=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+        document.cookie = 'connect.sid=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+      } catch (e) {}
     }
-    this.store.storeUser(null);
+
+    this.store.signOut(() => {
+      if (isPlatformBrowser(this._platformId)) {
+        window.location.href = targetUrl;
+      }
+    });
   }
 }

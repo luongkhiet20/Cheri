@@ -134,6 +134,13 @@ export class OrdersService {
     return order;
   }
 
+  async removeOrder(id: string): Promise<any> {
+    const order = await this.orderModel.findOneAndDelete({
+      $or: [{ orderId: id }, { _id: id }],
+    });
+    return order;
+  }
+
   private createOrder = (orderDto: OrderDto, cart: CartModel, type: string) => {
     const { addresses, currency, email, userId, cardId, notes } = orderDto;
     const orderId =

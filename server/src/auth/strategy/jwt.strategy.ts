@@ -10,7 +10,20 @@ import { InjectModel } from '@nestjs/mongoose';
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(@InjectModel('User') private userModel: Model<User>) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        (req: any) => {
+          if (!req) return null;
+          let token = null;
+          if (req.cookies) {
+            token = req.cookies['jwt'] || req.cookies['token'] || req.cookies['accessToken'];
+          }
+          if (!token && req.session) {
+            token = req.session.token || req.session.accessToken;
+          }
+          return token;
+        },
+      ]),
       secretOrKey: process.env.JWT_SECRET,
     });
   }

@@ -6,6 +6,7 @@ import { NavItem, DEFAULT_NAV_ITEMS } from './admin.models';
 import { accessTokenKey } from '../../shared/constants';
 import { SignalStore } from '../../store/signal.store';
 import { TranslateService } from '../../services/translate.service';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-admin-sidebar',
@@ -45,6 +46,10 @@ export class AdminSidebarComponent {
   }
 
   onSetSection(key: string): void {
+    const lang = this.translate?.lang || 'vi';
+    const path = key === 'overview' ? `/${lang}/dashboard` : `/${lang}/dashboard/${key}`;
+    this.router.navigate([path]);
+    // emit vẫn giữ để DashboardShellComponent nhận và cập nhật activeSection cho highlight
     this.activeSection = key;
     this.activeSectionChange.emit(key);
     this.sectionChange.emit(key);
@@ -56,17 +61,44 @@ export class AdminSidebarComponent {
     this.goToDashboard.emit(event);
   }
 
+  /** Lấy lang hiện tại từ URL để build đúng route */
+  private getLang(): string {
+    if (this.translate?.lang) return this.translate.lang;
+    const match = this.router.url.match(/^\/([a-z]{2})\//); 
+    return match?.[1] || 'vi';
+  }
+
   onLogout(): void {
+    const currentLang = this.translate?.lang || 'vi';
+    const targetUrl = `/${currentLang}`;
+
     if (isPlatformBrowser(this.platformId)) {
       try {
         localStorage.removeItem(accessTokenKey);
+        sessionStorage.clear();
+        document.cookie = 'jwt=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+        document.cookie = 'token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+        document.cookie = 'accessToken=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+        document.cookie = 'connect.sid=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
       } catch (e) {}
     }
+
     if (this.store) {
-      this.store.storeUser(null);
+      this.store.signOut(() => {
+        this.logout.emit();
+        if (isPlatformBrowser(this.platformId)) {
+          window.location.href = targetUrl;
+        } else {
+          this.router.navigate([targetUrl], { replaceUrl: true });
+        }
+      });
+    } else {
+      this.logout.emit();
+      if (isPlatformBrowser(this.platformId)) {
+        window.location.href = targetUrl;
+      } else {
+        this.router.navigate([targetUrl], { replaceUrl: true });
+      }
     }
-    this.logout.emit();
-    const lang = this.translate?.lang ? `/${this.translate.lang}` : '/';
-    this.router.navigate([lang]);
   }
 }

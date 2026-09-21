@@ -28,6 +28,7 @@ const getProductLangInfo = (): { [lang: string]: any } => {
         categoryLevel1: String,
         categoryLevel2: String,
         quantity: Number,
+        variants: [],
       },
     }),
     {},

@@ -284,9 +284,68 @@
   flex-shrink: 0;
 }
 
+/* ── Social Login (Google & Facebook on same row) ── */
+:host .social-login-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  width: 100%;
+}
+
+:host .social-auth-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 11px 16px;
+  background-color: #ffffff;
+  border: 1px solid #e8e3dd;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  outline: none;
+  font-family: inherit;
+}
+
+:host .social-auth-btn:hover {
+  background-color: #faf8f5;
+  border-color: #d1c9bf;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
+  transform: translateY(-1px);
+}
+
+:host .social-auth-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+}
+
+:host .social-svg-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+:host .social-btn-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: #2b2826;
+  letter-spacing: 0.01em;
+}
+
+:host .social-auth-btn.google-btn:hover .social-btn-text {
+  color: #1a73e8;
+}
+
+:host .social-auth-btn.facebook-btn:hover .social-btn-text {
+  color: #1877f2;
+}
+
 /* ── Footer ── */
 :host .auth-footer {
-  margin-top: 24px;
+  margin-top: 22px;
   padding-top: 20px;
   border-top: 1px solid #f2ede8;
 }

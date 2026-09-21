@@ -30,14 +30,23 @@ export interface Product {
   hasSizes?           : boolean;
   sizes?              : string[];
   hasClassification?  : boolean;
-  categoryLevel1?     : string;
+  categoryLevel1?     : string | string[];
   categoryLevel2?     : string;
   quantity?           : number;
+  variants?           : ProductVariant[];
   mainImage           : { url: string; name: string }
   images              : string[];
   _user?              : any;
   dateAdded?          : any;
   [key: string]       : any;
+}
+
+export interface ProductVariant {
+  sku: string;
+  attributes: { [key: string]: string };
+  price: number;
+  stock: number;
+  status?: boolean;
 }
 
 export interface Cart {
@@ -76,6 +85,14 @@ export interface Pagination {
 export interface User {
   email       : string;
   id?         : string;
+  _id?        : string;
+  name?       : string;
+  fullName?   : string;
+  phoneNumber?: string;
+  address?    : string;
+  gender?     : string;
+  dateOfBirth?: string;
+  avatar?     : string;
   roles?      : string[];
   role?       : string;
   accessToken?: string;

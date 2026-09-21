@@ -4,12 +4,8 @@
 
       <!-- Left Side: Premium Visual Banner -->
       <div class="auth-banner">
-        <img
-          src="https://static.wixstatic.com/media/911b80_7907b5e433d447698e7ea8bdd57b33e2~mv2.png"
-          alt="Chéri luxury membership visual banner"
-          class="auth-banner-img"
-          referrerpolicy="no-referrer"
-        />
+        <img src="https://static.wixstatic.com/media/911b80_7907b5e433d447698e7ea8bdd57b33e2~mv2.png"
+          alt="Chéri luxury membership visual banner" class="auth-banner-img" referrerpolicy="no-referrer" />
         <div class="auth-banner-overlay">
           <h4 class="auth-banner-quote">Bắt đầu hành trình cùng Chéri!</h4>
         </div>
@@ -24,115 +20,107 @@
 
         <form class="sign-form auth-inner-form" [formGroup]="signUpForm" (ngSubmit)="submit()">
 
-          <!-- Row 1: Name + Phone (phone is display-only, not in formGroup) -->
-          <div class="form-row-2col">
-            <div class="form-group sign-field">
-              <label class="form-label">Họ và tên</label>
-              <input
-                type="text"
-                placeholder="Ninh Dương Lan Ngọc"
-                formControlName="name"
-                name="name"
-                class="form-input"
-              />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Số điện thoại</label>
-              <input
-                type="tel"
-                placeholder="0909 123 456"
-                class="form-input"
-                name="phone"
-              />
-            </div>
+          <!-- Name -->
+          <div class="form-group sign-field">
+            <label class="form-label">Họ và tên</label>
+            <input type="text" placeholder="Nguyễn Văn A" formControlName="name" name="name" class="form-input" />
           </div>
 
           <!-- Email -->
           <div class="form-group sign-field">
-            <label class="form-label">Địa chỉ Email</label>
-            <input
-              type="email"
-              required
-              placeholder="lanngoc@gmail.com"
-              formControlName="email"
-              name="email"
-              class="form-input"
-            />
-          </div>
-
-          <!-- Address -->
-          <div class="form-group">
-            <label class="form-label">Địa chỉ mặc định</label>
-            <textarea
-              placeholder="79 Đường 3/2, Quận 10, Thành phố Hồ Chí Minh"
-              rows="2"
-              class="form-input form-textarea"
-              name="address"
-            ></textarea>
+            <label class="form-label">Địa chỉ Email <span class="required-star">*</span></label>
+            <input type="email" required placeholder="nguyenvana@gmail.com" formControlName="email" name="email"
+              class="form-input" [class.input-error]="signUpForm.get('email')?.touched && signUpForm.get('email')?.invalid" />
+            <div class="field-error-msg" *ngIf="signUpForm.get('email')?.touched && signUpForm.get('email')?.invalid">
+              <span *ngIf="signUpForm.get('email')?.errors?.['required']">Vui lòng nhập địa chỉ email</span>
+              <span *ngIf="signUpForm.get('email')?.errors?.['gmailInvalid'] || signUpForm.get('email')?.errors?.['email']">
+                Email phải đúng định dạng Gmail (ví dụ: nguyenvana@gmail.com)
+              </span>
+            </div>
           </div>
 
           <!-- Row 2: Password + Confirm -->
           <div class="form-row-2col">
             <div class="form-group sign-field">
-              <label class="form-label">Mật khẩu</label>
-              <input
-                [type]="showRegPassword ? 'text' : 'password'"
-                required
-                minlength="6"
-                placeholder="••••••••"
-                formControlName="password"
-                name="password"
-                class="form-input"
-              />
+              <label class="form-label">Mật khẩu <span class="required-star">*</span></label>
+              <input [type]="showRegPassword ? 'text' : 'password'" required minlength="6" placeholder="••••••••"
+                formControlName="password" name="password" class="form-input"
+                [class.input-error]="signUpForm.get('password')?.touched && signUpForm.get('password')?.invalid" />
+              <div class="field-error-msg"
+                *ngIf="signUpForm.get('password')?.touched && signUpForm.get('password')?.invalid">
+                <span *ngIf="signUpForm.get('password')?.errors?.['required']">Vui lòng nhập mật khẩu</span>
+                <span *ngIf="signUpForm.get('password')?.errors?.['minlength']">Mật khẩu tối thiểu 6 ký tự</span>
+              </div>
             </div>
-            <div class="form-group">
+            <div class="form-group sign-field">
               <label class="form-label">Nhập lại mật khẩu</label>
-              <input
-                [type]="showRegPassword ? 'text' : 'password'"
-                required
-                minlength="6"
-                placeholder="••••••••"
-                class="form-input"
-                name="confirmPassword"
-              />
+              <input [type]="showRegPassword ? 'text' : 'password'" minlength="6" placeholder="••••••••"
+                formControlName="confirmPassword" class="form-input" name="confirmPassword"
+                [class.input-error]="signUpForm.errors?.['passwordMismatch'] && signUpForm.get('confirmPassword')?.touched" />
             </div>
+          </div>
+
+          <div class="password-mismatch-msg"
+            *ngIf="signUpForm.errors?.['passwordMismatch'] && signUpForm.get('confirmPassword')?.value">
+            Mật khẩu nhập lại không khớp
           </div>
 
           <!-- Checkbox options -->
           <div class="form-checkbox-group">
             <label class="form-checkbox-label">
-              <input
-                type="checkbox"
-                [checked]="showRegPassword"
-                (change)="toggleShowPassword()"
-                class="form-checkbox"
-              />
+              <input type="checkbox" [checked]="showRegPassword" (change)="toggleShowPassword()"
+                class="form-checkbox" />
               <span>Hiển thị mật khẩu</span>
             </label>
 
-            <label class="form-checkbox-label">
-              <input
-                type="checkbox"
-                formControlName="agreeTerms"
-                class="form-checkbox"
-              />
-              <span>Chấp nhận điều khoản sử dụng</span>
+            <label class="form-checkbox-label terms-label">
+              <input type="checkbox" formControlName="agreeTerms" class="form-checkbox" />
+              <span>Chấp nhận điều khoản sử dụng và Chính sách bảo mật <span class="required-star">*</span></span>
             </label>
           </div>
 
           <!-- Submit -->
-          <button
-            type="submit"
-            class="submit-sign-button auth-submit-btn"
-            [disabled]="signUpForm.invalid"
-          >
+          <button type="submit" class="submit-sign-button auth-submit-btn" [disabled]="signUpForm.invalid"
+            [title]="getSubmitButtonTitle()">
             <span>ĐĂNG KÝ</span>
-            <svg class="btn-sparkle" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+            <svg class="btn-sparkle" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path
+                d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
             </svg>
           </button>
 
         </form>
+
+        <!-- Social Register buttons: Google & Facebook same row, below submit button, above horizontal line -->
+        <div class="social-login-row">
+          <button
+            type="button"
+            class="social-auth-btn google-btn"
+            (click)="signUpWithGoogle()"
+            title="Đăng ký bằng Google"
+          >
+            <svg class="social-svg-icon" viewBox="0 0 24 24" width="18" height="18">
+              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.26v3.15C3.25 21.36 7.33 24 12 24z"/>
+              <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.26C.46 8.16 0 9.97 0 12s.46 3.84 1.26 5.42l4.02-3.15z"/>
+              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.25 2.64 1.26 6.58l4.02 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+            </svg>
+            <span class="social-btn-text">Google</span>
+          </button>
+
+          <button
+            type="button"
+            class="social-auth-btn facebook-btn"
+            (click)="signUpWithFacebook()"
+            title="Đăng ký bằng Facebook"
+          >
+            <svg class="social-svg-icon" viewBox="0 0 24 24" width="18" height="18" fill="#1877F2">
+              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+            </svg>
+            <span class="social-btn-text">Facebook</span>
+          </button>
+        </div>
 
         <!-- Already have account -->
         <div class="auth-footer">

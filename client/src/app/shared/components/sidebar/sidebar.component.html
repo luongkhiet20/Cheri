@@ -1,41 +1,259 @@
-<div class="sidebar">
-  <div class="sidebar-header sidebar-header-top">
-    <h3 class="sidebar-title">{{ 'Categories' | translate | async }}</h3>
-  </div>
-  <a class="sidebar-item" [routerLink]="['/' + lang + '/product/all']" [class.active]="!activeCategory">
-    {{ 'All' | translate | async }} {{ 'products' | translate | async }}
-  </a>
-  @for (category of categories; track trackById($index, category)) {
-    @if (!category.menuHidden) {
-  <a
-    class="sidebar-item"
-    (click)="changeCategory.emit(category.titleUrl)"
-    [routerLink]="['/' + lang + '/product/category/' + category.titleUrl]"
-    [class.active]="activeCategory == category.titleUrl"
-  >
-    {{ category.title }}
-  </a>
-  }
-}
-  <div class="sidebar-sort-wrap">
-    <div class="sidebar-header">
-      <h3 class="sidebar-title">{{ 'Sorting' | translate | async }}</h3>
+<div class="sf-container">
+
+  <!-- ── Header ── -->
+  <div class="sf-header">
+    <div class="sf-header-top">
+      <div class="sf-header-brand-wrap">
+        <h2 class="sf-main-title">Bộ lọc</h2>
+      </div>
+      @if (activeFiltersCount > 0) {
+      <span class="sf-count-bubble">{{ activeFiltersCount }}</span>
+      }
     </div>
-    <mat-form-field class="sidebar-select">
-      <mat-select aria-label="Sort" [ngModel]="choosenSort || 'newest'" (ngModelChange)="onInputChange($event)">
-        @for (option of sortOptions; track option) {
-        <mat-option [value]="option.id">
-          {{ option.name | translate | async }}
-        </mat-option>
+
+    <div class="sf-header-sub">
+      <span class="sf-sub-text">
+        {{ activeFiltersCount > 0 ? activeFiltersCount + ' bộ lọc đang áp dụng' : 'Tất cả sản phẩm' }}
+      </span>
+      @if (activeFiltersCount > 0) {
+      <button type="button" class="sf-clear-link" (click)="onClearFilters()">
+        Xóa tất cả
+      </button>
+      }
+    </div>
+  </div>
+
+  <div class="sf-divider"></div>
+
+  <!-- ── 1. Sắp xếp sản phẩm ── -->
+  <div class="sf-section">
+    <button type="button" class="sf-section-header" (click)="showSort = !showSort">
+      <span class="sf-section-title">Sắp xếp sản phẩm</span>
+      <svg class="sf-chevron" [class.rotated]="!showSort" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="18 15 12 9 6 15"></polyline>
+      </svg>
+    </button>
+
+    @if (showSort) {
+    <div class="sf-section-body">
+      <div class="sf-select-container">
+        <select class="sf-select" [ngModel]="choosenSort" (ngModelChange)="onInputChange($event)">
+          @for (opt of sortOptions; track opt.id) {
+          <option [value]="opt.id">
+            @if (opt.id === 'priceasc') { Giá tăng dần }
+            @else if (opt.id === 'pricedesc') { Giá giảm dần }
+            @else if (opt.id === 'nameasc') { Tên A - Z }
+            @else if (opt.id === 'namedesc') { Tên Z - A }
+            @else if (opt.id === 'newest') { Mới nhất }
+            @else if (opt.id === 'oldest') { Cũ nhất }
+            @else if (opt.id === 'ratingdesc') { Đánh giá cao nhất }
+            @else if (opt.id === 'ratingasc') { Đánh giá thấp nhất }
+            @else { {{ opt.name }} }
+          </option>
+          }
+        </select>
+        <svg class="sf-select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </div>
+    </div>
+    }
+  </div>
+
+  <div class="sf-divider"></div>
+
+  <!-- ── 2. Danh mục sản phẩm ── -->
+  <div class="sf-section">
+    <button type="button" class="sf-section-header" (click)="showCategories = !showCategories">
+      <span class="sf-section-title">Danh mục sản phẩm</span>
+      <svg class="sf-chevron" [class.rotated]="!showCategories" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="18 15 12 9 6 15"></polyline>
+      </svg>
+    </button>
+
+    @if (showCategories) {
+    <div class="sf-section-body">
+      <div class="sf-checkbox-list">
+        <!-- Tất cả -->
+        <div class="sf-checkbox-row" [class.active]="isAllCategoriesSelected()" (click)="onToggleCategory('')">
+          <div class="sf-checkbox-left">
+            <span class="sf-custom-checkbox" [class.checked]="isAllCategoriesSelected()">
+              @if (isAllCategoriesSelected()) {
+              <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round"
+                stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              }
+            </span>
+            <span class="sf-checkbox-label">Tất cả danh mục</span>
+          </div>
+          <span class="sf-checkbox-dash">—</span>
+        </div>
+
+        <!-- Từng danh mục (đa chọn) -->
+        @for (cat of categories; track trackById($index, cat)) {
+        @if (!cat.menuHidden) {
+        <div class="sf-checkbox-row" [class.active]="isCategorySelected(cat.titleUrl)"
+          (click)="onToggleCategory(cat.titleUrl)">
+          <div class="sf-checkbox-left">
+            <span class="sf-custom-checkbox" [class.checked]="isCategorySelected(cat.titleUrl)">
+              @if (isCategorySelected(cat.titleUrl)) {
+              <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round"
+                stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              }
+            </span>
+            <span class="sf-checkbox-label">{{ cat.title }}</span>
+          </div>
+          <span class="sf-checkbox-dash">—</span>
+        </div>
         }
-      </mat-select>
-    </mat-form-field>
+        }
+      </div>
+    </div>
+    }
   </div>
-  <div class="sidebar-header">
-    <h3 class="sidebar-title">{{ 'PriceRange' | translate | async }}</h3>
+
+  <div class="sf-divider"></div>
+
+  <!-- ── 3. Khoảng giá ── -->
+  <div class="sf-section">
+    <button type="button" class="sf-section-header" (click)="showPrice = !showPrice">
+      <span class="sf-section-title">Khoảng giá</span>
+      <svg class="sf-chevron" [class.rotated]="!showPrice" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="18 15 12 9 6 15"></polyline>
+      </svg>
+    </button>
+
+    @if (showPrice) {
+    <div class="sf-section-body">
+      <!-- Input boxes Từ / Đến -->
+      <div class="sf-price-boxes">
+        <div class="sf-price-box">
+          <span class="sf-box-label">TỪ</span>
+          <span class="sf-box-value">{{ localMin | priceFormat }} {{ currency }}</span>
+        </div>
+        <span class="sf-box-dash">—</span>
+        <div class="sf-price-box">
+          <span class="sf-box-label">ĐẾN</span>
+          <span class="sf-box-value">{{ localMax | priceFormat }} {{ currency }}</span>
+        </div>
+      </div>
+
+      <!-- Material Slider matching mockup -->
+      <div class="sf-slider-wrapper">
+        <mat-slider class="sf-mat-slider w-100" [min]="minPrice" [max]="maxPrice" [step]="50000">
+          <input matSliderThumb [value]="localMax" (valueChange)="onMaxPriceChange($event)" />
+        </mat-slider>
+        <div class="sf-slider-labels">
+          <span>{{ minPrice | priceFormat }} {{ currency }}</span>
+          <span>{{ maxPrice | priceFormat }} {{ currency }}</span>
+        </div>
+      </div>
+    </div>
+    }
   </div>
-  <mat-slider aria-label="Range" class="sidebar-range" [max]="maxPrice" [min]="minPrice">
-    <input matSliderThumb [(ngModel)]="price" (change)="onChangePrice(maxPrice < price ? maxPrice : price)" />
-  </mat-slider>
-  {{ 'Price' | translate | async }} {{ 'to' | translate | async }}: {{ price | priceFormat }} {{ currency }}
+
+  <div class="sf-divider"></div>
+
+  <!-- ── 4. Tình trạng hàng ── -->
+  <div class="sf-section">
+    <button type="button" class="sf-section-header" (click)="showStock = !showStock">
+      <span class="sf-section-title">Tình trạng hàng</span>
+      <svg class="sf-chevron" [class.rotated]="!showStock" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="18 15 12 9 6 15"></polyline>
+      </svg>
+    </button>
+
+    @if (showStock) {
+    <div class="sf-section-body">
+      <div class="sf-radio-group">
+        <!-- Tất cả -->
+        <label class="sf-radio-row" (click)="onStockChange('all')">
+          <span class="sf-custom-radio" [class.checked]="stock === 'all'">
+            <span class="sf-radio-dot"></span>
+          </span>
+          <span class="sf-radio-text" [class.active]="stock === 'all'">Tất cả</span>
+        </label>
+
+        <!-- Còn hàng -->
+        <label class="sf-radio-row" (click)="onStockChange('onStock')">
+          <span class="sf-custom-radio" [class.checked]="stock === 'onStock'">
+            <span class="sf-radio-dot"></span>
+          </span>
+          <span class="sf-radio-text" [class.active]="stock === 'onStock'">Còn hàng</span>
+        </label>
+
+        <!-- Hết hàng -->
+        <label class="sf-radio-row" (click)="onStockChange('unavailable')">
+          <span class="sf-custom-radio" [class.checked]="stock === 'unavailable'">
+            <span class="sf-radio-dot"></span>
+          </span>
+          <span class="sf-radio-text" [class.active]="stock === 'unavailable'">Hết hàng</span>
+        </label>
+      </div>
+    </div>
+    }
+  </div>
+
+  <div class="sf-divider"></div>
+
+  <!-- ── 5. Đánh giá sao ── -->
+  <div class="sf-section">
+    <button type="button" class="sf-section-header" (click)="showRating = !showRating">
+      <span class="sf-section-title">Đánh giá sao</span>
+      <svg class="sf-chevron" [class.rotated]="!showRating" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="18 15 12 9 6 15"></polyline>
+      </svg>
+    </button>
+
+    @if (showRating) {
+    <div class="sf-section-body">
+      <div class="sf-rating-list">
+        @for (item of [
+        { stars: 5, filled: 5, empty: 0, label: '5 sao' },
+        { stars: 4, filled: 4, empty: 1, label: '4 sao' },
+        { stars: 3, filled: 3, empty: 2, label: '3 sao' },
+        { stars: 2, filled: 2, empty: 3, label: '2 sao' },
+        { stars: 1, filled: 1, empty: 4, label: '1 sao' }
+        ]; track item.stars) {
+        <div class="sf-rating-row" [class.active]="isRatingSelected(item.stars)" (click)="onToggleRating(item.stars)">
+          <span class="sf-custom-checkbox" [class.checked]="isRatingSelected(item.stars)">
+            @if (isRatingSelected(item.stars)) {
+            <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round"
+              stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            }
+          </span>
+          <div class="sf-stars-group">
+            @for (s of getRatingStars(item.filled); track $index) {
+            <span class="sf-star sf-star--filled">★</span>
+            }
+            @for (s of getRatingStars(item.empty); track $index) {
+            <span class="sf-star sf-star--empty">☆</span>
+            }
+          </div>
+          <span class="sf-rating-text">{{ item.label }}</span>
+        </div>
+        }
+      </div>
+    </div>
+    }
+  </div>
+
+  <!-- ── 6. Nút Áp dụng bộ lọc ── -->
+  <div class="sf-footer">
+    <button type="button" class="sf-apply-btn">
+      Áp dụng bộ lọc
+    </button>
+  </div>
+
 </div>

@@ -45,6 +45,20 @@ storeUser = (payload) => {
   this.selectors.userState.update((state) => ({ ...state, user: payload, loading: false }));
 };
 
+signOut = (callback?: () => void) => {
+  this.storeUser(null);
+  this.selectors.productState.update((state) => ({ ...state, userOrders: null, order: null }));
+  this.selectors.dashboardState.update((state) => ({ ...state, orders: null, order: null, allProducts: [], allCategories: [] }));
+  this.apiService.signOut().subscribe({
+    next: () => {
+      if (callback) callback();
+    },
+    error: () => {
+      if (callback) callback();
+    }
+  });
+};
+
 changeLanguage = (payload) => {
   this.selectors.userState.update((state) => ({ ...state, lang: payload.lang, currency: payload.currency }));
 };
@@ -260,30 +274,75 @@ getOrder = (payload) => {
   });
 }
 
-addProduct = (payload) => {
-  this.selectors.dashboardState.update((state) => ({ ...state, loading: true }));
-  this.apiService.addProduct(payload).subscribe(() => {
-    this.getAllProducts();
-    this.getAllCategories();
-    this.selectors.dashboardState.update((state) => ({ ...state, loading: false }));
+removeOrder = (orderId: string) => {
+  this.apiService.deleteOrder(orderId).subscribe(() => {
+    this.getOrders();
   });
 }
 
-editProduct = (payload) => {
+addProduct = (payload, callback?: (result: any) => void) => {
   this.selectors.dashboardState.update((state) => ({ ...state, loading: true }));
-  this.apiService.editProduct(payload).subscribe(() => {
-    this.getAllProducts();
-    this.getAllCategories();
-    this.selectors.dashboardState.update((state) => ({ ...state, loading: false }));
+  this.apiService.addProduct(payload).subscribe({
+    next: (response: any) => {
+      if (response && !response.error) {
+        this.getAllProducts();
+        this.getAllCategories();
+      }
+      this.selectors.dashboardState.update((state) => ({ ...state, loading: false }));
+      if (callback) {
+        callback(response);
+      }
+    },
+    error: (err: any) => {
+      this.selectors.dashboardState.update((state) => ({ ...state, loading: false }));
+      if (callback) {
+        callback({ error: err });
+      }
+    }
   });
 }
 
-removeProduct = (payload) => {
+editProduct = (payload, callback?: (result: any) => void) => {
   this.selectors.dashboardState.update((state) => ({ ...state, loading: true }));
-  this.apiService.removeProduct(payload).subscribe(() => {
-    this.getAllProducts();
-    this.getAllCategories();
-    this.selectors.dashboardState.update((state) => ({ ...state, loading: false }));
+  this.apiService.editProduct(payload).subscribe({
+    next: (response: any) => {
+      if (response && !response.error) {
+        this.getAllProducts();
+        this.getAllCategories();
+      }
+      this.selectors.dashboardState.update((state) => ({ ...state, loading: false }));
+      if (callback) {
+        callback(response);
+      }
+    },
+    error: (err: any) => {
+      this.selectors.dashboardState.update((state) => ({ ...state, loading: false }));
+      if (callback) {
+        callback({ error: err });
+      }
+    }
+  });
+}
+
+removeProduct = (payload, callback?: (result: any) => void) => {
+  this.selectors.dashboardState.update((state) => ({ ...state, loading: true }));
+  this.apiService.removeProduct(payload).subscribe({
+    next: (response: any) => {
+      if (response && !response.error) {
+        this.getAllProducts();
+        this.getAllCategories();
+      }
+      this.selectors.dashboardState.update((state) => ({ ...state, loading: false }));
+      if (callback) {
+        callback(response);
+      }
+    },
+    error: (err: any) => {
+      this.selectors.dashboardState.update((state) => ({ ...state, loading: false }));
+      if (callback) {
+        callback({ error: err });
+      }
+    }
   });
 }
 
@@ -303,9 +362,24 @@ storeProduct = (payload) => {
   this.selectors.productState.update((state) => ({ ...state, product: payload, loadingProduct: false}));
 }
 
-getAllProducts = () => {
-  this.apiService.getAllProducts().subscribe((response: any) => {
-    this.selectors.dashboardState.update((state) => ({ ...state, allProducts: response }));
+getAllProducts = (callback?: (err?: any) => void) => {
+  this.selectors.dashboardState.update((state) => ({ ...state, loading: true }));
+  this.apiService.getAllProducts().subscribe({
+    next: (response: any) => {
+      if (response && !response.error && Array.isArray(response)) {
+        this.selectors.dashboardState.update((state) => ({ ...state, allProducts: response, loading: false }));
+        if (callback) callback(null);
+      } else {
+        console.error('Lỗi khi tải danh sách sản phẩm:', response?.error || response);
+        this.selectors.dashboardState.update((state) => ({ ...state, loading: false }));
+        if (callback) callback(response?.error || 'Lỗi khi tải danh sách sản phẩm');
+      }
+    },
+    error: (err) => {
+      console.error('Lỗi kết nối khi tải danh sách sản phẩm:', err);
+      this.selectors.dashboardState.update((state) => ({ ...state, loading: false }));
+      if (callback) callback(err);
+    }
   });
 }
 
@@ -340,24 +414,49 @@ getImages = () => {
   });
 }
 
-addProductImagesUrl = (payload) => {
-  this.apiService.addProductImagesUrl(payload).subscribe((response: any) => {
-    if (response.error) {
-      return;
+addProductImagesUrl = (payload, callback?: (result: any) => void) => {
+  this.apiService.addProductImagesUrl(payload).subscribe({
+    next: (response: any) => {
+      if (response && !response.error) {
+        if (response.titleUrl) {
+          this.selectors.productState.update((state) => ({ ...state, product: response }));
+        }
+        if (response.all) {
+          this.selectors.dashboardState.update((state) => ({ ...state, productImages: response.all }));
+        }
+      }
+      if (callback) {
+        callback(response);
+      }
+    },
+    error: (err: any) => {
+      if (callback) {
+        callback({ error: err });
+      }
     }
-    if (response && response.titleUrl) {
-      this.selectors.productState.update((state) => ({ ...state, product: response }));
-    }
-    this.selectors.dashboardState.update((state) => ({ ...state, productImages: response.all }));
   });
 }
 
-removeImage = (payload) => {
-  this.apiService.removeImage(payload).subscribe((response: any) => {
-    if (response && response.titleUrl) {
-      this.selectors.productState.update((state) => ({ ...state, product: response }));
+removeImage = (payload, callback?: (result: any) => void) => {
+  this.apiService.removeImage(payload).subscribe({
+    next: (response: any) => {
+      if (response && !response.error) {
+        if (response.titleUrl) {
+          this.selectors.productState.update((state) => ({ ...state, product: response }));
+        }
+        if (response.all) {
+          this.selectors.dashboardState.update((state) => ({ ...state, productImages: response.all }));
+        }
+      }
+      if (callback) {
+        callback(response);
+      }
+    },
+    error: (err: any) => {
+      if (callback) {
+        callback({ error: err });
+      }
     }
-    this.selectors.dashboardState.update((state) => ({ ...state, productImages: response.all }));
   });
 }
 
@@ -368,6 +467,7 @@ storeProductImages = (payload) => {
 updateOrder = (payload) => {
   this.apiService.updateOrder(payload).subscribe((response: any) => {
     this.selectors.dashboardState.update((state) => ({ ...state, order: response }));
+    this.getOrders();
   });
 }
 

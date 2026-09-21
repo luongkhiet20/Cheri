@@ -297,3 +297,9 @@
     display: none;
   }
 }
+
+:host #user_icon,
+:host ::ng-deep #user_icon {
+  color: #74070E !important;
+}
+

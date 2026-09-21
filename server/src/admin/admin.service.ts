@@ -52,8 +52,28 @@ export class AdminService {
   ): Promise<Images | Product> {
     const { titleUrl } = addImageDto;
     const existImages = await new Images(images || { all: [] });
-    const uploadedImage = await this.uploadToCloudinary(file);
-    const image = uploadedImage.secure_url;
+
+    let image: string;
+    try {
+      const isCloudinaryConfigured =
+        process.env.CLOUDINARY_NAME &&
+        process.env.CLOUDINARY_KEY &&
+        process.env.CLOUDINARY_SECRET &&
+        !process.env.CLOUDINARY_KEY.includes('dummy') &&
+        !process.env.CLOUDINARY_KEY.includes('placeholder');
+
+      if (isCloudinaryConfigured) {
+        const uploadedImage = await this.uploadToCloudinary(file);
+        image = uploadedImage.secure_url;
+      } else {
+        const b64 = file.buffer.toString('base64');
+        image = `data:${file.mimetype};base64,${b64}`;
+      }
+    } catch (cldErr) {
+      console.warn('Cloudinary upload failed, fallback to base64:', cldErr?.message || cldErr);
+      const b64 = file.buffer.toString('base64');
+      image = `data:${file.mimetype};base64,${b64}`;
+    }
 
     const product = titleUrl
       ? await this.productModel.findOneAndUpdate(

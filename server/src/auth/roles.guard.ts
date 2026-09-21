@@ -7,7 +7,7 @@ import {
 
 @Injectable()
 export class RolesGuard implements CanActivate {
-  private roles = ['admin'];
+  private roles = ['admin', 'super-admin'];
   constructor() {}
 
   canActivate(context: ExecutionContext): boolean {

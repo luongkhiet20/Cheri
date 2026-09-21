@@ -124,7 +124,13 @@
   </button>
   }
 
-  @if (user$()) {
+  @if (isRegularUser()) {
+  <button mat-menu-item [routerLink]="['/' + (lang$ | async) + '/profile']" routerLinkActive="nav-active-link" title="Hồ sơ cá nhân">
+    <mat-icon id="user_icon">person</mat-icon>
+  </button>
+  }
+
+  @if (isAdmin()) {
   <button mat-menu-item (click)="onLogout()">
     <mat-icon>exit_to_app</mat-icon>
     <a class="nav-link"> {{ 'Logout' | translate | async }}</a>

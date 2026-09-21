@@ -4,6 +4,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
 import {
+  BadRequestException,
   ConflictException,
   InternalServerErrorException,
 } from '@nestjs/common';
@@ -21,12 +22,36 @@ export class AuthService {
   ) {}
 
   async signUp(authCredentialsDto: AuthCredentialDto): Promise<void> {
-    const { email, password } = authCredentialsDto;
-    const userExist = await this.userModel.findOne({ email });
+    const { email, password, name, fullName, phoneNumber, address, gender, dateOfBirth, avatar } = authCredentialsDto;
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const cleanPhone = (phoneNumber || '').replace(/\D/g, '');
+
+    if (!cleanPhone || cleanPhone.length !== 10) {
+      throw new BadRequestException('Số điện thoại bắt buộc đủ 10 số');
+    }
+
+    if (!cleanEmail || !/^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(cleanEmail)) {
+      throw new BadRequestException('Email phải đúng định dạng @gmail.com mới được đăng ký');
+    }
+
+    const userExist = await this.userModel.findOne({ email: cleanEmail });
     if (userExist) {
       throw new ConflictException('Username already exist');
     }
-    const user = new this.userModel(authCredentialsDto);
+    const resolvedName = fullName || name || cleanEmail.split('@')[0];
+    const user = new this.userModel({
+      ...authCredentialsDto,
+      email: cleanEmail,
+      phoneNumber: cleanPhone,
+      name: resolvedName,
+      fullName: resolvedName,
+      address: address || '',
+      gender: gender || '',
+      dateOfBirth: dateOfBirth || '',
+      avatar: avatar || '',
+      roles: ['user'],
+      status: true,
+    });
     user.salt = await bcrypt.genSalt();
     user.password = await this.hashPassword(password, user.salt);
 
@@ -108,4 +133,87 @@ export class AuthService {
     const hash = await bcrypt.hash(password, user.salt);
     return hash === user.password;
   }
+
+  async getAllUsers(): Promise<any[]> {
+    return this.userModel.find({}).sort({ createdAt: -1, dateAdded: -1 }).exec();
+  }
+
+  async createUser(userData: any): Promise<any> {
+    const {
+      email,
+      password,
+      name,
+      fullName,
+      phoneNumber,
+      address,
+      gender,
+      dateOfBirth,
+      avatar,
+      roles,
+      status,
+      description,
+      images,
+      cart,
+    } = userData;
+    const existing = await this.userModel.findOne({ email });
+    if (existing) {
+      throw new ConflictException('Email đã tồn tại trong hệ thống');
+    }
+    const resolvedName = fullName || name || email.split('@')[0];
+    const user = new this.userModel({
+      email,
+      name: resolvedName,
+      fullName: resolvedName,
+      phoneNumber: phoneNumber || '',
+      address: address || '',
+      gender: gender || '',
+      dateOfBirth: dateOfBirth || '',
+      avatar: avatar || '',
+      roles: roles && roles.length ? roles : ['admin'],
+      status: status !== undefined ? status : true,
+      description: description || '',
+      images: images || [],
+      cart: cart || { items: [] },
+    });
+    if (password) {
+      user.salt = await bcrypt.genSalt();
+      user.password = await this.hashPassword(password, user.salt);
+    }
+    await user.save();
+    return user.toObject();
+  }
+
+  async updateUser(id: string, updateData: any): Promise<any> {
+    const dataToUpdate = { ...updateData };
+    if (dataToUpdate.email) {
+      const existing = await this.userModel.findOne({
+        email: dataToUpdate.email,
+        _id: { $ne: id },
+      });
+      if (existing) {
+        throw new ConflictException('Email đã tồn tại trong hệ thống');
+      }
+    }
+    if (dataToUpdate.fullName && !dataToUpdate.name) {
+      dataToUpdate.name = dataToUpdate.fullName;
+    } else if (dataToUpdate.name && !dataToUpdate.fullName) {
+      dataToUpdate.fullName = dataToUpdate.name;
+    }
+    if (dataToUpdate.password && dataToUpdate.password.trim()) {
+      const salt = await bcrypt.genSalt();
+      dataToUpdate.password = await this.hashPassword(dataToUpdate.password, salt);
+      dataToUpdate.salt = salt;
+    } else {
+      delete dataToUpdate.password;
+      delete dataToUpdate.salt;
+    }
+    return this.userModel
+      .findByIdAndUpdate(id, { $set: dataToUpdate }, { new: true })
+      .exec();
+  }
+
+  async deleteUser(id: string): Promise<any> {
+    return this.userModel.findByIdAndDelete(id).exec();
+  }
 }
+

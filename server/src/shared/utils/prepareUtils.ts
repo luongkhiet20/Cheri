@@ -16,6 +16,7 @@ export const prepareProduct = (
     mainImage: p.mainImage,
     images: p.images || [],
     tags: p.tags || [],
+    rating: p.rating !== undefined ? p.rating : 5,
     _user: p._user,
     dateAdded: p.dateAdded,
     ...langData,

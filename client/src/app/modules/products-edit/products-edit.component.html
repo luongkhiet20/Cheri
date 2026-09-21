@@ -5,22 +5,17 @@
 ══════════════════════════════════════════════════ -->
 @if (action === 'add') {
 <div class="csv-import-section">
-  <h3 class="product_edit-subtitle csv-subtitle">
-    Nhập sản phẩm từ CSV (Google Sheets)
-  </h3>
+  <h2 class="section-title" style="margin-bottom: 16px;">
+    Nhập sản phẩm từ CSV
+  </h2>
+
 
   <div class="csv-upload-area">
     <div class="csv-upload-box" (click)="csvFileInput.click()">
       <div class="csv-upload-content">
-        <svg class="csv-upload-svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          stroke-width="1.75" style="margin-bottom: 8px; color: #64748b;">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-          <polyline points="17 8 12 3 7 8"></polyline>
-          <line x1="12" y1="3" x2="12" y2="15"></line>
-        </svg>
         @if (!csvFileName) {
         <span class="csv-upload-text">Nhấp để chọn file CSV hoặc kéo thả vào đây</span>
-        <span class="csv-upload-hint">Hỗ trợ file .csv xuất từ Google Sheets / Wix</span>
+        <span class="csv-upload-hint">Chỉ hỗ trợ file .csv </span>
         } @else {
         <span class="csv-upload-text csv-file-selected">{{ csvFileName }}</span>
         <span class="csv-upload-hint">{{ csvProducts.length }} sản phẩm được phát hiện</span>
@@ -49,22 +44,21 @@
     <div class="csv-preview-header">
       <span class="csv-preview-title">Xem trước dữ liệu CSV ({{ csvProducts.length }} sản phẩm)</span>
       <div class="csv-preview-actions">
-        <button mat-raised-button color="primary" (click)="importAllCsvProducts()" [disabled]="csvImporting"
-          class="csv-import-all-btn">
+        <button type="button" class="primary" (click)="importAllCsvProducts()" [disabled]="csvImporting">
           @if (csvImporting) {
-          <span>Đang nhập...</span>
+          <span>Đang nhập {{ csvProducts.length }} sản phẩm...</span>
           } @else {
           <span>Nhập tất cả ({{ csvProducts.length }})</span>
           }
         </button>
-        <button mat-stroked-button (click)="clearCsvPreview()" class="csv-clear-btn">
+        <button type="button" class="secondary" (click)="clearCsvPreview()" [disabled]="csvImporting">
           Xóa
         </button>
       </div>
     </div>
 
-    <div class="csv-table-wrap">
-      <table class="csv-preview-table">
+    <div class="variant-wrap">
+      <table>
         <thead>
           <tr>
             <th>#</th>
@@ -98,31 +92,21 @@
             <td>{{ cp[chooseLang]?.quantity || 0 }}</td>
             <td>
               @if (cp[chooseLang]?.sizes?.length) {
-              <span class="csv-sizes-badge">{{ cp[chooseLang].sizes.join(', ') }}</span>
+              <span class="chip">{{ cp[chooseLang].sizes.join(', ') }}</span>
               } @else {
               <span>—</span>
               }
             </td>
             <td>{{ cp._mediaCount || 0 }}</td>
             <td>
-              <button
-                type="button"
-                class="csv-status-toggle"
-                [class.active]="isCsvVisible(cp)"
-                (click)="toggleCsvVisibility(cp)"
-                [title]="isCsvVisible(cp) ? 'Đang bật hiển thị trên trang products - Nhấp để tắt' : 'Đang ẩn trên trang products - Nhấp để bật'"
-              >
-                <span class="toggle-dot"></span>
-                <span>{{ isCsvVisible(cp) ? 'Hiện' : 'Tắt' }}</span>
+              <button type="button" class="secondary" style="padding: 4px 10px; font-size: 12px;"
+                (click)="toggleCsvVisibility(cp)">
+                {{ isCsvVisible(cp) ? 'Hiện' : 'Tắt' }}
               </button>
             </td>
             <td>
-              <button
-                type="button"
-                class="csv-edit-btn"
-                (click)="applyCsvToForm(cp)"
-                title="Đưa sản phẩm vào form để chỉnh sửa"
-              >
+              <button type="button" class="primary" style="padding: 4px 10px; font-size: 12px;"
+                (click)="applyCsvToForm(cp)" title="Đưa sản phẩm vào form để chỉnh sửa">
                 Chỉnh sửa ↓
               </button>
             </td>
@@ -135,8 +119,8 @@
   }
 
   @if (csvProducts.length > 0) {
-  <div class="csv-divider">
-    <span>hoặc nhập thủ công bên dưới</span>
+  <div class="csv-divider" style="margin: 24px 0; text-align: center; color: var(--muted); font-size: 13px;">
+    <span>── hoặc nhập thủ công bên dưới ──</span>
   </div>
   }
 </div>
@@ -145,87 +129,82 @@
 <!-- ══════════════════════════════════════════════════
      FORM CHÍNH
 ══════════════════════════════════════════════════ -->
-<form class="product_edit-form" [formGroup]="productEditForm" novalidate>
+<form class="product_edit-form form-card" [formGroup]="productEditForm" novalidate>
+
+  <!-- Chọn sản phẩm (chỉ hiện khi Edit) -->
   @if (action === 'edit') {
-  <div class="product_edit-full-input product_edit-select-bar">
-    <mat-form-field class="product_edit-field" appearance="outline">
-      <mat-label>Chọn sản phẩm cần chỉnh sửa</mat-label>
-      <input matInput [formControl]="searchProductCtrl" placeholder="Nhấp để xem danh sách hoặc gõ tên sản phẩm..."
+  <div class="section" style="padding-bottom: 24px; margin-bottom: 24px;">
+    <div class="field">
+      <label class="field-label">Chọn sản phẩm cần chỉnh sửa</label>
+      <input [formControl]="searchProductCtrl" placeholder="Nhấp để xem danh sách hoặc gõ tên sản phẩm..."
         [matAutocomplete]="autoProduct" (focus)="searchProductCtrl.setValue('')" />
       <mat-autocomplete #autoProduct="matAutocomplete" (optionSelected)="onSelectProduct($event.option.value)">
         @for (product of (filteredProducts$ | async); track product.titleUrl) {
         <mat-option [value]="product.titleUrl" class="product-select-option">
-          <div class="product-select-option-item">
+          <div class="product-select-option-item" style="display: flex; align-items: center; gap: 10px;">
             @if (product.mainImage?.url) {
-            <img [src]="product.mainImage.url" class="select-option-thumb" width="28" height="28"
-              style="width: 28px !important; height: 28px !important; min-width: 28px !important; max-width: 28px !important; min-height: 28px !important; max-height: 28px !important; object-fit: cover !important; border-radius: 4px !important; flex-shrink: 0 !important; display: inline-block !important;"
-              alt="" />
+            <img [src]="product.mainImage.url" width="28" height="28"
+              style="width: 28px; height: 28px; object-fit: cover; border-radius: 4px;" alt="" />
             }
-            <span class="select-option-title">{{ product.title || product['vi']?.title || product.titleUrl }}</span>
-            <span class="select-option-code">({{ product.titleUrl }})</span>
+            <span style="font-weight: 600;">{{ product.title || product['vi']?.title || product.titleUrl }}</span>
+            <span style="color: var(--muted); font-size: 12px;">({{ product.titleUrl }})</span>
           </div>
         </mat-option>
         }
       </mat-autocomplete>
-    </mat-form-field>
+    </div>
   </div>
   }
+
   @if ((action === 'add') || (action === 'edit' && !!(product$ | async))) {
 
-  <h3 class="product_edit-subtitle">Nội dung sản phẩm</h3>
-  <div [formGroupName]="chooseLang">
+  <!-- ╔══════════════════════════════════════════
+       SECTION 1 — Thông tin cơ bản
+       ══════════════════════════════════════════╝ -->
+  <section class="section">
+    <h2 class="section-title" style="color:#d41b27;">
+      Hoặc
+    </h2>
 
-    <!-- 1. Handle / Mã sản phẩm (titleUrl) -->
-    <div class="product_edit-full-input">
-      <mat-form-field class="product_edit-field-title">
-        <mat-label>Mã sản phẩm (Handle / titleUrl)</mat-label>
-        <input matInput [formControl]="$any(productEditForm.get('titleUrl'))" type="text" name="titleUrl"
-          placeholder="VD: adidas-ultraboost" (input)="onTitleUrlInput()" (change)="formatTitleUrl($event)" />
-      </mat-form-field>
-    </div>
+    <h2 class="section-title">
+      Nhập thông tin cơ bản
+    </h2>
 
-    <!-- 2. Tên sản phẩm & Hiển thị (visible) -->
-    <div class="product_edit-full-input product_edit-title-cat-row">
-      <mat-form-field class="product_edit-field-title">
-        <mat-label>Tên sản phẩm (name)</mat-label>
-        <input matInput formControlName="title" type="text" name="title" placeholder="VD: Đầm Dạ Hội Ren Đỏ"
-          (input)="onTitleInput($event, chooseLang)" />
-        @if (productEditForm.get([chooseLang, 'title'])?.hasError('required')) {
-        <mat-error>Tên sản phẩm là bắt buộc</mat-error>
-        }
-      </mat-form-field>
+    <div [formGroupName]="chooseLang">
+      <div class="grid-2">
+        <!-- Mã sản phẩm -->
+        <div class="field">
+          <label class="field-label">Mã sản phẩm (SKU / Handle) <span class="required">*</span></label>
+          <input [formControl]="$any(productEditForm.get('titleUrl'))" type="text" name="titleUrl" id="titleUrl"
+            placeholder="Nhập mã sản phẩm (SKU)" (input)="onTitleUrlInput()" (change)="formatTitleUrl($event)" />
+          <span class="helper">Ví dụ: CHERI-DRESS-001, dam-da-hoi-ren-do</span>
+        </div>
 
-      <div class="product_edit-visibility-inline">
-        <div class="check-title">Hiển thị trên website (visible)</div>
-        <div class="visibility-switch-row">
-          <label class="toggle-switch" [class.is-active]="productEditForm.get([chooseLang, 'visibility'])?.value" title="Hiện khi màu xanh, Tắt khi màu đỏ">
-            <input type="checkbox" formControlName="visibility" id="visible-switch" />
-            <span class="toggle-knob"></span>
-          </label>
-          <span class="visibility-label-status" [class.is-visible]="productEditForm.get([chooseLang, 'visibility'])?.value">
-            {{ productEditForm.get([chooseLang, 'visibility'])?.value ? 'Hiện' : 'Tắt' }}
-          </span>
+        <!-- Tên sản phẩm -->
+        <div class="field">
+          <label class="field-label">Tên sản phẩm <span class="required">*</span></label>
+          <input formControlName="title" type="text" name="title" id="title" placeholder="Nhập tên sản phẩm"
+            (input)="onTitleInput($event, chooseLang)" />
+          @if (productEditForm.get([chooseLang, 'title'])?.hasError('required') && productEditForm.get([chooseLang,
+          'title'])?.touched) {
+          <span class="helper" style="color: var(--danger)">Tên sản phẩm là bắt buộc</span>
+          }
         </div>
       </div>
-    </div>
 
-    <!-- 3. Mô tả ngắn (plainDescription) -->
-    <div class="product_edit-full-input">
-      <mat-form-field class="product_edit-field">
-        <mat-label>
-          Mô tả ngắn (plainDescription)
-        </mat-label>
-        <textarea matInput formControlName="description" name="description"> </textarea>
-      </mat-form-field>
-    </div>
+      <!-- Mô tả ngắn -->
+      <div class="field" style="margin-top: 20px;">
+        <label class="field-label">Mô tả ngắn</label>
+        <textarea formControlName="description" name="description" id="description" rows="3"
+          placeholder="Nhập mô tả tóm tắt của sản phẩm..."></textarea>
+      </div>
 
-    <!-- 4. Danh mục (categorySlugs / tags) -->
-    <div class="product_edit-full-input product_edit-title-cat-row">
-      <div class="product_edit-category-input-group" style="flex: 1;">
-        <mat-form-field class="product_edit-field-cat">
-          <mat-label>Danh mục (categorySlugs)</mat-label>
-          <input matInput [(ngModel)]="tag" [ngModelOptions]="{ standalone: true }" name="tag"
-            [matAutocomplete]="autoTags" />
+      <!-- Danh mục / Tags -->
+      <div class="field" style="margin-top: 20px;">
+        <label class="field-label">Danh mục</label>
+        <div class="inline">
+          <input [(ngModel)]="tag" [ngModelOptions]="{ standalone: true }" name="tag" id="tag"
+            placeholder="Nhập hoặc chọn thẻ danh mục..." [matAutocomplete]="autoTags" />
           <mat-autocomplete #autoTags="matAutocomplete">
             @for (category of (categories$ | async); track category) {
             <mat-option [value]="category.titleUrl">
@@ -233,357 +212,557 @@
             </mat-option>
             }
           </mat-autocomplete>
-        </mat-form-field>
-        <button mat-raised-button color="primary" class="edit-find-button" (click)="addTag()">Thêm thẻ</button>
-      </div>
-    </div>
-
-    @if ((productEditForm.get('tags').value); as allTags) {
-    <div class="product_edit-tags-container">
-      <mat-chip-listbox class="product-tags">
-        @if (allTags && allTags.length) { @for (tag of allTags; track tag) {
-        <mat-chip-option class="clickable" (click)="removeTag(tag)">
-          @if (tag) {
-          <span>{{ tag }} x</span>
-          }
-        </mat-chip-option>
-        } }
-      </mat-chip-listbox>
-    </div>
-    }
-
-    <!-- 5. Giá gốc (price) & Giá khuyến mãi (salePrice) -->
-    <div class="product_edit-full-input product_edit-prices-row">
-      <mat-form-field class="product_edit-field-small">
-        <mat-label>Giá gốc / price (đ)</mat-label>
-        <input matInput formControlName="regularPrice" type="number" name="regularPrice" placeholder="VD: 500000" />
-        @if (productEditForm.get([chooseLang, 'regularPrice'])?.hasError('required')) {
-        <mat-error>Giá gốc là bắt buộc</mat-error>
-        }
-      </mat-form-field>
-
-      <mat-form-field class="product_edit-field-small">
-        <mat-label>Giá khuyến mãi / salePrice (đ)</mat-label>
-        <input matInput formControlName="salePrice" type="number" name="salePrice" placeholder="VD: 350000" />
-        @if (productEditForm.get([chooseLang, 'salePrice'])?.hasError('priceInvalid')) {
-        <mat-error>Giá khuyến mãi phải nhỏ hơn giá gốc</mat-error>
-        }
-      </mat-form-field>
-    </div>
-
-    <!-- 6. Số lượng tồn kho (quantity/inventory) & Tình trạng kho (stock) -->
-    <div class="product_edit-full-input product_edit-stock-row">
-      <mat-form-field class="product_edit-field-small product_edit-quantity-field">
-        <mat-label>Số lượng tồn kho (quantity)</mat-label>
-        <input matInput formControlName="quantity" type="number" name="quantity" placeholder="VD: 10" />
-      </mat-form-field>
-
-      <div class="product_edit-stock-options">
-        <div class="check-title">Tình trạng kho hàng (stock)</div>
-        <mat-radio-group aria-label="onStock" formControlName="stock">
-          <mat-radio-button value="onStock" name="stock" id="onStock">
-            Còn hàng
-          </mat-radio-button>
-          <mat-radio-button value="onWaitings" name="stock" id="onWaitings">
-            Hàng sắp về
-          </mat-radio-button>
-          <mat-radio-button value="unavailable" name="stock" id="unavailable">
-            Hết hàng
-          </mat-radio-button>
-        </mat-radio-group>
-      </div>
-
-      @if (productEditForm.get([chooseLang, 'stock'])?.value === 'onWaitings') {
-      <mat-form-field class="product_edit-field-small product_edit-date-field">
-        <mat-label>Ngày dự kiến hàng về</mat-label>
-        <input matInput type="date" formControlName="stockDate" name="stockDate" />
-      </mat-form-field>
-      }
-    </div>
-
-    <!-- ══════════════════════════════════════════════════
-         7. THUỘC TÍNH ĐỘNG: QUẦN ÁO & PHỤ KIỆN
-    ══════════════════════════════════════════════════ -->
-    <div class="product_edit-dynamic-section">
-      <!-- Bộ chọn loại sản phẩm & Công tắc thuộc tính -->
-      <div class="product_edit-type-bar">
-        <div class="product_edit-type-header">
-          <span class="check-title">Loại sản phẩm (fieldType):</span>
-          <div class="product_edit-type-chips">
-            <button type="button" mat-stroked-button class="type-btn"
-              [class.active-type]="productEditForm.get([chooseLang, 'productType'])?.value === 'clothing'"
-              (click)="onProductTypeChange('clothing', chooseLang)">
-              Quần áo &amp; Thời trang
-            </button>
-            <button type="button" mat-stroked-button class="type-btn"
-              [class.active-type]="productEditForm.get([chooseLang, 'productType'])?.value === 'accessories'"
-              (click)="onProductTypeChange('accessories', chooseLang)">
-              Phụ kiện &amp; Trang sức
-            </button>
-            <button type="button" mat-stroked-button class="type-btn"
-              [class.active-type]="productEditForm.get([chooseLang, 'productType'])?.value === 'other'"
-              (click)="onProductTypeChange('other', chooseLang)">
-              Tùy chỉnh khác
-            </button>
-          </div>
+          <button type="button" class="secondary" (click)="addTag()">Thêm thẻ</button>
         </div>
 
-        <div class="product_edit-toggles-row">
-          <mat-checkbox formControlName="hasColors" color="primary">
-            Thuộc tính Màu sắc
-          </mat-checkbox>
-          <mat-checkbox formControlName="hasSizes" color="primary">
-            Thuộc tính Kích cỡ (Size)
-          </mat-checkbox>
-          <mat-checkbox formControlName="hasClassification" color="primary">
-            Phân loại nhiều cấp
-          </mat-checkbox>
-        </div>
-      </div>
-
-      <!-- TRƯỜNG 1: MÀU SẮC (Hiển thị trực quan khi hasColors === true) -->
-      @if (productEditForm.get([chooseLang, 'hasColors'])?.value) {
-      <div class="product_edit-dynamic-card">
-        <div class="dynamic-card-title">
-          <span>Bảng màu sắc sản phẩm</span>
-          <small>Chọn các màu áp dụng cho sản phẩm hoặc tùy chỉnh mã màu</small>
-        </div>
-
-        <!-- Bảng màu sẵn có -->
-        <div class="color-palette-grid">
-          @for (c of presetColors; track c.hex) {
-          <div class="color-swatch-item" [class.selected]="isColorSelected(c, chooseLang)"
-            (click)="toggleColor(c, chooseLang)" [title]="c.name">
-            <span class="color-swatch-circle" [style.backgroundColor]="c.hex">
-              @if (isColorSelected(c, chooseLang)) {
-              <span class="check-icon">✓</span>
-              }
-            </span>
-            <span class="color-swatch-name">{{ c.name }}</span>
-          </div>
-          }
-        </div>
-
-        <!-- Thêm màu tùy chỉnh -->
-        <div class="custom-color-row">
-          <label class="custom-color-picker" title="Chọn mã màu">
-            <input type="color" [(ngModel)]="customColorHex" [ngModelOptions]="{ standalone: true }" />
-            <span>Mã màu</span>
-          </label>
-          <mat-form-field class="product_edit-field-small">
-            <mat-label>Tên màu tùy chỉnh (VD: Đỏ Cherry, Xanh Bạc Hà)</mat-label>
-            <input matInput [(ngModel)]="customColorName" [ngModelOptions]="{ standalone: true }"
-              placeholder="VD: Đỏ Cherry" />
-          </mat-form-field>
-          <button type="button" mat-raised-button color="primary" class="add-attr-btn"
-            (click)="addCustomColor(chooseLang)">
-            + Thêm màu
-          </button>
-        </div>
-
-        <!-- Danh sách màu đã chọn -->
-        @if (productEditForm.get([chooseLang, 'colors'])?.value?.length) {
-        <div class="selected-colors-list">
-          <span class="selected-label">Màu đã chọn:</span>
-          @for (sc of productEditForm.get([chooseLang, 'colors'])?.value; track $index) {
-          <div class="selected-color-pill">
-            <span class="pill-swatch" [style.backgroundColor]="sc.hex"></span>
-            <span class="pill-name">{{ sc.name }}</span>
-            <span class="pill-remove" (click)="removeColor($index, chooseLang)">✕</span>
-          </div>
-          }
-        </div>
-        }
-      </div>
-      }
-
-      <!-- TRƯỜNG 2: KÍCH CỠ (Hiển thị khi hasSizes === true) -->
-      @if (productEditForm.get([chooseLang, 'hasSizes'])?.value) {
-      <div class="product_edit-dynamic-card">
-        <div class="dynamic-card-title">
-          <span>Kích cỡ sản phẩm (Size)</span>
-          <small>Chọn các size áp dụng (XS, S, M, L, XL, XXL) hoặc nhập size riêng</small>
-        </div>
-
-        <!-- Nút chọn Size tiêu chuẩn -->
-        <div class="sizes-toggle-group">
-          @for (s of standardSizes; track s) {
-          <button type="button" class="size-btn" [class.active]="isSizeSelected(s, chooseLang)"
-            (click)="toggleSize(s, chooseLang)">
-            {{ s }}
-          </button>
-          }
-        </div>
-
-        <!-- Thêm size tùy chỉnh -->
-        <div class="custom-size-row">
-          <mat-form-field class="product_edit-field-small">
-            <mat-label>Size khác (VD: Freesize, 36, 38, Onesize...)</mat-label>
-            <input matInput [(ngModel)]="customSize" [ngModelOptions]="{ standalone: true }"
-              placeholder="VD: Freesize" />
-          </mat-form-field>
-          <button type="button" mat-raised-button color="primary" class="add-attr-btn"
-            (click)="addCustomSize(chooseLang)">
-            + Thêm size
-          </button>
-        </div>
-
-        <!-- Danh sách size đã chọn -->
-        @if (productEditForm.get([chooseLang, 'sizes'])?.value?.length) {
-        <div class="selected-sizes-list">
-          <span class="selected-label">Size đã chọn:</span>
-          @for (sz of productEditForm.get([chooseLang, 'sizes'])?.value; track sz) {
-          <span class="selected-size-chip" (click)="removeSize(sz, chooseLang)">
-            {{ sz }} ✕
+        @if (productEditForm.get('tags')?.value; as allTags) {
+        @if (allTags && allTags.length) {
+        <div class="chips" style="margin-top: 12px;">
+          @for (t of allTags; track t) {
+          <span class="chip">
+            {{ t }}
+            <button type="button" class="chip-remove" (click)="removeTag(t)">×</button>
           </span>
           }
         </div>
         }
+        }
       </div>
-      }
+    </div>
+  </section>
 
-      <!-- TRƯỜNG 3: PHÂN LOẠI NHIỀU CẤP (Hiển thị khi hasClassification === true) -->
-      @if (productEditForm.get([chooseLang, 'hasClassification'])?.value) {
-      <div class="product_edit-dynamic-card">
-        <div class="dynamic-card-title">
-          <span>Phân loại sản phẩm nhiều cấp</span>
-          <small>Chọn phân loại Cấp 1 (Nhóm chính) và Cấp 2 (Chi tiết kiểu dáng)</small>
-        </div>
+  <!-- ╔══════════════════════════════════════════
+       SECTION 2 — Hình ảnh sản phẩm (MEDIA)
+       ══════════════════════════════════════════╝ -->
+  <section class="section">
+    <h2 class="section-title">
+      Hình ảnh sản phẩm
+    </h2>
 
-        <div class="hierarchy-dropdown-row">
-          <!-- Cấp 1 -->
-          <mat-form-field class="product_edit-field-small">
-            <mat-label>Phân loại Cấp 1 (Nhóm chính)</mat-label>
-            <mat-select formControlName="categoryLevel1" (selectionChange)="onLevel1Change($event.value, chooseLang)">
-              @for (l1 of getLevel1Categories(); track l1) {
-              <mat-option [value]="l1">{{ l1 }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-
-          <!-- Cấp 2 -->
-          @if (productEditForm.get([chooseLang, 'categoryLevel1'])?.value) {
-          <mat-form-field class="product_edit-field-small">
-            <mat-label>Phân loại Cấp 2 (Chi tiết)</mat-label>
-            <mat-select formControlName="categoryLevel2">
-              @for (l2 of getLevel2Categories(productEditForm.get([chooseLang, 'categoryLevel1'])?.value); track l2) {
-              <mat-option [value]="l2">{{ l2 }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-          }
-        </div>
-      </div>
-      }
+    <!-- Mode Selector Tabs -->
+    <div class="media-tabs" style="display: flex; gap: 10px; margin-bottom: 16px;">
+      <button type="button" [class.primary]="imageUploadMode === 'upload'"
+        [class.secondary]="imageUploadMode !== 'upload'" (click)="imageUploadMode = 'upload'">
+        Tải ảnh từ máy
+      </button>
+      <button type="button" [class.primary]="imageUploadMode === 'url'" [class.secondary]="imageUploadMode !== 'url'"
+        (click)="imageUploadMode = 'url'">
+        Thêm từ URL
+      </button>
     </div>
 
-    <!-- 8. Hình thức vận chuyển (đa lựa chọn, căn cùng hàng ngang) -->
-    <div class="product_edit-full-input product_edit-shipping-container">
-      <div class="check-title full-width">Hình thức vận chuyển</div>
-      <div class="product_edit-shipping-row">
-        <!-- Vận chuyển Tiêu chuẩn -->
-        <div class="product_edit-shipping-col">
-          <mat-checkbox formControlName="shippingBasic" color="primary">
-            Tiêu chuẩn
-          </mat-checkbox>
-          @if (productEditForm.get([chooseLang, 'shippingBasic'])?.value) {
-          <mat-form-field class="product_edit-shipping-price-input">
-            <mat-label>Phí VC Tiêu chuẩn (đ)</mat-label>
-            <input matInput type="number" formControlName="shippingBasicCost" name="shippingBasicCost"
-              placeholder="VD: 30000" />
-          </mat-form-field>
+    <!-- Upload Panel -->
+    <div id="uploadPanel" class="upload-box" *ngIf="imageUploadMode === 'upload'" [class.uploading]="isUploadingImage">
+      <input class="file-field input-field" type="file" id="file-upload"
+        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" (change)="onFileChanged($event)" hidden
+        #fileUploadRef [disabled]="isUploadingImage" />
+      <button class="primary" type="button" (click)="fileUploadRef.click()" [disabled]="isUploadingImage">
+        {{ isUploadingImage ? 'Đang tải lên...' : 'Chọn ảnh từ thiết bị' }}
+      </button>
+      <div id="fileName" class="helper" style="margin-top: 12px;">Hỗ trợ JPG, PNG, WEBP</div>
+    </div>
+
+    <!-- URL Panel -->
+    <div id="urlPanel" *ngIf="imageUploadMode === 'url'">
+      <div class="field">
+        <label class="field-label" for="imageUrl">URL hình ảnh</label>
+        <div style="display: flex; gap: 8px;">
+          <input formControlName="imageUrl" name="imageUrl" id="imageUrl" type="url"
+            placeholder="https://example.com/image.jpg"
+            (keydown.enter)="$event.preventDefault(); addImageUrl()"
+            style="flex: 1;" />
+          <button type="button" class="secondary" (click)="addImageUrl()"
+            [disabled]="isAddingImageUrl || !productEditForm.get('imageUrl')?.value?.trim()">
+            {{ isAddingImageUrl ? 'Đang thêm...' : 'Thêm' }}
+          </button>
+        </div>
+        <span class="helper">Nhập đường dẫn hình ảnh (bắt đầu bằng http:// hoặc https://) rồi nhấn Thêm hoặc Enter.</span>
+      </div>
+    </div>
+
+    <!-- Danh sách ảnh xem trước -->
+    @if (getDisplayImages()?.length) {
+    <div class="images-preview-section" style="margin-top: 20px;">
+      <div style="font-size: 13px; font-weight: 700; color: #44383b; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+        <span>Hình ảnh sản phẩm ({{ getDisplayImages().length }})</span>
+        <span style="font-size: 12px; font-weight: 400; color: var(--muted);">Có thể kết hợp cả ảnh từ máy và ảnh từ URL</span>
+      </div>
+      <div class="images-wrapp">
+        @for (image of getDisplayImages(); track image) {
+        <div class="image-dash-wrap" [class.removing]="removingImage === image" [class.is-main]="isMainImage(image)">
+          <img [src]="image" alt="Product image" (error)="onImageError($event, image)" />
+          @if (isMainImage(image)) {
+          <span class="main-badge">Ảnh chính</span>
+          } @else {
+          <button type="button" class="set-main-btn" (click)="setAsMainImage(image)" title="Đặt làm ảnh đại diện">
+            Đặt ảnh chính
+          </button>
           }
+          <div class="remove-image" (click)="onRemoveImage(image, action === 'edit' ? 'product' : 'image')"
+            [title]="removingImage === image ? 'Đang xóa...' : 'Xóa ảnh'">
+            {{ removingImage === image ? '...' : '×' }}
+          </div>
+        </div>
+        }
+      </div>
+    </div>
+    }
+  </section>
+
+
+
+  <!-- ╔══════════════════════════════════════════
+       SECTION 3 — Phân loại hàng (Thuộc tính)
+       ══════════════════════════════════════════╝ -->
+  <section class="section">
+    <h2 class="section-title">
+      Phân loại hàng
+    </h2>
+
+    <div [formGroupName]="chooseLang">
+
+      <!-- Thuộc tính 1: Màu sắc -->
+      <div class="attribute">
+        <div class="attribute-head">
+          <label class="check-label">
+            <input type="checkbox" formControlName="hasColors" id="hasColors" (change)="generateVariants(chooseLang, true)" />
+            Màu sắc
+          </label>
+          <button type="button" class="danger-btn"
+            (click)="productEditForm.get([chooseLang, 'hasColors'])?.setValue(false); generateVariants(chooseLang, true)">
+            Xóa
+          </button>
+        </div>
+
+        @if (productEditForm.get([chooseLang, 'hasColors'])?.value) {
+        <div id="colorFields">
+          <div class="attribute-grid">
+            <div class="field">
+              <label class="field-label">Tên thuộc tính</label>
+              <input value="Màu sắc" disabled />
+            </div>
+            <div class="field">
+              <label class="field-label">Giá trị thuộc tính (Màu đã chọn)</label>
+              @if (productEditForm.get([chooseLang, 'colors'])?.value?.length) {
+              <div class="chips">
+                @for (sc of productEditForm.get([chooseLang, 'colors'])?.value; track $index) {
+                <span class="chip">
+                  <span class="pill-swatch" [style.backgroundColor]="sc.hex"></span>
+                  {{ sc.name }}
+                  <button type="button" (click)="removeColor($index, chooseLang)">×</button>
+                </span>
+                }
+              </div>
+              } @else {
+              <div class="helper" style="margin-bottom: 8px;">Chưa chọn màu nào. Chọn màu từ danh sách hoặc nhập màu
+                riêng:</div>
+              }
+
+              <!-- Bảng màu sẵn có -->
+              <div class="color-palette-grid">
+                @for (c of presetColors; track c.hex) {
+                <div class="color-swatch-item" [class.selected]="isColorSelected(c, chooseLang)"
+                  (click)="toggleColor(c, chooseLang)" [title]="c.name">
+                  <span class="color-swatch-circle" [style.backgroundColor]="c.hex">
+                    @if (isColorSelected(c, chooseLang)) {
+                    <span class="check-icon">✓</span>
+                    }
+                  </span>
+                  <span class="color-swatch-name">{{ c.name }}</span>
+                </div>
+                }
+              </div>
+
+              <!-- Nhập màu tùy chỉnh -->
+              <div class="inline" style="margin-top: 12px;">
+                <input type="color" [(ngModel)]="customColorHex" [ngModelOptions]="{ standalone: true }"
+                  style="width: 44px; height: 42px; padding: 2px; cursor: pointer;" title="Chọn mã màu" />
+                <input [(ngModel)]="customColorName" [ngModelOptions]="{ standalone: true }"
+                  placeholder="Nhập tên màu: Đỏ Cherry, Xanh Mint..." (keyup.enter)="addCustomColor(chooseLang)" />
+                <button type="button" class="secondary" (click)="addCustomColor(chooseLang)">Thêm</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        }
+      </div>
+
+      <!-- Thuộc tính 2: Kích thước -->
+      <div class="attribute">
+        <div class="attribute-head">
+          <label class="check-label">
+            <input type="checkbox" formControlName="hasSizes" id="hasSizes" (change)="generateVariants(chooseLang, true)" />
+            Kích thước
+          </label>
+          <button type="button" class="danger-btn"
+            (click)="productEditForm.get([chooseLang, 'hasSizes'])?.setValue(false); generateVariants(chooseLang, true)">
+            Xóa
+          </button>
+        </div>
+
+        @if (productEditForm.get([chooseLang, 'hasSizes'])?.value) {
+        <div id="sizeFields">
+          <div class="attribute-grid">
+            <div class="field">
+              <label class="field-label">Tên thuộc tính</label>
+              <input value="Kích thước" disabled />
+            </div>
+            <div class="field">
+              <label class="field-label">Giá trị thuộc tính (Size đã chọn)</label>
+              @if (productEditForm.get([chooseLang, 'sizes'])?.value?.length) {
+              <div class="chips">
+                @for (sz of productEditForm.get([chooseLang, 'sizes'])?.value; track sz) {
+                <span class="chip">
+                  {{ sz }}
+                  <button type="button" (click)="removeSize(sz, chooseLang)">×</button>
+                </span>
+                }
+              </div>
+              } @else {
+              <div class="helper" style="margin-bottom: 8px;">Chưa chọn kích thước nào. Nhấp chọn size tiêu chuẩn bên
+                dưới:</div>
+              }
+
+              <!-- Nút chọn Size tiêu chuẩn -->
+              <div class="sizes-toggle-group">
+                @for (s of standardSizes; track s) {
+                <button type="button" class="size-btn" [class.active]="isSizeSelected(s, chooseLang)"
+                  (click)="toggleSize(s, chooseLang)">
+                  {{ s }}
+                </button>
+                }
+              </div>
+
+              <!-- Thêm size tùy chỉnh -->
+              <div class="inline" style="margin-top: 12px;">
+                <input [(ngModel)]="customSize" [ngModelOptions]="{ standalone: true }"
+                  placeholder="Nhập size khác: Freesize, 36, 38, Onesize..."
+                  (keyup.enter)="addCustomSize(chooseLang)" />
+                <button type="button" class="secondary" (click)="addCustomSize(chooseLang)">Thêm</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        }
+      </div>
+
+      <!-- Thuộc tính: Phân loại danh mục -->
+      <div class="attribute">
+        <div class="attribute-head">
+          <label class="check-label">
+            <input type="checkbox" formControlName="hasClassification" id="hasClassification" (change)="generateVariants(chooseLang, true)" />
+            Phân loại danh mục
+          </label>
+          <button type="button" class="danger-btn"
+            (click)="productEditForm.get([chooseLang, 'hasClassification'])?.setValue(false); generateVariants(chooseLang, true)">
+            Xóa
+          </button>
+        </div>
+
+        @if (productEditForm.get([chooseLang, 'hasClassification'])?.value) {
+        <div id="classificationFields" style="margin-top: 14px;">
+          <div class="attribute-grid">
+            <div class="field">
+              <label class="field-label">Tên phân loại</label>
+              <input value="Danh mục" disabled />
+            </div>
+            <div class="field">
+              <label class="field-label">Danh mục đã chọn</label>
+              @if (productEditForm.get([chooseLang, 'categoryLevel1'])?.value?.length) {
+              <div class="chips">
+                @for (cat of productEditForm.get([chooseLang, 'categoryLevel1'])?.value; track cat) {
+                <span class="chip">
+                  {{ cat }}
+                  <button type="button" (click)="removeCategory(cat, chooseLang)">×</button>
+                </span>
+                }
+              </div>
+              } @else {
+              <div class="helper" style="margin-bottom: 8px;">Chưa chọn danh mục nào. Nhấp chọn danh mục bên dưới:</div>
+              }
+
+              <!-- Nút chọn Danh mục -->
+              <div class="sizes-toggle-group">
+                @for (item of categories; track item) {
+                <button type="button" class="size-btn" [class.active]="isCategorySelected(item, chooseLang)"
+                  (click)="toggleCategory(item, chooseLang)">
+                  {{ item }}
+                </button>
+                }
+              </div>
+
+              <!-- Thêm phân loại tùy chỉnh -->
+              <div class="inline" style="margin-top: 12px;">
+                <input [(ngModel)]="customClassification" [ngModelOptions]="{ standalone: true }"
+                  placeholder="Nhập danh mục khác: Đầm, Váy,..."
+                  (keyup.enter)="addClassification(chooseLang)" />
+                <button type="button" class="secondary" (click)="addClassification(chooseLang)">Thêm</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ╔══════════════════════════════════════════
+       SECTION 4 — Giá & Tồn kho
+       ══════════════════════════════════════════╝ -->
+  <section class="section">
+    <h2 class="section-title">
+      Giá &amp; Tồn kho <span class="required">*</span>
+    </h2>
+
+    <div [formGroupName]="chooseLang">
+      @if (hasVariantAttributes(chooseLang) || getVariantsFormArray(chooseLang).controls.length > 0) {
+        <!-- ÁP DỤNG NHANH CHO TẤT CẢ BIẾN THỂ (BATCH UPDATE) -->
+        <div class="inline" style="margin-bottom: 16px; flex-wrap: wrap; gap: 10px; align-items: flex-end;">
+          <div class="field" style="margin-bottom: 0; min-width: 160px; flex: 1;">
+            <label class="field-label">Giá áp dụng chung (VNĐ)</label>
+            <input type="number" [(ngModel)]="quickPrice" [ngModelOptions]="{ standalone: true }"
+              placeholder="Nhập giá áp dụng tất cả..." min="0" />
+          </div>
+          <div class="field" style="margin-bottom: 0; min-width: 160px; flex: 1;">
+            <label class="field-label">Kho chung</label>
+            <input type="number" [(ngModel)]="quickStock" [ngModelOptions]="{ standalone: true }"
+              placeholder="Nhập kho áp dụng tất cả..." min="0" />
+          </div>
+          <button type="button" class="secondary" (click)="applyBatchUpdate(chooseLang)" style="height: 42px;">
+            Áp dụng cho tất cả
+          </button>
+        </div>
+
+        <!-- BẢNG BIẾN THỂ SẢN PHẨM -->
+        <div class="variant-wrap" style="overflow-x: auto;">
+          <table class="variants-table">
+            <thead>
+              <tr>
+                <th style="width: 50px; text-align: center;">STT</th>
+                @for (col of getActiveAttributeColumns(chooseLang); track col.key) {
+                  <th>{{ col.label }}</th>
+                }
+                <th>Mã SKU <span class="required">*</span></th>
+                <th style="width: 180px;">Giá bán (VNĐ) <span class="required">*</span></th>
+                <th style="width: 140px;">Tồn kho <span class="required">*</span></th>
+                <th style="width: 90px; text-align: center;">Trạng thái</th>
+                <th style="width: 60px; text-align: center;">Xóa</th>
+              </tr>
+            </thead>
+            <tbody formArrayName="variants">
+              @for (variantGroup of getVariantsFormArray(chooseLang).controls; track $index; let i = $index) {
+                <tr [formGroupName]="i">
+                  <td class="stt-cell">{{ i + 1 }}</td>
+                  @for (col of getActiveAttributeColumns(chooseLang); track col.key) {
+                    <td>
+                      @if (col.key === 'color' || col.label === 'Màu sắc') {
+                        <div style="display: inline-flex; align-items: center; gap: 6px;">
+                          <span class="pill-swatch" [style.backgroundColor]="getColorHex(getVariantAttributeValue(variantGroup, col), chooseLang)"></span>
+                          <span>{{ getVariantAttributeValue(variantGroup, col) }}</span>
+                        </div>
+                      } @else {
+                        <span>{{ getVariantAttributeValue(variantGroup, col) }}</span>
+                      }
+                    </td>
+                  }
+                  <td>
+                    <input type="text" formControlName="sku" class="table-input sku-cell" placeholder="Mã SKU" />
+                  </td>
+                  <td>
+                    <input type="number" formControlName="price" class="table-input" placeholder="0" min="0" />
+                  </td>
+                  <td>
+                    <input type="number" formControlName="stock" class="table-input" placeholder="0" min="0" />
+                  </td>
+                  <td style="text-align: center;">
+                    <label class="variant-toggle" [title]="variantGroup.get('status')?.value !== false ? 'Đang bật hiển thị' : 'Đang tạm ẩn'">
+                      <input type="checkbox" formControlName="status" />
+                      <span class="toggle-track">
+                        <span class="toggle-thumb"></span>
+                      </span>
+                    </label>
+                  </td>
+                  <td style="text-align: center;">
+                    <button type="button" class="danger-btn" title="Xóa biến thể này"
+                      (click)="removeVariant(i, chooseLang)">
+                      Xóa
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="helper" style="margin-top: 12px; display: flex; justify-content: space-between; flex-wrap: wrap;">
+          <span>Tổng số biến thể: <strong>{{ getVariantsFormArray(chooseLang).length }}</strong> (Đang bật: <strong style="color: var(--wine);">{{ getActiveVariantsCount(chooseLang) }}</strong>)</span>
+          <span>Tổng tồn kho các biến thể: <strong>{{ getVariantsTotalStock(chooseLang) }}</strong></span>
+        </div>
+      } @else {
+        <!-- KHI CHƯA CHỌN BIẾN THỂ Ở PHẦN 3: HIỂN THỊ CÁC Ô NHẬP GIÁ & TỒN KHO CỦA SẢN PHẨM ĐƠN -->
+        <div class="grid-2">
+          <div class="field">
+            <label class="field-label">Giá gốc (VNĐ) <span class="required">*</span></label>
+            <input formControlName="regularPrice" type="number" name="regularPrice" id="regularPrice"
+              placeholder="399000" />
+            @if (productEditForm.get([chooseLang, 'regularPrice'])?.hasError('required') &&
+            productEditForm.get([chooseLang, 'regularPrice'])?.touched) {
+            <span class="helper" style="color: var(--danger)">Giá gốc là bắt buộc</span>
+            }
+          </div>
+
+          <div class="field">
+            <label class="field-label">Giá khuyến mãi (VNĐ)</label>
+            <input formControlName="salePrice" type="number" name="salePrice" id="salePrice" placeholder="299000" />
+            @if (productEditForm.get([chooseLang, 'salePrice'])?.hasError('priceInvalid')) {
+            <span class="helper" style="color: var(--danger)">Giá khuyến mãi phải nhỏ hơn giá gốc</span>
+            }
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-top: 20px;">
+          <div class="field">
+            <label class="field-label">Số lượng tồn kho</label>
+            <input formControlName="quantity" type="number" name="quantity" id="quantity" placeholder="10" />
+          </div>
+
+          <div class="field">
+            <label class="field-label">Tình trạng kho hàng</label>
+            <select formControlName="stock" id="stock">
+              <option value="onStock">Còn hàng</option>
+              <option value="onWaitings">Hàng sắp về</option>
+              <option value="unavailable">Hết hàng</option>
+            </select>
+          </div>
+        </div>
+
+        @if (productEditForm.get([chooseLang, 'stock'])?.value === 'onWaitings') {
+        <div class="field" style="margin-top: 20px;">
+          <label class="field-label">Ngày dự kiến hàng về</label>
+          <input type="date" formControlName="stockDate" name="stockDate" id="stockDate" />
+        </div>
+        }
+
+        <div class="helper" style="margin-top: 16px; padding: 12px 16px; background: #fafafa; border: 1px dashed var(--border-color, #e0d0d0); border-radius: 6px;">
+          <span>Sản phẩm này hiện đang là sản phẩm đơn (không có biến thể). Khi bạn chọn thuộc tính (Màu sắc, Kích thước hoặc Phân loại) ở <strong>Phần 3 — Phân loại hàng</strong> phía trên, hệ thống sẽ tự động chuyển phần này thành Bảng quản lý Giá và Tồn kho chi tiết cho từng biến thể.</span>
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- ╔══════════════════════════════════════════
+       SECTION 5 — Phương thức vận chuyển
+       ══════════════════════════════════════════╝ -->
+  <section class="section">
+    <h2 class="section-title">
+      Phương thức vận chuyển
+    </h2>
+
+    <div [formGroupName]="chooseLang">
+      <div class="grid-2">
+        <!-- Vận chuyển Tiêu chuẩn -->
+        <div class="toggle-row" style="margin-bottom: 0;">
+          <div style="flex: 1;">
+            <label class="check-label">
+              <input type="checkbox" formControlName="shippingBasic" id="shippingBasic" />
+              Tiêu chuẩn
+            </label>
+            <div class="helper" style="margin-top: 4px;">Giao hàng tiêu chuẩn 2-4 ngày</div>
+            @if (productEditForm.get([chooseLang, 'shippingBasic'])?.value) {
+            <div class="field" style="margin-top: 10px;">
+              <label class="field-label">Phí vận chuyển Tiêu chuẩn (VNĐ)</label>
+              <input type="number" formControlName="shippingBasicCost" name="shippingBasicCost" id="shippingBasicCost"
+                placeholder="30000" />
+            </div>
+            }
+          </div>
         </div>
 
         <!-- Vận chuyển Nhanh -->
-        <div class="product_edit-shipping-col">
-          <mat-checkbox formControlName="shippingExtended" color="primary">
-            Nhanh
-          </mat-checkbox>
-          @if (productEditForm.get([chooseLang, 'shippingExtended'])?.value) {
-          <mat-form-field class="product_edit-shipping-price-input">
-            <mat-label>Phí VC Nhanh (đ)</mat-label>
-            <input matInput type="number" formControlName="shippingExtendedCost" name="shippingExtendedCost"
-              placeholder="VD: 50000" />
-          </mat-form-field>
-          }
+        <div class="toggle-row" style="margin-bottom: 0;">
+          <div style="flex: 1;">
+            <label class="check-label">
+              <input type="checkbox" formControlName="shippingExtended" id="shippingExtended" />
+              Nhanh
+            </label>
+            <div class="helper" style="margin-top: 4px;">Giao hàng hỏa tốc trong ngày hoặc 1-2 ngày</div>
+            @if (productEditForm.get([chooseLang, 'shippingExtended'])?.value) {
+            <div class="field" style="margin-top: 10px;">
+              <label class="field-label">Phí vận chuyển Nhanh (VNĐ)</label>
+              <input type="number" formControlName="shippingExtendedCost" name="shippingExtendedCost"
+                id="shippingExtendedCost" placeholder="50000" />
+            </div>
+            }
+          </div>
         </div>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- 9. Hình ảnh sản phẩm -->
-  <h3 class="product_edit-subtitle">Hình ảnh sản phẩm (MEDIA)</h3>
-  <div class="product_edit-full-input">
-    <h4 class="product_edit-infotitle">Nhập URL</h4>
-    <mat-form-field class="product_edit-field">
-      <mat-label>
-        URL ảnh
-      </mat-label>
-      <input matInput formControlName="mainImage" name="mainImage" />
-    </mat-form-field>
-  </div>
-  <h4 class="product_edit-infotitle">Hoặc tải ảnh từ máy tính</h4>
+  <!-- ╔══════════════════════════════════════════
+       SECTION 6 — Hiển thị sản phẩm
+       ══════════════════════════════════════════╝ -->
+  <section class="section">
+    <h2 class="section-title">
 
-  <label for="file-upload" class="product_edit-add-images"> </label>
-  <input class="file-field input-field" type="file" id="file-upload" (change)="onFileChanged($event)" />
+      Hiển thị sản phẩm
+    </h2>
 
-  @if (testImageUrl) {
-  <div class="images-wrapp">
-    <div class="image-dash-wrap">
-      <img [src]="testImageUrl" (load)="checkImageUrl()" />
+    <div [formGroupName]="chooseLang">
+      <div class="toggle-row">
+        <div>
+          <strong style="font-size: 14px; color: var(--text)">Hiển thị trên website</strong>
+          <div class="helper" style="margin-top: 5px;">Bật để sản phẩm hiển thị công khai cho khách hàng.</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" formControlName="visibility" id="visible-switch" />
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+  </section>
+
+  <!-- Hành động cuối form -->
+  <div class="bottom">
+    <div id="formStatus" class="helper" [style.color]="isFormValid ? '#2e7d32' : '#d32f2f'"
+      style="font-size: 13px; font-weight: 500;">
+      @if (!isFormValid) {
+      <span>* Vui lòng điền Tên sản phẩm và Giá bán (VNĐ) để lưu sản phẩm.</span>
+      } @else {
+      <span>✓ Đã đủ thông tin hợp lệ để lưu sản phẩm.</span>
+      }
+    </div>
+    <div class="actions" style="display: flex; gap: 10px;">
+      <button type="button" class="secondary" (click)="goBackToProducts()">Hủy</button>
+      @if (action === 'edit') {
+      <button type="button" class="danger-btn" (click)="onRemoveSubmit()" [disabled]="isDeleting">
+        {{ isDeleting ? 'Đang xóa...' : 'Xóa' }}
+      </button>
+      }
+      <button type="button" class="primary" (click)="onSubmit()" [disabled]="!isFormValid || isSubmitting">
+        {{ isSubmitting ? 'Đang lưu...' : (action === 'add' ? 'Thêm sản phẩm' : 'Lưu sản phẩm') }}
+      </button>
     </div>
   </div>
-  } @if (!!(images$ | async)?.length && action === 'add') {
-  <div class="images-wrapp">
-    @for (image of (images$ | async); track image) {
-    <div class="image-dash-wrap">
-      <img src="{{ image }}" />
-      <div class="remove-image" (click)="onRemoveImage(image, 'image')">X</div>
-    </div>
-    }
-  </div>
-  } @if (!!(product$ | async)?.images?.length && action === 'edit') {
-  <div class="images-wrapp">
-    @for (image of (product$ | async)?.images; track image) {
-    <div class="image-dash-wrap">
-      <img src="{{ image }}" />
-      <div class="remove-image" (click)="onRemoveImage(image, 'product')">X</div>
-    </div>
-    }
-  </div>
-  }
 
-  <!-- 10. Mô tả chi tiết sản phẩm (Bài viết giới thiệu) -->
-  <h3 class="product_edit-subtitle">Mô tả chi tiết sản phẩm (Bài viết giới thiệu)</h3>
-  @if ((descriptionFullSub$ | async); as descriptionFull) {
-  <app-tiny-editor [description]="descriptionFull[chooseLang]" (editorContentChange)="onEditorChange($event)">
-  </app-tiny-editor>
-  }
-  <button mat-raised-button color="primary" (click)="onSubmit()" [disabled]="!productEditForm.valid">
-    Lưu sản phẩm
-  </button>
-  @if (action === 'edit') {
-  <button class="product_edit-btn-remove" mat-raised-button color="primary" (click)="onRemoveSubmit()"
-    [disabled]="!productEditForm.valid">
-    Xóa sản phẩm
-  </button>
-  } }
+  } <!-- /if add || edit -->
 </form>
 
 } @if (sendRequest) {
-<div class="product_edit-after-send">
-  <span> Yêu cầu đã được thực hiện thành công!</span>
-  <button class="product_edit-btn-action" mat-raised-button color="primary" (click)="openForm()">
-    Thực hiện lại
-  </button>
-  @if (action === 'add') {
-  <button class="product_edit-btn-action" mat-raised-button color="primary" (click)="changeTab.emit(2)">
-    Chỉnh sửa sản phẩm
-  </button>
-  }
-  <button class="product_edit-btn-action" mat-stroked-button (click)="changeTab.emit(0)">
-    ← Danh sách sản phẩm
-  </button>
+<div class="product_edit-after-send form-card" style="text-align: center; padding: 40px;">
+  <h3 style="color: var(--wine); margin-bottom: 12px; font-size: 20px;">Yêu cầu đã được thực hiện thành công!</h3>
+  <div class="actions" style="display: flex; gap: 12px; justify-content: center; margin-top: 20px;">
+    <button class="primary" type="button" (click)="openForm()">
+      Thực hiện lại
+    </button>
+    @if (action === 'add') {
+    <button class="secondary" type="button" (click)="changeTab.emit(2)">
+      Chỉnh sửa sản phẩm
+    </button>
+    }
+    <button class="secondary" type="button" (click)="goBackToProducts()">
+      Danh sách sản phẩm
+    </button>
+  </div>
 </div>
 }

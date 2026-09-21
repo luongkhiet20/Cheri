@@ -29,14 +29,58 @@ export class ProductsService {
     getProductsDto: GetProductsDto,
     lang: string,
   ): Promise<ProductsWithPagination> {
-    const { page, sort, category, search, maxPrice } = getProductsDto;
+    const { page, sort, category, search, maxPrice, minPrice, stock, rating } = getProductsDto;
     const searchQuery = search ? { titleUrl: new RegExp(search, 'i') } : {};
-    const categoryQuery = category
-      ? { [`tags`]: new RegExp(category, 'i') }
+    // Category filter: single or multiple (comma-separated or array)
+    let categoryQuery: any = {};
+    if (category) {
+      const cats = (Array.isArray(category) ? category : String(category).split(','))
+        .map((c: string) => c.trim())
+        .filter(Boolean);
+      if (cats.length === 1) {
+        categoryQuery = { [`tags`]: new RegExp(cats[0], 'i') };
+      } else if (cats.length > 1) {
+        categoryQuery = {
+          $or: cats.map((c: string) => ({ [`tags`]: new RegExp(c, 'i') })),
+        };
+      }
+    }
+
+    // Price range: min and max
+    const priceField = `${lang}.salePrice`;
+    const priceQuery: any = {};
+    if (maxPrice) priceQuery[priceField] = { ...(priceQuery[priceField] || {}), $lte: Number(maxPrice) };
+    if (minPrice) priceQuery[priceField] = { ...(priceQuery[priceField] || {}), $gte: Number(minPrice) };
+
+    // Stock filter: onStock / unavailable / out
+    const stockQuery = stock && stock !== 'all'
+      ? {
+          $or: [
+            { [`${lang}.stock`]: stock },
+            { [`vi.stock`]: stock },
+          ],
+        }
       : {};
-    const maxPriceQuery = maxPrice
-      ? { [`${lang}.salePrice`]: { $lte: maxPrice } }
-      : {};
+
+    // Rating filter: single or multiple tiers (e.g. 5, 4, 3, 2, 1)
+    let ratingQuery: any = {};
+    if (rating !== undefined && rating !== null && rating !== '' && rating !== 0 && rating !== '0') {
+      const ratings = (Array.isArray(rating) ? rating : String(rating).split(','))
+        .map((r: any) => Number(r))
+        .filter((r: number) => !isNaN(r) && r > 0);
+      if (ratings.length === 1) {
+        const r = ratings[0];
+        ratingQuery = r === 5
+          ? { rating: { $gte: 5 } }
+          : { rating: { $gte: r, $lt: r + 1 } };
+      } else if (ratings.length > 1) {
+        ratingQuery = {
+          $or: ratings.map((r: number) =>
+            r === 5 ? { rating: { $gte: 5 } } : { rating: { $gte: r, $lt: r + 1 } }
+          ),
+        };
+      }
+    }
 
     const visibilityQuery = {
       $or: [
@@ -49,7 +93,9 @@ export class ProductsService {
     const query = {
       ...searchQuery,
       ...categoryQuery,
-      ...maxPriceQuery,
+      ...priceQuery,
+      ...stockQuery,
+      ...ratingQuery,
       ...visibilityQuery,
     };
     const options = {
@@ -282,6 +328,14 @@ export class ProductsService {
         return `${lang}.salePrice`;
       case 'pricedesc':
         return `-${lang}.salePrice`;
+      case 'nameasc':
+        return `${lang}.title`;
+      case 'namedesc':
+        return `-${lang}.title`;
+      case 'ratingdesc':
+        return `-rating`;
+      case 'ratingasc':
+        return `rating`;
       default:
         return `-dateAdded`;
     }

@@ -13,6 +13,10 @@ export class GetProductsDto {
     SortOptions.oldest,
     SortOptions.priceasc,
     SortOptions.pricedesc,
+    SortOptions.nameasc,
+    SortOptions.namedesc,
+    SortOptions.ratingdesc,
+    SortOptions.ratingasc,
   ])
   sort: SortOptions;
 
@@ -21,4 +25,10 @@ export class GetProductsDto {
   search?: string;
 
   maxPrice?: number;
+
+  minPrice?: number;
+
+  stock?: string;
+
+  rating?: any;
 }

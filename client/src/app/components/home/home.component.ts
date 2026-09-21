@@ -59,6 +59,8 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
 
   @ViewChild('videoRef') private videoRef: ElementRef;
   @ViewChild('featuredLane') private featuredLane: ElementRef<HTMLElement>;
+  @ViewChild('museSection') private museSection?: ElementRef<HTMLElement>;
+  private museObserver?: IntersectionObserver;
 
   constructor(
     private route: ActivatedRoute,
@@ -138,6 +140,19 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     this.router.navigate(['/' + lang + '/cart']);
   }
 
+  goToProducts(): void {
+    const lang = this.lang() || 'vi';
+    this.router.navigate(['/' + lang + '/product/all']);
+  }
+
+  onOpenQuickView(product: any): void {
+    const slug = product?.titleUrl || product?._id || product?.id;
+    if (slug) {
+      const lang = this.lang() || 'vi';
+      this.router.navigate(['/' + lang + '/product/' + slug]);
+    }
+  }
+
   priceRange(price: number): void {
     if (this.filterPrice() !== price) {
       this.store.filterPrice(price);
@@ -195,14 +210,32 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
       }
       this._document.getElementById('navbar')?.classList?.add("transparent");
       this._document.getElementById('main-content')?.classList?.add("transparent");
+
+      // Scroll reveal observer for Section 4 (Nàng Thơ)
+      if (typeof window !== 'undefined' && 'IntersectionObserver' in window && this.museSection?.nativeElement) {
+        this.museObserver = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              this.museSection?.nativeElement.classList.add('is-visible');
+            }
+          });
+        }, {
+          threshold: 0.12,
+          rootMargin: '0px 0px -40px 0px'
+        });
+        this.museObserver.observe(this.museSection.nativeElement);
+      }
     });
   }
 
   ngOnDestroy(): void {
+    if (this.museObserver) {
+      this.museObserver.disconnect();
+    }
     this.categoriesSub.unsubscribe();
     this.productsSub.unsubscribe();
-      this._document.getElementById('navbar')?.classList?.remove("transparent");
-      this._document.getElementById('main-content')?.classList?.remove("transparent");
+    this._document.getElementById('navbar')?.classList?.remove("transparent");
+    this._document.getElementById('main-content')?.classList?.remove("transparent");
   }
 
 

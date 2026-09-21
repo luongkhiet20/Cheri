@@ -1,0 +1,12 @@
+<app-admin-layout
+  [activeSection]="activeSection"
+  [(sidebarCollapsed)]="sidebarCollapsed"
+  [pageTitle]="currentPageTitle"
+  [(searchQuery)]="searchQuery"
+  [navItems]="navItems"
+  (sectionChange)="setSection($event)"
+  (toggleSidebar)="toggleSidebar()"
+  (goToDashboard)="goToDashboard($event)"
+  (logout)="logout()"
+  (accountClick)="setSection('accounts')">
+</app-admin-layout>

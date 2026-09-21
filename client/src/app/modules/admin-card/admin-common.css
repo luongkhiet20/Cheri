@@ -38,26 +38,36 @@
 
 /* ── Buttons ── */
 .primary-btn {
-  background: var(--accent, #74070E);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 16px;
+  background: linear-gradient(135deg, rgba(116, 7, 14, 0.95) 0%, rgba(154, 15, 24, 0.9) 50%, rgba(105, 5, 12, 0.98) 100%);
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 9px;
+  padding: 8px 18px;
   font-size: 13.5px;
   font-weight: 600;
+  letter-spacing: 0.3px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(116, 7, 14, 0.22);
+  gap: 7px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 14px rgba(116, 7, 14, 0.32), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+  user-select: none;
 }
 
 .primary-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 5px 16px rgba(116, 7, 14, 0.32);
-  filter: brightness(1.05);
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, rgba(138, 9, 17, 0.98) 0%, rgba(175, 20, 30, 0.94) 50%, rgba(116, 7, 14, 1) 100%);
+  border-color: rgba(255, 255, 255, 0.38);
+  box-shadow: 0 6px 20px rgba(116, 7, 14, 0.48), inset 0 1px 1px rgba(255, 255, 255, 0.35);
+}
+
+.primary-btn:active {
+  transform: translateY(0.5px);
+  box-shadow: 0 2px 8px rgba(116, 7, 14, 0.32);
 }
 
 .secondary-btn {

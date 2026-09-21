@@ -67,6 +67,38 @@ export class ApiService {
     );
   }
 
+  getUsers() {
+    const usersUrl = this.apiUrl + '/api/auth/users';
+    return this.http.get(usersUrl, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  createUser(userData: any) {
+    const usersUrl = this.apiUrl + '/api/auth/users';
+    return this.http.post(usersUrl, userData, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  updateUser(id: string, userData: any) {
+    const usersUrl = this.apiUrl + `/api/auth/users/${id}`;
+    return this.http.put(usersUrl, userData, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  deleteUser(id: string) {
+    const usersUrl = this.apiUrl + `/api/auth/users/${id}`;
+    return this.http.delete(usersUrl, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
   signIn(req) {
     const sendContact = this.apiUrl + '/api/auth/signin';
     return this.http.post(sendContact, req, this.getRequestOptions()).pipe(
@@ -83,15 +115,27 @@ export class ApiService {
     );
   }
 
+  signOut() {
+    const signOutUrl = this.apiUrl + '/api/auth/signout';
+    return this.http.post(signOutUrl, {}, this.getRequestOptions()).pipe(
+      catchError(() => of({ success: true }))
+    );
+  }
+
   getProducts(req: any = {}) {
     const lang = req.lang || 'vi';
     const page = req.page !== undefined ? req.page : 1;
     const sort = req.sort || 'newest';
-    const { category, maxPrice } = req;
-    const addCategory = category ? { category } : {};
-    const categoryQuery = category ? '&category=' + category : '';
+    const { category, maxPrice, minPrice, stock, rating } = req;
+    const catStr = Array.isArray(category) ? category.join(',') : (category || '');
+    const addCategory = catStr ? { category: catStr } : {};
+    const categoryQuery = catStr ? '&category=' + encodeURIComponent(catStr) : '';
     const priceQuery = maxPrice ? '&maxPrice=' + maxPrice : '';
-    const productsUrl = this.apiUrl + '/api/products?lang=' + lang + '&page=' + page + '&sort=' + sort + categoryQuery + priceQuery;
+    const minPriceQuery = minPrice ? '&minPrice=' + minPrice : '';
+    const stockQuery = stock && stock !== 'all' ? '&stock=' + stock : '';
+    const ratStr = Array.isArray(rating) ? rating.join(',') : (rating !== undefined && rating !== null ? String(rating) : '');
+    const ratingQuery = ratStr && ratStr !== '0' ? '&rating=' + encodeURIComponent(ratStr) : '';
+    const productsUrl = this.apiUrl + '/api/products?lang=' + lang + '&page=' + page + '&sort=' + sort + categoryQuery + priceQuery + minPriceQuery + stockQuery + ratingQuery;
     return this.http.get(productsUrl, this.getRequestOptions()).pipe(
       map((data: any) => ({
         products: (data?.all || []).map((product) => ({
@@ -238,6 +282,14 @@ export class ApiService {
   updateOrder(req) {
     const orderUpdateUrl = this.apiUrl + '/api/orders';
     return this.http.patch(orderUpdateUrl, req, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  deleteOrder(orderId: string) {
+    const orderDeleteUrl = this.apiUrl + '/api/orders/' + orderId;
+    return this.http.delete(orderDeleteUrl, this.getRequestOptions()).pipe(
       map((response: any) => response),
       catchError((error: Error) => of({ error })),
     );

@@ -116,5 +116,23 @@ export class SignInComponent {
       }
     });
   }
+
+  signInWithGoogle(): void {
+    this.snackBar.open('Đang kết nối cổng đăng nhập Google...', 'Đóng', {
+      duration: 3500,
+      horizontalPosition: 'center',
+      verticalPosition: 'bottom'
+    });
+    // Gọi endpoint Google OAuth của Backend
+    window.location.href = '/api/auth/google';
+  }
+
+  signInWithFacebook(): void {
+    this.snackBar.open('Đang kết nối cổng đăng nhập Facebook...', 'Đóng', {
+      duration: 3500,
+      horizontalPosition: 'center',
+      verticalPosition: 'bottom'
+    });
+  }
 }
 

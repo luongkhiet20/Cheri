@@ -1,20 +1,15 @@
 <mat-drawer-container class="products-sidebar-container" autosize hasBackdrop>
-  <mat-drawer #sideBar [(opened)]="sidebarOpened" class="products-sidebar" mode="over">
-    <app-sidebar
-      [class.disabled]="loadingProducts()"
-      [categories]="categories()"
-      [price]="filterPrice()"
-      [maxPrice]="maxPrice()"
-      [minPrice]="minPrice()"
-      [activeCategory]="category()"
-      [sortOptions]="sortOptions"
-      [currency]="currency()"
-      [lang]="lang()"
-      [choosenSort]="sortBy()"
-      (changePrice)="priceRange($event)"
-      (changeSort)="changeSort($event)"
-      (changeCategory)="changeCategory()"
-    >
+  <!-- Mobile drawer sidebar -->
+  <mat-drawer #sideBar [(opened)]="sidebarOpened" class="products-sidebar-drawer" mode="over">
+    <app-sidebar [class.disabled]="loadingProducts()" [categories]="categories()" [price]="filterPrice()"
+      [maxPrice]="maxPrice()" [minPrice]="minPrice()" [filterMinPrice]="filterMinPrice()"
+      [filterMaxPrice]="filterPrice()" [stock]="filterStock()" [rating]="filterRating()"
+      [selectedRatings]="selectedRatings()"
+      [activeCategory]="selectedCategories().length > 0 ? selectedCategories().join(',') : category()"
+      [activeCategories]="selectedCategories()" [sortOptions]="sortOptions" [currency]="currency()" [lang]="lang()"
+      [choosenSort]="sortBy()" [activeFiltersCount]="activeFiltersCount()" (changeMinPrice)="changeMinPrice($event)"
+      (changeMaxPrice)="priceRange($event)" (changeSort)="changeSort($event)" (changeCategory)="changeCategory($event)"
+      (changeStock)="changeStock($event)" (changeRating)="changeRating($event)" (clearFilters)="clearAllFilters()">
     </app-sidebar>
   </mat-drawer>
 
@@ -22,222 +17,226 @@
     <div class="main">
       <div class="products-wrap">
 
-        <!-- ── Toolbar: categories + sort ── -->
-        <div class="products-toolbar">
+        <!-- ── Two-column layout: sidebar + content ── -->
+        <div class="products-layout">
 
-          <!-- Left: category chips -->
-          <div class="products-category-bar">
-            <!-- Mobile filter toggle -->
-            <button type="button" class="products-mobile-filter-btn" (click)="toggleSidebar()">
-              <i class="material-icons">filter_list</i>
-              <span>Bộ lọc</span>
-            </button>
+          <!-- ── Desktop Sidebar (cố định bên trái) ── -->
+          <aside class="products-desktop-sidebar">
+            <app-sidebar [class.disabled]="loadingProducts()" [categories]="categories()" [price]="filterPrice()"
+              [maxPrice]="maxPrice()" [minPrice]="minPrice()" [filterMinPrice]="filterMinPrice()"
+              [filterMaxPrice]="filterPrice()" [stock]="filterStock()" [rating]="filterRating()"
+              [selectedRatings]="selectedRatings()"
+              [activeCategory]="selectedCategories().length > 0 ? selectedCategories().join(',') : category()"
+              [activeCategories]="selectedCategories()" [sortOptions]="sortOptions" [currency]="currency()"
+              [lang]="lang()" [choosenSort]="sortBy()" [activeFiltersCount]="activeFiltersCount()"
+              (changeMinPrice)="changeMinPrice($event)" (changeMaxPrice)="priceRange($event)"
+              (changeSort)="changeSort($event)" (changeCategory)="changeCategory($event)"
+              (changeStock)="changeStock($event)" (changeRating)="changeRating($event)"
+              (clearFilters)="clearAllFilters()">
+            </app-sidebar>
+          </aside>
 
-            <!-- Category chips: "Tất cả" + each category -->
-            <button
-              type="button"
-              class="products-cat-chip"
-              [class.products-cat-chip--active]="!category()"
-              [routerLink]="['/' + lang() + '/product/all']"
-              [queryParams]="{ sort: sortBy() || 'newest', page: 1 }">
-              Tất cả
-            </button>
-            @for (cat of categories(); track cat.titleUrl) {
-            <button
-              type="button"
-              class="products-cat-chip"
-              [class.products-cat-chip--active]="category() === cat.titleUrl"
-              [routerLink]="['/' + lang() + '/product/category/' + cat.titleUrl]"
-              [queryParams]="{ sort: sortBy() || 'newest', page: 1 }">
-              {{ cat.title }}
-            </button>
-            }
-          </div>
+          <!-- ── Main content ── -->
+          <div class="products-main-content">
 
-          <!-- Right: grid switcher + sort select -->
-          <div class="products-controls-right">
-            <div class="products-grid-switcher" title="Chế độ hiển thị">
-              <button
-                type="button"
-                class="grid-switch-btn"
-                [class.active]="columnsView() === 3"
-                (click)="setColumns(3)"
-                title="Lưới 3 cột (Hình lớn)">
-                <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="1" y="2" width="3.6" height="12" rx="0.8"/>
-                  <rect x="6.2" y="2" width="3.6" height="12" rx="0.8"/>
-                  <rect x="11.4" y="2" width="3.6" height="12" rx="0.8"/>
-                </svg>
-              </button>
-              <button
-                type="button"
-                class="grid-switch-btn"
-                [class.active]="columnsView() === 4"
-                (click)="setColumns(4)"
-                title="Lưới 4 cột (Chuẩn)">
-                <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="1" y="2" width="2.6" height="12" rx="0.6"/>
-                  <rect x="4.9" y="2" width="2.6" height="12" rx="0.6"/>
-                  <rect x="8.7" y="2" width="2.6" height="12" rx="0.6"/>
-                  <rect x="12.5" y="2" width="2.6" height="12" rx="0.6"/>
-                </svg>
-              </button>
-            </div>
+            <!-- ── Toolbar: result count + mobile filter + sort ── -->
+            <div class="products-toolbar">
 
-            <div class="products-sort-wrap">
-              <select
-                class="products-sort-select"
-                [value]="sortBy() || 'newest'"
-                (change)="changeSort($any($event.target).value)">
-                <option value="newest">Sắp xếp mặc định</option>
-                <option value="price_asc">Giá tăng dần</option>
-                <option value="price_desc">Giá giảm dần</option>
-                <option value="rating">Được thích nhiều nhất</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <!-- ── Loading bar ── -->
-        @if (loadingProducts()) {
-        <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-        }
-
-        <!-- ── Page title (category or all) ── -->
-        @if (categoryInfo(); as info) {
-        <div class="products-page-title">
-          <h1 class="products-title">{{ info.title }}</h1>
-          @if (info.description) {
-          <p class="products-description">{{ info.description }}</p>
-          }
-        </div>
-        }
-
-        <!-- ── Sub-categories ── -->
-        @if (subCategories(); as subs) {
-          @if (subs.length && (pagination()).page === 1) {
-          <app-categories-list [categories]="subs" [lang]="lang()" [withSlider]="false"></app-categories-list>
-          }
-        }
-
-        <!-- ── Product grid ── -->
-        @if (products(); as products) {
-          @if (products.length > 0) {
-          <div class="products-grid" [class.cols-3]="columnsView() === 3" [class.cols-4]="columnsView() === 4">
-            @for (product of products; track product._id) {
-            <div class="pcard" [routerLink]="['/' + lang() + '/product/' + product.titleUrl]">
-
-              <!-- Image -->
-              <div class="pcard-img-wrap">
-                <img
-                  class="pcard-img"
-                  [src]="product.mainImage?.url || (product.images && product.images[0])"
-                  [alt]="product.title" />
-
-                <!-- Badges -->
-                @if (product.stock === '0' || product.stock === 'unavailable') {
-                <span class="pcard-badge pcard-badge--sold">Hết hàng</span>
-                } @else {
-                <span class="pcard-badge pcard-badge--new">NEW</span>
-                }
-                @if (hasDiscount(product)) {
-                <span class="pcard-badge pcard-badge--sale pcard-badge--top-right">ƯU ĐÃI</span>
-                }
-
-                <!-- Heart / Wishlist button (bottom-right, always visible) -->
-                <button
-                  type="button"
-                  class="pcard-wishlist-btn"
-                  [class.pcard-wishlist-btn--active]="isInWishlist(product._id || product.id)"
-                  (click)="toggleWishlist($event, product)"
-                  [title]="isInWishlist(product._id || product.id) ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+              <!-- Left: mobile filter toggle + result count -->
+              <div class="products-toolbar-left">
+                <!-- Mobile filter toggle -->
+                <button type="button" class="products-mobile-filter-btn" (click)="toggleSidebar()">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    <line x1="4" y1="6" x2="20" y2="6" />
+                    <line x1="4" y1="12" x2="14" y2="12" />
+                    <line x1="4" y1="18" x2="11" y2="18" />
                   </svg>
+                  <span>Bộ lọc</span>
+                  @if (activeFiltersCount() > 0) {
+                  <span class="products-filter-badge">{{ activeFiltersCount() }}</span>
+                  }
                 </button>
 
-                <!-- Hover overlay: add to cart -->
-                <div class="pcard-overlay">
-                  @if (product.stock !== '0') {
-                  <button
-                    type="button"
-                    class="pcard-overlay-btn pcard-overlay-btn--cart"
-                    (click)="addToCart(product._id); $event.stopPropagation()"
-                    title="Thêm vào giỏ hàng">
-                    <!-- Shopping bag SVG -->
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-                      <line x1="3" y1="6" x2="21" y2="6"/>
-                      <path d="M16 10a4 4 0 0 1-8 0"/>
-                    </svg>
-                  </button>
-                  }
-                  <button
-                    type="button"
-                    class="pcard-overlay-btn pcard-overlay-btn--view"
-                    [routerLink]="['/' + lang() + '/product/' + product.titleUrl]"
-                    (click)="$event.stopPropagation()"
-                    title="Xem chi tiết">
-                    <!-- Eye SVG -->
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                      <circle cx="12" cy="12" r="3"/>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
-              <!-- Info -->
-              <div class="pcard-info">
-                @if (product.tags?.length) {
-                <span class="pcard-tag">{{ product.tags[0] }}</span>
+                <!-- Result count -->
+                @if (pagination(); as pg) {
+                <span class="products-result-count">
+                  {{ pg.total || 0 }} sản phẩm
+                </span>
                 }
-                <h4 class="pcard-name">{{ product.title }}</h4>
-                <div class="pcard-prices">
-                  <span class="pcard-price">{{ getDisplayPrice(product) | priceFormat }} {{ currency() }}</span>
-                  @if (hasDiscount(product)) {
-                  <span class="pcard-original">{{ getOriginalPrice(product) | priceFormat }} {{ currency() }}</span>
-                  }
-                </div>
               </div>
 
             </div>
+
+
+            <!-- ── Active filter chips ── -->
+            @if (activeFiltersCount() > 0) {
+            <div class="products-active-filters">
+              @for (cat of selectedCategories(); track cat) {
+              <button type="button" class="products-filter-chip" (click)="removeCategoryFilter(cat)">
+                <span>Danh mục: {{ getCategoryTitle(cat) }}</span>
+
+              </button>
+              }
+              @for (r of selectedRatings(); track r) {
+              <button type="button" class="products-filter-chip" (click)="removeRatingFilter(r)">
+                <span>{{ r }}★</span>
+              </button>
+              }
+              @if (filterStock() !== 'all') {
+              <button type="button" class="products-filter-chip" (click)="changeStock('all')">
+                <span>{{ filterStock() === 'onStock' ? 'Còn hàng' : 'Hết hàng' }}</span>
+
+              </button>
+              }
+              @if (filterPrice() > 0 && filterPrice() < (maxPrice() || 999999999)) { <button type="button"
+                class="products-filter-chip" (click)="priceRange(0)">
+                <span>Giá max: {{ filterPrice() | priceFormat }} {{ currency() }}</span>
+
+                </button>
+                }
+                @if (filterMinPrice() > 0) {
+                <button type="button" class="products-filter-chip" (click)="changeMinPrice(0)">
+                  <span>Giá min: {{ filterMinPrice() | priceFormat }} {{ currency() }}</span>
+
+                </button>
+                }
+
+            </div>
             }
-          </div>
 
-          <!-- Pagination -->
-          @if (pagination(); as pagination) {
-          <app-pagination
-            [class.disabled]="loadingProducts()"
-            [pagination]="pagination"
-            (changePage)="changePage($event)">
-          </app-pagination>
-          }
+            <!-- ── Loading bar ── -->
+            @if (loadingProducts()) {
+            <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+            }
 
-          } @else {
-          <!-- Empty state -->
-          <div class="products-empty">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
-              class="products-empty-icon">
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-            </svg>
-            <h3 class="products-empty-title">Chưa Tìm Thấy Sản Phẩm</h3>
-            <p class="products-empty-desc">
-              Chéri chưa tìm thấy sản phẩm nào khớp với bộ lọc của bạn.
-              Hãy thử lại với danh mục khác nhé.
-            </p>
-            <a class="products-empty-btn"
-              [routerLink]="['/' + lang() + '/product/all']"
-              [queryParams]="{ sort: 'newest', page: 1 }">
-              Xem Toàn Bộ Sản Phẩm
-            </a>
-          </div>
-          }
-        }
+            <!-- ── Page title (category or all) ── -->
+            @if (categoryInfo(); as info) {
+            <div class="products-page-title">
+              <h1 class="products-title">{{ info.title }}</h1>
+              @if (info.description) {
+              <p class="products-description">{{ info.description }}</p>
+              }
+            </div>
+            }
+
+            <!-- ── Sub-categories ── -->
+            @if (subCategories(); as subs) {
+            @if (subs.length && (pagination()).page === 1) {
+            <app-categories-list [categories]="subs" [lang]="lang()" [withSlider]="false"></app-categories-list>
+            }
+            }
+
+            <!-- ── Product grid ── -->
+            @if (products(); as products) {
+            @if (products.length > 0) {
+            <div class="products-grid" [class.cols-3]="columnsView() === 3" [class.cols-4]="columnsView() === 4">
+              @for (product of products; track product._id) {
+              <div class="pcard" [routerLink]="['/' + lang() + '/product/' + product.titleUrl]">
+
+                <!-- Image -->
+                <div class="pcard-img-wrap">
+                  <img class="pcard-img" [src]="product.mainImage?.url || (product.images && product.images[0])"
+                    [alt]="product.title" />
+
+                  <!-- Badges -->
+                  @if (product.stock === '0' || product.stock === 'unavailable') {
+                  <span class="pcard-badge pcard-badge--sold">Hết hàng</span>
+                  } @else {
+                  <span class="pcard-badge pcard-badge--new">NEW</span>
+                  }
+                  @if (hasDiscount(product)) {
+                  <span class="pcard-badge pcard-badge--sale pcard-badge--top-right">ƯU ĐÃI</span>
+                  }
+
+                  <!-- Heart / Wishlist button (bottom-right, always visible) -->
+                  <button type="button" class="pcard-wishlist-btn"
+                    [class.pcard-wishlist-btn--active]="isInWishlist(product._id || product.id)"
+                    (click)="toggleWishlist($event, product)"
+                    [title]="isInWishlist(product._id || product.id) ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path
+                        d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                    </svg>
+                  </button>
+
+                  <!-- Hover overlay: add to cart -->
+                  <div class="pcard-overlay">
+                    @if (product.stock !== '0') {
+                    <button type="button" class="pcard-overlay-btn pcard-overlay-btn--cart"
+                      (click)="addToCart(product._id); $event.stopPropagation()" title="Thêm vào giỏ hàng">
+                      <!-- Shopping bag SVG -->
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                        <line x1="3" y1="6" x2="21" y2="6" />
+                        <path d="M16 10a4 4 0 0 1-8 0" />
+                      </svg>
+                    </button>
+                    }
+                    <button type="button" class="pcard-overlay-btn pcard-overlay-btn--view"
+                      [routerLink]="['/' + lang() + '/product/' + product.titleUrl]" (click)="$event.stopPropagation()"
+                      title="Xem chi tiết">
+                      <!-- Eye SVG -->
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Info -->
+                <div class="pcard-info">
+                  @if (product.tags?.length) {
+                  <span class="pcard-tag">{{ product.tags[0] }}</span>
+                  }
+                  <h4 class="pcard-name">{{ product.title }}</h4>
+                  <div class="pcard-prices">
+                    <span class="pcard-price">{{ getDisplayPrice(product) | priceFormat }} {{ currency() }}</span>
+                    @if (hasDiscount(product)) {
+                    <span class="pcard-original">{{ getOriginalPrice(product) | priceFormat }} {{ currency() }}</span>
+                    }
+                  </div>
+                </div>
+
+              </div>
+              }
+            </div>
+
+            <!-- Pagination -->
+            @if (pagination(); as pagination) {
+            <app-pagination [class.disabled]="loadingProducts()" [pagination]="pagination"
+              (changePage)="changePage($event)">
+            </app-pagination>
+            }
+
+            } @else {
+            <!-- Empty state -->
+            <div class="products-empty">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                class="products-empty-icon">
+                <path
+                  d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
+              <h3 class="products-empty-title">Chưa Tìm Thấy Sản Phẩm</h3>
+              <p class="products-empty-desc">
+                Chéri chưa tìm thấy sản phẩm nào khớp với bộ lọc của bạn.
+                Hãy thử lại với danh mục khác nhé.
+              </p>
+              <a class="products-empty-btn" [routerLink]="['/' + lang() + '/product/all']"
+                [queryParams]="{ sort: 'newest', page: 1 }">
+                Xem Toàn Bộ Sản Phẩm
+              </a>
+            </div>
+            }
+            }
+
+          </div><!-- /products-main-content -->
+        </div><!-- /products-layout -->
 
       </div>
     </div>

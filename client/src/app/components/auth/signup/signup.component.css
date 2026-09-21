@@ -103,16 +103,24 @@
 }
 
 :host .auth-header {
-  margin-bottom: 20px;
+  margin-bottom: 22px;
 }
 
 :host .auth-title {
-  font-size: 20px !important;
+  font-size: 22px !important;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
   font-weight: 700 !important;
   letter-spacing: -0.02em;
   color: #74070e !important;
   margin: 0 !important;
+}
+
+:host .auth-subtitle {
+  font-size: 13px !important;
+  color: #78716c !important;
+  margin: 4px 0 0 0 !important;
+  font-weight: 400 !important;
+  line-height: 1.4;
 }
 
 /* ── Form ── */
@@ -184,11 +192,42 @@
   line-height: 1.5;
 }
 
+:host .required-star {
+  color: #dc2626 !important;
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+:host .password-mismatch-msg {
+  font-size: 12px;
+  color: #dc2626;
+  font-weight: 500;
+  margin-top: -6px;
+  margin-bottom: 2px;
+}
+
+:host .field-error-msg {
+  font-size: 11.5px;
+  color: #dc2626;
+  font-weight: 500;
+  margin-top: 1px;
+  line-height: 1.35;
+}
+
+:host .form-input.input-error {
+  border-color: #ef4444 !important;
+  background-color: #fff9f9 !important;
+}
+:host .form-input.input-error:focus {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12) !important;
+}
+
 /* ── Checkbox options ── */
 :host .form-checkbox-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   padding: 4px 0;
 }
 
@@ -201,27 +240,35 @@
 :host .form-checkbox-label {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   cursor: pointer;
-  font-size: 12px !important;
+  font-size: 12.5px !important;
   color: #555555 !important;
   font-weight: 400 !important;
   text-transform: none !important;
   letter-spacing: normal !important;
   user-select: none;
 }
+:host .form-checkbox-label.terms-label {
+  align-items: flex-start;
+  line-height: 1.45;
+}
+:host .form-checkbox-label.terms-label .form-checkbox {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
 :host .form-checkbox-label span {
   text-transform: none !important;
-  font-size: 12px !important;
-  color: #555555 !important;
+  font-size: 12.5px !important;
+  color: #444444 !important;
   font-weight: 400 !important;
   letter-spacing: normal !important;
 }
 
 :host .form-checkbox {
   accent-color: #74070e;
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
   cursor: pointer;
 }
 
@@ -273,9 +320,68 @@
   flex-shrink: 0;
 }
 
+/* ── Social Register (Google & Facebook on same row, identical to signin) ── */
+:host .social-login-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  width: 100%;
+}
+
+:host .social-auth-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 11px 16px;
+  background-color: #ffffff;
+  border: 1px solid #e8e3dd;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  outline: none;
+  font-family: inherit;
+}
+
+:host .social-auth-btn:hover {
+  background-color: #faf8f5;
+  border-color: #d1c9bf;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
+  transform: translateY(-1px);
+}
+
+:host .social-auth-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+}
+
+:host .social-svg-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+:host .social-btn-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: #2b2826;
+  letter-spacing: 0.01em;
+}
+
+:host .social-auth-btn.google-btn:hover .social-btn-text {
+  color: #1a73e8;
+}
+
+:host .social-auth-btn.facebook-btn:hover .social-btn-text {
+  color: #1877f2;
+}
+
 /* ── Footer ── */
 :host .auth-footer {
-  margin-top: 20px;
+  margin-top: 22px;
   padding-top: 18px;
   border-top: 1px solid #f2ede8;
 }

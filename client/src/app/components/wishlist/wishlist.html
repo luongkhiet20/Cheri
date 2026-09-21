@@ -1,6 +1,11 @@
 <div class="wishlist-wrap animate-fade-in" [class.has-products]="wishlistProducts && wishlistProducts.length > 0">
 
   @if (wishlistProducts && wishlistProducts.length > 0) {
+  <div class="wishlist-header">
+    <h2 class="wishlist-title">Danh sách yêu thích</h2>
+    <span class="wishlist-count">({{ wishlistProducts.length }} sản phẩm)</span>
+  </div>
+
   <div class="products-grid">
     @for (product of wishlistProducts; track (product._id || product.id)) {
 

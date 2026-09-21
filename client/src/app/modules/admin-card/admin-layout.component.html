@@ -23,9 +23,9 @@
       <ng-content select="[header-actions]"></ng-content>
     </app-admin-header>
 
-    <!-- Page Body -->
+    <!-- Page Body: child routes render here -->
     <main class="admin-content">
-      <ng-content></ng-content>
+      <router-outlet></router-outlet>
     </main>
   </div>
 </div>

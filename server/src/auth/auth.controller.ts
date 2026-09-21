@@ -5,11 +5,15 @@ import {
   ValidationPipe,
   UseGuards,
   Get,
+  Put,
+  Delete,
+  Param,
   Req,
   Res,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 
+import { RolesGuard } from './roles.guard';
 import { AuthCredentialDto } from './dto/auth-credential.dto';
 import { AuthService } from './auth.service';
 import { User } from './models/user.model';
@@ -19,6 +23,30 @@ import { GoogleUserDto } from './dto/google-user.dto';
 @Controller('api/auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
+
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Get('/users')
+  async getAllUsers() {
+    return this.authService.getAllUsers();
+  }
+
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Post('/users')
+  async createUser(@Body() body: any) {
+    return this.authService.createUser(body);
+  }
+
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Put('/users/:id')
+  async updateUser(@Param('id') id: string, @Body() body: any) {
+    return this.authService.updateUser(id, body);
+  }
+
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Delete('/users/:id')
+  async deleteUser(@Param('id') id: string) {
+    return this.authService.deleteUser(id);
+  }
 
   @UseGuards(AuthGuard('jwt'))
   @Get()
@@ -67,5 +95,22 @@ export class AuthController {
     const accessToken = await this.authService.signInGoogle(googleUserDto);
     const tokenUrl = process.env.ORIGIN + '/jwtToken/' + accessToken;
     res.redirect(tokenUrl);
+  }
+
+  @Post('/signout')
+  signOut(@Req() req, @Res() res) {
+    if (req.session) {
+      req.session.destroy(() => {});
+    }
+    res.clearCookie('jwt');
+    res.clearCookie('token');
+    res.clearCookie('accessToken');
+    res.clearCookie('connect.sid');
+    return res.status(200).json({ success: true, message: 'Signed out successfully' });
+  }
+
+  @Get('/signout')
+  signOutGet(@Req() req, @Res() res) {
+    return this.signOut(req, res);
   }
 }

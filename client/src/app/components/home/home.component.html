@@ -82,7 +82,7 @@
             <h3 class="home-featured-title">Sản phẩm tiêu biểu</h3>
           </div>
           <div class="home-featured-actions">
-            <a class="home-featured-viewall" (click)="goToCart()" [routerLink]="['/' + (lang() || 'vi') + '/cart']" role="button">
+            <a class="home-featured-viewall" [routerLink]="['/' + (lang() || 'vi') + '/product/all']" role="button">
               <span>Xem Toàn Bộ Cửa Hàng</span>
               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -140,6 +140,14 @@
                   </svg>
                 </button>
                 }
+                <button type="button" class="pcard-overlay-btn pcard-overlay-btn--view"
+                  (click)="onOpenQuickView(product); $event.stopPropagation()" title="Xem chi tiết">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                </button>
               </div>
             </div>
 
@@ -166,12 +174,17 @@
       <!-- ══════════════════════════════════════════
            SECTION 4 – Nàng Thơ Của Riêng Bạn (Editorial)
       ══════════════════════════════════════════ -->
-      <section class="home-muse-section">
+      <section #museSection class="home-muse-section">
         <div class="home-muse-container">
           <div class="home-muse-grid">
 
             <!-- Left Column: Model Imagery -->
-            <div class="home-muse-image-col" [routerLink]="['/' + (lang() || 'vi') + '/cart']">
+            <div class="home-muse-image-col"
+              [routerLink]="['/' + (lang() || 'vi') + '/product/all']"
+              (click)="goToProducts()"
+              role="button"
+              tabindex="0"
+              title="Xem tất cả sản phẩm">
               <div class="home-muse-img-wrapper">
                 <img src="https://static.wixstatic.com/media/911b80_c2c4f8245cbc4a1e80c6e871af920c1d~mv2.png"
                   alt="Nàng thơ Chéri" referrerpolicy="no-referrer" class="home-muse-img" />

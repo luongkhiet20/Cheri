@@ -1,14 +1,16 @@
 import { filter, first, take, delay, startWith, map } from 'rxjs/operators';
-import { Component, OnInit, Input, OnDestroy, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
-import { FormBuilder, FormGroup, FormControl, Validators, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
+import { Component, OnInit, Input, OnDestroy, Output, EventEmitter, OnChanges, SimpleChanges, Optional, ChangeDetectorRef } from '@angular/core';
+import { FormBuilder, FormGroup, FormArray, FormControl, Validators, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 import { Observable, Subscription, BehaviorSubject, from, combineLatest } from 'rxjs';
-
+import { ActivatedRoute, Router } from '@angular/router';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { ApiService } from '../../services/api.service';
 import { languages } from '../../shared/constants';
-import { Product, Category } from '../../shared/models';
+import { Product, Category, ProductVariant } from '../../shared/models';
 import { SignalStore } from '../../store/signal.store';
 import { SignalStoreSelectors } from '../../store/signal.store.selectors';
+import { TranslateService } from '../../services/translate.service';
 import { toObservable } from '@angular/core/rxjs-interop';
 
 @Component({
@@ -55,19 +57,29 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
   standardSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 
   categoriesTree: { [key: string]: string[] } = {
-    'Đầm & Váy': ['Đầm Dạ Hội', 'Đầm Tiệc Cocktail', 'Đầm Dạo Phố', 'Đầm Chữ A', 'Đầm Body', 'Đầm Maxi', 'Đầm Suông'],
-    'Áo': ['Sơ Mi Lụa', 'Áo Kiểu Sang Trọng', 'Áo Ren', 'Áo Croptop', 'Áo Len & Thun'],
-    'Áo Khoác & Blazer': ['Blazer Dạ', 'Blazer Tweed', 'Áo Khoác Dáng Dài', 'Cardigan'],
-    'Quần & Chân Váy': ['Chân Váy Xòe', 'Chân Váy Bút Chì', 'Quần Palazzo Ống Rộng', 'Quần Tây Âu'],
-    'Set Bộ Thiết Kế': ['Set Áo & Chân Váy', 'Set Blazer & Quần', 'Set Dạ Tweed'],
-    'Túi Xách & Ví': ['Túi Kẹp Nách', 'Túi Xách Tay', 'Túi Đeo Chéo', 'Ví Cầm Tay Clutch'],
-    'Trang Sức & Phụ Kiện': ['Khuyên Tai', 'Vòng Cổ Ngọc Trai', 'Hoa Cài Áo Mạ Vàng', 'Nhẫn & Vòng Tay', 'Khăn Lụa & Thắt Lưng'],
-    'Giày & Guốc': ['Giày Cao Gót', 'Guốc Mules', 'Sandal Sang Trọng', 'Giày Búp Bê']
+    'Áo': [],
+    'Váy': [],
+    'Quần': [],
+    'Đầm': [],
+    'Trang Sức': [],
+    'Khăn choàng': [],
+    'Phụ Kiện': [],
   };
 
   customColorName = '';
   customColorHex = '#74070E';
   customSize = '';
+  customClassification = '';
+
+  // Biến thể (Variants) Batch Update
+  quickPrice: number | null = null;
+  quickStock: number | null = null;
+  batchVariantPrice: number | null = null;
+  batchVariantStock: number | null = null;
+  batchVariantStatus: '' | 'active' | 'inactive' = '';
+
+  // Image upload mode
+  imageUploadMode: 'upload' | 'url' = 'upload';
 
   // CSV Import
   csvProducts: any[] = [];
@@ -75,20 +87,78 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
   csvImportResult: { imported: number; errors: string[] } | null = null;
   csvFileName = '';
 
-  constructor(private fb: FormBuilder, private store: SignalStore, private selectors: SignalStoreSelectors, private apiService: ApiService) {
+  // Async Button States
+  isSubmitting = false;
+  isDeleting = false;
+  isUploadingImage = false;
+  isAddingImageUrl = false;
+  removingImage: string | null = null;
+
+  constructor(
+    private fb: FormBuilder,
+    private store: SignalStore,
+    private selectors: SignalStoreSelectors,
+    private apiService: ApiService,
+    @Optional() private snackBar?: MatSnackBar,
+    @Optional() private cdr?: ChangeDetectorRef,
+    @Optional() private route?: ActivatedRoute,
+    @Optional() private router?: Router,
+    @Optional() private translate?: TranslateService
+  ) {
     this.createForm();
     this.product$ = toObservable(this.selectors.product)
-      .pipe(filter((product) => !!product && !!product.titleUrl && !product.title));
+      .pipe(filter((product) => !!product && (!!product.titleUrl || !!product._id || !!product.id)));
     this.categories$ = toObservable(this.selectors.categories);
     this.images$ = toObservable(this.selectors.productImages);
     this.allProducts$ = toObservable(this.selectors.allProducts);
     this.store.getCategories(languages[0]);
   }
 
+  showToast(message: string, isError: boolean = false): void {
+    if (this.snackBar) {
+      this.snackBar.open(message, 'Đóng', {
+        duration: isError ? 4000 : 2500,
+        horizontalPosition: 'right',
+        verticalPosition: 'top',
+      });
+    }
+  }
+
   ngOnInit(): void {
     this.store.getImages();
     this.store.getAllProducts();
-    if (this.productToEditTitleUrl) {
+
+    if (this.route) {
+      this.route.params.subscribe((params) => {
+        const id = params['id'];
+        const url = this.router?.url || '';
+        if (id && id !== 'new' && id !== 'add') {
+          this.action = 'edit';
+          this.productToEditTitleUrl = id;
+          this.store.getProduct(id);
+        } else if (
+          id === 'new' ||
+          id === 'add' ||
+          url.includes('/products/add') ||
+          url.includes('/products/edit/new') ||
+          url.includes('/products/edit/add') ||
+          !this.action
+        ) {
+          this.action = 'add';
+          this.productToEditTitleUrl = '';
+          this.createForm();
+          this.sendRequest = false;
+          this.manualTitleUrl = false;
+          this.csvProducts = [];
+          this.csvFileName = '';
+          this.csvImportResult = null;
+          this.searchProductCtrl.setValue('', { emitEvent: false });
+          this.descriptionFullSub$.next(
+            this.languageOptions.reduce((prev, lang) => ({ ...prev, [lang]: '' }), {})
+          );
+        }
+      });
+    } else if (this.productToEditTitleUrl) {
       this.store.getProduct(this.productToEditTitleUrl);
     }
 
@@ -108,11 +178,12 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
       })
     );
 
-    this.productSub = this.product$.subscribe((product) => {
+    this.productSub = this.product$.subscribe((product: any) => {
+      if (!product || this.action === 'add') return;
       const newForm = {
-        titleUrl: product.titleUrl,
-        mainImage: product.mainImage && product.mainImage.url ? product.mainImage.url : '',
-        tags: product.tags,
+        titleUrl: product.titleUrl || '',
+        mainImage: product.mainImage && product.mainImage.url ? product.mainImage.url : (typeof product.mainImage === 'string' ? product.mainImage : ''),
+        tags: product.tags || [],
         images: product.images || [],
         imageUrl: '',
         ...this.prepareLangEditForm(product),
@@ -120,16 +191,29 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
 
       const prepareDescFull = this.languageOptions
         .map((lang) => ({
-          [lang]: product[lang]?.descriptionFull?.length ? product[lang].descriptionFull[0] : '',
+          [lang]: product[lang]?.descriptionFull?.length ? product[lang].descriptionFull[0] : (product.descriptionFull?.[0] || ''),
         }))
         .reduce((prev, curr) => ({ ...prev, ...curr }), {});
 
       this.descriptionFullSub$.next(prepareDescFull);
-      this.productEditForm.setValue(newForm);
-      const displayName = product.title || product['vi']?.title || product.titleUrl;
+      this.productEditForm.patchValue(newForm);
+      this.languageOptions.forEach((lang) => {
+        const variants = product[lang]?.variants || product.variants || [];
+        this.setVariantsFormArray(lang, variants);
+      });
+      const displayName = product.title || product['vi']?.title || product.titleUrl || '';
       this.searchProductCtrl.setValue(displayName, { emitEvent: false });
     });
   }
+
+  goBackToProducts(): void {
+    this.changeTab.emit(0);
+    const lang = this.translate?.lang || 'vi';
+    if (this.router) {
+      this.router.navigate([`/${lang}/dashboard/products`]);
+    }
+  }
+
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['productToEditTitleUrl'] && this.productToEditTitleUrl) {
@@ -162,27 +246,133 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
     }
   }
 
-  onFileChanged(event) {
-    const files = event.target.files;
-    if (files.length === 0)
+  onFileChanged(event: any) {
+    const files = event?.target?.files;
+    if (!files || files.length === 0)
       return;
 
-    const mimeType = files[0].type;
-    if (mimeType.match(/image\/*/) == null) {
-      console.log("Only images are supported.");
+    const file = files[0];
+    const fileName = (file.name || '').toLowerCase();
+    const validExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+    const validMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+
+    const hasValidExt = validExtensions.some((ext) => fileName.endsWith(ext));
+    const hasValidMime = validMimeTypes.includes((file.type || '').toLowerCase());
+
+    if (!hasValidExt && !hasValidMime) {
+      this.showToast('Chỉ chấp nhận tệp hình ảnh định dạng JPG, PNG hoặc WEBP!', true);
+      if (event?.target) event.target.value = '';
       return;
     }
 
-    const uploadImage = this.apiService.uploadImage({ fileToUpload: files[0], titleUrl: this.productToEditTitleUrl });
+    this.isUploadingImage = true;
+    this.cdr?.detectChanges();
+
+    const titleUrlToUpload = this.productToEditTitleUrl || this.productEditForm.get('titleUrl')?.value || '';
+    const uploadImage = this.apiService.uploadImage({ fileToUpload: file, titleUrl: titleUrlToUpload });
 
     uploadImage.pipe(take(1))
-      .subscribe((result: any) => {
-        if (result && result.titleUrl) {
-          this.store.storeProduct(result);
-        } else if (result && result.all) {
-          this.store.storeProductImages(result);
+      .subscribe({
+        next: (result: any) => {
+          if (result && !result.error) {
+            this.isUploadingImage = false;
+            let newImageUrl: string = '';
+            if (result && result.titleUrl) {
+              this.store.storeProduct(result);
+              if (Array.isArray(result.images) && result.images.length) {
+                newImageUrl = result.images[result.images.length - 1];
+              } else if (result.mainImage?.url) {
+                newImageUrl = result.mainImage.url;
+              }
+            } else if (result && result.all) {
+              this.store.storeProductImages(result);
+              if (Array.isArray(result.all) && result.all.length) {
+                newImageUrl = result.all[result.all.length - 1];
+              }
+            }
+
+            if (newImageUrl) {
+              this.addImageToForm(newImageUrl);
+            }
+            this.showToast('Tải hình ảnh lên thành công!');
+            if (event?.target) {
+              event.target.value = '';
+            }
+            this.cdr?.detectChanges();
+          } else {
+            this.fallbackLocalImageRead(file, event);
+          }
+        },
+        error: (err: any) => {
+          console.warn('Lỗi kết nối upload ảnh, chuyển sang chế độ đọc ảnh trực tiếp:', err);
+          this.fallbackLocalImageRead(file, event);
         }
       });
+  }
+
+  addImageToForm(url: string): void {
+    if (!url) return;
+    const currentImages = this.productEditForm.get('images')?.value || [];
+    const imagesList: string[] = Array.isArray(currentImages)
+      ? currentImages.map((img: any) => (typeof img === 'string' ? img : img?.url)).filter(Boolean)
+      : [];
+
+    if (!imagesList.includes(url)) {
+      const updated = [...imagesList, url];
+      this.productEditForm.get('images')?.setValue(updated);
+      const currentMain = this.productEditForm.get('mainImage')?.value;
+      const currentMainUrl = typeof currentMain === 'string' ? currentMain : currentMain?.url;
+      if (!currentMainUrl) {
+        this.productEditForm.get('mainImage')?.setValue(url);
+      }
+    }
+    const storeImages = this.selectors?.productImages?.() || [];
+    if (!storeImages.includes(url)) {
+      this.store.storeProductImages({ all: [...storeImages, url] });
+    }
+    this.cdr?.detectChanges();
+  }
+
+  fallbackLocalImageRead(file: File, event?: any): void {
+    const reader = new FileReader();
+    reader.onload = (e: any) => {
+      this.isUploadingImage = false;
+      const dataUrl = e.target?.result;
+      if (dataUrl) {
+        this.addImageToForm(dataUrl);
+        this.showToast('Tải hình ảnh lên thành công!');
+      } else {
+        this.showToast('Không thể tải hình ảnh. Vui lòng thử lại!', true);
+      }
+      if (event?.target) event.target.value = '';
+      this.cdr?.detectChanges();
+    };
+    reader.onerror = () => {
+      this.isUploadingImage = false;
+      this.showToast('Lỗi khi đọc tệp ảnh từ thiết bị!', true);
+      if (event?.target) event.target.value = '';
+      this.cdr?.detectChanges();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  getDisplayImages(): string[] {
+    const list: string[] = [];
+    const formImages = this.productEditForm?.get('images')?.value;
+    if (Array.isArray(formImages)) {
+      formImages.forEach((img: any) => {
+        const url = typeof img === 'string' ? img : img?.url;
+        if (url && !list.includes(url)) list.push(url);
+      });
+    }
+
+    const mainImage = this.productEditForm?.get('mainImage')?.value;
+    const mainImageUrl = typeof mainImage === 'string' ? mainImage : mainImage?.url;
+    if (mainImageUrl && !list.includes(mainImageUrl)) {
+      list.unshift(mainImageUrl);
+    }
+
+    return list;
   }
 
   onEditorChange(value): void {
@@ -196,16 +386,68 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
       titleUrl: [''],
       mainImage: '',
       tags: [[]],
-      images: [],
+      images: [[]],
       imageUrl: '',
       ...this.createLangForm(this.languageOptions),
     });
   }
 
-  onRemoveImage(image: string, type: string): void {
-    const titleUrl = type === 'product' ? { titleUrl: this.productEditForm.get('titleUrl').value } : {};
+  isMainImage(image: string): boolean {
+    const mainImg = this.productEditForm?.get('mainImage')?.value;
+    const mainUrl = typeof mainImg === 'string' ? mainImg : mainImg?.url;
+    return !!mainUrl && mainUrl === image;
+  }
 
-    this.store.removeImage({ image: image, ...titleUrl });
+  setAsMainImage(image: string): void {
+    if (!image) return;
+    this.productEditForm.get('mainImage')?.setValue(image);
+    this.showToast('Đã đặt làm ảnh chính!');
+    this.cdr?.detectChanges();
+  }
+
+  onImageError(event: any, image: string): void {
+    console.warn('Không thể tải hình ảnh:', image);
+    if (event?.target) {
+      event.target.src =
+        'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23f8edef"/><text x="50" y="50" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="11" fill="%2374070E">Ảnh lỗi</text></svg>';
+    }
+  }
+
+  onRemoveImage(image: string, type: string): void {
+    if (this.removingImage === image) return;
+    this.removingImage = image;
+    this.cdr?.detectChanges();
+
+    const formImages = this.productEditForm.get('images')?.value || [];
+    const remaining = (Array.isArray(formImages) ? formImages : [])
+      .map((img: any) => (typeof img === 'string' ? img : img?.url))
+      .filter((imgUrl: string) => imgUrl && imgUrl !== image);
+
+    this.productEditForm.get('images')?.setValue(remaining);
+
+    const currentMain = this.productEditForm.get('mainImage')?.value;
+    const currentMainUrl = typeof currentMain === 'string' ? currentMain : currentMain?.url;
+    if (currentMainUrl === image) {
+      this.productEditForm.get('mainImage')?.setValue(remaining.length ? remaining[0] : '');
+    }
+
+    const storeImages = this.selectors?.productImages?.() || [];
+    if (storeImages.includes(image)) {
+      this.store.storeProductImages({ all: storeImages.filter((img: string) => img !== image) });
+    }
+
+    const titleUrlVal = this.productToEditTitleUrl || this.productEditForm.get('titleUrl')?.value;
+    const titleUrl = type === 'product' && titleUrlVal ? { titleUrl: titleUrlVal } : {};
+
+    this.store.removeImage({ image: image, ...titleUrl }, (res: any) => {
+      this.removingImage = null;
+      if (res && !res.error) {
+        this.showToast('Đã xóa hình ảnh thành công!');
+      } else {
+        this.showToast('Đã gỡ ảnh khỏi sản phẩm thành công!');
+      }
+      this.cdr?.detectChanges();
+    });
   }
 
   setLang(lang: string): void {
@@ -243,18 +485,57 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   addImageUrl(): void {
-    const imageUrl = this.productEditForm.get('imageUrl').value;
-    const titleUrl = this.productEditForm.get('titleUrl').value;
-    if (imageUrl && titleUrl) {
-      this.testImageUrl = imageUrl;
+    const rawUrl = (this.productEditForm.get('imageUrl')?.value || '').trim();
+    if (!rawUrl) {
+      this.showToast('Vui lòng nhập đường dẫn URL hình ảnh!', true);
+      return;
     }
-  }
 
-  checkImageUrl() {
-    const imageUrl = this.productEditForm.get('imageUrl').value;
-    const titleUrl = this.productEditForm.get('titleUrl').value;
-    this.store.addProductImagesUrl({ image: imageUrl, titleUrl });
-    this.testImageUrl = '';
+    let validUrl = rawUrl;
+    if (
+      !/^https?:\/\//i.test(validUrl) &&
+      !/^data:image\//i.test(validUrl) &&
+      !/^\/\//.test(validUrl) &&
+      !validUrl.startsWith('/')
+    ) {
+      if (validUrl.includes('.') && !validUrl.includes(' ')) {
+        validUrl = 'https://' + validUrl;
+      } else {
+        this.showToast('Đường dẫn URL không hợp lệ (phải bắt đầu bằng http:// hoặc https://)!', true);
+        return;
+      }
+    }
+
+    const currentImages = this.productEditForm.get('images')?.value || [];
+    const imagesList: string[] = Array.isArray(currentImages)
+      ? currentImages.map((img: any) => (typeof img === 'string' ? img : img?.url)).filter(Boolean)
+      : [];
+
+    const currentMain = this.productEditForm.get('mainImage')?.value;
+    const currentMainUrl = typeof currentMain === 'string' ? currentMain : currentMain?.url;
+
+    if (imagesList.includes(validUrl) || currentMainUrl === validUrl) {
+      this.showToast('Hình ảnh này đã có trong danh sách!', true);
+      return;
+    }
+
+    this.isAddingImageUrl = true;
+    this.cdr?.detectChanges();
+
+    this.addImageToForm(validUrl);
+    this.productEditForm.get('imageUrl')?.setValue('');
+    this.showToast('Đã thêm hình ảnh từ URL thành công!');
+
+    const titleUrl = this.productToEditTitleUrl || this.productEditForm.get('titleUrl')?.value || '';
+    if (this.action === 'edit' && titleUrl) {
+      this.store.addProductImagesUrl({ image: validUrl, titleUrl }, () => {
+        this.isAddingImageUrl = false;
+        this.cdr?.detectChanges();
+      });
+    } else {
+      this.isAddingImageUrl = false;
+      this.cdr?.detectChanges();
+    }
   }
 
   openForm(): void {
@@ -303,42 +584,104 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
     }
   }
 
+  /**
+   * Kiểm tra xem ngôn ngữ hiện tại có đang chọn ít nhất 1 thuộc tính biến thể (Màu, Size, Phân loại) hay không
+   */
+  hasVariantAttributes(lang: string): boolean {
+    const langGroup = this.productEditForm?.get([lang]);
+    if (!langGroup) return false;
+    const hasColors = !!langGroup.get('hasColors')?.value && (langGroup.get('colors')?.value || []).length > 0;
+    const hasSizes = !!langGroup.get('hasSizes')?.value && (langGroup.get('sizes')?.value || []).length > 0;
+    const rawCat = langGroup.get('categoryLevel1')?.value;
+    const hasClass = !!langGroup.get('hasClassification')?.value && (Array.isArray(rawCat) ? rawCat.length > 0 : !!rawCat);
+    return hasColors || hasSizes || hasClass;
+  }
+
+  get isFormValid(): boolean {
+    if (!this.productEditForm) return false;
+    const chosenLang = this.choosenLanguageSub$.value || 'vi';
+    const group = this.productEditForm.get([chosenLang]) || this.productEditForm.get(['vi']);
+    if (!group) return false;
+
+    const title = group.get('title')?.value;
+    const hasTitle = !!title && String(title).trim().length > 0;
+
+    const variantsArray = this.getVariantsFormArray(chosenLang);
+    const hasVariants = variantsArray && variantsArray.length > 0;
+
+    let hasPrice = false;
+    if (hasVariants) {
+      hasPrice = variantsArray.controls.some(ctrl => Number(ctrl.get('price')?.value) > 0);
+    } else {
+      const regularPrice = group.get('regularPrice')?.value;
+      hasPrice = regularPrice !== null && regularPrice !== '' && !isNaN(Number(regularPrice)) && Number(regularPrice) > 0;
+    }
+
+    const hasPriceError = group.hasError('priceInvalid') || group.get('salePrice')?.hasError('priceInvalid');
+
+    return hasTitle && hasPrice && !hasPriceError;
+  }
+
   onSubmit(): void {
+    if (this.isSubmitting) return;
+
+    if (!this.isFormValid) {
+      this.showToast('Vui lòng nhập Tên sản phẩm và Giá bán (VNĐ) hợp lệ!', true);
+      return;
+    }
+
     const formVal = this.productEditForm.value;
     let titleUrl = formVal.titleUrl;
 
+    const chosenLang = this.choosenLanguageSub$.value || 'vi';
+    const activeData = formVal[chosenLang] || formVal.vi || {};
+
     if (!titleUrl || !titleUrl.trim()) {
-      const chosenLang = this.choosenLanguageSub$.value || 'vi';
       const name =
-        formVal[chosenLang]?.title ||
+        activeData.title ||
         formVal.vi?.title ||
         formVal.en?.title ||
         formVal.sk?.title ||
         formVal.cs?.title ||
         '';
       titleUrl = this.generateSlug(name) || `sp-${Date.now()}`;
+      this.productEditForm.patchValue({ titleUrl });
     }
+
+    this.isSubmitting = true;
+    this.cdr?.detectChanges();
+
+    const formTitle = activeData.title || 'Sản phẩm';
+    const currentImages = (this.productEditForm.value.images || [])
+      .map((img: any) => (typeof img === 'string' ? img : img?.url))
+      .filter(Boolean);
+    const mainImageUrl = this.productEditForm.value.mainImage || (currentImages.length ? currentImages[0] : '');
 
     switch (this.action) {
       case 'add':
-        this.images$.pipe(first()).subscribe((images) => {
-          if (images && images.length) {
-            this.productEditForm.patchValue({ images: images });
+        const productPrepare = {
+          ...this.productEditForm.value,
+          titleUrl: titleUrl,
+          mainImage: {
+            url: mainImageUrl,
+            name: titleUrl,
+          },
+          tags: this.productEditForm.value.tags || [],
+          images: currentImages,
+          ...this.prepareProductData(this.languageOptions, this.productEditForm.value),
+        };
+
+        this.store.addProduct(productPrepare, (res: any) => {
+          this.isSubmitting = false;
+          if (res && !res.error) {
+            this.sendRequest = true;
+            this.showToast(`Thêm mới sản phẩm "${formTitle}" thành công!`);
+          } else {
+            console.error('Lỗi khi thêm sản phẩm:', res?.error);
+            const errMsg = res?.error?.error?.message || res?.error?.message || (typeof res?.error === 'string' ? res?.error : 'Thêm sản phẩm thất bại. Vui lòng kiểm tra lại thông tin!');
+            this.showToast(Array.isArray(errMsg) ? errMsg.join(', ') : errMsg, true);
           }
-
-          const productPrepare = {
-            ...this.productEditForm.value,
-            titleUrl: titleUrl,
-            mainImage: {
-              url: this.productEditForm.value.mainImage || '',
-              name: titleUrl,
-            },
-            tags: this.productEditForm.value.tags || [],
-            images: this.productEditForm.value.images || [],
-            ...this.prepareProductData(this.languageOptions, this.productEditForm.value),
-          };
-
-          this.store.addProduct(productPrepare);
+          this.cdr?.detectChanges();
         });
         break;
 
@@ -347,24 +690,62 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
           ...this.productEditForm.value,
           titleUrl: titleUrl,
           mainImage: {
-            url: this.productEditForm.value.mainImage || '',
+            url: mainImageUrl,
             name: titleUrl,
           },
           tags: this.productEditForm.value.tags || [],
-          images: this.productEditForm.value.images || [],
+          images: currentImages,
           ...this.prepareProductData(this.languageOptions, this.productEditForm.value),
         };
 
-        this.store.editProduct(productPrepareEdit);
+        this.store.editProduct(productPrepareEdit, (res: any) => {
+          this.isSubmitting = false;
+          if (res && !res.error) {
+            this.sendRequest = true;
+            this.showToast(`Lưu thay đổi sản phẩm "${formTitle}" thành công!`);
+          } else {
+            console.error('Lỗi khi cập nhật sản phẩm:', res?.error);
+            const errMsg = res?.error?.error?.message || res?.error?.message || (typeof res?.error === 'string' ? res?.error : 'Lưu sản phẩm thất bại. Vui lòng thử lại!');
+            this.showToast(Array.isArray(errMsg) ? errMsg.join(', ') : errMsg, true);
+          }
+          this.cdr?.detectChanges();
+        });
+        break;
+
+      default:
+        this.isSubmitting = false;
+        this.cdr?.detectChanges();
         break;
     }
-
-    this.sendRequest = true;
   }
 
   onRemoveSubmit(): void {
-    this.store.removeProduct(this.productEditForm.get('titleUrl').value);
-    this.sendRequest = true;
+    if (this.isDeleting) return;
+
+    const titleUrl = this.productEditForm.get('titleUrl')?.value;
+    if (!titleUrl) {
+      this.showToast('Không tìm thấy mã định danh sản phẩm để xóa!', true);
+      return;
+    }
+
+    if (!confirm('Bạn có chắc chắn muốn xóa vĩnh viễn sản phẩm này? Thao tác này không thể hoàn tác.')) {
+      return;
+    }
+
+    this.isDeleting = true;
+    this.cdr?.detectChanges();
+
+    this.store.removeProduct(titleUrl, (res: any) => {
+      this.isDeleting = false;
+      if (res && !res.error) {
+        this.sendRequest = true;
+        this.showToast('Đã xóa sản phẩm thành công!');
+      } else {
+        const errMsg = res?.error?.message || res?.error || 'Xóa sản phẩm thất bại. Vui lòng thử lại!';
+        this.showToast(errMsg, true);
+      }
+      this.cdr?.detectChanges();
+    });
   }
 
   priceValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
@@ -431,6 +812,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
       currentColors.push(color);
     }
     langGroup.get('colors')?.setValue([...currentColors]);
+    this.generateVariants(lang, true);
   }
 
   isColorSelected(color: { name: string; hex: string }, lang: string): boolean {
@@ -454,6 +836,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
     const currentColors = [...(langGroup.get('colors')?.value || [])];
     currentColors.splice(index, 1);
     langGroup.get('colors')?.setValue(currentColors);
+    this.generateVariants(lang, true);
   }
 
   toggleSize(size: string, lang: string): void {
@@ -468,6 +851,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
       currentSizes.push(size);
     }
     langGroup.get('sizes')?.setValue([...currentSizes]);
+    this.generateVariants(lang, true);
   }
 
   isSizeSelected(size: string, lang: string): boolean {
@@ -485,12 +869,51 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
     this.toggleSize(size, lang);
   }
 
+  get categories(): string[] {
+    return Object.keys(this.categoriesTree);
+  }
+
   getLevel1Categories(): string[] {
     return Object.keys(this.categoriesTree);
   }
 
   getLevel2Categories(level1: string): string[] {
     return this.categoriesTree[level1] || [];
+  }
+
+  addClassification(lang: string): void {
+    if (!this.customClassification || !this.customClassification.trim()) return;
+    const catName = this.customClassification.trim();
+    if (!this.categoriesTree[catName]) {
+      this.categoriesTree[catName] = [];
+    }
+    this.toggleCategory(catName, lang);
+    this.customClassification = '';
+    this.showToast(`Đã thêm danh mục "${catName}"!`);
+  }
+
+  toggleCategory(cat: string, lang: string): void {
+    const langGroup = this.productEditForm.get([lang]);
+    if (!langGroup) return;
+    const currentCats: string[] = langGroup.get('categoryLevel1')?.value || [];
+    const index = currentCats.indexOf(cat);
+
+    if (index > -1) {
+      currentCats.splice(index, 1);
+    } else {
+      currentCats.push(cat);
+    }
+    langGroup.get('categoryLevel1')?.setValue([...currentCats]);
+    this.generateVariants(lang, true);
+  }
+
+  isCategorySelected(cat: string, lang: string): boolean {
+    const currentCats: string[] = this.productEditForm.get([lang, 'categoryLevel1'])?.value || [];
+    return currentCats.includes(cat);
+  }
+
+  removeCategory(cat: string, lang: string): void {
+    this.toggleCategory(cat, lang);
   }
 
   onLevel1Change(level1: string, lang: string): void {
@@ -500,16 +923,383 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
         categoryLevel1: level1,
         categoryLevel2: ''
       });
+      this.generateVariants(lang, true);
     }
+  }
+
+  /**
+   * Lấy FormArray variants của một ngôn ngữ
+   */
+  getVariantsFormArray(lang: string): FormArray {
+    const langGroup = this.productEditForm?.get([lang]);
+    return (langGroup?.get('variants') as FormArray) || this.fb.array([]);
+  }
+
+  /**
+   * Tạo FormGroup cho 1 biến thể với cấu trúc chuẩn Reactive Forms
+   */
+  createVariantGroup(v?: any): FormGroup {
+    return this.fb.group({
+      sku: [v?.sku || '', [Validators.required]],
+      attributes: [v?.attributes || {}],
+      price: [v?.price !== undefined ? Number(v.price) : 0, [Validators.required, Validators.min(0)]],
+      stock: [v?.stock !== undefined ? Number(v.stock) : 0, [Validators.required, Validators.min(0)]],
+      status: [v?.status !== undefined ? Boolean(v.status) : true],
+    });
+  }
+
+  /**
+   * Đổ dữ liệu vào FormArray variants
+   */
+  setVariantsFormArray(lang: string, variants: any[]): void {
+    const formArray = this.getVariantsFormArray(lang);
+    if (!formArray) return;
+    formArray.clear();
+    if (Array.isArray(variants)) {
+      variants.forEach((v) => {
+        formArray.push(this.createVariantGroup(v));
+      });
+    }
+  }
+
+  /**
+   * Hàm chuẩn hóa SKU không dấu viết hoa
+   */
+  slugify(text: string): string {
+    if (!text) return '';
+    return text
+      .toString()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[đĐ]/g, 'D')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '')
+      .trim();
+  }
+
+  formatSkuSegment(text: string): string {
+    return this.slugify(text);
+  }
+
+  /**
+   * Sinh mã SKU tự động theo thuộc tính (VD: "AO-DO-S")
+   * Thứ tự ưu tiên: Phân loại -> Màu sắc -> Kích thước
+   */
+  generateVariantSku(attributes: Record<string, string>): string {
+    if (!attributes) return `VAR-${Date.now()}`;
+    const parts: string[] = [];
+
+    // 1. Phân loại
+    const classification = attributes['Phân loại'] || attributes['classification'];
+    if (classification) {
+      parts.push(this.slugify(classification));
+    }
+
+    // 2. Màu sắc
+    const color = attributes['Màu sắc'] || attributes['color'];
+    if (color) {
+      parts.push(this.slugify(color));
+    }
+
+    // 3. Kích thước
+    const size = attributes['Kích thước'] || attributes['size'];
+    if (size) {
+      parts.push(this.slugify(size));
+    }
+
+    // Các thuộc tính khác nếu có
+    for (const key of Object.keys(attributes)) {
+      if (!['Phân loại', 'classification', 'Màu sắc', 'color', 'Kích thước', 'size'].includes(key) && attributes[key]) {
+        parts.push(this.slugify(attributes[key]));
+      }
+    }
+
+    return parts.filter(Boolean).join('-') || `VAR-${Date.now()}`;
+  }
+
+  /**
+   * Helper tạo khóa duy nhất từ attributes để map bảo lưu biến thể cũ
+   */
+  private getAttributeKey(attributes: Record<string, string>): string {
+    if (!attributes) return '';
+    return Object.keys(attributes)
+      .sort()
+      .map((k) => `${k}:${attributes[k]}`)
+      .join('|');
+  }
+
+  /**
+   * Lấy danh sách các cột thuộc tính đang kích hoạt và có dữ liệu để hiển thị động trên bảng
+   */
+  getActiveAttributeColumns(lang: string): { key: string; label: string }[] {
+    const langGroup = this.productEditForm?.get([lang]);
+    if (!langGroup) return [];
+    const cols: { key: string; label: string }[] = [];
+
+    // Nhóm 1: Phân loại danh mục
+    const hasClass = !!langGroup.get('hasClassification')?.value;
+    const catVal = langGroup.get('categoryLevel1')?.value;
+    const hasCats = Array.isArray(catVal) ? catVal.length > 0 : !!catVal;
+    if (hasClass && hasCats) {
+      cols.push({ key: 'classification', label: 'Phân loại' });
+    }
+
+    // Nhóm 2: Màu sắc
+    const hasColors = !!langGroup.get('hasColors')?.value;
+    const colors = langGroup.get('colors')?.value || [];
+    if (hasColors && colors.length > 0) {
+      cols.push({ key: 'color', label: 'Màu sắc' });
+    }
+
+    // Nhóm 3: Kích thước
+    const hasSizes = !!langGroup.get('hasSizes')?.value;
+    const sizes = langGroup.get('sizes')?.value || [];
+    if (hasSizes && sizes.length > 0) {
+      cols.push({ key: 'size', label: 'Kích thước' });
+    }
+
+    return cols;
+  }
+
+  /**
+   * Lấy giá trị thuộc tính cho cell hiển thị
+   */
+  getVariantAttributeValue(control: AbstractControl, col: { key: string; label: string }): string {
+    const attrs = control?.get('attributes')?.value || {};
+    return attrs[col.label] || attrs[col.key] || attrs[col.label.toLowerCase()] || '—';
+  }
+
+  /**
+   * Lấy mã hex của màu sắc để hiển thị pill-swatch đồng bộ
+   */
+  getColorHex(colorName: string, lang: string): string {
+    if (!colorName || colorName === '—') return 'transparent';
+    const langGroup = this.productEditForm?.get([lang]);
+    const colors: { name: string; hex: string }[] = langGroup?.get('colors')?.value || [];
+    const found = colors.find((c) => (c.name || '').toLowerCase() === colorName.toLowerCase());
+    if (found?.hex) return found.hex;
+    const preset = this.presetColors.find((c) => (c.name || '').toLowerCase() === colorName.toLowerCase());
+    if (preset?.hex) return preset.hex;
+    return '#74070E';
+  }
+
+  /**
+   * Thuật toán Cartesian Product (Tích Descartes) linh hoạt:
+   * 1. Tự động kiểm tra cờ bật/tắt (hasColors, hasSizes, hasClassification).
+   * 2. Chỉ đưa các nhóm thuộc tính vào tích Descartes khi cờ tương ứng = true VÀ mảng dữ liệu có ít nhất 1 phần tử.
+   * 3. Trường hợp số lượng thuộc tính biến động (1, 2 hoặc 3): Tự co giãn linh hoạt mà không lỗi mảng rỗng.
+   * 4. Bảo toàn dữ liệu (Data Persistence): Giữ nguyên price và stock cũ nếu SKU hoặc thuộc tính trùng.
+   */
+  generateVariants(lang: string, preserveExisting = true): void {
+    const langGroup = this.productEditForm?.get([lang]);
+    if (!langGroup) return;
+
+    const variantsArray = this.getVariantsFormArray(lang);
+    if (!variantsArray) return;
+
+    interface AttrGroup {
+      key: string;
+      label: string;
+      values: string[];
+    }
+    const groups: AttrGroup[] = [];
+
+    // Nhóm 1: Phân loại sản phẩm (hasClassification)
+    const hasClass = !!langGroup.get('hasClassification')?.value;
+    const rawCategory = langGroup.get('categoryLevel1')?.value;
+    let categoryValues: string[] = [];
+    if (Array.isArray(rawCategory)) {
+      categoryValues = rawCategory.filter((c: any) => c && String(c).trim());
+    } else if (typeof rawCategory === 'string' && rawCategory.trim()) {
+      categoryValues = [rawCategory.trim()];
+    }
+    if (hasClass && categoryValues.length > 0) {
+      groups.push({ key: 'classification', label: 'Phân loại', values: categoryValues });
+    }
+
+    // Nhóm 2: Màu sắc (hasColors)
+    const hasColors = !!langGroup.get('hasColors')?.value;
+    const colors = (langGroup.get('colors')?.value || [])
+      .map((c: any) => (typeof c === 'string' ? c : c?.name))
+      .filter((name: string) => name && name.trim());
+    if (hasColors && colors.length > 0) {
+      groups.push({ key: 'color', label: 'Màu sắc', values: colors });
+    }
+
+    // Nhóm 3: Kích thước (hasSizes)
+    const hasSizes = !!langGroup.get('hasSizes')?.value;
+    const sizes = (langGroup.get('sizes')?.value || [])
+      .filter((s: string) => s && String(s).trim());
+    if (hasSizes && sizes.length > 0) {
+      groups.push({ key: 'size', label: 'Kích thước', values: sizes });
+    }
+
+    // Nếu không có nhóm nào được bật hoặc chưa có dữ liệu thuộc tính
+    if (groups.length === 0) {
+      variantsArray.clear();
+      this.cdr?.detectChanges();
+      return;
+    }
+
+    // Thuật toán tích Descartes tổng quát (Cartesian Product)
+    const combinations = groups.reduce<Record<string, string>[]>(
+      (acc, group) => {
+        const next: Record<string, string>[] = [];
+        for (const item of acc) {
+          for (const val of group.values) {
+            next.push({
+              ...item,
+              [group.label]: val,
+              [group.key]: val,
+            });
+          }
+        }
+        return next;
+      },
+      [{}]
+    );
+
+    // Lấy giá và tồn kho mặc định từ Section 4
+    const defaultPrice = Number(langGroup.get('regularPrice')?.value) || 0;
+    const defaultStock = Number(langGroup.get('quantity')?.value) || 0;
+
+    // Lưu trữ biến thể cũ để bảo lưu giá / tồn kho / status theo SKU hoặc attributes
+    const existingVariants: any[] = preserveExisting ? variantsArray.value : [];
+    const existingMap = new Map<string, any>();
+    for (const v of existingVariants) {
+      if (!v) continue;
+      const attrKey = this.getAttributeKey(v.attributes);
+      if (attrKey) existingMap.set(attrKey, v);
+      if (v.sku) existingMap.set(v.sku, v);
+    }
+
+    // Xóa và tạo mới các FormGroups
+    variantsArray.clear();
+    for (const attrs of combinations) {
+      const sku = this.generateVariantSku(attrs);
+      const attrKey = this.getAttributeKey(attrs);
+      const existing = existingMap.get(attrKey) || existingMap.get(sku);
+
+      // Cặp tên thuộc tính hiển thị: {"Phân loại": "...", "Màu sắc": "...", "Kích thước": "..."}
+      const cleanAttrs: Record<string, string> = {};
+      if (attrs['Phân loại']) cleanAttrs['Phân loại'] = attrs['Phân loại'];
+      if (attrs['Màu sắc']) cleanAttrs['Màu sắc'] = attrs['Màu sắc'];
+      if (attrs['Kích thước']) cleanAttrs['Kích thước'] = attrs['Kích thước'];
+
+      const variantGroup = this.createVariantGroup({
+        sku: existing?.sku || sku,
+        attributes: cleanAttrs,
+        price: existing?.price !== undefined ? Number(existing.price) : defaultPrice,
+        stock: existing?.stock !== undefined ? Number(existing.stock) : defaultStock,
+        status: existing?.status !== undefined ? Boolean(existing.status) : true,
+      });
+
+      variantsArray.push(variantGroup);
+    }
+
+    // Đồng bộ giá và tồn kho lên form cha để hợp lệ form
+    const firstValidPrice = variantsArray.controls
+      .map(c => Number(c.get('price')?.value) || 0)
+      .find(p => p > 0) || defaultPrice;
+    if (firstValidPrice > 0 && (!langGroup.get('regularPrice')?.value || Number(langGroup.get('regularPrice')?.value) === 0)) {
+      langGroup.get('regularPrice')?.setValue(firstValidPrice);
+    }
+    const totalStock = this.getVariantsTotalStock(lang);
+    if (totalStock > 0) {
+      langGroup.get('quantity')?.setValue(totalStock);
+    }
+
+    this.cdr?.detectChanges();
+  }
+
+  /**
+   * Áp dụng nhanh cho tất cả (Batch Update)
+   */
+  applyBatchUpdate(lang: string): void {
+    const formArray = this.getVariantsFormArray(lang);
+    if (!formArray || formArray.length === 0) {
+      this.showToast('Không có biến thể nào để áp dụng!', true);
+      return;
+    }
+
+    const hasPrice = this.quickPrice !== null && this.quickPrice !== undefined && String(this.quickPrice).trim() !== '' && !isNaN(Number(this.quickPrice)) && Number(this.quickPrice) >= 0;
+    const hasStock = this.quickStock !== null && this.quickStock !== undefined && String(this.quickStock).trim() !== '' && !isNaN(Number(this.quickStock)) && Number(this.quickStock) >= 0;
+
+    if (!hasPrice && !hasStock) {
+      this.showToast('Vui lòng nhập Giá chung hoặc Kho chung để áp dụng nhanh!', true);
+      return;
+    }
+
+    const langGroup = this.productEditForm?.get([lang]);
+
+    formArray.controls.forEach((control: AbstractControl) => {
+      if (hasPrice) {
+        control.get('price')?.setValue(Number(this.quickPrice));
+      }
+      if (hasStock) {
+        control.get('stock')?.setValue(Number(this.quickStock));
+      }
+    });
+
+    if (hasPrice && langGroup) {
+      langGroup.get('regularPrice')?.setValue(Number(this.quickPrice));
+    }
+    if (hasStock && langGroup) {
+      langGroup.get('quantity')?.setValue(this.getVariantsTotalStock(lang));
+    }
+
+    this.showToast(`Đã áp dụng nhanh cho ${formArray.length} biến thể!`);
+    this.cdr?.detectChanges();
+  }
+
+  applyBatchVariants(lang: string): void {
+    this.applyBatchUpdate(lang);
+  }
+
+  updateVariantField(index: number, field: 'price' | 'stock' | 'sku' | 'status', value: any, lang: string): void {
+    const formArray = this.getVariantsFormArray(lang);
+    if (!formArray) return;
+    const control = formArray.at(index);
+    if (control) {
+      let parsedVal: any = value;
+      if (field === 'price' || field === 'stock') {
+        parsedVal = Math.max(0, Number(value) || 0);
+      } else if (field === 'status') {
+        parsedVal = Boolean(value);
+      } else {
+        parsedVal = String(value);
+      }
+      control.get(field)?.setValue(parsedVal);
+    }
+  }
+
+  removeVariant(index: number, lang: string): void {
+    const formArray = this.getVariantsFormArray(lang);
+    if (formArray && index >= 0 && index < formArray.length) {
+      formArray.removeAt(index);
+      this.cdr?.detectChanges();
+    }
+  }
+
+  getVariantsTotalStock(lang: string): number {
+    const formArray = this.getVariantsFormArray(lang);
+    if (!formArray) return 0;
+    return formArray.controls.reduce((sum, ctrl) => sum + (Number(ctrl.get('stock')?.value) || 0), 0);
+  }
+
+  getActiveVariantsCount(lang: string): number {
+    const formArray = this.getVariantsFormArray(lang);
+    if (!formArray) return 0;
+    return formArray.controls.filter((ctrl) => ctrl.get('status')?.value !== false).length;
   }
 
   private createLangForm(languageOptions: Array<string>) {
     return languageOptions
       .map((lang: string) => ({
         [lang]: this.fb.group({
-          title: ['', Validators.required],
+          title: ['', lang === 'vi' ? [Validators.required] : []],
           description: '',
-          regularPrice: ['', [Validators.required, Validators.min(1)]],
+          regularPrice: ['', lang === 'vi' ? [Validators.required, Validators.min(1)] : []],
           salePrice: [''],
           descriptionFull: '',
           visibility: true,
@@ -529,8 +1319,9 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
           hasSizes: true,
           sizes: [[]],
           hasClassification: true,
-          categoryLevel1: '',
+          categoryLevel1: [[]],
           categoryLevel2: '',
+          variants: this.fb.array([]),
         }, { validators: [this.priceValidator] }),
       }))
       .reduce((prev, curr) => ({ ...prev, ...curr }), {});
@@ -571,8 +1362,9 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
             hasSizes: productLang.hasSizes !== undefined ? !!productLang.hasSizes : true,
             sizes: productLang.sizes || [],
             hasClassification: productLang.hasClassification !== undefined ? !!productLang.hasClassification : true,
-            categoryLevel1: productLang.categoryLevel1 || '',
+            categoryLevel1: productLang.categoryLevel1 || [],
             categoryLevel2: productLang.categoryLevel2 || '',
+            variants: productLang.variants || [],
           },
         };
       })
@@ -580,22 +1372,32 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private prepareProductData(languageOptions: Array<string>, formData) {
+    const chosenLang = this.choosenLanguageSub$.value || 'vi';
+    const activeData = formData[chosenLang] || formData['vi'] || {};
+
     return languageOptions
       .map((lang: string) => {
-        const langData = formData[lang] || {};
-        const descFull = langData.descriptionFull;
+        const rawLangData = formData[lang] || {};
+        const title = (rawLangData.title && String(rawLangData.title).trim()) ? rawLangData.title.trim() : (activeData.title || '');
+        const descFull = rawLangData.descriptionFull || activeData.descriptionFull;
         const descriptionFullArray = Array.isArray(descFull)
           ? descFull
           : (descFull ? [descFull] : []);
-        const regularPrice = Number(langData.regularPrice) || 0;
-        const salePriceNum = Number(langData.salePrice) || 0;
+        const rawRegPrice = rawLangData.regularPrice !== undefined && rawLangData.regularPrice !== ''
+          ? rawLangData.regularPrice
+          : activeData.regularPrice;
+        const regularPrice = Number(rawRegPrice) || 0;
+        const rawSalePrice = rawLangData.salePrice !== undefined && rawLangData.salePrice !== ''
+          ? rawLangData.salePrice
+          : activeData.salePrice;
+        const salePriceNum = Number(rawSalePrice) || 0;
         const hasSalePrice = salePriceNum > 0 && salePriceNum < regularPrice;
         const effectiveSalePrice = hasSalePrice ? salePriceNum : regularPrice;
 
-        const shippingBasic = !!langData.shippingBasic;
-        const shippingExtended = !!langData.shippingExtended;
-        const shippingBasicCost = Number(langData.shippingBasicCost) || 0;
-        const shippingExtendedCost = Number(langData.shippingExtendedCost) || 0;
+        const shippingBasic = !!(rawLangData.shippingBasic !== undefined ? rawLangData.shippingBasic : activeData.shippingBasic);
+        const shippingExtended = !!(rawLangData.shippingExtended !== undefined ? rawLangData.shippingExtended : activeData.shippingExtended);
+        const shippingBasicCost = Number(rawLangData.shippingBasicCost !== undefined ? rawLangData.shippingBasicCost : activeData.shippingBasicCost) || 0;
+        const shippingExtendedCost = Number(rawLangData.shippingExtendedCost !== undefined ? rawLangData.shippingExtendedCost : activeData.shippingExtendedCost) || 0;
         let shippingType = 'none';
         if (shippingBasic && shippingExtended) {
           shippingType = 'both';
@@ -607,31 +1409,32 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
 
         return {
           [lang]: {
-            ...langData,
-            title: langData.title || '',
-            description: langData.description || '',
+            ...rawLangData,
+            title: title,
+            description: rawLangData.description || activeData.description || '',
             regularPrice: regularPrice,
             salePrice: effectiveSalePrice,
             descriptionFull: descriptionFullArray,
-            visibility: !!langData.visibility,
-            onSale: hasSalePrice || !!langData.onSale,
-            stock: langData.stock || 'onStock',
-            stockDate: langData.stockDate || '',
-            quantity: Number(langData.quantity) || 0,
+            visibility: rawLangData.visibility !== undefined ? !!rawLangData.visibility : (activeData.visibility !== undefined ? !!activeData.visibility : true),
+            onSale: hasSalePrice || !!rawLangData.onSale,
+            stock: rawLangData.stock || activeData.stock || 'onStock',
+            stockDate: rawLangData.stockDate || activeData.stockDate || '',
+            quantity: Number(rawLangData.quantity !== undefined ? rawLangData.quantity : activeData.quantity) || 0,
             shipping: shippingType,
             shippingBasic: shippingBasic,
             shippingBasicCost: shippingBasicCost,
             shippingExtended: shippingExtended,
             shippingExtendedCost: shippingExtendedCost,
-            shippingCost: shippingBasicCost || shippingExtendedCost || Number(langData.shippingCost) || 0,
-            productType: langData.productType || 'clothing',
-            hasColors: !!langData.hasColors,
-            colors: langData.colors || [],
-            hasSizes: !!langData.hasSizes,
-            sizes: langData.sizes || [],
-            hasClassification: !!langData.hasClassification,
-            categoryLevel1: langData.categoryLevel1 || '',
-            categoryLevel2: langData.categoryLevel2 || '',
+            shippingCost: shippingBasicCost || shippingExtendedCost || Number(rawLangData.shippingCost) || 0,
+            productType: rawLangData.productType || activeData.productType || 'clothing',
+            hasColors: rawLangData.hasColors !== undefined ? !!rawLangData.hasColors : (activeData.hasColors !== undefined ? !!activeData.hasColors : true),
+            colors: rawLangData.colors || activeData.colors || [],
+            hasSizes: rawLangData.hasSizes !== undefined ? !!rawLangData.hasSizes : (activeData.hasSizes !== undefined ? !!activeData.hasSizes : true),
+            sizes: rawLangData.sizes || activeData.sizes || [],
+            hasClassification: rawLangData.hasClassification !== undefined ? !!rawLangData.hasClassification : (activeData.hasClassification !== undefined ? !!activeData.hasClassification : true),
+            categoryLevel1: rawLangData.categoryLevel1 || activeData.categoryLevel1 || '',
+            categoryLevel2: rawLangData.categoryLevel2 || activeData.categoryLevel2 || '',
+            variants: rawLangData.variants || activeData.variants || [],
           },
         };
       })
@@ -907,8 +1710,10 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
     if (!this.csvProducts.length || this.csvImporting) return;
     this.csvImporting = true;
     this.csvImportResult = null;
+    this.cdr?.detectChanges();
 
     // Prepare products for API
+    const countToImport = this.csvProducts.length;
     const productsToImport = this.csvProducts.map(p => {
       const prepared = { ...p };
       delete prepared._handle;
@@ -921,11 +1726,16 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
       this.csvImporting = false;
       if (result && !result.error) {
         this.csvImportResult = result;
+        const importedCount = result.imported ?? countToImport;
         this.csvProducts = [];
         this.csvFileName = '';
+        this.showToast(`Đã nhập thành công ${importedCount} sản phẩm từ file CSV!`);
       } else {
-        this.csvImportResult = { imported: 0, errors: ['Lỗi khi import sản phẩm'] };
+        const errorMsg = result?.error?.message || result?.error || 'Lỗi khi nhập sản phẩm từ CSV';
+        this.csvImportResult = { imported: 0, errors: [errorMsg] };
+        this.showToast(errorMsg, true);
       }
+      this.cdr?.detectChanges();
     });
   }
 

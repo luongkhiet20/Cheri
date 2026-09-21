@@ -7,6 +7,7 @@ import {
   Session,
   Param,
   Patch,
+  Delete,
   UnprocessableEntityException,
   Headers,
 } from '@nestjs/common';
@@ -102,5 +103,11 @@ export class OrdersController {
   @Patch()
   updateOrder(@Body() order) {
     return this.ordersService.updateOrder(order);
+  }
+
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Delete('/:id')
+  deleteOrder(@Param('id') id: string) {
+    return this.ordersService.removeOrder(id);
   }
 }

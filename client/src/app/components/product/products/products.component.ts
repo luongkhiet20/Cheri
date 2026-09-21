@@ -39,10 +39,34 @@ export class ProductsComponent implements OnDestroy {
   categoriesSub: Subscription;
   productsSub: Subscription;
   sortOptions = sortOptions;
+
+  // ── New filter signals ──
+  filterMinPrice = signal<number>(0);
+  filterStock = signal<string>('all');
+  filterRating = signal<any>(0);
+  selectedCategories = signal<string[]>([]);
+  selectedRatings = signal<number[]>([]);
   sidebarOpened = false;
   columnsView = signal<number>(4);
   wishlistIds = signal<string[]>([]);
   private _storageListener?: (e: StorageEvent) => void;
+
+  // ── Computed active filters count ──
+  activeFiltersCount = computed(() => {
+    let count = 0;
+    if (this.filterPrice() && this.filterPrice() < (this.maxPrice() || Infinity)) count++;
+    if (this.filterMinPrice() > 0) count++;
+    if (this.filterStock() !== 'all') count++;
+    if (this.selectedRatings().length > 0) {
+      count += this.selectedRatings().length;
+    } else if (this.filterRating() && String(this.filterRating()) !== '0') {
+      count += String(this.filterRating()).split(',').length;
+    }
+    if (this.selectedCategories().length > 0) {
+      count += this.selectedCategories().length;
+    }
+    return count;
+  });
 
   setColumns(cols: number): void {
     this.columnsView.set(cols);
@@ -184,6 +208,14 @@ export class ProductsComponent implements OnDestroy {
     this.category = toSignal(this.route.params.pipe(
       map((params) => params['category'])
     ));
+    this.route.params.subscribe((params) => {
+      const cat = params['category'];
+      if (cat && cat !== 'all') {
+        this.selectedCategories.set([cat]);
+      } else {
+        this.selectedCategories.set([]);
+      }
+    });
     this.page = toSignal(this.route.queryParams.pipe(
       map((params) => parseFloat(params['page']))
     ));
@@ -206,8 +238,8 @@ export class ProductsComponent implements OnDestroy {
      }
     );
 
-    this.title.setTitle('Cheri');
-    this.meta.updateTag({ name: 'description', content: 'Angular - Node.js - Cheri application - MEAN Cheri with dashboard' });
+    this.title.setTitle('Cheri — Cửa hàng');
+    this.meta.updateTag({ name: 'description', content: 'Khám phá bộ sưu tập thời trang Cheri — lọc theo danh mục, giá, tình trạng hàng và đánh giá.' });
 
     this.categories = this.selectors.categories;
     this.pagination = this.selectors.pagination;
@@ -257,7 +289,18 @@ export class ProductsComponent implements OnDestroy {
     }
   }
 
-  changeCategory(): void {
+  changeMinPrice(price: number): void {
+    this.filterMinPrice.set(price || 0);
+  }
+
+  changeCategory(cats?: any): void {
+    let arr: string[] = [];
+    if (Array.isArray(cats)) {
+      arr = cats;
+    } else if (typeof cats === 'string' && cats.trim().length > 0 && cats !== 'all') {
+      arr = cats.split(',').map((c: string) => c.trim()).filter(Boolean);
+    }
+    this.selectedCategories.set(arr);
     this.store.updatePosition({ productsComponent: 0 });
   }
 
@@ -277,11 +320,65 @@ export class ProductsComponent implements OnDestroy {
   changeSort(sort: string): void {
     if (this.category()) {
       this.router.navigate(['/' + this.lang() + '/product/category/' + this.category()], {
-        queryParams: { sort , page: this.page() || 1 },
+        queryParams: { sort, page: this.page() || 1 },
       });
     } else {
       this.router.navigate(['/' + this.lang() + '/product/all'], { queryParams: { sort, page: this.page() || 1 } });
     }
+    this.store.updatePosition({ productsComponent: 0 });
+  }
+
+  changeStock(stock: string): void {
+    this.filterStock.set(stock);
+  }
+
+  changeRating(rating: any): void {
+    let nums: number[] = [];
+    if (Array.isArray(rating)) {
+      nums = rating.map(r => Number(r)).filter(r => !isNaN(r) && r > 0);
+    } else if (typeof rating === 'string' && rating.length > 0 && rating !== '0') {
+      nums = rating.split(',').map(r => Number(r)).filter(r => !isNaN(r) && r > 0);
+    } else if (typeof rating === 'number' && rating > 0) {
+      nums = [rating];
+    }
+    this.selectedRatings.set(nums);
+    this.filterRating.set(nums.length > 0 ? nums.join(',') : 0);
+    this.store.updatePosition({ productsComponent: 0 });
+  }
+
+  getCategoryTitle(catUrl: string): string {
+    const found = (this.categories() || []).find(c => c.titleUrl === catUrl);
+    return found ? found.title : catUrl;
+  }
+
+  removeCategoryFilter(catUrl: string): void {
+    const next = this.selectedCategories().filter(c => c !== catUrl);
+    this.selectedCategories.set(next);
+    if (this.category()) {
+      this.router.navigate(['/' + this.lang() + '/product/all'], {
+        queryParams: { sort: this.sortBy() || 'newest', page: 1 },
+      });
+    }
+    this.store.updatePosition({ productsComponent: 0 });
+  }
+
+  removeRatingFilter(stars: number): void {
+    const next = this.selectedRatings().filter(r => r !== stars);
+    this.selectedRatings.set(next);
+    this.filterRating.set(next.length > 0 ? next.join(',') : 0);
+    this.store.updatePosition({ productsComponent: 0 });
+  }
+
+  clearAllFilters(): void {
+    this.filterMinPrice.set(0);
+    this.filterStock.set('all');
+    this.filterRating.set(0);
+    this.selectedCategories.set([]);
+    this.selectedRatings.set([]);
+    this.store.filterPrice(0);
+    this.router.navigate(['/' + this.lang() + '/product/all'], {
+      queryParams: { sort: 'newest', page: 1 }
+    });
     this.store.updatePosition({ productsComponent: 0 });
   }
 
@@ -310,14 +407,37 @@ export class ProductsComponent implements OnDestroy {
   private _loadProducts(): void {
     this.productsSub = combineLatest([
       toObservable(this.lang).pipe(distinctUntilChanged()),
-      toObservable(this.category).pipe(distinctUntilChanged()),
+      toObservable(this.selectedCategories).pipe(
+        distinctUntilChanged((a, b) => a.slice().sort().join(',') === b.slice().sort().join(','))
+      ),
       toObservable(this.filterPrice).pipe(distinctUntilChanged()),
+      toObservable(this.filterMinPrice).pipe(distinctUntilChanged()),
+      toObservable(this.filterStock).pipe(distinctUntilChanged()),
+      toObservable(this.selectedRatings).pipe(
+        distinctUntilChanged((a, b) => a.slice().sort().join(',') === b.slice().sort().join(','))
+      ),
       this.route.queryParams.pipe(
         map((params) => ({ page: params['page'], sort: params['sort'] })),
-        distinctUntilChanged()
+        distinctUntilChanged((a, b) => a.page === b.page && a.sort === b.sort)
       ),
-    ]).subscribe(([lang, category, filterPrice, { page, sort }]) => {
-      this.store.getProducts({ lang, category, maxPrice: filterPrice, page: page || 1, sort: sort || 'newest' });
+    ]).subscribe(([lang, selectedCategories, filterPrice, minPrice, stock, selectedRatings, { page, sort }]) => {
+      const catParam = selectedCategories.length > 0
+        ? selectedCategories.join(',')
+        : undefined;
+      const ratParam = selectedRatings.length > 0
+        ? selectedRatings.join(',')
+        : undefined;
+
+      this.store.getProducts({
+        lang,
+        category: catParam,
+        maxPrice: filterPrice || undefined,
+        minPrice: minPrice || undefined,
+        stock: stock !== 'all' ? stock : undefined,
+        rating: ratParam,
+        page: page || 1,
+        sort: sort || 'newest',
+      });
     });
   }
 }

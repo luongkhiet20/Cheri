@@ -117,6 +117,13 @@
   </button>
   }
 
+  @if (isAdmin()) {
+  <button mat-menu-item [routerLink]="['/' + (lang$ | async) + '/dashboard']" routerLinkActive="nav-active-link">
+    <mat-icon>dashboard</mat-icon>
+    <a class="nav-link"> Quản trị</a>
+  </button>
+  }
+
   @if (user$()) {
   <button mat-menu-item (click)="onLogout()">
     <mat-icon>exit_to_app</mat-icon>

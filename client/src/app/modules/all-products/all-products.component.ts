@@ -15,6 +15,7 @@ export class AllProductsComponent implements OnChanges {
 
   @Output() getAllProducts = new EventEmitter<void>();
   @Output() editProduct = new EventEmitter<string>();
+  @Output() deleteProduct = new EventEmitter<string>();
 
   searchQuery: string = '';
   viewMode: 'grid' | 'table' = 'table';
@@ -42,8 +43,9 @@ export class AllProductsComponent implements OnChanges {
     this.filteredProducts = list.filter((p) => {
       const title = (p.title || p[this.lang]?.title || p['vi']?.title || '').toLowerCase();
       const titleUrl = (p.titleUrl || '').toLowerCase();
+      const idStr = (p.id || p._id || '').toString().toLowerCase();
       const tags = Array.isArray(p.tags) ? p.tags.join(' ').toLowerCase() : '';
-      return title.includes(q) || titleUrl.includes(q) || tags.includes(q);
+      return title.includes(q) || titleUrl.includes(q) || idStr.includes(q) || tags.includes(q);
     });
   }
 
@@ -53,6 +55,30 @@ export class AllProductsComponent implements OnChanges {
 
   onEdit(titleUrl: string): void {
     this.editProduct.emit(titleUrl);
+  }
+
+  onDelete(product: Product, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    const title = this.getProductTitle(product);
+    if (confirm(`Bạn có chắc chắn muốn xóa sản phẩm "${title}" không?`)) {
+      const target = product.titleUrl || product.id || product._id;
+      if (!target) return;
+      this.deleteProduct.emit(target);
+      this.apiService.removeProduct(target).subscribe({
+        next: () => {
+          this.allProducts = (this.allProducts || []).filter(
+            (p) => (p.titleUrl || p.id || p._id) !== target
+          );
+          this.filterProducts();
+        },
+        error: (err) => {
+          console.error('Lỗi khi xóa sản phẩm:', err);
+          this.onRefresh();
+        }
+      });
+    }
   }
 
   getProductTitle(product: Product): string {

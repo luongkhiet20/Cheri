@@ -152,7 +152,7 @@
             <button class="primary-btn" (click)="onAddNewProduct()">+ Thêm mới</button>
           </div>
           <app-all-products [allProducts]="allProducts$()" [lang]="lang$ | async" [currency]="currency$() || 'đ'"
-            (getAllProducts)="getProducts()" (editProduct)="onEditProduct($event)">
+            (getAllProducts)="getProducts()" (editProduct)="onEditProduct($event)" (deleteProduct)="onDeleteProduct($event)">
           </app-all-products>
         </app-admin-card>
       </ng-container>
@@ -220,7 +220,7 @@
             </div>
           </div>
           <app-all-products [allProducts]="allProducts$()" [lang]="lang$ | async" [currency]="currency$() || 'đ'"
-            (getAllProducts)="getProducts()" (editProduct)="onEditProduct($event)">
+            (getAllProducts)="getProducts()" (editProduct)="onEditProduct($event)" (deleteProduct)="onDeleteProduct($event)">
           </app-all-products>
         </app-admin-card>
       </ng-container>

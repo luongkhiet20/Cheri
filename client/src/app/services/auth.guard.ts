@@ -2,13 +2,25 @@ import { inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { ActivatedRouteSnapshot, CanActivateFn, Router } from '@angular/router';
 import { SignalStoreSelectors } from '../store/signal.store.selectors';
-import { toObservable } from '@angular/core/rxjs-interop';
+import { SignalStore } from '../store/signal.store';
+import { ApiService } from './api.service';
 import { Observable, of } from 'rxjs';
-import { filter, map, take } from 'rxjs/operators';
+import { catchError, map, take } from 'rxjs/operators';
 import { accessTokenKey } from '../shared/constants';
+
+const checkIsAdmin = (user: any): boolean => {
+  if (!user) return false;
+  const roles = user.roles || (user.role ? [user.role] : []);
+  if (Array.isArray(roles) && roles.some((r: string) => r && r.toLowerCase() === 'admin')) {
+    return true;
+  }
+  return false;
+};
 
 export const AuthGuard: CanActivateFn = (_route: ActivatedRouteSnapshot): Observable<boolean> | boolean => {
   const selectors = inject(SignalStoreSelectors);
+  const store = inject(SignalStore);
+  const apiService = inject(ApiService);
   const platformId = inject(PLATFORM_ID);
   const router = inject(Router);
 
@@ -27,21 +39,28 @@ export const AuthGuard: CanActivateFn = (_route: ActivatedRouteSnapshot): Observ
     return false;
   }
 
-  return toObservable(selectors.user).pipe(
-    filter((user) => !!user),
+  return apiService.getUser().pipe(
     take(1),
-    map((user) => {
-      const isAuth = Boolean(user && (user.email || user.accessToken));
-      if (!isAuth) {
+    map((user: any) => {
+      const isAuth = Boolean(user && !user.error && (user.email || user.accessToken));
+      if (isAuth) {
+        store.storeUser(user);
+      } else {
         router.navigate(['/']);
       }
       return isAuth;
+    }),
+    catchError(() => {
+      router.navigate(['/']);
+      return of(false);
     })
   );
 };
 
 export const AdminGuard: CanActivateFn = (_route: ActivatedRouteSnapshot): Observable<boolean> | boolean => {
   const selectors = inject(SignalStoreSelectors);
+  const store = inject(SignalStore);
+  const apiService = inject(ApiService);
   const platformId = inject(PLATFORM_ID);
   const router = inject(Router);
 
@@ -51,7 +70,7 @@ export const AdminGuard: CanActivateFn = (_route: ActivatedRouteSnapshot): Obser
 
   const currentUser = selectors.user();
   if (currentUser) {
-    const isAdmin = Boolean(Array.isArray(currentUser.roles) && currentUser.roles.includes('admin'));
+    const isAdmin = checkIsAdmin(currentUser);
     if (!isAdmin) {
       router.navigate(['/']);
     }
@@ -64,15 +83,23 @@ export const AdminGuard: CanActivateFn = (_route: ActivatedRouteSnapshot): Obser
     return false;
   }
 
-  return toObservable(selectors.user).pipe(
-    filter((user) => !!user),
+  return apiService.getUser().pipe(
     take(1),
-    map((user) => {
-      const isAdmin = Boolean(user && Array.isArray(user.roles) && user.roles.includes('admin'));
-      if (!isAdmin) {
-        router.navigate(['/']);
+    map((user: any) => {
+      if (user && !user.error && (user.email || user.accessToken)) {
+        store.storeUser(user);
+        const isAdmin = checkIsAdmin(user);
+        if (!isAdmin) {
+          router.navigate(['/']);
+        }
+        return isAdmin;
       }
-      return isAdmin;
+      router.navigate(['/']);
+      return false;
+    }),
+    catchError(() => {
+      router.navigate(['/']);
+      return of(false);
     })
   );
 };

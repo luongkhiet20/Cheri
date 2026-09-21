@@ -11,6 +11,7 @@ export const prepareProduct = (
   const langData = p[lang] || p.vi || p.en || p.sk || p.cs || {};
   return {
     _id: p._id,
+    id: p.id || (p._id ? p._id.toString() : ''),
     titleUrl: p.titleUrl || '',
     mainImage: p.mainImage,
     images: p.images || [],

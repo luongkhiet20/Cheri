@@ -36,6 +36,7 @@ const getProductLangInfo = (): { [lang: string]: any } => {
 
 const ProductSchema = new Schema(
   {
+    id: String,
     titleUrl: String,
     mainImage: {
       url: { type: String, trim: true },
@@ -47,8 +48,16 @@ const ProductSchema = new Schema(
     dateAdded: Date,
     ...getProductLangInfo(),
   },
-  { strict: false },
+  {
+    strict: false,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  },
 );
+
+ProductSchema.virtual('id').get(function () {
+  return this._id ? this._id.toString() : '';
+});
 
 ProductSchema.plugin(paginate.pagination);
 

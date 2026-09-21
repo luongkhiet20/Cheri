@@ -10,6 +10,7 @@ export interface Translations {
 
 export interface Product {
   _id?                : string;
+  id?                 : string;
   title               : string;
   titleUrl            : string;
   description         : string;
@@ -76,6 +77,7 @@ export interface User {
   email       : string;
   id?         : string;
   roles?      : string[];
+  role?       : string;
   accessToken?: string;
 }
 

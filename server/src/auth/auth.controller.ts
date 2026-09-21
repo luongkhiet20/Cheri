@@ -27,7 +27,14 @@ export class AuthController {
     email: string;
     roles: string[];
   } {
-    return { id: user._id, email: user.email, roles: user.roles };
+    const adminEmails = (process.env.ADMIN_EMAILS || 'contact.cheri@gmail.com,admin@example.com')
+      .split(',')
+      .map((e) => e.trim().toLowerCase());
+    const roles = Array.isArray(user.roles) ? [...user.roles] : [];
+    if (user.email && adminEmails.includes(user.email.toLowerCase()) && !roles.includes('admin')) {
+      roles.push('admin');
+    }
+    return { id: user._id, email: user.email, roles };
   }
 
   @Post('/signup')

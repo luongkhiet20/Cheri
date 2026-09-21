@@ -57,6 +57,14 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credential');
     }
 
+    const adminEmails = (process.env.ADMIN_EMAILS || 'contact.cheri@gmail.com,admin@example.com')
+      .split(',')
+      .map((e) => e.trim().toLowerCase());
+    if (adminEmails.includes(user.email.toLowerCase()) && (!user.roles || !user.roles.includes('admin'))) {
+      user.roles = [...(user.roles || []), 'admin'];
+      await this.userModel.updateOne({ _id: user._id }, { $addToSet: { roles: 'admin' } });
+    }
+
     const payload: JwtPayload = { email };
     const accessToken = await this.jwtService.sign(payload);
 

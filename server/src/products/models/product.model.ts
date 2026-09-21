@@ -2,6 +2,7 @@ import { Document, Model } from 'mongoose';
 
 export interface Product extends Document {
     _id: string;
+    id?: string;
     title: string;
     description: string;
     descriptionFull: string[];

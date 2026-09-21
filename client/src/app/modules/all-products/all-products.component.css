@@ -205,7 +205,7 @@
 }
 
 .col-title,
-.col-url,
+.col-id,
 .col-price,
 .col-actions {
   background: #ffffff;
@@ -259,13 +259,12 @@
   font-weight: 400;
 }
 
-.col-url code {
+.col-id code {
   font-size: 0.82rem;
   color: #000000;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  padding: 2px 8px;
-  border-radius: 4px;
+  background: transparent;
+  border: none;
+  padding: 0;
   font-weight: 400;
 }
 
@@ -289,16 +288,22 @@
 .stock-pill {
   font-size: 0.8rem;
   font-weight: 400;
-  padding: 2px 8px;
-  border-radius: 12px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  border: none;
   color: #000000;
 }
 
 /* =========================================
-   EDIT BUTTON
+   ACTIONS (EDIT & DELETE BUTTONS)
 ========================================= */
+.actions-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .edit-action-btn {
   display: inline-flex;
   align-items: center;
@@ -325,6 +330,37 @@
   background: #f3f4f6;
   border-color: #000000;
   color: #000000;
+}
+
+.delete-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: #dc3545;
+  background: #ffffff;
+  border: 1px solid #dc3545;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: 'Inter', sans-serif;
+}
+
+.delete-action-btn svg {
+  width: 14px;
+  height: 14px;
+  stroke: #dc3545;
+}
+
+.delete-action-btn:hover {
+  background: #dc3545;
+  color: #ffffff;
+}
+
+.delete-action-btn:hover svg {
+  stroke: #ffffff;
 }
 
 /* =========================================
@@ -524,13 +560,12 @@
   align-items: center;
 }
 
-.card-url {
+.card-id {
   font-size: 0.78rem;
   color: #000000;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  padding: 1px 6px;
-  border-radius: 4px;
+  background: transparent;
+  border: none;
+  padding: 0;
   font-weight: 400;
   max-width: 100%;
   overflow: hidden;
@@ -583,6 +618,12 @@
   gap: 8px;
 }
 
+.card-actions-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .card-edit-btn {
   display: inline-flex;
   align-items: center;
@@ -609,4 +650,35 @@
   background: #f3f4f6;
   border-color: #000000;
   color: #000000;
+}
+
+.card-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: #dc3545;
+  background: #ffffff;
+  border: 1px solid #dc3545;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: 'Inter', sans-serif;
+}
+
+.card-delete-btn svg {
+  width: 13px;
+  height: 13px;
+  stroke: #dc3545;
+}
+
+.card-delete-btn:hover {
+  background: #dc3545;
+  color: #ffffff;
+}
+
+.card-delete-btn:hover svg {
+  stroke: #ffffff;
 }

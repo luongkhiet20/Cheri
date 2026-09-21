@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, isValidObjectId } from 'mongoose';
 
 import { GetProductsDto } from './dto/get-products';
 import {
@@ -93,7 +93,13 @@ export class ProductsService {
     getProductDto: GetProductDto,
   ): Promise<Product> {
     const { lang } = getProductDto;
-    const found = await this.productModel.findOne({ titleUrl: name });
+    let found = await this.productModel.findOne({ titleUrl: name });
+    if (!found && isValidObjectId(name)) {
+      found = await this.productModel.findById(name);
+    }
+    if (!found) {
+      found = await this.productModel.findOne({ id: name });
+    }
 
     if (!found) {
       throw new NotFoundException(`Product with title ${name} not found`);
@@ -142,22 +148,45 @@ export class ProductsService {
   }
 
   async editProduct(productReq): Promise<void> {
-    const { titleUrl } = productReq;
-    const found = await this.productModel.findOneAndUpdate(
-      { titleUrl },
+    const { titleUrl, _id, id } = productReq;
+    let query: any = {};
+    if (_id && isValidObjectId(_id)) {
+      query = { _id };
+    } else if (titleUrl) {
+      query = { titleUrl };
+    } else if (id) {
+      query = { id };
+    }
+
+    let found = await this.productModel.findOneAndUpdate(
+      query,
       productReq,
       { upsert: true, new: true },
     );
 
+    if (!found && titleUrl) {
+      found = await this.productModel.findOneAndUpdate(
+        { titleUrl },
+        productReq,
+        { upsert: true, new: true },
+      );
+    }
+
     if (!found) {
-      throw new NotFoundException(`Product with title ${titleUrl} not found`);
+      throw new NotFoundException(`Product with title ${titleUrl || id || _id} not found`);
     } else {
       await this.addCategory(productReq);
     }
   }
 
   async deleteProductByName(titleUrl: string): Promise<void> {
-    const found = await this.productModel.findOneAndDelete({ titleUrl });
+    let found = await this.productModel.findOneAndDelete({ titleUrl });
+    if (!found && isValidObjectId(titleUrl)) {
+      found = await this.productModel.findByIdAndDelete(titleUrl);
+    }
+    if (!found) {
+      found = await this.productModel.findOneAndDelete({ id: titleUrl });
+    }
 
     if (!found) {
       throw new NotFoundException(`Product with title ${titleUrl} not found`);

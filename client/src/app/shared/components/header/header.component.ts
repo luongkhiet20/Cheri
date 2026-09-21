@@ -1,4 +1,4 @@
-﻿import { debounceTime, take, delay } from 'rxjs/operators';
+import { debounceTime, take, delay } from 'rxjs/operators';
 import { Component, OnInit, PLATFORM_ID, Inject, Signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
@@ -103,6 +103,13 @@ export class HeaderComponent implements OnInit {
   onTitleLink(): void {
     this.query.setValue('');
     this.isSearchOpen = false;
+  }
+
+  isAdmin(): boolean {
+    const user = this.user$ ? this.user$() : null;
+    if (!user) return false;
+    const roles = user.roles || (user.role ? [user.role] : []);
+    return Array.isArray(roles) && roles.some((r: string) => r && r.toLowerCase() === 'admin');
   }
 
   onLogout(): void {

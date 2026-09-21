@@ -121,6 +121,10 @@ export class DashboardComponent implements AfterViewInit, OnDestroy {
     this.scrollToTop();
   }
 
+  onDeleteProduct(titleUrl: string): void {
+    this.store.removeProduct(titleUrl);
+  }
+
   onChangeTab(tab: number): void {
     if (tab === 0) this.productAction = '';
   }

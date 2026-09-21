@@ -92,7 +92,8 @@ export class SignInComponent {
       next: ({ user, lang }) => {
         if (user && !user.error && (user.accessToken || user.email)) {
           this.signInForm.reset();
-          if (Array.isArray(user.roles) && user.roles.includes('admin')) {
+          const roles = user.roles || (user.role ? [user.role] : []);
+          if (Array.isArray(roles) && roles.some((r: string) => r && r.toLowerCase() === 'admin')) {
             this.router.navigate(['/' + lang + '/dashboard']);
           } else {
             this.router.navigate(['/' + lang]);

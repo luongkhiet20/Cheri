@@ -55,10 +55,6 @@ const ProductSchema = new Schema(
   },
 );
 
-ProductSchema.virtual('id').get(function () {
-  return this._id ? this._id.toString() : '';
-});
-
 ProductSchema.plugin(paginate.pagination);
 
 export default ProductSchema;

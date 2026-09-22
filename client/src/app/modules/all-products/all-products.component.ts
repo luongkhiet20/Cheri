@@ -233,6 +233,21 @@ export class AllProductsComponent implements OnInit, OnChanges {
     this.filterProducts();
   }
 
+  onSearchEnter(): void {
+    this.filterProducts();
+    this.loadProducts(true);
+  }
+
+  removeVietnameseTones(str: string): string {
+    if (!str) return '';
+    return str
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[đĐ]/g, 'd')
+      .toLowerCase()
+      .trim();
+  }
+
   getProductKey(product: Product): string {
     return (product.titleUrl || product.id || product._id || '').toString();
   }
@@ -316,13 +331,42 @@ export class AllProductsComponent implements OnInit, OnChanges {
 
     // 1. Text search
     if (this.searchQuery && this.searchQuery.trim()) {
-      const q = this.searchQuery.trim().toLowerCase();
+      const rawQ = this.searchQuery.trim().toLowerCase();
+      const normQ = this.removeVietnameseTones(rawQ);
+      const terms = normQ.split(/\s+/).filter(t => t.length > 0);
+
       list = list.filter((p) => {
         const title = (p.title || p[this.lang]?.title || p['vi']?.title || '').toLowerCase();
+        const normTitle = this.removeVietnameseTones(title);
+
         const titleUrl = (p.titleUrl || '').toLowerCase();
         const idStr = (p.id || p._id || '').toString().toLowerCase();
+
+        const category = this.getProductCategory(p).toLowerCase();
+        const normCategory = this.removeVietnameseTones(category);
+
         const tags = Array.isArray(p.tags) ? p.tags.join(' ').toLowerCase() : '';
-        return title.includes(q) || titleUrl.includes(q) || idStr.includes(q) || tags.includes(q);
+        const normTags = this.removeVietnameseTones(tags);
+
+        const desc = this.getProductDesc(p).toLowerCase();
+        const normDesc = this.removeVietnameseTones(desc);
+
+        const matchesField =
+          title.includes(rawQ) || normTitle.includes(normQ) ||
+          titleUrl.includes(rawQ) ||
+          idStr.includes(rawQ) ||
+          category.includes(rawQ) || normCategory.includes(normQ) ||
+          tags.includes(rawQ) || normTags.includes(normQ) ||
+          desc.includes(rawQ) || normDesc.includes(normQ);
+
+        if (matchesField) return true;
+
+        if (terms.length > 1) {
+          const combinedNorm = `${normTitle} ${titleUrl} ${idStr} ${normCategory} ${normTags} ${normDesc}`;
+          return terms.every(t => combinedNorm.includes(t));
+        }
+
+        return false;
       });
     }
 

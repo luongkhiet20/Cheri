@@ -6,26 +6,16 @@
         <circle cx="11" cy="11" r="8"></circle>
         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
       </svg>
-      <input
-        type="text"
-        class="search-input"
-        placeholder="Tìm kiếm theo tên, email, SĐT, địa chỉ, ID..."
-        [(ngModel)]="searchQuery"
-        (input)="onSearchChange()"
-      />
+      <input type="text" class="search-input" placeholder="Tìm kiếm theo tên, email, SĐT, địa chỉ, ID..."
+        [(ngModel)]="searchQuery" (input)="onSearchChange()" />
       <button *ngIf="searchQuery" class="clear-search-btn" (click)="searchQuery=''; onSearchChange()">✕</button>
     </div>
 
     <div class="toolbar-actions">
       <!-- Nút Xóa khi chọn nhiều tài khoản -->
-      <button
-        *ngIf="selectedAccountKeys.size > 0"
-        type="button"
-        class="bulk-delete-btn"
-        (click)="deleteSelectedAccounts()"
-        [disabled]="isDeleting"
-        title="Xóa {{ selectedAccountKeys.size }} tài khoản đã chọn"
-      >
+      <button *ngIf="selectedAccountKeys.size > 0" type="button" class="bulk-delete-btn"
+        (click)="deleteSelectedAccounts()" [disabled]="isDeleting"
+        title="Xóa {{ selectedAccountKeys.size }} tài khoản đã chọn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="3 6 5 6 21 6"></polyline>
           <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -34,13 +24,8 @@
       </button>
 
       <!-- Nút Lọc tài khoản -->
-      <button
-        type="button"
-        class="filter-btn"
-        [class.active]="isFilterOpen || hasActiveFilters()"
-        (click)="toggleFilterMenu()"
-        title="Bộ lọc tài khoản"
-      >
+      <button type="button" class="filter-btn" [class.active]="isFilterOpen || hasActiveFilters()"
+        (click)="toggleFilterMenu()" title="Bộ lọc tài khoản">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
         </svg>
@@ -52,27 +37,8 @@
 
       <!-- View Toggle -->
       <div class="view-toggle">
-        <button
-          type="button"
-          class="toggle-btn"
-          [class.active]="viewMode === 'grid'"
-          (click)="setViewMode('grid')"
-          title="Hiển thị danh sách theo dạng lưới (Grid)"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="7" height="7"></rect>
-            <rect x="14" y="3" width="7" height="7"></rect>
-            <rect x="14" y="14" width="7" height="7"></rect>
-            <rect x="3" y="14" width="7" height="7"></rect>
-          </svg>
-        </button>
-        <button
-          type="button"
-          class="toggle-btn"
-          [class.active]="viewMode === 'table'"
-          (click)="setViewMode('table')"
-          title="Hiển thị danh sách theo dạng bảng"
-        >
+        <button type="button" class="toggle-btn" [class.active]="viewMode === 'table'" (click)="setViewMode('table')"
+          title="Hiển thị danh sách theo dạng bảng">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="8" y1="6" x2="21" y2="6"></line>
             <line x1="8" y1="12" x2="21" y2="12"></line>
@@ -82,18 +48,23 @@
             <line x1="3" y1="18" x2="3.01" y2="18"></line>
           </svg>
         </button>
+
+        <button type="button" class="toggle-btn" [class.active]="viewMode === 'grid'" (click)="setViewMode('grid')"
+          title="Hiển thị danh sách theo dạng lưới (Grid)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+        </button>
       </div>
 
       <!-- Làm mới -->
-      <button
-        type="button"
-        class="refresh-btn"
-        [class.spinning]="isLoading"
-        [disabled]="isLoading"
-        (click)="onRefresh()"
-        title="Tải lại dữ liệu tài khoản từ MongoDB"
-      >
-        <svg class="refresh-icon" [style.transform]="'rotate(' + refreshRotation + 'deg)'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <button type="button" class="refresh-btn" [class.spinning]="isLoading" [disabled]="isLoading"
+        (click)="onRefresh()" title="Tải lại dữ liệu tài khoản từ MongoDB">
+        <svg class="refresh-icon" [style.transform]="'rotate(' + refreshRotation + 'deg)'" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="23 4 23 10 17 10"></polyline>
           <polyline points="1 20 1 14 7 14"></polyline>
           <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
@@ -102,7 +73,8 @@
       </button>
 
       <!-- Thêm tài khoản mới -->
-      <button type="button" class="add-account-btn" (click)="openAddModal()" title="Thêm tài khoản quản trị hoặc người dùng mới">
+      <button type="button" class="add-account-btn" (click)="openAddModal()"
+        title="Thêm tài khoản quản trị hoặc người dùng mới">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="12" y1="5" x2="12" y2="19"></line>
           <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -147,13 +119,8 @@
       </select>
     </div>
 
-    <button
-      *ngIf="hasActiveFilters()"
-      type="button"
-      class="filter-reset-btn"
-      (click)="resetFilters()"
-      title="Đặt lại tất cả bộ lọc"
-    >
+    <button *ngIf="hasActiveFilters()" type="button" class="filter-reset-btn" (click)="resetFilters()"
+      title="Đặt lại tất cả bộ lọc">
       ✕ Đặt lại bộ lọc
     </button>
   </div>
@@ -164,34 +131,22 @@
        GRID VIEW (GIỮ NGUYÊN LAYOUT LƯỚI GIỐNG HỆT ALL PRODUCT)
        ========================================= -->
   <div class="accounts-grid" *ngIf="viewMode === 'grid' && filteredAccounts.length">
-    <div class="admin-account-card" *ngFor="let account of filteredAccounts" [class.card-selected]="isSelected(account)">
+    <div class="admin-account-card" *ngFor="let account of filteredAccounts"
+      [class.card-selected]="isSelected(account)">
       <!-- Thumbnail container -->
       <div class="card-thumb-wrap">
         <!-- Selection checkbox for card view -->
         <div class="card-checkbox-wrap" (click)="$event.stopPropagation()">
-          <input
-            type="checkbox"
-            class="account-checkbox"
-            [checked]="isSelected(account)"
-            (change)="toggleSelect(account, $event)"
-            title="Chọn tài khoản"
-          />
+          <input type="checkbox" class="account-checkbox" [checked]="isSelected(account)"
+            (change)="toggleSelect(account, $event)" title="Chọn tài khoản" />
         </div>
 
         <!-- Avatar in Card -->
         <div class="card-avatar-display" (click)="openViewModal(account, $event)">
-          <img
-            *ngIf="account.avatar || account.images?.[0]"
-            [src]="account.avatar || account.images?.[0]"
-            [alt]="getAccountDisplayName(account)"
-            class="card-avatar-img"
-            loading="lazy"
-          />
-          <div
-            *ngIf="!account.avatar && !account.images?.[0]"
-            class="card-avatar-initials"
-            [style.background]="getAvatarGradient(account)"
-          >
+          <img *ngIf="account.avatar || account.images?.[0]" [src]="account.avatar || account.images?.[0]"
+            [alt]="getAccountDisplayName(account)" class="card-avatar-img" loading="lazy" />
+          <div *ngIf="!account.avatar && !account.images?.[0]" class="card-avatar-initials"
+            [style.background]="getAvatarGradient(account)">
             {{ getInitials(account) }}
           </div>
         </div>
@@ -220,12 +175,8 @@
 
         <!-- Vai trò Roles -->
         <div class="card-tags" *ngIf="account.roles?.length">
-          <span
-            class="card-tag"
-            *ngFor="let role of account.roles"
-            [class.tag-super]="role === 'super-admin'"
-            [class.tag-admin]="role === 'admin'"
-          >
+          <span class="card-tag" *ngFor="let role of account.roles" [class.tag-super]="role === 'super-admin'"
+            [class.tag-admin]="role === 'admin'">
             {{ role }}
           </span>
         </div>
@@ -244,7 +195,9 @@
           <!-- Số điện thoại (phoneNumber) -->
           <div class="card-info-item">
             <svg class="info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+              <path
+                d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z">
+              </path>
             </svg>
             <span class="info-text" [class.text-muted]="!account.phoneNumber">
               {{ account.phoneNumber || 'Chưa cập nhật SĐT' }}
@@ -272,7 +225,8 @@
 
           <!-- Ngày tạo (createdAt) & Giỏ hàng (cart) -->
           <div class="card-meta-bottom">
-            <span class="meta-date" *ngIf="account.createdAt || account.dateAdded" [title]="'Ngày tạo: ' + getFormattedDate(account.createdAt || account.dateAdded)">
+            <span class="meta-date" *ngIf="account.createdAt || account.dateAdded"
+              [title]="'Ngày tạo: ' + getFormattedDate(account.createdAt || account.dateAdded)">
               <svg class="mini-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                 <line x1="16" y1="2" x2="16" y2="6"></line>
@@ -294,25 +248,17 @@
 
       <!-- Card actions footer (Đầy đủ nút Toggle + Xem / Sửa / Xóa giống All Product) -->
       <div class="card-footer">
-        <button
-          type="button"
-          class="status-toggle-btn"
-          [class.active]="account.status"
+        <button type="button" class="status-toggle-btn" [class.active]="account.status"
           (click)="toggleAccountStatus(account, $event)"
-          [title]="account.status ? 'Đang HOẠT ĐỘNG - Nhấp để tạm khóa' : 'Đang KHÓA - Nhấp để mở hoạt động'"
-        >
+          [title]="account.status ? 'Đang HOẠT ĐỘNG - Nhấp để tạm khóa' : 'Đang KHÓA - Nhấp để mở hoạt động'">
           <span class="toggle-indicator"></span>
           <span class="toggle-text">{{ account.status ? 'Hoạt động' : 'Đã khóa' }}</span>
         </button>
 
         <div class="card-actions-group">
           <!-- Nút Xem (View) -->
-          <button
-            type="button"
-            class="card-view-btn"
-            (click)="openViewModal(account, $event)"
-            title="Xem chi tiết toàn bộ dữ liệu MongoDB"
-          >
+          <button type="button" class="card-view-btn" (click)="openViewModal(account, $event)"
+            title="Xem chi tiết toàn bộ dữ liệu MongoDB">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
               <circle cx="12" cy="12" r="3"></circle>
@@ -321,12 +267,8 @@
           </button>
 
           <!-- Nút Sửa (Edit) -->
-          <button
-            type="button"
-            class="card-edit-btn"
-            (click)="onEdit(account, $event)"
-            title="Chỉnh sửa thông tin tài khoản"
-          >
+          <button type="button" class="card-edit-btn" (click)="onEdit(account, $event)"
+            title="Chỉnh sửa thông tin tài khoản">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -335,12 +277,8 @@
           </button>
 
           <!-- Nút Xóa (Delete) -->
-          <button
-            type="button"
-            class="card-delete-btn"
-            (click)="onDelete(account, $event)"
-            title="Xóa tài khoản khỏi cơ sở dữ liệu MongoDB"
-          >
+          <button type="button" class="card-delete-btn" (click)="onDelete(account, $event)"
+            title="Xóa tài khoản khỏi cơ sở dữ liệu MongoDB">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6"></polyline>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -360,14 +298,9 @@
       <thead>
         <tr>
           <th style="width: 44px; text-align: center;">
-            <input
-              type="checkbox"
-              class="account-checkbox"
-              [checked]="isAllSelected()"
-              [indeterminate]="isPartiallySelected()"
-              (change)="toggleSelectAll($event)"
-              title="Chọn tất cả tài khoản"
-            />
+            <input type="checkbox" class="account-checkbox" [checked]="isAllSelected()"
+              [indeterminate]="isPartiallySelected()" (change)="toggleSelectAll($event)"
+              title="Chọn tất cả tài khoản" />
           </th>
           <th style="width: 60px; text-align: center;">Avatar</th>
           <th style="text-align: left;">Họ và tên (fullName)</th>
@@ -385,27 +318,15 @@
       <tbody>
         <tr *ngFor="let account of filteredAccounts" [class.row-selected]="isSelected(account)">
           <td class="col-checkbox" style="text-align: center; width: 44px;">
-            <input
-              type="checkbox"
-              class="account-checkbox"
-              [checked]="isSelected(account)"
-              (change)="toggleSelect(account, $event)"
-              (click)="$event.stopPropagation()"
-            />
+            <input type="checkbox" class="account-checkbox" [checked]="isSelected(account)"
+              (change)="toggleSelect(account, $event)" (click)="$event.stopPropagation()" />
           </td>
           <td class="col-avatar" style="text-align: center;">
             <div class="account-avatar-thumb" (click)="openViewModal(account, $event)">
-              <img
-                *ngIf="account.avatar || account.images?.[0]"
-                [src]="account.avatar || account.images?.[0]"
-                [alt]="getAccountDisplayName(account)"
-                loading="lazy"
-              />
-              <div
-                *ngIf="!account.avatar && !account.images?.[0]"
-                class="avatar-initials"
-                [style.background]="getAvatarGradient(account)"
-              >
+              <img *ngIf="account.avatar || account.images?.[0]" [src]="account.avatar || account.images?.[0]"
+                [alt]="getAccountDisplayName(account)" loading="lazy" />
+              <div *ngIf="!account.avatar && !account.images?.[0]" class="avatar-initials"
+                [style.background]="getAvatarGradient(account)">
                 {{ getInitials(account) }}
               </div>
             </div>
@@ -426,7 +347,8 @@
             <span [class.text-muted]="!account.phoneNumber">{{ account.phoneNumber || '—' }}</span>
           </td>
           <td class="col-address">
-            <span class="text-truncate" style="max-width: 140px; display: inline-block;" [title]="account.address || ''">
+            <span class="text-truncate" style="max-width: 140px; display: inline-block;"
+              [title]="account.address || ''">
               {{ account.address || '—' }}
             </span>
           </td>
@@ -435,13 +357,8 @@
           </td>
           <td class="col-roles" style="text-align: center;">
             <div class="role-pill-group">
-              <span
-                class="role-pill"
-                *ngFor="let role of account.roles"
-                [class.role-super]="role === 'super-admin'"
-                [class.role-admin]="role === 'admin'"
-                [class.role-staff]="role === 'staff'"
-              >
+              <span class="role-pill" *ngFor="let role of account.roles" [class.role-super]="role === 'super-admin'"
+                [class.role-admin]="role === 'admin'" [class.role-staff]="role === 'staff'">
                 {{ role }}
               </span>
             </div>
@@ -450,13 +367,9 @@
             {{ getFormattedDate(account.createdAt || account.dateAdded) }}
           </td>
           <td class="col-status" style="text-align: center;">
-            <button
-              type="button"
-              class="status-toggle-btn"
-              [class.active]="account.status"
+            <button type="button" class="status-toggle-btn" [class.active]="account.status"
               (click)="toggleAccountStatus(account, $event)"
-              [title]="account.status ? 'Đang HOẠT ĐỘNG - Nhấp để tạm khóa' : 'Đang KHÓA - Nhấp để mở hoạt động'"
-            >
+              [title]="account.status ? 'Đang HOẠT ĐỘNG - Nhấp để tạm khóa' : 'Đang KHÓA - Nhấp để mở hoạt động'">
               <span class="toggle-indicator"></span>
               <span class="toggle-text">{{ account.status ? 'Hoạt động' : 'Đã khóa' }}</span>
             </button>
@@ -464,12 +377,8 @@
           <td class="col-actions" style="text-align: center;">
             <div class="actions-group">
               <!-- Nút Xem (View) -->
-              <button
-                type="button"
-                class="view-action-btn"
-                (click)="openViewModal(account, $event)"
-                title="Xem chi tiết dữ liệu MongoDB"
-              >
+              <button type="button" class="view-action-btn" (click)="openViewModal(account, $event)"
+                title="Xem chi tiết dữ liệu MongoDB">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                   <circle cx="12" cy="12" r="3"></circle>
@@ -477,12 +386,8 @@
                 Xem
               </button>
               <!-- Nút Sửa (Edit) -->
-              <button
-                type="button"
-                class="edit-action-btn"
-                (click)="onEdit(account, $event)"
-                title="Chỉnh sửa tài khoản"
-              >
+              <button type="button" class="edit-action-btn" (click)="onEdit(account, $event)"
+                title="Chỉnh sửa tài khoản">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -490,12 +395,7 @@
                 Sửa
               </button>
               <!-- Nút Xóa (Delete) -->
-              <button
-                type="button"
-                class="delete-action-btn"
-                (click)="onDelete(account, $event)"
-                title="Xóa tài khoản"
-              >
+              <button type="button" class="delete-action-btn" (click)="onDelete(account, $event)" title="Xóa tài khoản">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="3 6 5 6 21 6"></polyline>
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -551,17 +451,11 @@
         <!-- Account Visual Summary Header -->
         <div class="view-account-banner">
           <div class="view-avatar-wrap">
-            <img
-              *ngIf="viewingAccount.avatar || viewingAccount.images?.[0]"
-              [src]="viewingAccount.avatar || viewingAccount.images?.[0]"
-              [alt]="getAccountDisplayName(viewingAccount)"
-              class="view-avatar-img"
-            />
-            <div
-              *ngIf="!viewingAccount.avatar && !viewingAccount.images?.[0]"
-              class="view-avatar-initials"
-              [style.background]="getAvatarGradient(viewingAccount)"
-            >
+            <img *ngIf="viewingAccount.avatar || viewingAccount.images?.[0]"
+              [src]="viewingAccount.avatar || viewingAccount.images?.[0]" [alt]="getAccountDisplayName(viewingAccount)"
+              class="view-avatar-img" />
+            <div *ngIf="!viewingAccount.avatar && !viewingAccount.images?.[0]" class="view-avatar-initials"
+              [style.background]="getAvatarGradient(viewingAccount)">
               {{ getInitials(viewingAccount) }}
             </div>
           </div>
@@ -582,20 +476,10 @@
 
         <!-- Toggle View Mode: Grid Table vs Raw JSON -->
         <div class="view-mode-tabs">
-          <button
-            type="button"
-            class="view-mode-tab"
-            [class.active]="!viewRawJson"
-            (click)="viewRawJson = false"
-          >
+          <button type="button" class="view-mode-tab" [class.active]="!viewRawJson" (click)="viewRawJson = false">
             Thông tin chi tiết
           </button>
-          <button
-            type="button"
-            class="view-mode-tab"
-            [class.active]="viewRawJson"
-            (click)="viewRawJson = true"
-          >
+          <button type="button" class="view-mode-tab" [class.active]="viewRawJson" (click)="viewRawJson = true">
             Dữ liệu MongoDB (Raw JSON)
           </button>
         </div>
@@ -690,7 +574,8 @@
           <div class="view-field-cell">
             <span class="field-label">salt (Mã muối Bcrypt):</span>
             <span class="field-value">
-              <code class="code-secret">{{ viewingAccount.salt ? viewingAccount.salt.substring(0, 16) + '...' : '—' }}</code>
+              <code
+                class="code-secret">{{ viewingAccount.salt ? viewingAccount.salt.substring(0, 16) + '...' : '—' }}</code>
             </span>
           </div>
 
@@ -698,26 +583,30 @@
           <div class="view-field-cell">
             <span class="field-label">password (Mật khẩu Bcrypt):</span>
             <span class="field-value">
-              <code class="code-secret">{{ viewingAccount.password ? 'Đã mã hóa Bcrypt (' + viewingAccount.password.substring(0, 15) + '...)' : '●●●●●● (Bảo mật)' }}</code>
+              <code
+                class="code-secret">{{ viewingAccount.password ? 'Đã mã hóa Bcrypt (' + viewingAccount.password.substring(0, 15) + '...)' : '●●●●●● (Bảo mật)' }}</code>
             </span>
           </div>
 
           <!-- __v -->
           <div class="view-field-cell">
             <span class="field-label">__v (Mongoose version key):</span>
-            <span class="field-value"><code>{{ viewingAccount.__v !== undefined ? viewingAccount.__v : 0 }}</code></span>
+            <span
+              class="field-value"><code>{{ viewingAccount.__v !== undefined ? viewingAccount.__v : 0 }}</code></span>
           </div>
 
           <!-- createdAt -->
           <div class="view-field-cell">
             <span class="field-label">createdAt (Ngày tạo):</span>
-            <span class="field-value">{{ getFormattedDate(viewingAccount.createdAt || viewingAccount.dateAdded) }}</span>
+            <span class="field-value">{{ getFormattedDate(viewingAccount.createdAt || viewingAccount.dateAdded)
+              }}</span>
           </div>
 
           <!-- updatedAt -->
           <div class="view-field-cell">
             <span class="field-label">updatedAt (Cập nhật lần cuối):</span>
-            <span class="field-value">{{ getFormattedDate(viewingAccount.updatedAt || viewingAccount.createdAt || viewingAccount.dateAdded) }}</span>
+            <span class="field-value">{{ getFormattedDate(viewingAccount.updatedAt || viewingAccount.createdAt ||
+              viewingAccount.dateAdded) }}</span>
           </div>
 
           <!-- description -->
@@ -741,12 +630,9 @@
 
       <div class="modal-footer">
         <button type="button" class="btn-cancel" (click)="closeViewModal()">Đóng</button>
-        <button
-          type="button"
-          class="btn-save"
-          (click)="closeViewModal(); onEdit(viewingAccount)"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="margin-right: 6px;">
+        <button type="button" class="btn-save" (click)="closeViewModal(); onEdit(viewingAccount)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"
+            style="margin-right: 6px;">
             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
           </svg>
@@ -775,22 +661,13 @@
         <div class="form-row">
           <div class="form-group col-half">
             <label class="form-label">Họ và tên (fullName) <span class="required">*</span></label>
-            <input
-              type="text"
-              class="form-control"
-              placeholder="Ví dụ: Nguyễn Văn Quản Trị"
-              [(ngModel)]="formFullName"
-            />
+            <input type="text" class="form-control" placeholder="Ví dụ: Nguyễn Văn Quản Trị"
+              [(ngModel)]="formFullName" />
           </div>
           <div class="form-group col-half">
             <label class="form-label">Email đăng nhập <span class="required">*</span></label>
-            <input
-              type="email"
-              class="form-control"
-              placeholder="admin@cheri.com"
-              [(ngModel)]="formEmail"
-              [disabled]="modalMode === 'edit'"
-            />
+            <input type="email" class="form-control" placeholder="admin@cheri.com" [(ngModel)]="formEmail"
+              [disabled]="modalMode === 'edit'" />
           </div>
         </div>
 
@@ -798,21 +675,12 @@
         <div class="form-row">
           <div class="form-group col-half">
             <label class="form-label">Số điện thoại (phoneNumber)</label>
-            <input
-              type="tel"
-              class="form-control"
-              placeholder="Ví dụ: 0909 123 456"
-              [(ngModel)]="formPhoneNumber"
-            />
+            <input type="tel" class="form-control" placeholder="Ví dụ: 0909 123 456" [(ngModel)]="formPhoneNumber" />
           </div>
           <div class="form-group col-half">
             <label class="form-label">Địa chỉ (address)</label>
-            <input
-              type="text"
-              class="form-control"
-              placeholder="Ví dụ: 123 Lê Lợi, Q.1, TP.HCM"
-              [(ngModel)]="formAddress"
-            />
+            <input type="text" class="form-control" placeholder="Ví dụ: 123 Lê Lợi, Q.1, TP.HCM"
+              [(ngModel)]="formAddress" />
           </div>
         </div>
 
@@ -828,11 +696,7 @@
           </div>
           <div class="form-group col-half">
             <label class="form-label">Ngày sinh (dateOfBirth)</label>
-            <input
-              type="date"
-              class="form-control"
-              [(ngModel)]="formDateOfBirth"
-            />
+            <input type="date" class="form-control" [(ngModel)]="formDateOfBirth" />
           </div>
         </div>
 
@@ -840,24 +704,15 @@
         <div class="form-row">
           <div class="form-group col-half">
             <label class="form-label">Ảnh đại diện (Avatar URL)</label>
-            <input
-              type="text"
-              class="form-control"
-              placeholder="https://example.com/avatar.jpg"
-              [(ngModel)]="formAvatar"
-            />
+            <input type="text" class="form-control" placeholder="https://example.com/avatar.jpg"
+              [(ngModel)]="formAvatar" />
           </div>
           <div class="form-group col-half">
             <label class="form-label">
               {{ modalMode === 'add' ? 'Mật khẩu đăng nhập' : 'Mật khẩu mới (Để trống nếu không đổi)' }}
               <span class="required" *ngIf="modalMode === 'add'">*</span>
             </label>
-            <input
-              type="password"
-              class="form-control"
-              placeholder="Ít nhất 6 ký tự"
-              [(ngModel)]="formPassword"
-            />
+            <input type="password" class="form-control" placeholder="Ít nhất 6 ký tự" [(ngModel)]="formPassword" />
           </div>
         </div>
 
@@ -884,24 +739,16 @@
         <!-- Row 6: Mô tả / Ghi chú -->
         <div class="form-group">
           <label class="form-label">Mô tả / Ghi chú nội bộ <span class="optional">(Không bắt buộc)</span></label>
-          <textarea
-            class="form-control"
-            rows="3"
+          <textarea class="form-control" rows="3"
             placeholder="Ghi chú về quyền quản lý hoặc ghi chú nội bộ MongoDB (để trống nếu không cần)..."
-            [(ngModel)]="formDescription"
-          ></textarea>
+            [(ngModel)]="formDescription"></textarea>
         </div>
       </div>
 
       <div class="modal-footer">
         <button type="button" class="btn-cancel" (click)="closeModal()" [disabled]="isSaving">Hủy</button>
-        <button
-          type="button"
-          class="btn-save"
-          (click)="saveModal()"
-          [disabled]="isSaving || !isFormValid()"
-          [title]="!isFormValid() ? 'Vui lòng nhập đủ các trường bắt buộc' : ''"
-        >
+        <button type="button" class="btn-save" (click)="saveModal()" [disabled]="isSaving || !isFormValid()"
+          [title]="!isFormValid() ? 'Vui lòng nhập đủ các trường bắt buộc' : ''">
           {{ isSaving ? 'Đang lưu vào MongoDB...' : (modalMode === 'add' ? 'Tạo tài khoản' : 'Lưu thay đổi') }}
         </button>
       </div>

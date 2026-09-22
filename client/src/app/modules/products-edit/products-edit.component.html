@@ -536,7 +536,8 @@
             name="discountBatch" [placeholder]="hasQuickPrice ? 'Nhập giá khuyến mãi chung' : 'Cần nhập giá bán trước'"
             min="0" (input)="onDiscountBatchInput()" />
           @if (isDiscountBatchInvalid) {
-          <span class="helper" style="color: var(--danger); font-size: 11px;">Giá KM phải nhỏ hơn giá bán ({{ quickPrice | number }} VNĐ)</span>
+          <span class="helper" style="color: var(--danger); font-size: 11px;">Giá KM phải nhỏ hơn giá bán ({{ quickPrice
+            | number }} VNĐ)</span>
           }
         </div>
         <div class="field" style="margin-bottom: 0; min-width: 160px; flex: 1;">
@@ -641,12 +642,7 @@
           <input formControlName="quantity" type="number" name="quantity" id="quantity" placeholder="10" />
         </div>
 
-        <div class="helper"
-          style="margin-top: 16px; padding: 12px 16px; background: #fafafa; border: 1px dashed var(--border-color, #e0d0d0); border-radius: 6px;">
-          <span>Sản phẩm này hiện đang là sản phẩm đơn (không có biến thể). Khi bạn chọn thuộc tính (Màu sắc, Kích thước
-            hoặc Phân loại) ở <strong>Phần 3 — Phân loại hàng</strong> phía trên, hệ thống sẽ tự động chuyển phần này
-            thành Bảng quản lý Giá và Tồn kho chi tiết cho từng biến thể.</span>
-        </div>
+     
       </div>
       }
     </div>

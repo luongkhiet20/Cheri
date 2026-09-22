@@ -200,6 +200,11 @@ export class AccountsEditComponent implements OnInit, OnDestroy {
     this.filterAccounts();
   }
 
+  onSearchEnter(): void {
+    this.filterAccounts();
+    this.loadAccounts(true);
+  }
+
   getAccountKey(account: AccountUser): string {
     return (account._id || account.id || account.email || '').toString();
   }
@@ -276,24 +281,70 @@ export class AccountsEditComponent implements OnInit, OnDestroy {
     this.filterAccounts();
   }
 
+  removeVietnameseTones(str: string): string {
+    if (!str) return '';
+    return str
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[đĐ]/g, 'd')
+      .toLowerCase()
+      .trim();
+  }
+
   filterAccounts(): void {
     let list = [...(this.allAccounts || [])];
 
-    // 1. Text search
+    // 1. Text search theo các tiêu chí: Tên, Email, SĐT, Địa chỉ, Mã ID MongoDB...
     if (this.searchQuery && this.searchQuery.trim()) {
-      const q = this.searchQuery.trim().toLowerCase();
+      const rawQ = this.searchQuery.trim().toLowerCase();
+      const normQ = this.removeVietnameseTones(rawQ);
+      const digitQ = rawQ.replace(/\D/g, '');
+      const terms = normQ.split(/\s+/).filter(t => t.length > 0);
+
       list = list.filter(a => {
-        const name = (a.name || '').toLowerCase();
-        const fullName = (a.fullName || '').toLowerCase();
+        const name = (a.fullName || a.name || '').toLowerCase();
+        const normName = this.removeVietnameseTones(name);
+
         const email = (a.email || '').toLowerCase();
+
         const phone = (a.phoneNumber || '').toLowerCase();
+        const digitPhone = phone.replace(/\D/g, '');
+
         const address = (a.address || '').toLowerCase();
-        const idStr = (a._id || a.id || '').toLowerCase();
-        const roles = Array.isArray(a.roles) ? a.roles.join(' ').toLowerCase() : '';
+        const normAddress = this.removeVietnameseTones(address);
+
+        const idStr = (a._id || a.id || '').toString().toLowerCase();
+
+        const rolesStr = Array.isArray(a.roles) ? a.roles.join(' ').toLowerCase() : '';
+        const roleLabel = this.getRoleLabel(a).toLowerCase();
+        const normRoleLabel = this.removeVietnameseTones(roleLabel);
+
+        const gender = (a.gender || '').toLowerCase();
+        const normGender = this.removeVietnameseTones(gender);
+
         const desc = (a.description || '').toLowerCase();
-        return name.includes(q) || fullName.includes(q) || email.includes(q) ||
-               phone.includes(q) || address.includes(q) || idStr.includes(q) ||
-               roles.includes(q) || desc.includes(q);
+        const normDesc = this.removeVietnameseTones(desc);
+
+        // Khớp trực tiếp hoặc không dấu theo từng trường thông tin
+        const matchesField =
+          name.includes(rawQ) || normName.includes(normQ) ||
+          email.includes(rawQ) ||
+          (digitQ.length > 0 && digitPhone.includes(digitQ)) || phone.includes(rawQ) ||
+          address.includes(rawQ) || normAddress.includes(normQ) ||
+          idStr.includes(rawQ) ||
+          rolesStr.includes(rawQ) || roleLabel.includes(rawQ) || normRoleLabel.includes(normQ) ||
+          gender.includes(rawQ) || normGender.includes(normQ) ||
+          desc.includes(rawQ) || normDesc.includes(normQ);
+
+        if (matchesField) return true;
+
+        // Tìm kiếm đa từ khóa (ví dụ: "Nguyen admin" hoặc "Hanoi 0909")
+        if (terms.length > 1) {
+          const combinedNorm = `${normName} ${email} ${digitPhone} ${phone} ${normAddress} ${idStr} ${rolesStr} ${normRoleLabel} ${normGender} ${normDesc}`;
+          return terms.every(t => combinedNorm.includes(t));
+        }
+
+        return false;
       });
     }
 

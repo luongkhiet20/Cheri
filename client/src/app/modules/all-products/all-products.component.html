@@ -6,8 +6,8 @@
         <circle cx="11" cy="11" r="8"></circle>
         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
       </svg>
-      <input type="text" class="search-input" placeholder="Tìm kiếm theo tên, URL, tag, ID, danh mục..." [(ngModel)]="searchQuery"
-        (input)="onSearchChange()" (keyup.enter)="onSearchEnter()" />
+      <input type="text" class="search-input" placeholder="Tìm kiếm theo tên, URL, tag, ID, danh mục..."
+        [(ngModel)]="searchQuery" (input)="onSearchChange()" (keyup.enter)="onSearchEnter()" />
       <button *ngIf="searchQuery" class="clear-search-btn" (click)="searchQuery=''; onSearchChange()">✕</button>
     </div>
 
@@ -33,7 +33,7 @@
         <span class="filter-count-badge" *ngIf="activeFilterCount > 0">{{ activeFilterCount }}</span>
       </button>
 
-      <span class="count-badge">Tổng: {{ filteredProducts.length }} / {{ allProducts?.length || 0 }} sản phẩm</span>
+      <span class="count-badge">Tổng: {{ filteredProducts.length }} sản phẩm</span>
 
       <div class="view-toggle">
         <button type="button" class="toggle-btn" [class.active]="viewMode === 'table'" (click)="viewMode = 'table'"
@@ -58,8 +58,8 @@
         </button>
       </div>
 
-      <button type="button" class="refresh-btn" [class.is-refreshing]="isRefreshing" [disabled]="isRefreshing" (click)="onRefresh()"
-        title="Tải lại dữ liệu sản phẩm từ hệ thống">
+      <button type="button" class="refresh-btn" [class.is-refreshing]="isRefreshing" [disabled]="isRefreshing"
+        (click)="onRefresh()" title="Tải lại dữ liệu sản phẩm từ hệ thống">
         <svg class="refresh-icon" [style.transform]="'rotate(' + refreshRotation + 'deg)'" viewBox="0 0 24 24"
           fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="23 4 23 10 17 10"></polyline>
@@ -181,7 +181,8 @@
               (click)="toggleProductVisibility(product, $event)"
               [title]="isProductVisible(product) ? 'Đang BẬT hiển thị trên trang products - Nhấp để tắt (ẩn)' : 'Đang TẮT (ẩn trên trang products) - Nhấp để bật hiển thị'">
               <span class="toggle-indicator"></span>
-              <span class="toggle-text">{{ togglingProductKey === getProductKey(product) ? 'Đang lưu...' : (isProductVisible(product) ? 'Hoạt động' : 'Ẩn') }}</span>
+              <span class="toggle-text">{{ togglingProductKey === getProductKey(product) ? 'Đang lưu...' :
+                (isProductVisible(product) ? 'Hoạt động' : 'Ẩn') }}</span>
             </button>
           </td>
           <td class="col-actions" style="text-align: center;">
@@ -207,7 +208,8 @@
                 [disabled]="deletingProductKey === getProductKey(product)"
                 [class.is-deleting]="deletingProductKey === getProductKey(product)"
                 [title]="deletingProductKey === getProductKey(product) ? 'Đang xóa...' : 'Xóa sản phẩm'">
-                <svg *ngIf="deletingProductKey !== getProductKey(product)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg *ngIf="deletingProductKey !== getProductKey(product)" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2">
                   <polyline points="3 6 5 6 21 6"></polyline>
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                 </svg>
@@ -270,11 +272,11 @@
       <div class="card-footer">
         <button type="button" class="status-toggle-btn" [class.active]="isProductVisible(product)"
           [class.is-toggling]="togglingProductKey === getProductKey(product)"
-          [disabled]="togglingProductKey === getProductKey(product)"
-          (click)="toggleProductVisibility(product, $event)"
+          [disabled]="togglingProductKey === getProductKey(product)" (click)="toggleProductVisibility(product, $event)"
           [title]="isProductVisible(product) ? 'Đang BẬT hiển thị trên trang products - Nhấp để tắt' : 'Đang TẮT - Nhấp để bật'">
           <span class="toggle-indicator"></span>
-          <span class="toggle-text">{{ togglingProductKey === getProductKey(product) ? 'Đang lưu...' : (isProductVisible(product) ? 'Hiện' : 'Ẩn') }}</span>
+          <span class="toggle-text">{{ togglingProductKey === getProductKey(product) ? 'Đang lưu...' :
+            (isProductVisible(product) ? 'Hiện' : 'Ẩn') }}</span>
         </button>
 
         <div class="card-actions-group">
@@ -298,7 +300,8 @@
             [disabled]="deletingProductKey === getProductKey(product)"
             [class.is-deleting]="deletingProductKey === getProductKey(product)"
             [title]="deletingProductKey === getProductKey(product) ? 'Đang xóa...' : 'Xóa sản phẩm'">
-            <svg *ngIf="deletingProductKey !== getProductKey(product)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg *ngIf="deletingProductKey !== getProductKey(product)" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6"></polyline>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
             </svg>

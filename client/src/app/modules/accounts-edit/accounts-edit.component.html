@@ -7,7 +7,7 @@
         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
       </svg>
       <input type="text" class="search-input" placeholder="Tìm kiếm theo tên, email, SĐT, địa chỉ, ID..."
-        [(ngModel)]="searchQuery" (input)="onSearchChange()" />
+        [(ngModel)]="searchQuery" (input)="onSearchChange()" (keyup.enter)="onSearchEnter()" />
       <button *ngIf="searchQuery" class="clear-search-btn" (click)="searchQuery=''; onSearchChange()">✕</button>
     </div>
 

@@ -383,7 +383,8 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
 
   createForm(): void {
     this.productEditForm = this.fb.group({
-      titleUrl: [''],
+      titleUrl: ['', [Validators.required]],
+      discountBatch: [{ value: '', disabled: true }],
       mainImage: '',
       tags: [[]],
       images: [[]],
@@ -570,11 +571,13 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
     if (val) {
       const formatted = this.generateSlug(val);
       this.productEditForm.get('titleUrl')?.setValue(formatted);
+      this.updateVariantsSkuWithBase();
     }
   }
 
   onTitleUrlInput(): void {
     this.manualTitleUrl = true;
+    this.updateVariantsSkuWithBase();
   }
 
   onTitleInput(event: any, lang: string): void {
@@ -939,10 +942,15 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
    * Tạo FormGroup cho 1 biến thể với cấu trúc chuẩn Reactive Forms
    */
   createVariantGroup(v?: any): FormGroup {
+    const rawDiscount = v?.discountPrice !== undefined && v?.discountPrice !== null && v?.discountPrice !== ''
+      ? Number(v.discountPrice)
+      : (v?.salePrice !== undefined && v?.salePrice !== null && v?.salePrice !== '' ? Number(v.salePrice) : null);
+
     return this.fb.group({
       sku: [v?.sku || '', [Validators.required]],
       attributes: [v?.attributes || {}],
       price: [v?.price !== undefined ? Number(v.price) : 0, [Validators.required, Validators.min(0)]],
+      discountPrice: [rawDiscount, [Validators.min(0)]],
       stock: [v?.stock !== undefined ? Number(v.stock) : 0, [Validators.required, Validators.min(0)]],
       status: [v?.status !== undefined ? Boolean(v.status) : true],
     });
@@ -982,39 +990,195 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   /**
-   * Sinh mã SKU tự động theo thuộc tính (VD: "AO-DO-S")
-   * Thứ tự ưu tiên: Phân loại -> Màu sắc -> Kích thước
+   * Chuyển đổi tên màu sắc thành mã viết tắt (VD: Đen -> BK, Đỏ -> RD, Xanh -> BL, Navy -> NV, ...)
    */
-  generateVariantSku(attributes: Record<string, string>): string {
-    if (!attributes) return `VAR-${Date.now()}`;
-    const parts: string[] = [];
+  getColorAbbreviation(colorName: string): string {
+    if (!colorName) return '';
+    const clean = colorName
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[đĐ]/g, 'd')
+      .trim();
 
-    // 1. Phân loại
-    const classification = attributes['Phân loại'] || attributes['classification'];
+    const colorCodeMap: Record<string, string> = {
+      'do ruou': 'RD',
+      'do': 'RD',
+      'red': 'RD',
+      'den': 'BK',
+      'black': 'BK',
+      'trang': 'WT',
+      'white': 'WT',
+      'kem be': 'BE',
+      'kem': 'CR',
+      'be': 'BE',
+      'beige': 'BE',
+      'hong pastel': 'PK',
+      'hong': 'PK',
+      'pink': 'PK',
+      'xanh navy': 'NV',
+      'navy': 'NV',
+      'xanh reu': 'OL',
+      'reu': 'OL',
+      'nau tay': 'BR',
+      'nau': 'BR',
+      'brown': 'BR',
+      'xam khoi': 'GY',
+      'xam': 'GY',
+      'grey': 'GY',
+      'gray': 'GY',
+      'xanh duong': 'BL',
+      'xanh lam': 'BL',
+      'xanh bien': 'BL',
+      'xanh': 'BL',
+      'blue': 'BL',
+      'xanh la': 'GR',
+      'green': 'GR',
+      'vang': 'YL',
+      'yellow': 'YL',
+      'cam': 'OR',
+      'orange': 'OR',
+      'tim': 'PR',
+      'purple': 'PR',
+    };
+
+    if (colorCodeMap[clean]) {
+      return colorCodeMap[clean];
+    }
+
+    const words = clean.split(/\s+/).filter(Boolean);
+    if (words.length > 1) {
+      return words.map(w => w[0].toUpperCase()).join('').slice(0, 3);
+    }
+    const upper = this.slugify(clean);
+    return upper.slice(0, 2);
+  }
+
+  /**
+   * Chuyển đổi tên thuộc tính khác (Phân loại / Danh mục / Thuộc tính riêng) thành mã viết tắt
+   * (VD: Áo Thun -> AT, Kim Cương -> KC, Khăn Choàng -> KC, ...)
+   */
+  getAttributeAbbreviation(attrName: string): string {
+    if (!attrName) return '';
+    const clean = attrName
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[đĐ]/g, 'D')
+      .trim();
+
+    const commonMap: Record<string, string> = {
+      'AO THUN': 'AT',
+      'KIM CUONG': 'KC',
+      'KHAN CHOANG': 'KC',
+      'DAM DA HOI': 'DDH',
+      'PHU KIEN': 'PK',
+      'TRANG SUC': 'TS',
+    };
+    const upperStr = clean.toUpperCase();
+    if (commonMap[upperStr]) {
+      return commonMap[upperStr];
+    }
+
+    const words = clean.split(/\s+/).filter(Boolean);
+    if (words.length > 1) {
+      return words.map(w => w[0].toUpperCase()).join('').slice(0, 3);
+    }
+    const slug = this.slugify(clean);
+    if (slug.length <= 3) return slug;
+    return slug.slice(0, 2);
+  }
+
+  /**
+   * Sinh mã SKU tự động cho biến thể theo quy tắc:
+   * - Mã gốc + Size → 089S, 089M, 089L
+   * - Mã gốc + Màu → 089-BL, 089-RD
+   * - Mã gốc + Size + Màu → 089S-BL
+   * - Mã gốc + Thuộc tính khác → 089S-KC hoặc 089-KC
+   * - Mã gốc + Thuộc tính + Size → 089-KC-S
+   * - Mã gốc + Thuộc tính viết tắt → 089-AT-M-BK
+   */
+  generateVariantSku(attributes: Record<string, string>, baseSkuParam?: string): string {
+    const rawBase = baseSkuParam !== undefined ? baseSkuParam : (this.productEditForm?.get('titleUrl')?.value || '');
+    const base = this.slugify(rawBase) || 'SP';
+
+    if (!attributes || Object.keys(attributes).length === 0) {
+      return base;
+    }
+
+    // 1. Kích thước (Size)
+    const rawSize = attributes['Kích thước'] || attributes['size'] || '';
+    const sizeCode = rawSize ? this.slugify(rawSize) : '';
+
+    // 2. Màu sắc (Color)
+    const rawColor = attributes['Màu sắc'] || attributes['color'] || '';
+    const colorCode = rawColor ? this.getColorAbbreviation(rawColor) : '';
+
+    // 3. Thuộc tính khác (Phân loại / Danh mục / Thuộc tính riêng)
+    const otherAttrs: string[] = [];
+    const classification = attributes['Phân loại'] || attributes['classification'] || '';
     if (classification) {
-      parts.push(this.slugify(classification));
+      otherAttrs.push(this.getAttributeAbbreviation(classification));
     }
 
-    // 2. Màu sắc
-    const color = attributes['Màu sắc'] || attributes['color'];
-    if (color) {
-      parts.push(this.slugify(color));
-    }
-
-    // 3. Kích thước
-    const size = attributes['Kích thước'] || attributes['size'];
-    if (size) {
-      parts.push(this.slugify(size));
-    }
-
-    // Các thuộc tính khác nếu có
     for (const key of Object.keys(attributes)) {
       if (!['Phân loại', 'classification', 'Màu sắc', 'color', 'Kích thước', 'size'].includes(key) && attributes[key]) {
-        parts.push(this.slugify(attributes[key]));
+        otherAttrs.push(this.getAttributeAbbreviation(attributes[key]));
       }
     }
 
-    return parts.filter(Boolean).join('-') || `VAR-${Date.now()}`;
+    const hasOther = otherAttrs.length > 0;
+    const hasSize = !!sizeCode;
+    const hasColor = !!colorCode;
+
+    // 1. Có thuộc tính khác
+    if (hasOther) {
+      const otherStr = otherAttrs.join('-');
+      if (hasSize && hasColor) {
+        // Mã gốc + Thuộc tính viết tắt: 089-AT-M-BK
+        return `${base}-${otherStr}-${sizeCode}-${colorCode}`;
+      } else if (hasSize) {
+        // Mã gốc + Thuộc tính + Size: 089-KC-S
+        return `${base}-${otherStr}-${sizeCode}`;
+      } else if (hasColor) {
+        // Mã gốc + Thuộc tính + Màu: 089-KC-BK
+        return `${base}-${otherStr}-${colorCode}`;
+      } else {
+        // Mã gốc + Thuộc tính khác: 089-KC
+        return `${base}-${otherStr}`;
+      }
+    }
+
+    // 2. Không có thuộc tính khác:
+    if (hasSize && hasColor) {
+      // Mã gốc + Size + Màu: 089S-BL
+      return `${base}${sizeCode}-${colorCode}`;
+    } else if (hasSize) {
+      // Mã gốc + Size: 089S, 089M, 089L
+      return `${base}${sizeCode}`;
+    } else if (hasColor) {
+      // Mã gốc + Màu: 089-BL, 089-RD
+      return `${base}-${colorCode}`;
+    }
+
+    return base;
+  }
+
+  /**
+   * Cập nhật lại mã SKU cho tất cả biến thể khi đổi mã gốc (titleUrl)
+   */
+  updateVariantsSkuWithBase(lang?: string): void {
+    const targetLang = lang || this.choosenLanguageSub$.value || 'vi';
+    const formArray = this.getVariantsFormArray(targetLang);
+    if (!formArray || formArray.length === 0) return;
+    const baseSku = this.productEditForm?.get('titleUrl')?.value;
+    if (!baseSku || !String(baseSku).trim()) return;
+
+    formArray.controls.forEach((control: AbstractControl) => {
+      const attrs = control.get('attributes')?.value || {};
+      const newSku = this.generateVariantSku(attrs, String(baseSku).trim());
+      control.get('sku')?.setValue(newSku);
+    });
+    this.cdr?.detectChanges();
   }
 
   /**
@@ -1175,8 +1339,9 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
 
     // Xóa và tạo mới các FormGroups
     variantsArray.clear();
+    const currentBaseSku = this.productEditForm?.get('titleUrl')?.value || '';
     for (const attrs of combinations) {
-      const sku = this.generateVariantSku(attrs);
+      const sku = this.generateVariantSku(attrs, currentBaseSku);
       const attrKey = this.getAttributeKey(attrs);
       const existing = existingMap.get(attrKey) || existingMap.get(sku);
 
@@ -1190,6 +1355,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
         sku: existing?.sku || sku,
         attributes: cleanAttrs,
         price: existing?.price !== undefined ? Number(existing.price) : defaultPrice,
+        discountPrice: existing?.discountPrice !== undefined ? existing.discountPrice : (existing?.salePrice !== undefined ? existing.salePrice : null),
         stock: existing?.stock !== undefined ? Number(existing.stock) : defaultStock,
         status: existing?.status !== undefined ? Boolean(existing.status) : true,
       });
@@ -1212,57 +1378,184 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
     this.cdr?.detectChanges();
   }
 
+  get hasQuickPrice(): boolean {
+    return this.quickPrice !== null && this.quickPrice !== undefined && String(this.quickPrice).trim() !== '' && !isNaN(Number(this.quickPrice)) && Number(this.quickPrice) > 0;
+  }
+
+  get isDiscountBatchInvalid(): boolean {
+    if (!this.hasQuickPrice) return false;
+    const discountVal = this.productEditForm?.get('discountBatch')?.value;
+    if (discountVal === null || discountVal === undefined || String(discountVal).trim() === '') return false;
+    const numDiscount = Number(discountVal);
+    const numPrice = Number(this.quickPrice);
+    return !isNaN(numDiscount) && !isNaN(numPrice) && numDiscount >= numPrice;
+  }
+
+  onQuickPriceChange(): void {
+    const discountCtrl = this.productEditForm?.get('discountBatch');
+    if (!this.hasQuickPrice) {
+      discountCtrl?.setValue('');
+      discountCtrl?.disable();
+    } else {
+      discountCtrl?.enable();
+      if (discountCtrl?.value && Number(discountCtrl.value) >= Number(this.quickPrice)) {
+        discountCtrl.setErrors({ discountTooHigh: true });
+      } else {
+        if (discountCtrl?.hasError('discountTooHigh')) {
+          const errors = { ...discountCtrl.errors };
+          delete errors.discountTooHigh;
+          discountCtrl.setErrors(Object.keys(errors).length ? errors : null);
+        }
+      }
+    }
+    this.cdr?.markForCheck();
+    this.cdr?.detectChanges();
+  }
+
+  onDiscountBatchInput(): void {
+    const discountCtrl = this.productEditForm?.get('discountBatch');
+    if (!this.hasQuickPrice) {
+      discountCtrl?.setValue('');
+      discountCtrl?.disable();
+      return;
+    }
+    const val = discountCtrl?.value;
+    if (val !== null && val !== undefined && String(val).trim() !== '') {
+      if (Number(val) >= Number(this.quickPrice)) {
+        discountCtrl?.setErrors({ ...(discountCtrl?.errors || {}), discountTooHigh: true });
+      } else {
+        if (discountCtrl?.hasError('discountTooHigh')) {
+          const errors = { ...discountCtrl.errors };
+          delete errors.discountTooHigh;
+          discountCtrl.setErrors(Object.keys(errors).length ? errors : null);
+        }
+      }
+    }
+    this.cdr?.markForCheck();
+    this.cdr?.detectChanges();
+  }
+
+  onVariantStockInput(lang: string): void {
+    const totalStock = this.getVariantsTotalStock(lang);
+    const langGroup = this.productEditForm?.get([lang]);
+    if (langGroup) {
+      langGroup.get('quantity')?.setValue(totalStock);
+    }
+    this.cdr?.markForCheck();
+    this.cdr?.detectChanges();
+  }
+
   /**
    * Áp dụng nhanh cho tất cả (Batch Update)
    */
-  applyBatchUpdate(lang: string): void {
-    const formArray = this.getVariantsFormArray(lang);
+  applyBatchUpdate(lang?: string): void {
+    const targetLang = lang || this.choosenLanguageSub$.value || 'vi';
+
+    // 1. Kiểm tra SKU (Mã sản phẩm) bắt buộc nhập trước khi nhấn nút "Áp dụng cho tất cả"
+    const titleUrlCtrl = this.productEditForm?.get('titleUrl');
+    const titleUrlVal = titleUrlCtrl?.value;
+    if (!titleUrlVal || !String(titleUrlVal).trim()) {
+      this.showToast('Vui lòng nhập Mã sản phẩm (SKU) trước khi áp dụng cho tất cả!', true);
+      titleUrlCtrl?.markAsTouched();
+      titleUrlCtrl?.setErrors({ required: true });
+      const skuEl = document.getElementById('titleUrl');
+      if (skuEl) {
+        skuEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        skuEl.focus();
+      }
+      return;
+    }
+
+    const formArray = this.getVariantsFormArray(targetLang);
     if (!formArray || formArray.length === 0) {
       this.showToast('Không có biến thể nào để áp dụng!', true);
       return;
     }
 
+    // Giá bán áp dụng chung (VNĐ): có thể nhập hoặc không
     const hasPrice = this.quickPrice !== null && this.quickPrice !== undefined && String(this.quickPrice).trim() !== '' && !isNaN(Number(this.quickPrice)) && Number(this.quickPrice) >= 0;
-    const hasStock = this.quickStock !== null && this.quickStock !== undefined && String(this.quickStock).trim() !== '' && !isNaN(Number(this.quickStock)) && Number(this.quickStock) >= 0;
+    const numPrice = hasPrice ? Number(this.quickPrice) : null;
 
-    if (!hasPrice && !hasStock) {
-      this.showToast('Vui lòng nhập Giá chung hoặc Kho chung để áp dụng nhanh!', true);
+    // Giá khuyến mãi áp dụng chung (VNĐ): chỉ được nhập khi Giá bán áp dụng chung được nhập VÀ nhỏ hơn Giá bán áp dụng chung
+    const discountVal = this.productEditForm?.get('discountBatch')?.value;
+    const hasDiscountInput = discountVal !== null && discountVal !== undefined && String(discountVal).trim() !== '' && !isNaN(Number(discountVal));
+    const numDiscount = hasDiscountInput ? Number(discountVal) : null;
+
+    if (hasDiscountInput) {
+      if (!hasPrice) {
+        this.showToast('Giá khuyến mãi chỉ được áp dụng khi đã nhập Giá bán áp dụng chung!', true);
+        return;
+      }
+      if (numDiscount !== null && numPrice !== null && numDiscount >= numPrice) {
+        this.showToast('Giá khuyến mãi áp dụng chung phải nhỏ hơn Giá bán áp dụng chung!', true);
+        return;
+      }
+    }
+
+    // Kho chung: có thể nhập hoặc không
+    const hasStock = this.quickStock !== null && this.quickStock !== undefined && String(this.quickStock).trim() !== '' && !isNaN(Number(this.quickStock)) && Number(this.quickStock) >= 0;
+    const numStock = hasStock ? Number(this.quickStock) : null;
+
+    if (!hasPrice && !hasDiscountInput && !hasStock) {
+      this.showToast('Vui lòng nhập ít nhất một giá trị (Giá bán, Giá KM hoặc Kho) để áp dụng!', true);
       return;
     }
 
-    const langGroup = this.productEditForm?.get([lang]);
+    const langGroup = this.productEditForm?.get([targetLang]);
+    const baseSku = String(titleUrlVal).trim();
 
-    formArray.controls.forEach((control: AbstractControl) => {
-      if (hasPrice) {
-        control.get('price')?.setValue(Number(this.quickPrice));
+    // Lặp qua tất cả biến thể trong bảng, kể cả biến thể đầu tiên, không bỏ sót bất kỳ hàng nào
+    for (let i = 0; i < formArray.length; i++) {
+      const control = formArray.at(i);
+      if (hasPrice && numPrice !== null) {
+        control.get('price')?.setValue(numPrice);
       }
-      if (hasStock) {
-        control.get('stock')?.setValue(Number(this.quickStock));
+      if (hasDiscountInput && numDiscount !== null) {
+        control.get('discountPrice')?.setValue(numDiscount);
       }
-    });
+      if (hasStock && numStock !== null) {
+        control.get('stock')?.setValue(numStock);
+      }
 
-    if (hasPrice && langGroup) {
-      langGroup.get('regularPrice')?.setValue(Number(this.quickPrice));
+      // Cập nhật mã SKU theo quy tắc nếu chưa có SKU hoặc SKU cũ
+      const currentSku = control.get('sku')?.value;
+      const attrs = control.get('attributes')?.value || {};
+      const generatedSku = this.generateVariantSku(attrs, baseSku);
+      if (!currentSku || !currentSku.trim() || currentSku.startsWith('VAR-') || !currentSku.startsWith(this.slugify(baseSku))) {
+        control.get('sku')?.setValue(generatedSku);
+      }
+    }
+
+    if (hasPrice && numPrice !== null && langGroup) {
+      langGroup.get('regularPrice')?.setValue(numPrice);
+    }
+    if (hasDiscountInput && numDiscount !== null && langGroup) {
+      langGroup.get('salePrice')?.setValue(numDiscount);
+      langGroup.get('onSale')?.setValue(true);
     }
     if (hasStock && langGroup) {
-      langGroup.get('quantity')?.setValue(this.getVariantsTotalStock(lang));
+      langGroup.get('quantity')?.setValue(this.getVariantsTotalStock(targetLang));
     }
 
-    this.showToast(`Đã áp dụng nhanh cho ${formArray.length} biến thể!`);
+    // Trigger form update để hiển thị ngay lập tức và tính toán lại thống kê
+    this.productEditForm.updateValueAndValidity();
+    this.cdr?.markForCheck();
     this.cdr?.detectChanges();
+
+    this.showToast(`Đã áp dụng thành công cho tất cả ${formArray.length} biến thể!`);
   }
 
-  applyBatchVariants(lang: string): void {
+  applyBatchVariants(lang?: string): void {
     this.applyBatchUpdate(lang);
   }
 
-  updateVariantField(index: number, field: 'price' | 'stock' | 'sku' | 'status', value: any, lang: string): void {
+  updateVariantField(index: number, field: 'price' | 'discountPrice' | 'stock' | 'sku' | 'status', value: any, lang: string): void {
     const formArray = this.getVariantsFormArray(lang);
     if (!formArray) return;
     const control = formArray.at(index);
     if (control) {
       let parsedVal: any = value;
-      if (field === 'price' || field === 'stock') {
+      if (field === 'price' || field === 'stock' || field === 'discountPrice') {
         parsedVal = Math.max(0, Number(value) || 0);
       } else if (field === 'status') {
         parsedVal = Boolean(value);
@@ -1270,6 +1563,15 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
         parsedVal = String(value);
       }
       control.get(field)?.setValue(parsedVal);
+      if (field === 'stock') {
+        const totalStock = this.getVariantsTotalStock(lang);
+        const langGroup = this.productEditForm?.get([lang]);
+        if (langGroup) {
+          langGroup.get('quantity')?.setValue(totalStock);
+        }
+      }
+      this.cdr?.markForCheck();
+      this.cdr?.detectChanges();
     }
   }
 
@@ -1277,6 +1579,13 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
     const formArray = this.getVariantsFormArray(lang);
     if (formArray && index >= 0 && index < formArray.length) {
       formArray.removeAt(index);
+      const totalStock = this.getVariantsTotalStock(lang);
+      const langGroup = this.productEditForm?.get([lang]);
+      if (langGroup) {
+        langGroup.get('quantity')?.setValue(totalStock);
+      }
+      this.productEditForm.updateValueAndValidity();
+      this.cdr?.markForCheck();
       this.cdr?.detectChanges();
     }
   }

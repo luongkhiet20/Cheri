@@ -174,10 +174,13 @@
       <div class="grid-2">
         <!-- Mã sản phẩm -->
         <div class="field">
-          <label class="field-label">Mã sản phẩm (SKU / Handle) <span class="required">*</span></label>
+          <label class="field-label">Mã sản phẩm (SKU) <span class="required">*</span></label>
           <input [formControl]="$any(productEditForm.get('titleUrl'))" type="text" name="titleUrl" id="titleUrl"
             placeholder="Nhập mã sản phẩm (SKU)" (input)="onTitleUrlInput()" (change)="formatTitleUrl($event)" />
-          <span class="helper">Ví dụ: CHERI-DRESS-001, dam-da-hoi-ren-do</span>
+          <span class="helper">Ví dụ: CHERI001</span>
+          @if (productEditForm.get('titleUrl')?.hasError('required') && productEditForm.get('titleUrl')?.touched) {
+          <span class="helper" style="color: var(--danger)">Mã sản phẩm (SKU) là bắt buộc</span>
+          }
         </div>
 
         <!-- Tên sản phẩm -->
@@ -268,24 +271,26 @@
         <label class="field-label" for="imageUrl">URL hình ảnh</label>
         <div style="display: flex; gap: 8px;">
           <input formControlName="imageUrl" name="imageUrl" id="imageUrl" type="url"
-            placeholder="https://example.com/image.jpg"
-            (keydown.enter)="$event.preventDefault(); addImageUrl()"
+            placeholder="https://example.com/image.jpg" (keydown.enter)="$event.preventDefault(); addImageUrl()"
             style="flex: 1;" />
           <button type="button" class="secondary" (click)="addImageUrl()"
             [disabled]="isAddingImageUrl || !productEditForm.get('imageUrl')?.value?.trim()">
             {{ isAddingImageUrl ? 'Đang thêm...' : 'Thêm' }}
           </button>
         </div>
-        <span class="helper">Nhập đường dẫn hình ảnh (bắt đầu bằng http:// hoặc https://) rồi nhấn Thêm hoặc Enter.</span>
+        <span class="helper">Nhập đường dẫn hình ảnh (bắt đầu bằng http:// hoặc https://) rồi nhấn Thêm hoặc
+          Enter.</span>
       </div>
     </div>
 
     <!-- Danh sách ảnh xem trước -->
     @if (getDisplayImages()?.length) {
     <div class="images-preview-section" style="margin-top: 20px;">
-      <div style="font-size: 13px; font-weight: 700; color: #44383b; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+      <div
+        style="font-size: 13px; font-weight: 700; color: #44383b; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
         <span>Hình ảnh sản phẩm ({{ getDisplayImages().length }})</span>
-        <span style="font-size: 12px; font-weight: 400; color: var(--muted);">Có thể kết hợp cả ảnh từ máy và ảnh từ URL</span>
+        <span style="font-size: 12px; font-weight: 400; color: var(--muted);">Có thể kết hợp cả ảnh từ máy và ảnh từ
+          URL</span>
       </div>
       <div class="images-wrapp">
         @for (image of getDisplayImages(); track image) {
@@ -325,7 +330,8 @@
       <div class="attribute">
         <div class="attribute-head">
           <label class="check-label">
-            <input type="checkbox" formControlName="hasColors" id="hasColors" (change)="generateVariants(chooseLang, true)" />
+            <input type="checkbox" formControlName="hasColors" id="hasColors"
+              (change)="generateVariants(chooseLang, true)" />
             Màu sắc
           </label>
           <button type="button" class="danger-btn"
@@ -391,7 +397,8 @@
       <div class="attribute">
         <div class="attribute-head">
           <label class="check-label">
-            <input type="checkbox" formControlName="hasSizes" id="hasSizes" (change)="generateVariants(chooseLang, true)" />
+            <input type="checkbox" formControlName="hasSizes" id="hasSizes"
+              (change)="generateVariants(chooseLang, true)" />
             Kích thước
           </label>
           <button type="button" class="danger-btn"
@@ -450,7 +457,8 @@
       <div class="attribute">
         <div class="attribute-head">
           <label class="check-label">
-            <input type="checkbox" formControlName="hasClassification" id="hasClassification" (change)="generateVariants(chooseLang, true)" />
+            <input type="checkbox" formControlName="hasClassification" id="hasClassification"
+              (change)="generateVariants(chooseLang, true)" />
             Phân loại danh mục
           </label>
           <button type="button" class="danger-btn"
@@ -494,8 +502,7 @@
               <!-- Thêm phân loại tùy chỉnh -->
               <div class="inline" style="margin-top: 12px;">
                 <input [(ngModel)]="customClassification" [ngModelOptions]="{ standalone: true }"
-                  placeholder="Nhập danh mục khác: Đầm, Váy,..."
-                  (keyup.enter)="addClassification(chooseLang)" />
+                  placeholder="Nhập danh mục khác: Đầm, Váy,..." (keyup.enter)="addClassification(chooseLang)" />
                 <button type="button" class="secondary" (click)="addClassification(chooseLang)">Thêm</button>
               </div>
             </div>
@@ -516,136 +523,131 @@
 
     <div [formGroupName]="chooseLang">
       @if (hasVariantAttributes(chooseLang) || getVariantsFormArray(chooseLang).controls.length > 0) {
-        <!-- ÁP DỤNG NHANH CHO TẤT CẢ BIẾN THỂ (BATCH UPDATE) -->
-        <div class="inline" style="margin-bottom: 16px; flex-wrap: wrap; gap: 10px; align-items: flex-end;">
-          <div class="field" style="margin-bottom: 0; min-width: 160px; flex: 1;">
-            <label class="field-label">Giá áp dụng chung (VNĐ)</label>
-            <input type="number" [(ngModel)]="quickPrice" [ngModelOptions]="{ standalone: true }"
-              placeholder="Nhập giá áp dụng tất cả..." min="0" />
-          </div>
-          <div class="field" style="margin-bottom: 0; min-width: 160px; flex: 1;">
-            <label class="field-label">Kho chung</label>
-            <input type="number" [(ngModel)]="quickStock" [ngModelOptions]="{ standalone: true }"
-              placeholder="Nhập kho áp dụng tất cả..." min="0" />
-          </div>
-          <button type="button" class="secondary" (click)="applyBatchUpdate(chooseLang)" style="height: 42px;">
-            Áp dụng cho tất cả
-          </button>
+      <!-- ÁP DỤNG NHANH CHO TẤT CẢ BIẾN THỂ (BATCH UPDATE) -->
+      <div class="inline" style="margin-bottom: 16px; flex-wrap: wrap; gap: 10px; align-items: flex-end;">
+        <div class="field" style="margin-bottom: 0; min-width: 160px; flex: 1;">
+          <label class="field-label">Giá bán áp dụng chung (VNĐ)</label>
+          <input type="number" [(ngModel)]="quickPrice" [ngModelOptions]="{ standalone: true }"
+            placeholder="Nhập giá bán áp dụng tất cả..." min="0" (ngModelChange)="onQuickPriceChange()" />
         </div>
+        <div class="field" style="margin-bottom: 0; min-width: 160px; flex: 1;">
+          <label class="field-label">Giá khuyến mãi áp dụng chung (VNĐ)</label>
+          <input type="number" [formControl]="$any(productEditForm.get('discountBatch'))" id="discountBatch"
+            name="discountBatch" [placeholder]="hasQuickPrice ? 'Nhập giá khuyến mãi chung' : 'Cần nhập giá bán trước'"
+            min="0" (input)="onDiscountBatchInput()" />
+          @if (isDiscountBatchInvalid) {
+          <span class="helper" style="color: var(--danger); font-size: 11px;">Giá KM phải nhỏ hơn giá bán ({{ quickPrice | number }} VNĐ)</span>
+          }
+        </div>
+        <div class="field" style="margin-bottom: 0; min-width: 160px; flex: 1;">
+          <label class="field-label">Kho chung</label>
+          <input type="number" [(ngModel)]="quickStock" [ngModelOptions]="{ standalone: true }"
+            placeholder="Nhập kho áp dụng tất cả..." min="0" />
+        </div>
+        <button type="button" class="secondary" id="applyBatchBtn" (click)="applyBatchUpdate()" style="height: 42px;">
+          Áp dụng cho tất cả
+        </button>
+      </div>
 
-        <!-- BẢNG BIẾN THỂ SẢN PHẨM -->
-        <div class="variant-wrap" style="overflow-x: auto;">
-          <table class="variants-table">
-            <thead>
-              <tr>
-                <th style="width: 50px; text-align: center;">STT</th>
-                @for (col of getActiveAttributeColumns(chooseLang); track col.key) {
-                  <th>{{ col.label }}</th>
-                }
-                <th>Mã SKU <span class="required">*</span></th>
-                <th style="width: 180px;">Giá bán (VNĐ) <span class="required">*</span></th>
-                <th style="width: 140px;">Tồn kho <span class="required">*</span></th>
-                <th style="width: 90px; text-align: center;">Trạng thái</th>
-                <th style="width: 60px; text-align: center;">Xóa</th>
-              </tr>
-            </thead>
-            <tbody formArrayName="variants">
-              @for (variantGroup of getVariantsFormArray(chooseLang).controls; track $index; let i = $index) {
-                <tr [formGroupName]="i">
-                  <td class="stt-cell">{{ i + 1 }}</td>
-                  @for (col of getActiveAttributeColumns(chooseLang); track col.key) {
-                    <td>
-                      @if (col.key === 'color' || col.label === 'Màu sắc') {
-                        <div style="display: inline-flex; align-items: center; gap: 6px;">
-                          <span class="pill-swatch" [style.backgroundColor]="getColorHex(getVariantAttributeValue(variantGroup, col), chooseLang)"></span>
-                          <span>{{ getVariantAttributeValue(variantGroup, col) }}</span>
-                        </div>
-                      } @else {
-                        <span>{{ getVariantAttributeValue(variantGroup, col) }}</span>
-                      }
-                    </td>
-                  }
-                  <td>
-                    <input type="text" formControlName="sku" class="table-input sku-cell" placeholder="Mã SKU" />
-                  </td>
-                  <td>
-                    <input type="number" formControlName="price" class="table-input" placeholder="0" min="0" />
-                  </td>
-                  <td>
-                    <input type="number" formControlName="stock" class="table-input" placeholder="0" min="0" />
-                  </td>
-                  <td style="text-align: center;">
-                    <label class="variant-toggle" [title]="variantGroup.get('status')?.value !== false ? 'Đang bật hiển thị' : 'Đang tạm ẩn'">
-                      <input type="checkbox" formControlName="status" />
-                      <span class="toggle-track">
-                        <span class="toggle-thumb"></span>
-                      </span>
-                    </label>
-                  </td>
-                  <td style="text-align: center;">
-                    <button type="button" class="danger-btn" title="Xóa biến thể này"
-                      (click)="removeVariant(i, chooseLang)">
-                      Xóa
-                    </button>
-                  </td>
-                </tr>
+      <!-- BẢNG BIẾN THỂ SẢN PHẨM -->
+      <div class="variant-wrap" style="overflow-x: auto;">
+        <table class="variants-table">
+          <thead>
+            <tr>
+              <th style="width: 50px; text-align: center;">STT</th>
+              @for (col of getActiveAttributeColumns(chooseLang); track col.key) {
+              <th>{{ col.label }}</th>
               }
-            </tbody>
-          </table>
-        </div>
+              <th>Mã SKU <span class="required">*</span></th>
+              <th style="width: 170px;">Giá bán (VNĐ) <span class="required">*</span></th>
+              <th style="width: 170px;">Giá khuyến mãi (VNĐ)</th>
+              <th style="width: 130px;">Tồn kho <span class="required">*</span></th>
+              <th style="width: 60px; text-align: center;">Xóa</th>
+            </tr>
+          </thead>
+          <tbody formArrayName="variants">
+            @for (variantGroup of getVariantsFormArray(chooseLang).controls; track variantGroup; let i = $index) {
+            <tr [formGroupName]="i">
+              <td class="stt-cell">{{ i + 1 }}</td>
+              @for (col of getActiveAttributeColumns(chooseLang); track col.key) {
+              <td>
+                @if (col.key === 'color' || col.label === 'Màu sắc') {
+                <div style="display: inline-flex; align-items: center; gap: 6px;">
+                  <span class="pill-swatch"
+                    [style.backgroundColor]="getColorHex(getVariantAttributeValue(variantGroup, col), chooseLang)"></span>
+                  <span>{{ getVariantAttributeValue(variantGroup, col) }}</span>
+                </div>
+                } @else {
+                <span>{{ getVariantAttributeValue(variantGroup, col) }}</span>
+                }
+              </td>
+              }
+              <td>
+                <input type="text" formControlName="sku" class="table-input sku-cell" placeholder="Mã SKU" />
+              </td>
+              <td>
+                <input type="number" formControlName="price" class="table-input" placeholder="0" min="0" />
+              </td>
+              <td>
+                <input type="number" formControlName="discountPrice" class="table-input" placeholder="0" min="0" />
+              </td>
+              <td>
+                <input type="number" formControlName="stock" class="table-input" placeholder="0" min="0"
+                  (input)="onVariantStockInput(chooseLang)" />
+              </td>
 
-        <div class="helper" style="margin-top: 12px; display: flex; justify-content: space-between; flex-wrap: wrap;">
-          <span>Tổng số biến thể: <strong>{{ getVariantsFormArray(chooseLang).length }}</strong> (Đang bật: <strong style="color: var(--wine);">{{ getActiveVariantsCount(chooseLang) }}</strong>)</span>
-          <span>Tổng tồn kho các biến thể: <strong>{{ getVariantsTotalStock(chooseLang) }}</strong></span>
-        </div>
+              <td style="text-align: center;">
+                <button type="button" class="danger-btn" title="Xóa biến thể này"
+                  (click)="removeVariant(i, chooseLang)">
+                  Xóa
+                </button>
+              </td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="helper" style="margin-top: 12px; display: flex; justify-content: space-between; flex-wrap: wrap;">
+        <span>Tổng số biến thể: <strong>{{ getVariantsFormArray(chooseLang).length }}</strong> (Đang bật: <strong
+            style="color: var(--wine);">{{ getActiveVariantsCount(chooseLang) }}</strong>)</span>
+        <span>Tổng tồn kho các biến thể: <strong>{{ getVariantsTotalStock(chooseLang) }}</strong></span>
+      </div>
       } @else {
-        <!-- KHI CHƯA CHỌN BIẾN THỂ Ở PHẦN 3: HIỂN THỊ CÁC Ô NHẬP GIÁ & TỒN KHO CỦA SẢN PHẨM ĐƠN -->
-        <div class="grid-2">
-          <div class="field">
-            <label class="field-label">Giá gốc (VNĐ) <span class="required">*</span></label>
-            <input formControlName="regularPrice" type="number" name="regularPrice" id="regularPrice"
-              placeholder="399000" />
-            @if (productEditForm.get([chooseLang, 'regularPrice'])?.hasError('required') &&
-            productEditForm.get([chooseLang, 'regularPrice'])?.touched) {
-            <span class="helper" style="color: var(--danger)">Giá gốc là bắt buộc</span>
-            }
-          </div>
-
-          <div class="field">
-            <label class="field-label">Giá khuyến mãi (VNĐ)</label>
-            <input formControlName="salePrice" type="number" name="salePrice" id="salePrice" placeholder="299000" />
-            @if (productEditForm.get([chooseLang, 'salePrice'])?.hasError('priceInvalid')) {
-            <span class="helper" style="color: var(--danger)">Giá khuyến mãi phải nhỏ hơn giá gốc</span>
-            }
-          </div>
+      <!-- KHI CHƯA CHỌN BIẾN THỂ Ở PHẦN 3: HIỂN THỊ CÁC Ô NHẬP GIÁ & TỒN KHO CỦA SẢN PHẨM ĐƠN -->
+      <div class="grid-2">
+        <div class="field">
+          <label class="field-label">Giá bán (VNĐ) <span class="required">*</span></label>
+          <input formControlName="regularPrice" type="number" name="regularPrice" id="regularPrice"
+            placeholder="399000" />
+          @if (productEditForm.get([chooseLang, 'regularPrice'])?.hasError('required') &&
+          productEditForm.get([chooseLang, 'regularPrice'])?.touched) {
+          <span class="helper" style="color: var(--danger)">Giá bán là bắt buộc</span>
+          }
         </div>
 
-        <div class="grid-2" style="margin-top: 20px;">
-          <div class="field">
-            <label class="field-label">Số lượng tồn kho</label>
-            <input formControlName="quantity" type="number" name="quantity" id="quantity" placeholder="10" />
-          </div>
+        <div class="field">
+          <label class="field-label">Giá khuyến mãi (VNĐ)</label>
+          <input formControlName="salePrice" type="number" name="salePrice" id="salePrice" placeholder="299000" />
+          @if (productEditForm.get([chooseLang, 'salePrice'])?.hasError('priceInvalid')) {
+          <span class="helper" style="color: var(--danger)">Giá khuyến mãi phải nhỏ hơn giá gốc</span>
+          }
+        </div>
+      </div>
 
-          <div class="field">
-            <label class="field-label">Tình trạng kho hàng</label>
-            <select formControlName="stock" id="stock">
-              <option value="onStock">Còn hàng</option>
-              <option value="onWaitings">Hàng sắp về</option>
-              <option value="unavailable">Hết hàng</option>
-            </select>
-          </div>
+      <div class="grid-2" style="margin-top: 20px;">
+        <div class="field">
+          <label class="field-label">Số lượng tồn kho</label>
+          <input formControlName="quantity" type="number" name="quantity" id="quantity" placeholder="10" />
         </div>
 
-        @if (productEditForm.get([chooseLang, 'stock'])?.value === 'onWaitings') {
-        <div class="field" style="margin-top: 20px;">
-          <label class="field-label">Ngày dự kiến hàng về</label>
-          <input type="date" formControlName="stockDate" name="stockDate" id="stockDate" />
+        <div class="helper"
+          style="margin-top: 16px; padding: 12px 16px; background: #fafafa; border: 1px dashed var(--border-color, #e0d0d0); border-radius: 6px;">
+          <span>Sản phẩm này hiện đang là sản phẩm đơn (không có biến thể). Khi bạn chọn thuộc tính (Màu sắc, Kích thước
+            hoặc Phân loại) ở <strong>Phần 3 — Phân loại hàng</strong> phía trên, hệ thống sẽ tự động chuyển phần này
+            thành Bảng quản lý Giá và Tồn kho chi tiết cho từng biến thể.</span>
         </div>
-        }
-
-        <div class="helper" style="margin-top: 16px; padding: 12px 16px; background: #fafafa; border: 1px dashed var(--border-color, #e0d0d0); border-radius: 6px;">
-          <span>Sản phẩm này hiện đang là sản phẩm đơn (không có biến thể). Khi bạn chọn thuộc tính (Màu sắc, Kích thước hoặc Phân loại) ở <strong>Phần 3 — Phân loại hàng</strong> phía trên, hệ thống sẽ tự động chuyển phần này thành Bảng quản lý Giá và Tồn kho chi tiết cho từng biến thể.</span>
-        </div>
+      </div>
       }
     </div>
   </section>

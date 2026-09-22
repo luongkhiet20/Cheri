@@ -940,6 +940,10 @@ h3 {
   font-weight: 600;
 }
 
+.variants-table {
+  min-width: 800px;
+}
+
 .variants-table th {
   background: #faf5f6;
   color: #715d61;

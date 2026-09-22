@@ -24,11 +24,7 @@ export class AuthService {
   async signUp(authCredentialsDto: AuthCredentialDto): Promise<void> {
     const { email, password, name, fullName, phoneNumber, address, gender, dateOfBirth, avatar } = authCredentialsDto;
     const cleanEmail = (email || '').trim().toLowerCase();
-    const cleanPhone = (phoneNumber || '').replace(/\D/g, '');
-
-    if (!cleanPhone || cleanPhone.length !== 10) {
-      throw new BadRequestException('Số điện thoại bắt buộc đủ 10 số');
-    }
+    const cleanPhone = phoneNumber ? String(phoneNumber).replace(/\D/g, '') : '';
 
     if (!cleanEmail || !/^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(cleanEmail)) {
       throw new BadRequestException('Email phải đúng định dạng @gmail.com mới được đăng ký');
@@ -42,7 +38,7 @@ export class AuthService {
     const user = new this.userModel({
       ...authCredentialsDto,
       email: cleanEmail,
-      phoneNumber: cleanPhone,
+      phoneNumber: cleanPhone || '',
       name: resolvedName,
       fullName: resolvedName,
       address: address || '',

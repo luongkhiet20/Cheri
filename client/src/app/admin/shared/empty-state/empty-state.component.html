@@ -1,0 +1,22 @@
+<div class="empty-state" role="status">
+  <div class="empty-state__illustration" aria-hidden="true">
+    <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+      <rect x="8" y="16" width="48" height="36" rx="4" stroke="var(--cheri-border)" stroke-width="2"/>
+      <path d="M8 24h48" stroke="var(--cheri-border)" stroke-width="2"/>
+      <rect x="16" y="32" width="12" height="3" rx="1.5" fill="var(--cheri-divider)"/>
+      <rect x="16" y="39" width="20" height="3" rx="1.5" fill="var(--cheri-divider)"/>
+      <circle cx="48" cy="44" r="10" fill="var(--cheri-background)" stroke="var(--cheri-border)" stroke-width="2"/>
+      <path d="M48 40v8M44 44h8" stroke="var(--cheri-text-light)" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <h3 class="empty-state__title">{{ title }}</h3>
+  <p class="empty-state__description">{{ description }}</p>
+  <button
+    *ngIf="actionLabel"
+    class="btn btn-primary"
+    (click)="onAction()"
+    [id]="'empty-action-' + icon"
+  >
+    {{ actionLabel }}
+  </button>
+</div>

@@ -1,0 +1,456 @@
+<div class="order-detail-page">
+
+  <!-- Top bar with Back and Status Summary -->
+  <div class="detail-header" *ngIf="!isLoading && !isNotFound && order">
+    <div class="detail-header-info">
+      <div class="header-badges">
+        <span class="order-code-badge">{{ order.orderId || order.code }}</span>
+        <app-admin-status-badge
+          [label]="order.statusText || order.status"
+          [variant]="order.statusVariant || 'neutral'"
+        ></app-admin-status-badge>
+        <span *ngIf="order.type" class="type-badge">{{ order.type }}</span>
+      </div>
+      <h1 class="detail-title">Chi tiết đơn hàng {{ order.orderId || order.code }}</h1>
+      <p class="detail-subtitle">
+        Mã MongoDB (<code>_id</code>): <code>{{ order._id }}</code> • Ngày đặt: <span>{{ order.dateAdded | date:'dd/MM/yyyy HH:mm' }}</span>
+      </p>
+    </div>
+
+    <div class="detail-header-actions">
+      <button type="button" class="btn btn-outline" (click)="onBack()" id="btn-back-orders">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        <span>Danh sách đơn hàng</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Alert Messages -->
+  <div *ngIf="successMessage" class="alert-box alert-success">
+    <div class="alert-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    </div>
+    <div class="alert-content">
+      <strong>Thành công:</strong> {{ successMessage }}
+    </div>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert-box alert-error">
+    <div class="alert-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+    </div>
+    <div class="alert-content">
+      <strong>Lỗi:</strong> {{ errorMessage }}
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="state-card loading-state">
+    <div class="spinner"></div>
+    <p class="state-title">Đang tải thông tin đơn hàng...</p>
+    <p class="state-desc">Đang truy vấn document từ MongoDB Atlas theo _id: {{ orderId }}</p>
+  </div>
+
+  <!-- Not Found State -->
+  <div *ngIf="!isLoading && isNotFound" class="state-card not-found-state">
+    <div class="state-icon">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+        stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        <line x1="8" y1="11" x2="14" y2="11"></line>
+      </svg>
+    </div>
+    <h2 class="state-title">Không tìm thấy đơn hàng</h2>
+    <p class="state-desc">Đơn hàng có mã <code>{{ orderId }}</code> không tồn tại trong collection <code>orders</code> của MongoDB Atlas.</p>
+    <button type="button" class="btn btn-outline" (click)="onBack()">
+      ← Quay lại danh sách đơn hàng
+    </button>
+  </div>
+
+  <!-- Main Detail Content -->
+  <div *ngIf="!isLoading && !isNotFound && order" class="order-content-layout">
+
+    <!-- LEFT COLUMN: STATUS TRANSITION & ITEMS & ADDRESSES -->
+    <div class="content-main">
+
+      <!-- SECTION 1: CẬP NHẬT TRẠNG THÁI NGHIỆP VỤ -->
+      <div class="card status-action-card">
+        <div class="card-head">
+          <div class="head-left">
+            <h2 class="card-head-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" class="card-icon">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+              </svg>
+              Quy trình & Cập nhật trạng thái đơn hàng
+            </h2>
+            <p class="card-head-desc">
+              Trạng thái hiện tại: <strong>{{ order.statusText || order.status }}</strong> (<code>{{ order.statusCode }}</code>)
+            </p>
+          </div>
+          <app-admin-status-badge
+            [label]="order.statusText || order.status"
+            [variant]="order.statusVariant || 'neutral'"
+          ></app-admin-status-badge>
+        </div>
+
+        <div class="transition-container">
+          <p class="transition-title">Chọn trạng thái chuyển tiếp hợp lệ:</p>
+
+          <div class="status-options-grid">
+            <button
+              *ngFor="let st of ALL_STATUSES"
+              type="button"
+              class="status-btn"
+              [class.is-current]="order.statusCode === st.code"
+              [class.is-selected]="selectedNextStatus === st.code"
+              [class.is-disabled]="order.statusCode === st.code || !isTransitionAllowed(st.code)"
+              [disabled]="order.statusCode === st.code || !isTransitionAllowed(st.code)"
+              (click)="onSelectStatus(st.code)"
+              [id]="'btn-status-' + st.code.toLowerCase()"
+            >
+              <span class="status-dot status-dot--{{ st.variant }}"></span>
+              <span class="status-name">{{ st.label }}</span>
+              <span *ngIf="order.statusCode === st.code" class="current-tag">Hiện tại</span>
+              <span *ngIf="order.statusCode !== st.code && isTransitionAllowed(st.code)" class="allowed-tag">Khả dụng</span>
+              <span *ngIf="order.statusCode !== st.code && !isTransitionAllowed(st.code)" class="forbidden-tag">Không thể chuyển</span>
+            </button>
+          </div>
+
+          <!-- Transition validation warning -->
+          <div *ngIf="statusValidationMessage" class="inline-warning">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <span>{{ statusValidationMessage }}</span>
+          </div>
+
+          <!-- Note input for status change -->
+          <div class="status-note-wrap" *ngIf="selectedNextStatus">
+            <label class="form-label" for="status-note-input">Ghi chú cập nhật trạng thái (tùy chọn):</label>
+            <input
+              type="text"
+              id="status-note-input"
+              class="form-control"
+              [(ngModel)]="statusNote"
+              placeholder="VD: Khách yêu cầu giao lại vào buổi chiều, đã đóng gói xong..."
+            />
+          </div>
+
+          <!-- Submit status button -->
+          <div class="transition-actions">
+            <button
+              type="button"
+              class="btn btn-primary"
+              [disabled]="!selectedNextStatus || isUpdatingStatus"
+              (click)="onRequestChangeStatus()"
+              id="btn-submit-status"
+            >
+              <span *ngIf="isUpdatingStatus" class="spinner-inline"></span>
+              <span>{{ isUpdatingStatus ? 'Đang lưu vào MongoDB...' : 'Xác nhận đổi trạng thái' }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 2: SẢN PHẨM TRONG ĐƠN HÀNG (cart.items) -->
+      <div class="card items-card">
+        <div class="card-head">
+          <h2 class="card-head-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" class="card-icon">
+              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <path d="M16 10a4 4 0 0 1-8 0"></path>
+            </svg>
+            Danh sách sản phẩm trong đơn hàng
+          </h2>
+          <span class="badge badge-neutral">{{ order.cart?.items?.length || 0 }} loại sản phẩm • Tổng {{ order.cart?.totalQty || 0 }} món</span>
+        </div>
+
+        <div class="table-responsive">
+          <table class="order-items-table">
+            <thead>
+              <tr>
+                <th class="th-product">Sản phẩm</th>
+                <th class="th-price text-right">Đơn giá tại thời điểm đặt</th>
+                <th class="th-qty text-center">Số lượng</th>
+                <th class="th-total text-right">Thành tiền</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let it of order.cart?.items">
+                <td class="td-product">
+                  <div class="item-info-wrap">
+                    <div class="item-thumb-box">
+                      <img
+                        *ngIf="getItemImage(it)"
+                        [src]="getItemImage(it)"
+                        [alt]="getItemTitle(it)"
+                        class="item-thumb"
+                      />
+                      <div *ngIf="!getItemImage(it)" class="item-thumb-placeholder">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                          <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                          <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                      </div>
+                    </div>
+                    <div class="item-details">
+                      <div class="item-title">{{ getItemTitle(it) }}</div>
+                      <div class="item-sku" *ngIf="it.id || it.item?._id">
+                        Mã SP: <code>{{ it.id || it.item?._id }}</code>
+                      </div>
+                      <div class="item-variants" *ngIf="getItemVariants(it).length > 0">
+                        <span *ngFor="let v of getItemVariants(it)" class="variant-tag">{{ v }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td class="td-price text-right font-medium">
+                  {{ it.price | number:'1.0-0' }} {{ order.currency || 'đ' }}
+                </td>
+                <td class="td-qty text-center">
+                  <span class="qty-bubble">x{{ it.qty }}</span>
+                </td>
+                <td class="td-total text-right font-bold color-primary">
+                  {{ (it.price * it.qty) | number:'1.0-0' }} {{ order.currency || 'đ' }}
+                </td>
+              </tr>
+              <tr *ngIf="!order.cart?.items || order.cart?.items.length === 0">
+                <td colspan="4" class="text-center text-muted py-4">Đơn hàng không có sản phẩm nào</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SECTION 3: ĐỊA CHỈ GIAO HÀNG & THANH TOÁN (addresses) -->
+      <div class="card info-card">
+        <div class="card-head">
+          <h2 class="card-head-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" class="card-icon">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+              <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+            Địa chỉ nhận hàng (addresses)
+          </h2>
+        </div>
+
+        <div *ngIf="order.addresses && order.addresses.length > 0" class="addresses-grid">
+          <div *ngFor="let addr of order.addresses; let idx = index" class="address-box">
+            <div class="address-type-tag">Địa chỉ #{{ idx + 1 }}</div>
+            <div class="address-name font-semibold">{{ addr.name || order.customer || 'Người nhận' }}</div>
+            <div class="address-phone" *ngIf="addr.phone || order.phone">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+              </svg>
+              <span>{{ addr.phone || order.phone }}</span>
+            </div>
+            <div class="address-lines">
+              <p *ngIf="addr.line1">{{ addr.line1 }}</p>
+              <p *ngIf="addr.line2">{{ addr.line2 }}</p>
+              <p *ngIf="addr.city || addr.country">
+                {{ addr.city }}<span *ngIf="addr.city && addr.country">, </span>{{ addr.country }}
+              </p>
+              <p *ngIf="addr.zip">Mã bưu điện (Zip): {{ addr.zip }}</p>
+            </div>
+          </div>
+        </div>
+        <div *ngIf="!order.addresses || order.addresses.length === 0" class="text-muted p-3">
+          Không có thông tin địa chỉ trong đơn hàng.
+        </div>
+      </div>
+
+      <!-- SECTION 4: LỊCH SỬ TRẠNG THÁI (statusHistory) -->
+      <div class="card info-card" *ngIf="order.statusHistory && order.statusHistory.length > 0">
+        <div class="card-head">
+          <h2 class="card-head-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" class="card-icon">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            Lịch sử cập nhật trạng thái (statusHistory)
+          </h2>
+        </div>
+
+        <div class="timeline-list">
+          <div *ngFor="let h of order.statusHistory" class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-body">
+              <div class="timeline-header">
+                <span class="timeline-status font-bold">{{ h.status }}</span>
+                <span class="timeline-time">{{ h.updatedAt | date:'dd/MM/yyyy HH:mm:ss' }}</span>
+              </div>
+              <div class="timeline-note" *ngIf="h.note">{{ h.note }}</div>
+              <div class="timeline-user" *ngIf="h.updatedBy">Mã người thực hiện: <code>{{ h.updatedBy }}</code></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN: SUMMARY & DETAILS -->
+    <div class="content-sidebar">
+
+      <!-- CARD 1: TỔNG QUAN TÀI CHÍNH & VẬN CHUYỂN -->
+      <div class="card summary-card">
+        <div class="card-head">
+          <h3 class="card-head-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" class="card-icon">
+              <line x1="12" y1="1" x2="12" y2="23"></line>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+            Thanh toán & Vận chuyển
+          </h3>
+        </div>
+
+        <div class="summary-rows">
+          <div class="summary-row">
+            <span class="summary-label">Tổng số lượng (totalQty):</span>
+            <span class="summary-val font-semibold">{{ order.cart?.totalQty || 0 }} sản phẩm</span>
+          </div>
+
+          <div class="summary-row">
+            <span class="summary-label">Phí vận chuyển (shippingCost):</span>
+            <span class="summary-val">
+              {{ (order.cart?.shippingCost || 0) > 0 ? ((order.cart?.shippingCost | number:'1.0-0') + ' ' + (order.currency || 'đ')) : 'Miễn phí' }}
+            </span>
+          </div>
+
+          <div class="summary-row" *ngIf="order.cart?.shippingType">
+            <span class="summary-label">Loại vận chuyển (shippingType):</span>
+            <span class="summary-val badge badge-neutral">{{ order.cart?.shippingType }}</span>
+          </div>
+
+          <div class="summary-row" *ngIf="order.cart?.shippingLimit !== undefined">
+            <span class="summary-label">Ngưỡng Freeship (shippingLimit):</span>
+            <span class="summary-val">{{ order.cart?.shippingLimit | number:'1.0-0' }} {{ order.currency || 'đ' }}</span>
+          </div>
+
+          <div class="summary-row" *ngIf="order.payment">
+            <span class="summary-label">Hình thức thanh toán:</span>
+            <span class="summary-val font-medium">{{ order.payment }}</span>
+          </div>
+
+          <div class="summary-divider"></div>
+
+          <div class="summary-row total-row">
+            <span class="total-label">Tổng thanh toán (totalPrice):</span>
+            <span class="total-amount">{{ (order.total || order.amount || 0) | number:'1.0-0' }} {{ order.currency || 'đ' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 2: THÔNG TIN KHÁCH HÀNG (customerEmail) -->
+      <div class="card info-card">
+        <div class="card-head">
+          <h3 class="card-head-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" class="card-icon">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            Thông tin khách hàng
+          </h3>
+        </div>
+
+        <div class="info-list">
+          <div class="info-row">
+            <span class="info-label">Tên khách hàng:</span>
+            <span class="info-value font-medium">{{ order.customer || 'Khách vãng lai' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Email khách hàng (customerEmail):</span>
+            <span class="info-value text-break">{{ order.customerEmail || 'Chưa cung cấp' }}</span>
+          </div>
+          <div class="info-row" *ngIf="order.phone">
+            <span class="info-label">Số điện thoại:</span>
+            <span class="info-value">{{ order.phone }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 3: THÔNG TIN HỆ THỐNG & OUTCOME -->
+      <div class="card info-card">
+        <div class="card-head">
+          <h3 class="card-head-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" class="card-icon">
+              <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+              <line x1="7" y1="2" x2="7" y2="22"></line>
+              <line x1="17" y1="2" x2="17" y2="22"></line>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <line x1="2" y1="7" x2="7" y2="7"></line>
+              <line x1="2" y1="17" x2="7" y2="17"></line>
+              <line x1="17" y1="17" x2="22" y2="17"></line>
+              <line x1="17" y1="7" x2="22" y2="7"></line>
+            </svg>
+            Dữ liệu hệ thống
+          </h3>
+        </div>
+
+        <div class="info-list">
+          <div class="info-row">
+            <span class="info-label">Mã MongoDB (_id):</span>
+            <code class="info-code">{{ order._id }}</code>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Mã đơn hàng (orderId):</span>
+            <span class="info-value font-semibold">{{ order.orderId || order.code }}</span>
+          </div>
+          <div class="info-row" *ngIf="order.type">
+            <span class="info-label">Loại đơn (type):</span>
+            <span class="info-value">{{ order.type }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Tiền tệ (currency):</span>
+            <span class="info-value">{{ order.currency || 'VND' }}</span>
+          </div>
+          <div class="info-row" *ngIf="order.notes">
+            <span class="info-label">Ghi chú (notes):</span>
+            <span class="info-value">{{ order.notes }}</span>
+          </div>
+          <div class="info-row" *ngIf="order.outcome && order.outcome.seller_message">
+            <span class="info-label">Outcome (seller_message):</span>
+            <code class="info-code">{{ order.outcome.seller_message }}</code>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Modal xác nhận đổi trạng thái -->
+<app-confirm-dialog
+  [isOpen]="confirmOpen"
+  [title]="confirmDialogTitle"
+  [message]="confirmDialogMessage"
+  confirmLabel="Cập nhật ngay"
+  variant="default"
+  (confirmed)="onConfirmStatusUpdate()"
+  (cancelled)="onCancelConfirmDialog()"
+></app-confirm-dialog>

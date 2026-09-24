@@ -1,0 +1,92 @@
+<div class="admin-table-wrapper">
+
+  <!-- Loading State -->
+  <app-loading-state *ngIf="loading" [rows]="8"></app-loading-state>
+
+  <!-- Empty State -->
+  <app-empty-state *ngIf="!loading && data.length === 0" title="Chưa có dữ liệu"
+    description="Không tìm thấy bản ghi nào. Thử thay đổi bộ lọc hoặc thêm mới."></app-empty-state>
+
+  <!-- Table -->
+  <div class="table-scroll" *ngIf="!loading && data.length > 0">
+    <table class="admin-table" role="table">
+      <thead>
+        <tr class="admin-table__head-row">
+
+          <!-- Checkbox header -->
+          <th *ngIf="selectable" class="admin-table__th admin-table__th--checkbox">
+            <input #headerCheckbox type="checkbox" class="row-checkbox" [checked]="allSelected" (change)="toggleAll()"
+              aria-label="Chọn tất cả" id="select-all-checkbox" />
+          </th>
+
+          <!-- Data columns -->
+          <th *ngFor="let col of columns" class="admin-table__th" [class.is-sortable]="col.sortable"
+            [class.is-sorted-asc]="sortKey === col.key && sortDir === 'asc'"
+            [class.is-sorted-desc]="sortKey === col.key && sortDir === 'desc'" [style.width]="col.width || 'auto'"
+            (click)="onSort(col)">
+            <span class="admin-table__th-inner">
+              {{ col.label }}
+              <span *ngIf="col.sortable" class="sort-icon" aria-hidden="true">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                  stroke-linecap="round">
+                  <polyline points="6 9 12 4 18 9"></polyline>
+                  <polyline points="6 15 12 20 18 15"></polyline>
+                </svg>
+              </span>
+            </span>
+          </th>
+
+          <th *ngIf="showActions && actions.length > 0" class="admin-table__th admin-table__th--actions">
+            Thao tác
+          </th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr class="admin-table__row" *ngFor="let row of data; let i = index" [class.is-selected]="isRowSelected(row)"
+          [attr.aria-rowindex]="i + 1" [attr.aria-selected]="selectable ? isRowSelected(row) : null">
+          <!-- ── Row checkbox (NEW) ── -->
+          <td *ngIf="selectable" class="admin-table__td admin-table__td--checkbox">
+            <input type="checkbox" class="row-checkbox" [checked]="isRowSelected(row)" (change)="toggleRow(row)"
+              [attr.aria-label]="'Chọn hàng ' + (i + 1)" [id]="'row-checkbox-' + row[rowKey]" />
+          </td>
+
+          <!-- Data cells -->
+          <td *ngFor="let col of columns" class="admin-table__td" [attr.data-label]="col.label">
+
+            <!-- Status Badge -->
+            <app-admin-status-badge *ngIf="isStatusColumn(col)" [label]="formatValue(row, col)"
+              [variant]="row[col.key + 'Variant'] || 'neutral'"></app-admin-status-badge>
+
+            <!-- Image cell -->
+            <div *ngIf="isImageColumn(col)" class="cell-image">
+              <img [src]="getCellValue(row, col.key) || fallbackImage" [alt]="col.label" loading="lazy" />
+            </div>
+
+            <!-- Default text -->
+            <span *ngIf="!isStatusColumn(col) && !isImageColumn(col)">
+              {{ formatValue(row, col) }}
+            </span>
+          </td>
+
+          <!-- Actions Column -->
+          <td *ngIf="showActions && actions.length > 0" class="admin-table__td admin-table__td--actions">
+            <app-admin-action-buttons [actions]="actions" [row]="row"
+              (actionClick)="onAction($event)"></app-admin-action-buttons>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Footer: Total count + Pagination -->
+  <div class="table-footer" *ngIf="!loading && data.length > 0">
+    <div class="table-footer__total">
+      Tổng số: <strong>{{ displayTotal }}</strong>
+      <span *ngIf="totalLabel">&nbsp;{{ totalLabel }}</span>
+    </div>
+    <app-admin-pagination *ngIf="pagination" [page]="pagination.page" [pageSize]="pagination.pageSize"
+      [total]="pagination.total" (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)"></app-admin-pagination>
+  </div>
+</div>

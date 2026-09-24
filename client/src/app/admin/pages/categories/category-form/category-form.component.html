@@ -1,0 +1,252 @@
+<div class="page-content">
+
+  <!-- Breadcrumbs & Header -->
+  <div class="page-top">
+    <div>
+      <div class="breadcrumbs">
+        <a routerLink="/admin/categories" class="breadcrumb-link">Danh mục</a>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current">{{ isEditMode ? 'Chỉnh sửa danh mục' : 'Thêm danh mục mới' }}</span>
+      </div>
+      <h1 class="page-title">{{ isEditMode ? 'Chỉnh sửa danh mục' : 'Thêm danh mục mới' }}</h1>
+      <p class="page-subtitle">Dữ liệu được lưu trực tiếp vào collection <code>categories</code> trong MongoDB Atlas</p>
+    </div>
+
+    <div class="page-actions">
+      <button type="button" class="btn btn-outline" (click)="onCancel()" [disabled]="isSubmitting" id="btn-cancel-top">
+        Hủy
+      </button>
+      <button type="button" class="btn btn-primary" (click)="onSubmit()" [disabled]="isSubmitting || isLoading" id="btn-save-top">
+        <span *ngIf="isSubmitting" class="spinner-inline"></span>
+        {{ isSubmitting ? 'Đang lưu...' : (isEditMode ? 'Lưu thay đổi' : 'Lưu danh mục') }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Alert Messages -->
+  <div *ngIf="errorMessage" class="alert-box alert-error">
+    <div class="alert-icon">⚠️</div>
+    <div class="alert-content">
+      <strong>Lỗi:</strong> {{ errorMessage }}
+    </div>
+  </div>
+
+  <div *ngIf="successMessage" class="alert-box alert-success">
+    <div class="alert-icon">✓</div>
+    <div class="alert-content">{{ successMessage }}</div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="form-loading-card">
+    <div class="spinner"></div>
+    <p class="loading-title">Đang tải dữ liệu danh mục từ MongoDB...</p>
+  </div>
+
+  <!-- Main Form Layout -->
+  <form *ngIf="!isLoading" (ngSubmit)="onSubmit()" class="category-form-layout" novalidate>
+
+    <!-- LEFT COLUMN -->
+    <div class="form-main-col">
+
+      <!-- 1. Category Information -->
+      <div class="form-card">
+        <h2 class="card-section-title">Thông tin danh mục</h2>
+
+        <!-- Tên danh mục (vi.title) -->
+        <div class="form-group">
+          <label class="form-label required" for="categoryTitle">Tên danh mục (vi.title)</label>
+          <input
+            type="text"
+            id="categoryTitle"
+            class="form-control"
+            [class.is-invalid]="errors['title']"
+            [(ngModel)]="formData.title"
+            (ngModelChange)="onTitleChange()"
+            name="title"
+            placeholder="Ví dụ: Quần Áo, Váy Đầm, Phụ Kiện..."
+            required
+          />
+          <div *ngIf="errors['title']" class="invalid-feedback">
+            {{ errors['title'] }}
+          </div>
+          <span class="form-hint">Tên hiển thị của danh mục sản phẩm trên toàn hệ thống</span>
+        </div>
+
+        <!-- Mã slug (titleUrl) -->
+        <div class="form-group">
+          <label class="form-label" for="categorySlug">Mã đường dẫn / Slug (titleUrl)</label>
+          <input
+            type="text"
+            id="categorySlug"
+            class="form-control font-mono"
+            [class.is-invalid]="errors['slug']"
+            [(ngModel)]="formData.slug"
+            (ngModelChange)="onSlugChange()"
+            name="slug"
+            placeholder="Ví dụ: quan-ao, vay-dam..."
+          />
+          <div *ngIf="errors['slug']" class="invalid-feedback">
+            {{ errors['slug'] }}
+          </div>
+          <span class="form-hint">Chuỗi URL thân thiện (tự động tạo từ tên nếu để trống)</span>
+        </div>
+
+        <!-- Danh mục cha (parentId) -->
+        <div class="form-group">
+          <label class="form-label" for="categoryParent">Danh mục cha (parentId)</label>
+          <select
+            id="categoryParent"
+            class="form-control"
+            [(ngModel)]="formData.parentId"
+            (ngModelChange)="markDirty()"
+            name="parentId"
+          >
+            <option value="">-- Không có danh mục cha (Danh mục cấp 1) --</option>
+            <option *ngFor="let p of parentCategories" [value]="p.id">
+              📁 {{ p.name }}
+            </option>
+          </select>
+          <span class="form-hint">
+            Để trống nếu là danh mục chính (cấp 1). Chọn một danh mục cha nếu muốn tạo danh mục con (cấp 2).
+          </span>
+        </div>
+
+        <!-- Mô tả danh mục (vi.description) -->
+        <div class="form-group">
+          <label class="form-label" for="categoryDesc">Mô tả danh mục (vi.description)</label>
+          <textarea
+            id="categoryDesc"
+            class="form-control"
+            rows="4"
+            [(ngModel)]="formData.description"
+            (ngModelChange)="markDirty()"
+            name="description"
+            placeholder="Mô tả tóm tắt về các sản phẩm trong danh mục này..."
+          ></textarea>
+        </div>
+
+      </div>
+
+      <!-- 2. Image Media (mainImage.url) -->
+      <div class="form-card">
+        <h2 class="card-section-title">Hình ảnh đại diện danh mục (mainImage)</h2>
+
+        <div class="image-input-box">
+          <div class="form-group">
+            <label class="form-label">Đường dẫn ảnh trực tiếp (URL)</label>
+            <input
+              type="text"
+              class="form-control"
+              [(ngModel)]="formData.imageUrl"
+              (ngModelChange)="markDirty()"
+              name="imageUrl"
+              placeholder="Dán URL hình ảnh (https://...)"
+            />
+          </div>
+
+          <div class="form-group mb-0">
+            <label class="form-label">Hoặc tải file ảnh từ máy tính</label>
+            <input
+              type="file"
+              class="form-control file-input"
+              accept="image/*"
+              (change)="onFileSelected($event)"
+            />
+          </div>
+        </div>
+
+        <!-- Preview -->
+        <div *ngIf="formData.imageUrl" class="image-preview-card mt-3">
+          <div class="preview-img-wrap">
+            <img [src]="formData.imageUrl" alt="Ảnh xem trước danh mục" />
+          </div>
+          <div class="preview-meta">
+            <span class="badge-main-active">✓ Ảnh đại diện</span>
+            <button type="button" class="btn btn-sm btn-danger-outline" (click)="removeImage()">
+              🗑️ Xóa ảnh
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="!formData.imageUrl" class="no-images-notice">
+          Chưa có hình ảnh nào được chọn. Danh mục có thể sử dụng ảnh hoặc icon mặc định.
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN (Sidebar) -->
+    <div class="form-sidebar-col">
+
+      <!-- Status & Visibility -->
+      <div class="form-card">
+        <h2 class="card-section-title">Trạng thái phát hành</h2>
+
+        <div class="form-group">
+          <label class="form-label" for="categoryVisibility">Hiển thị trên hệ thống (vi.visibility)</label>
+          <select
+            id="categoryVisibility"
+            class="form-control"
+            [(ngModel)]="formData.visibility"
+            (ngModelChange)="markDirty()"
+            name="visibility"
+          >
+            <option [ngValue]="true">Hiển thị (Đang kích hoạt)</option>
+            <option [ngValue]="false">Tạm ẩn (Bản nháp)</option>
+          </select>
+        </div>
+
+        <div class="status-summary-box" [class.active]="formData.visibility">
+          <div class="dot"></div>
+          <span>{{ formData.visibility ? 'Danh mục đang được hiển thị trên Store' : 'Danh mục đang bị ẩn khỏi khách hàng' }}</span>
+        </div>
+      </div>
+
+      <!-- Position -->
+      <div class="form-card">
+        <h2 class="card-section-title">Thứ tự hiển thị</h2>
+
+        <div class="form-group">
+          <label class="form-label" for="categoryPosition">Vị trí sắp xếp (vi.position)</label>
+          <input
+            type="number"
+            id="categoryPosition"
+            class="form-control"
+            [(ngModel)]="formData.position"
+            (ngModelChange)="markDirty()"
+            name="position"
+            min="0"
+          />
+          <span class="form-hint">Số thứ tự ưu tiên khi sắp xếp hiển thị trên menu cửa hàng (0, 1, 2...)</span>
+        </div>
+      </div>
+
+      <!-- Action Card -->
+      <div class="form-card action-bottom-card">
+        <button
+          type="button"
+          class="btn btn-primary btn-block mb-2"
+          (click)="onSubmit()"
+          [disabled]="isSubmitting"
+          id="btn-save-bottom"
+        >
+          <span *ngIf="isSubmitting" class="spinner-inline"></span>
+          {{ isSubmitting ? 'Đang lưu...' : (isEditMode ? 'Lưu thay đổi' : 'Lưu danh mục') }}
+        </button>
+
+        <button
+          type="button"
+          class="btn btn-outline btn-block"
+          (click)="onCancel()"
+          [disabled]="isSubmitting"
+          id="btn-cancel-bottom"
+        >
+          Hủy bỏ
+        </button>
+      </div>
+
+    </div>
+
+  </form>
+
+</div>

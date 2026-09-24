@@ -243,6 +243,75 @@ getStripeSession = (payload) => {
   this.apiService.getStripeSession(payload);
 };
 
+// ─── Shipping Methods ────────────────────────────────────────────────────
+
+getShippingMethods = () => {
+  this.apiService.getShippingMethods().subscribe((response: any) => {
+    if (!response?.error) {
+      this.selectors.productState.update((state) => ({ ...state, shippingMethods: response }));
+    }
+  });
+};
+
+getAllShippingMethods = () => {
+  this.apiService.getAllShippingMethods().subscribe((response: any) => {
+    if (!response?.error) {
+      this.selectors.dashboardState.update((state) => ({ ...state, shippingMethods: response }));
+    }
+  });
+};
+
+saveShippingMethod = (payload, callback?: (result: any) => void) => {
+  this.selectors.dashboardState.update((state) => ({ ...state, loading: true }));
+  this.apiService.saveShippingMethod(payload).subscribe((response: any) => {
+    this.selectors.dashboardState.update((state) => ({ ...state, loading: false }));
+    if (callback) callback(response);
+  });
+};
+
+deleteShippingMethod = (id: string, callback?: () => void) => {
+  this.selectors.dashboardState.update((state) => ({ ...state, loading: true }));
+  this.apiService.deleteShippingMethod(id).subscribe(() => {
+    this.selectors.dashboardState.update((state) => ({ ...state, loading: false }));
+    if (callback) callback();
+  });
+};
+
+// ─── Payment Methods ─────────────────────────────────────────────────────
+
+getPaymentMethods = () => {
+  this.apiService.getPaymentMethods().subscribe((response: any) => {
+    if (!response?.error) {
+      this.selectors.productState.update((state) => ({ ...state, paymentMethods: response }));
+    }
+  });
+};
+
+getAllPaymentMethods = () => {
+  this.apiService.getAllPaymentMethods().subscribe((response: any) => {
+    if (!response?.error) {
+      this.selectors.dashboardState.update((state) => ({ ...state, paymentMethods: response }));
+    }
+  });
+};
+
+savePaymentMethod = (payload, callback?: (result: any) => void) => {
+  this.selectors.dashboardState.update((state) => ({ ...state, loading: true }));
+  this.apiService.savePaymentMethod(payload).subscribe((response: any) => {
+    this.selectors.dashboardState.update((state) => ({ ...state, loading: false }));
+    if (callback) callback(response);
+  });
+};
+
+deletePaymentMethod = (id: string, callback?: () => void) => {
+  this.selectors.dashboardState.update((state) => ({ ...state, loading: true }));
+  this.apiService.deletePaymentMethod(id).subscribe(() => {
+    this.selectors.dashboardState.update((state) => ({ ...state, loading: false }));
+    if (callback) callback();
+  });
+};
+
+
 getUserOrders = () => {
   this.apiService.getUserOrders().subscribe((response: any) => {
     this.selectors.productState.update((state) => ({ ...state, userOrders: response }));

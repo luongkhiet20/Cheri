@@ -8,7 +8,7 @@ import { Observable, of } from 'rxjs';
 import { catchError, map, take } from 'rxjs/operators';
 import { accessTokenKey } from '../shared/constants';
 
-const checkIsAdmin = (user: any): boolean => {
+export const checkIsAdmin = (user: any): boolean => {
   if (!user) return false;
   const roles = user.roles || (user.role ? [user.role] : []);
   if (Array.isArray(roles) && roles.some((r: string) => r && r.toLowerCase() === 'admin')) {

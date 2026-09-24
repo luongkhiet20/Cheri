@@ -1,0 +1,27 @@
+<div class="loading-state" role="status" aria-live="polite" aria-label="Đang tải">
+  <ng-container *ngIf="type === 'spinner'">
+    <div class="loading-spinner" aria-hidden="true">
+      <div class="loading-spinner__ring"></div>
+    </div>
+    <p class="loading-state__text">{{ message }}</p>
+  </ng-container>
+
+  <ng-container *ngIf="type === 'skeleton'">
+    <div class="skeleton-table">
+      <div class="skeleton-row skeleton-row--header">
+        <div class="skeleton-cell skeleton-cell--wide"></div>
+        <div class="skeleton-cell"></div>
+        <div class="skeleton-cell"></div>
+        <div class="skeleton-cell skeleton-cell--narrow"></div>
+        <div class="skeleton-cell skeleton-cell--narrow"></div>
+      </div>
+      <div class="skeleton-row" *ngFor="let r of skeletonRows">
+        <div class="skeleton-cell skeleton-cell--wide skeleton-cell--animated"></div>
+        <div class="skeleton-cell skeleton-cell--animated"></div>
+        <div class="skeleton-cell skeleton-cell--animated"></div>
+        <div class="skeleton-cell skeleton-cell--narrow skeleton-cell--animated"></div>
+        <div class="skeleton-cell skeleton-cell--narrow skeleton-cell--animated"></div>
+      </div>
+    </div>
+  </ng-container>
+</div>

@@ -18,7 +18,7 @@ import { GetProductsDto } from './dto/get-products';
 import { ProductsWithPagination, Product } from './models/product.model';
 import { GetProductDto } from './dto/get-product';
 import { Category } from './models/category.model';
-import { RolesGuard } from '../auth/roles.guard';
+import { RolesGuard, AdminJwtAuthGuard } from '../auth/roles.guard';
 import { GetUser } from '../auth/utils/get-user.decorator';
 import { User } from '../auth/models/user.model';
 
@@ -44,10 +44,15 @@ export class ProductsController {
     return this.productService.getProductsTitles(query);
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
   @Get('/all')
   getAllProducts(@Headers('lang') lang: string): Promise<Product[]> {
     return this.productService.getAllProducts(lang);
+  }
+
+  @Get('/:id/variants')
+  getProductVariants(@Param('id') id: string): Promise<any> {
+    return this.productService.getProductVariants(id);
   }
 
   @Get('/:name')
@@ -58,43 +63,43 @@ export class ProductsController {
     return this.productService.getProductByName(name, getProductDto);
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
   @Delete('/:name')
   deleteProductByName(@Param('name') name: string): Promise<void> {
     return this.productService.deleteProductByName(name);
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
   @Post('/add')
   addProduct(@Body() productReq, @GetUser() user: User): Promise<void> {
     return this.productService.addProduct(productReq, user);
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
   @Patch('/edit')
   editProduct(@Body() productReq): Promise<void> {
     return this.productService.editProduct(productReq);
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
   @Post('/import-csv')
   importCsvProducts(@Body() body: { products: any[] }, @GetUser() user: User): Promise<{ imported: number; errors: string[] }> {
     return this.productService.importProducts(body.products, user);
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
   @Get('/categories/all')
   getAllCategories(@Headers('lang') lang: string): Promise<any> {
     return this.productService.getAllCategories(lang);
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
   @Patch('/categories/edit')
   editCategory(@Body() categoryReq): Promise<void> {
     return this.productService.editCategory(categoryReq);
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
   @Delete('/categories/:name')
   deleteCategoryByName(@Param('name') name: string): Promise<void> {
     return this.productService.deleteCategoryByName(name);

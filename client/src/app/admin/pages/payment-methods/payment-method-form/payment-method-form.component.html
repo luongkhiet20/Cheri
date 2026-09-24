@@ -1,0 +1,200 @@
+<div class="payment-form-page">
+
+  <!-- Header -->
+  <div class="form-header">
+    <div class="form-header-info">
+      <h1 class="form-title">{{ isEditMode ? 'Chỉnh sửa phương thức thanh toán' : 'Thêm phương thức thanh toán' }}</h1>
+      <p class="form-subtitle">
+        {{ isEditMode ? 'Cập nhật cấu hình phương thức thanh toán trong collection payment_methods' : 'Tạo mới phương thức thanh toán vào collection payment_methods trong MongoDB' }}
+      </p>
+    </div>
+    <div class="form-header-actions">
+      <button type="button" class="btn btn-outline" (click)="onCancel()" [disabled]="isSubmitting" id="btn-cancel-payment">
+        Hủy
+      </button>
+      <button
+        type="button"
+        class="btn btn-primary"
+        (click)="onSubmit()"
+        [disabled]="isSubmitting || isLoading"
+        id="btn-submit-payment"
+      >
+        <span *ngIf="isSubmitting" class="spinner-inline"></span>
+        <span>{{ isSubmitting ? 'Đang lưu...' : (isEditMode ? 'Lưu thay đổi' : 'Lưu phương thức thanh toán') }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Alert Messages -->
+  <div *ngIf="successMessage" class="alert-box alert-success">
+    <div class="alert-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    </div>
+    <div class="alert-content">{{ successMessage }}</div>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert-box alert-error">
+    <div class="alert-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+    </div>
+    <div class="alert-content">{{ errorMessage }}</div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="form-loading">
+    <div class="spinner"></div>
+    <p>Đang tải thông tin phương thức thanh toán từ MongoDB...</p>
+  </div>
+
+  <!-- Form Layout -->
+  <form *ngIf="!isLoading" (ngSubmit)="onSubmit()" class="form-layout" novalidate>
+
+    <div class="form-card">
+      <div class="card-header">
+        <h2 class="card-title">Biểu mẫu phương thức thanh toán</h2>
+        <p class="card-desc">Thiết lập các thông số nhận diện và cấu hình giao dịch thanh toán</p>
+      </div>
+
+      <div class="form-grid">
+
+        <!-- [1] Tên phương thức thanh toán * -->
+        <div class="form-group col-span-2">
+          <label class="form-label required" for="payment-name">Tên phương thức thanh toán</label>
+          <input
+            type="text"
+            id="payment-name"
+            name="name"
+            class="form-control"
+            [class.is-invalid]="errors['name']"
+            [(ngModel)]="formData.name"
+            placeholder="Ví dụ: VNPay, MoMo, ZaloPay, Thanh toán khi nhận hàng (COD)"
+            required
+          />
+          <div *ngIf="errors['name']" class="field-error">{{ errors['name'] }}</div>
+          <small class="form-hint">Tên hiển thị cho khách hàng và nhân viên quản trị.</small>
+        </div>
+
+        <!-- [2] Mã phương thức thanh toán * -->
+        <div class="form-group">
+          <label class="form-label required" for="payment-code">Mã phương thức thanh toán</label>
+          <input
+            type="text"
+            id="payment-code"
+            name="code"
+            class="form-control"
+            [class.is-invalid]="errors['code']"
+            [(ngModel)]="formData.code"
+            (input)="onCodeInput()"
+            placeholder="Ví dụ: VNPAY, MOMO, COD"
+            required
+          />
+          <div *ngIf="errors['code']" class="field-error">{{ errors['code'] }}</div>
+          <small class="form-hint">Mã định danh nghiệp vụ viết hoa, không dấu, không khoảng trắng (VD: VNPAY, COD).</small>
+        </div>
+
+        <!-- [3] Loại thanh toán * -->
+        <div class="form-group">
+          <label class="form-label required" for="payment-type">Loại thanh toán</label>
+          <select
+            id="payment-type"
+            name="type"
+            class="form-control"
+            [class.is-invalid]="errors['type']"
+            [(ngModel)]="formData.type"
+            required
+          >
+            <option *ngFor="let t of PAYMENT_TYPES" [value]="t">{{ t }}</option>
+          </select>
+          <div *ngIf="errors['type']" class="field-error">{{ errors['type'] }}</div>
+          <small class="form-hint">Dùng để phân biệt loại phương thức thanh toán trong hệ thống.</small>
+        </div>
+
+        <!-- [4] Thông tin thanh toán (paymentInfo) -->
+        <div class="form-group col-span-2">
+          <label class="form-label" for="payment-info">Thông tin thanh toán (paymentInfo)</label>
+          <textarea
+            id="payment-info"
+            name="paymentInfo"
+            rows="3"
+            class="form-control"
+            [(ngModel)]="formData.paymentInfo"
+            placeholder="Ví dụ: Số tài khoản: 1903... | Ngân hàng Techcombank | Chủ TK: CỬA HÀNG THỜI TRANG CHÉRI"
+          ></textarea>
+          <small class="form-hint">Thông tin hướng dẫn chuyển khoản hoặc tài khoản nhận tiền dành cho khách hàng.</small>
+        </div>
+
+        <!-- [5] Trạng thái (isActive) -->
+        <div class="form-group col-span-2">
+          <label class="form-label">Trạng thái hoạt động</label>
+          <div class="radio-status-group">
+            <label class="radio-card" [class.is-active]="formData.isActive">
+              <input
+                type="radio"
+                name="isActive"
+                [value]="true"
+                [(ngModel)]="formData.isActive"
+              />
+              <div class="radio-content">
+                <span class="radio-title">Bật (Hoạt động)</span>
+                <span class="radio-desc">Cho phép khách hàng lựa chọn phương thức này khi đặt hàng</span>
+              </div>
+            </label>
+
+            <label class="radio-card" [class.is-active]="!formData.isActive">
+              <input
+                type="radio"
+                name="isActive"
+                [value]="false"
+                [(ngModel)]="formData.isActive"
+              />
+              <div class="radio-content">
+                <span class="radio-title">Tắt (Tạm khóa)</span>
+                <span class="radio-desc">Tạm thời ẩn phương thức này khỏi trang thanh toán</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- [6] Mô tả (description) -->
+        <div class="form-group col-span-2">
+          <label class="form-label" for="payment-description">Mô tả</label>
+          <textarea
+            id="payment-description"
+            name="description"
+            rows="3"
+            class="form-control"
+            [(ngModel)]="formData.description"
+            placeholder="Thông tin bổ sung về phương thức thanh toán này..."
+          ></textarea>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Bottom Actions -->
+    <div class="form-bottom-actions">
+      <button type="button" class="btn btn-outline" (click)="onCancel()" [disabled]="isSubmitting">
+        Hủy
+      </button>
+      <button
+        type="button"
+        class="btn btn-primary"
+        (click)="onSubmit()"
+        [disabled]="isSubmitting || isLoading"
+      >
+        <span *ngIf="isSubmitting" class="spinner-inline"></span>
+        <span>{{ isSubmitting ? 'Đang lưu...' : (isEditMode ? 'Lưu thay đổi' : 'Lưu phương thức thanh toán') }}</span>
+      </button>
+    </div>
+
+  </form>
+
+</div>

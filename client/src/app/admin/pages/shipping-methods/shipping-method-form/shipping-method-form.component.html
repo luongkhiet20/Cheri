@@ -1,0 +1,240 @@
+<div class="page-container">
+  <!-- Header / Action bar -->
+  <div class="form-header">
+    <div class="form-header-left">
+      <h1 class="page-title">
+        {{ isEditMode ? 'Chỉnh sửa phương thức vận chuyển' : 'Thêm phương thức vận chuyển' }}
+      </h1>
+      <p class="page-subtitle">
+        {{ isEditMode ? 'Cập nhật cấu hình phương thức vận chuyển trong collection shippingmethods' : 'Tạo mới phương thức vận chuyển vào collection shippingmethods trong MongoDB' }}
+      </p>
+    </div>
+    <div class="form-header-right">
+      <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="isSubmitting">
+        Hủy
+      </button>
+      <button type="button" class="btn btn-primary" (click)="onSubmit()" [disabled]="isSubmitting">
+        <span *ngIf="isSubmitting" class="spinner"></span>
+        {{ isEditMode ? 'Lưu thay đổi' : 'Lưu phương thức vận chuyển' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div *ngIf="successMessage" class="alert-box alert-success">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>
+    <span>{{ successMessage }}</span>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert-box alert-error">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="12" y1="8" x2="12" y2="12"></line>
+      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+    </svg>
+    <span>{{ errorMessage }}</span>
+  </div>
+
+  <!-- Loading State (Edit mode only) -->
+  <div *ngIf="isLoading" class="loading-container">
+    <div class="spinner-large"></div>
+    <p>Đang tải thông tin phương thức vận chuyển...</p>
+  </div>
+
+  <!-- Main Form Content -->
+  <form *ngIf="!isLoading" (ngSubmit)="onSubmit()" class="form-content" novalidate>
+    <div class="card form-card">
+      <h2 class="card-section-title">Thông tin phương thức vận chuyển</h2>
+      <p class="card-section-subtitle">Các trường thông tin bắt buộc được đánh dấu sao (*)</p>
+
+      <div class="form-grid">
+        <!-- [1] Tên phương thức vận chuyển * -->
+        <div class="form-group">
+          <label class="form-label" for="shipping-name">
+            Tên phương thức vận chuyển <span class="required">*</span>
+          </label>
+          <input
+            type="text"
+            id="shipping-name"
+            class="form-control"
+            [class.is-invalid]="errors['name']"
+            [(ngModel)]="formData.name"
+            name="name"
+            placeholder="Ví dụ: Viettel Post, SPX Express, Giao hàng tiêu chuẩn"
+            required
+          />
+          <div *ngIf="errors['name']" class="error-feedback">{{ errors['name'] }}</div>
+        </div>
+
+        <!-- [2] Mã phương thức vận chuyển * -->
+        <div class="form-group">
+          <label class="form-label" for="shipping-code">
+            Mã phương thức vận chuyển <span class="required">*</span>
+          </label>
+          <input
+            type="text"
+            id="shipping-code"
+            class="form-control code-input"
+            [class.is-invalid]="errors['code']"
+            [(ngModel)]="formData.code"
+            (input)="onCodeInput()"
+            name="code"
+            placeholder="Ví dụ: VIETTEL_POST, SPX_EXPRESS, STANDARD"
+            required
+          />
+          <div class="form-hint">Mã nghiệp vụ duy nhất, viết hoa, khoảng trắng tự chuyển thành gạch dưới (_).</div>
+          <div *ngIf="errors['code']" class="error-feedback">{{ errors['code'] }}</div>
+        </div>
+
+        <!-- [3] Phí vận chuyển cơ bản (VNĐ) * -->
+        <div class="form-group">
+          <label class="form-label" for="shipping-base-cost">
+            Phí vận chuyển cơ bản (VNĐ) <span class="required">*</span>
+          </label>
+          <div class="input-suffix-wrapper">
+            <input
+              type="number"
+              id="shipping-base-cost"
+              class="form-control"
+              [class.is-invalid]="errors['baseCost']"
+              [(ngModel)]="formData.baseCost"
+              name="baseCost"
+              placeholder="30000"
+              min="0"
+              step="1000"
+              required
+            />
+            <span class="input-suffix">VNĐ</span>
+          </div>
+          <div class="form-hint">Lưu dưới dạng số (Number >= 0) vào CSDL.</div>
+          <div *ngIf="errors['baseCost']" class="error-feedback">{{ errors['baseCost'] }}</div>
+        </div>
+
+        <!-- [4] Thời gian giao hàng dự kiến * -->
+        <div class="form-group">
+          <label class="form-label" for="shipping-estimated-days">
+            Thời gian giao hàng dự kiến <span class="required">*</span>
+          </label>
+          <input
+            type="text"
+            id="shipping-estimated-days"
+            class="form-control"
+            [class.is-invalid]="errors['estimatedDays']"
+            [(ngModel)]="formData.estimatedDays"
+            name="estimatedDays"
+            placeholder="Ví dụ: 2–5 ngày làm việc, 1-2 ngày, Trong ngày"
+            required
+          />
+          <div *ngIf="errors['estimatedDays']" class="error-feedback">{{ errors['estimatedDays'] }}</div>
+        </div>
+
+        <!-- [5] Phạm vi giao hàng -->
+        <div class="form-group">
+          <label class="form-label" for="shipping-coverage-area">
+            Phạm vi giao hàng
+          </label>
+          <input
+            type="text"
+            id="shipping-coverage-area"
+            class="form-control"
+            [(ngModel)]="formData.coverageArea"
+            name="coverageArea"
+            placeholder="Ví dụ: Toàn quốc hoặc TP.HCM và Hà Nội"
+          />
+          <div class="form-hint">Nhập khu vực cụ thể hoặc để mặc định "Toàn quốc".</div>
+        </div>
+
+        <!-- [6] Điều kiện miễn phí vận chuyển -->
+        <div class="form-group">
+          <label class="form-label" for="shipping-free-threshold">
+            Miễn phí vận chuyển từ (VNĐ)
+          </label>
+          <div class="input-suffix-wrapper">
+            <input
+              type="number"
+              id="shipping-free-threshold"
+              class="form-control"
+              [class.is-invalid]="errors['freeShippingThreshold']"
+              [(ngModel)]="formData.freeShippingThreshold"
+              name="freeShippingThreshold"
+              placeholder="500000"
+              min="0"
+              step="10000"
+            />
+            <span class="input-suffix">VNĐ</span>
+          </div>
+          <div class="form-hint">Đơn hàng có giá trị từ mức này trở lên sẽ được miễn phí vận chuyển (0 nếu không áp dụng).</div>
+          <div *ngIf="errors['freeShippingThreshold']" class="error-feedback">{{ errors['freeShippingThreshold'] }}</div>
+        </div>
+
+        <!-- [7] Trạng thái -->
+        <div class="form-group full-width">
+          <label class="form-label">
+            Trạng thái hoạt động
+          </label>
+          <div class="radio-toggle-group">
+            <label class="radio-card" [class.active]="formData.isActive === true">
+              <input
+                type="radio"
+                name="isActive"
+                [value]="true"
+                [(ngModel)]="formData.isActive"
+              />
+              <div class="radio-card-content">
+                <span class="status-indicator active-dot"></span>
+                <div>
+                  <div class="radio-title">Bật (Hoạt động)</div>
+                  <div class="radio-desc">Hiển thị cho khách hàng chọn khi thanh toán đơn hàng</div>
+                </div>
+              </div>
+            </label>
+
+            <label class="radio-card" [class.active]="formData.isActive === false">
+              <input
+                type="radio"
+                name="isActive"
+                [value]="false"
+                [(ngModel)]="formData.isActive"
+              />
+              <div class="radio-card-content">
+                <span class="status-indicator inactive-dot"></span>
+                <div>
+                  <div class="radio-title">Tắt (Tạm ngừng)</div>
+                  <div class="radio-desc">Tạm thời vô hiệu hóa phương thức vận chuyển này</div>
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- [8] Mô tả -->
+        <div class="form-group full-width">
+          <label class="form-label" for="shipping-desc">
+            Mô tả
+          </label>
+          <textarea
+            id="shipping-desc"
+            class="form-control textarea"
+            [(ngModel)]="formData.description"
+            name="description"
+            rows="3"
+            placeholder="Thông tin bổ sung về phương thức vận chuyển, lưu ý khi giao..."
+          ></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Actions -->
+    <div class="form-bottom-actions">
+      <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="isSubmitting">
+        Hủy
+      </button>
+      <button type="submit" class="btn btn-primary" [disabled]="isSubmitting">
+        <span *ngIf="isSubmitting" class="spinner"></span>
+        {{ isEditMode ? 'Lưu thay đổi' : 'Lưu phương thức vận chuyển' }}
+      </button>
+    </div>
+  </form>
+</div>

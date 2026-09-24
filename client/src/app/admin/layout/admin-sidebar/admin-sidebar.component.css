@@ -1,0 +1,131 @@
+/* =============================================
+   ADMIN SIDEBAR
+   ============================================= */
+
+.admin-sidebar {
+  position: fixed;
+  top: var(--header-height);
+  left: 0;
+  bottom: 0;
+  width: var(--sidebar-width);
+  background-color: var(--cheri-white);
+  border-right: 1px solid var(--cheri-divider);
+  z-index: 90;
+  overflow-y: auto;
+  overflow-x: hidden;
+  transition: transform var(--transition-base);
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-sidebar__inner {
+  flex: 1;
+  padding: var(--space-md) 0;
+}
+
+/* ----- Navigation List ----- */
+.admin-sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 var(--space-sm);
+}
+
+.admin-sidebar__item {
+  list-style: none;
+}
+
+/* ----- Nav Link States ----- */
+.admin-sidebar__link {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  color: var(--cheri-text-secondary);
+  font-size: var(--font-size-base);
+  font-weight: 400;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--transition-fast),
+              color var(--transition-fast);
+  white-space: nowrap;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Default state indicator bar */
+.admin-sidebar__link::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 0;
+  background-color: var(--cheri-primary);
+  border-radius: 0 3px 3px 0;
+  transition: height var(--transition-base);
+}
+
+/* Hover state */
+.admin-sidebar__link:hover {
+  background-color: var(--cheri-background);
+  color: var(--cheri-text);
+}
+
+/* Active state */
+.admin-sidebar__link.is-active {
+  background-color: var(--cheri-primary-light);
+  color: var(--cheri-primary);
+  font-weight: 600;
+}
+
+.admin-sidebar__link.is-active::before {
+  height: 60%;
+}
+
+/* Active hover state */
+.admin-sidebar__link.is-active:hover {
+  background-color: #EDD9DA;
+}
+
+.admin-sidebar__link-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ----- Overlay (mobile) ----- */
+.admin-sidebar__overlay {
+  display: none;
+}
+
+/* ----- Tablet (769px – 1024px) ----- */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .admin-sidebar {
+    width: 200px;
+  }
+}
+
+/* ----- Mobile (<= 768px) ----- */
+@media (max-width: 768px) {
+  .admin-sidebar {
+    transform: translateX(-100%);
+    width: var(--sidebar-width);
+    box-shadow: none;
+  }
+
+  .admin-sidebar.is-open {
+    transform: translateX(0);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .admin-sidebar__overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.4);
+    z-index: -1;
+  }
+}

@@ -1,0 +1,17 @@
+<div class="admin-card" [class.admin-card--no-padding]="noPadding">
+  <div class="admin-card__header" *ngIf="title || subtitle">
+    <div class="admin-card__titles">
+      <h3 class="admin-card__title" *ngIf="title">{{ title }}</h3>
+      <p class="admin-card__subtitle" *ngIf="subtitle">{{ subtitle }}</p>
+    </div>
+    <div class="admin-card__header-actions">
+      <ng-content select="[card-header-actions]"></ng-content>
+    </div>
+  </div>
+  <div class="admin-card__body">
+    <ng-content></ng-content>
+  </div>
+  <div class="admin-card__footer">
+    <ng-content select="[card-footer]"></ng-content>
+  </div>
+</div>

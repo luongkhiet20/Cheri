@@ -1,0 +1,37 @@
+.admin-card {
+  background-color: var(--cheri-surface);
+  border: 1px solid var(--cheri-border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+.admin-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--cheri-divider);
+}
+.admin-card__title {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--cheri-text);
+  line-height: 1.3;
+}
+.admin-card__subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--cheri-text-secondary);
+  margin-top: 2px;
+}
+.admin-card__body {
+  padding: var(--space-lg);
+}
+.admin-card--no-padding .admin-card__body {
+  padding: 0;
+}
+.admin-card__footer {
+  display: contents;
+}
+.admin-card__footer:empty {
+  display: none;
+}

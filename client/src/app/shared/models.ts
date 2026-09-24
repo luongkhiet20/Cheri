@@ -11,6 +11,7 @@ export interface Translations {
 export interface Product {
   _id?                : string;
   id?                 : string;
+  sku?                : string;
   title               : string;
   titleUrl            : string;
   description         : string;
@@ -34,19 +35,30 @@ export interface Product {
   categoryLevel2?     : string;
   quantity?           : number;
   variants?           : ProductVariant[];
-  mainImage           : { url: string; name: string }
+  mainImage           : { url: string; name: string };
   images              : string[];
   _user?              : any;
   dateAdded?          : any;
+  createdAt?          : Date | string;
+  updatedAt?          : Date | string;
   [key: string]       : any;
 }
 
 export interface ProductVariant {
-  sku: string;
-  attributes: { [key: string]: string };
-  price: number;
-  stock: number;
-  status?: boolean;
+  _id?                : string;
+  productId?          : string;
+  sku                 : string;
+  color?              : string;
+  size?               : string;
+  classification?     : string;
+  attributes?         : { [key: string]: string };
+  price               : number;
+  discountPrice?      : number;
+  stock               : number;
+  isActive?           : boolean;
+  status?             : boolean;
+  createdAt?          : Date | string;
+  updatedAt?          : Date | string;
 }
 
 export interface Cart {
@@ -57,10 +69,10 @@ export interface Cart {
   shippingType?: string;
   items       : {
     id? : string;
-    item: Product
+    item: Product;
     price: number;
     qty  : number;
-  }[]
+  }[];
 }
 
 export interface Category {
@@ -68,10 +80,10 @@ export interface Category {
   title?        : string;
   description?  : string;
   visibility?   : boolean;
-  mainImage?    : {url: string; name: string; type?: boolean};
-  subCategories? : string[];
+  mainImage?    : { url: string; name: string; type?: boolean };
+  subCategories?: string[];
   position      : number;
-  [lang: string]: any | { title?: string; description?: string; visibility? : boolean; };
+  [lang: string]: any | { title?: string; description?: string; visibility?: boolean };
 }
 
 export interface Pagination {
@@ -79,7 +91,7 @@ export interface Pagination {
   limit?    : number;
   page      : number;
   pages     : number;
-  range?    : number[]
+  range?    : number[];
 }
 
 export interface User {
@@ -91,11 +103,17 @@ export interface User {
   phoneNumber?: string;
   address?    : string;
   gender?     : string;
-  dateOfBirth?: string;
+  dateOfBirth?: Date | string;
   avatar?     : string;
   roles?      : string[];
   role?       : string;
+  status?     : boolean;
+  images?     : string[];
+  description?: string;
+  cart?       : any;
   accessToken?: string;
+  createdAt?  : Date | string;
+  updatedAt?  : Date | string;
 }
 
 export interface Address {
@@ -109,31 +127,116 @@ export interface Address {
 }
 
 export enum OrderStatus {
-  NEW = 'NEW',
-  PAID = 'PAID',
+  PENDING = 'PENDING',
+  CONFIRMED = 'CONFIRMED',
+  PROCESSING = 'PROCESSING',
   SHIPPING = 'SHIPPING',
-  COMPLETED = 'COMPLETED',
-  CANCELED = 'CANCELED',
+  DELIVERED = 'DELIVERED',
+  CANCELLED = 'CANCELLED',
+  RETURNED = 'RETURNED',
+}
+
+export enum PaymentStatus {
+  PENDING = 'PENDING',
+  PAID = 'PAID',
+  FAILED = 'FAILED',
+  REFUNDED = 'REFUNDED',
+  PARTIALLY_REFUNDED = 'PARTIALLY_REFUNDED',
+}
+
+export interface ShippingMethod {
+  _id?: string;
+  name: string;
+  code: string;
+  baseFee: number;
+  estimatedDeliveryTime: string;
+  deliveryScope: string;
+  deliveryAreas?: string[];
+  freeShippingCondition?: {
+    enabled: boolean;
+    minimumOrderValue: number;
+    description: string;
+  };
+  status: string;
+  description?: string;
+}
+
+export interface PaymentMethod {
+  _id?: string;
+  name: string;
+  code: string;
+  paymentType: string;
+  description?: string;
+  transactionFee?: {
+    enabled: boolean;
+    type: string;
+    value: number;
+  };
+  logo?: string;
+  status: string;
+}
+
+export interface ShippingAddress {
+  fullName: string;
+  phone: string;
+  address: string;
+  ward?: string;
+  district?: string;
+  province?: string;
 }
 
 export interface Order {
   _id?: string;
   orderId: string;
-  addresses: Address[]
-  amount: number;
-  amount_refunded: number;
-  currency: string;
-  cart: Cart;
-  cardId?: string;
-  customerEmail: string;
-  dateAdded: any;
-  type: string;
-  description?: string;
-  notes? : string;
-  outcome?: {seller_message: string; }
-  status: OrderStatus;
-  __v?: number;
   _user?: string;
+  customerEmail: string;
+  customerPhone?: string;
+  status: string;
+  paymentStatus?: string;
+  notes?: string;
+  items?: {
+    productId: string;
+    variantId?: string;
+    productSnapshot: {
+      title: string;
+      sku: string;
+      image?: string;
+      variant?: { color?: string; size?: string; classification?: string };
+    };
+    quantity: number;
+    unitPrice: number;
+    subtotal: number;
+  }[];
+  shippingAddress?: ShippingAddress;
+  shippingMethodId?: string;
+  shippingMethodSnapshot?: { name: string; code: string; fee: number; estimatedDeliveryTime?: string };
+  shippingFee?: number;
+  trackingNumber?: string;
+  paymentMethodId?: string;
+  paymentMethodSnapshot?: { name: string; code: string; paymentType: string; paymentFee: number };
+  transactionId?: string;
+  paymentFee?: number;
+  paidAt?: Date | string;
+  refundedAmount?: number;
+  subtotal?: number;
+  discountAmount?: number;
+  taxAmount?: number;
+  couponCode?: string;
+  couponDiscount?: number;
+  totalAmount?: number;
+  currency?: string;
+  statusHistory?: { status: string; updatedAt: Date; updatedBy?: string; note?: string }[];
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+  // Legacy fields (backward compat)
+  amount?: number;
+  dateAdded?: any;
+  description?: string;
+  type?: string;
+  outcome?: any;
+  cart?: any;
+  addresses?: any[];
+  amount_refunded?: number;
 }
 
 export interface Page {

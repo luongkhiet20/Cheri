@@ -1,0 +1,15 @@
+<div class="dialog-overlay" *ngIf="isOpen" (click)="onOverlayClick()" role="dialog" aria-modal="true" [attr.aria-label]="title">
+  <div class="dialog-panel" (click)="$event.stopPropagation()">
+    <div class="dialog-header">
+      <h2 class="dialog-title">{{ title }}</h2>
+      <button class="dialog-close" (click)="onCancel()" aria-label="Đóng">&times;</button>
+    </div>
+    <div class="dialog-body">
+      <p class="dialog-message">{{ message }}</p>
+    </div>
+    <div class="dialog-footer">
+      <button class="btn btn-secondary" (click)="onCancel()" id="dialog-cancel">{{ cancelLabel }}</button>
+      <button [ngClass]="confirmBtnClass" (click)="onConfirm()" id="dialog-confirm">{{ confirmLabel }}</button>
+    </div>
+  </div>
+</div>

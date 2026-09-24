@@ -1,0 +1,263 @@
+<div class="account-form-page">
+
+  <!-- Header -->
+  <div class="form-header">
+    <div class="form-header-info">
+      <h1 class="form-title">{{ isEditMode ? 'Chỉnh sửa tài khoản' : 'Thêm tài khoản' }}</h1>
+      <p class="form-subtitle">
+        {{ isEditMode ? 'Cập nhật thông tin tài khoản người dùng trong MongoDB' : 'Tạo mới tài khoản người dùng vào collection users trong MongoDB' }}
+      </p>
+    </div>
+    <div class="form-header-actions">
+      <button type="button" class="btn btn-outline" (click)="onCancel()" [disabled]="isSubmitting">
+        Hủy
+      </button>
+      <button type="button" class="btn btn-primary" (click)="onSubmit()" [disabled]="isSubmitting || isLoading" id="btn-submit-account">
+        <span *ngIf="isSubmitting" class="spinner-inline"></span>
+        <span>{{ isSubmitting ? 'Đang lưu...' : (isEditMode ? 'Lưu thay đổi' : 'Lưu tài khoản') }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Alert Messages -->
+  <div *ngIf="successMessage" class="alert-box alert-success">
+    <div class="alert-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    </div>
+    <div class="alert-content">{{ successMessage }}</div>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert-box alert-error">
+    <div class="alert-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+    </div>
+    <div class="alert-content">{{ errorMessage }}</div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="form-loading">
+    <div class="spinner"></div>
+    <p>Đang tải thông tin tài khoản từ MongoDB...</p>
+  </div>
+
+  <!-- Form Layout -->
+  <form *ngIf="!isLoading" (ngSubmit)="onSubmit()" class="form-layout" novalidate>
+
+    <!-- SECTION 1: THÔNG TIN TÀI KHOẢN -->
+    <div class="form-card">
+      <div class="card-header">
+        <h2 class="card-title">Thông tin tài khoản</h2>
+        <p class="card-desc">Thiết lập thông tin xác thực và quyền hạn tài khoản</p>
+      </div>
+
+      <div class="form-grid">
+        <!-- Email -->
+        <div class="form-group col-span-2">
+          <label class="form-label required" for="user-email">Email</label>
+          <input
+            type="email"
+            id="user-email"
+            name="email"
+            class="form-control"
+            [class.is-invalid]="errors['email']"
+            [(ngModel)]="formData.email"
+            placeholder="example@domain.com"
+            required
+          />
+          <div *ngIf="errors['email']" class="field-error">{{ errors['email'] }}</div>
+        </div>
+
+        <!-- Password (Only on Add) -->
+        <div *ngIf="!isEditMode" class="form-group col-span-2">
+          <label class="form-label required" for="user-password">Mật khẩu</label>
+          <input
+            type="password"
+            id="user-password"
+            name="password"
+            class="form-control"
+            [class.is-invalid]="errors['password']"
+            [(ngModel)]="formData.password"
+            placeholder="Tối thiểu 6 ký tự"
+            required
+          />
+          <div *ngIf="errors['password']" class="field-error">{{ errors['password'] }}</div>
+          <small class="form-hint">Mật khẩu sẽ được mã hóa an toàn trước khi lưu vào MongoDB.</small>
+        </div>
+
+        <!-- Vai trò (roles) -->
+        <div class="form-group">
+          <label class="form-label required">Vai trò (roles)</label>
+          <div class="checkbox-group">
+            <label class="custom-checkbox">
+              <input
+                type="checkbox"
+                [checked]="isRoleSelected('user')"
+                (change)="onRoleChange('user', $event)"
+              />
+              <span class="checkbox-label">Khách hàng (user)</span>
+            </label>
+            <label class="custom-checkbox">
+              <input
+                type="checkbox"
+                [checked]="isRoleSelected('admin')"
+                (change)="onRoleChange('admin', $event)"
+              />
+              <span class="checkbox-label">Quản trị viên (admin)</span>
+            </label>
+          </div>
+          <div *ngIf="errors['roles']" class="field-error">{{ errors['roles'] }}</div>
+        </div>
+
+        <!-- Trạng thái (status) -->
+        <div class="form-group">
+          <label class="form-label required" for="user-status">Trạng thái (status)</label>
+          <select
+            id="user-status"
+            name="status"
+            class="form-control"
+            [(ngModel)]="formData.status"
+          >
+            <option [ngValue]="true">Hoạt động (Active)</option>
+            <option [ngValue]="false">Đã khóa (Locked)</option>
+          </select>
+          <small class="form-hint">Tài khoản bị khóa sẽ không thể đăng nhập vào hệ thống.</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2: THÔNG TIN CÁ NHÂN -->
+    <div class="form-card">
+      <div class="card-header">
+        <h2 class="card-title">Thông tin cá nhân</h2>
+        <p class="card-desc">Thông tin hồ sơ và liên hệ của người dùng</p>
+      </div>
+
+      <div class="form-grid">
+        <!-- Họ tên (fullName) -->
+        <div class="form-group">
+          <label class="form-label" for="user-fullname">Họ và tên (fullName)</label>
+          <input
+            type="text"
+            id="user-fullname"
+            name="fullName"
+            class="form-control"
+            [(ngModel)]="formData.fullName"
+            placeholder="Ví dụ: Nguyễn Văn A"
+          />
+        </div>
+
+        <!-- Tên hiển thị (name) -->
+        <div class="form-group">
+          <label class="form-label" for="user-name">Tên hiển thị (name)</label>
+          <input
+            type="text"
+            id="user-name"
+            name="name"
+            class="form-control"
+            [(ngModel)]="formData.name"
+            placeholder="Ví dụ: vana_nguyen"
+          />
+        </div>
+
+        <!-- Số điện thoại (phoneNumber) -->
+        <div class="form-group">
+          <label class="form-label" for="user-phone">Số điện thoại (phoneNumber)</label>
+          <input
+            type="tel"
+            id="user-phone"
+            name="phoneNumber"
+            class="form-control"
+            [(ngModel)]="formData.phoneNumber"
+            placeholder="Ví dụ: 0901234567"
+          />
+        </div>
+
+        <!-- Giới tính (gender) -->
+        <div class="form-group">
+          <label class="form-label" for="user-gender">Giới tính (gender)</label>
+          <select
+            id="user-gender"
+            name="gender"
+            class="form-control"
+            [(ngModel)]="formData.gender"
+          >
+            <option value="Nam">Nam</option>
+            <option value="Nữ">Nữ</option>
+            <option value="Khác">Khác</option>
+          </select>
+        </div>
+
+        <!-- Ngày sinh (dateOfBirth) -->
+        <div class="form-group">
+          <label class="form-label" for="user-dob">Ngày sinh (dateOfBirth)</label>
+          <input
+            type="date"
+            id="user-dob"
+            name="dateOfBirth"
+            class="form-control"
+            [(ngModel)]="formData.dateOfBirth"
+          />
+        </div>
+
+        <!-- Ảnh đại diện (avatar) -->
+        <div class="form-group">
+          <label class="form-label" for="user-avatar">URL Ảnh đại diện (avatar)</label>
+          <input
+            type="url"
+            id="user-avatar"
+            name="avatar"
+            class="form-control"
+            [(ngModel)]="formData.avatar"
+            placeholder="https://example.com/avatar.jpg"
+          />
+        </div>
+
+        <!-- Địa chỉ (address) -->
+        <div class="form-group col-span-2">
+          <label class="form-label" for="user-address">Địa chỉ (address)</label>
+          <input
+            type="text"
+            id="user-address"
+            name="address"
+            class="form-control"
+            [(ngModel)]="formData.address"
+            placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố"
+          />
+        </div>
+
+        <!-- Mô tả (description) -->
+        <div class="form-group col-span-2">
+          <label class="form-label" for="user-description">Mô tả / Ghi chú (description)</label>
+          <textarea
+            id="user-description"
+            name="description"
+            rows="3"
+            class="form-control"
+            [(ngModel)]="formData.description"
+            placeholder="Ghi chú thêm về tài khoản người dùng..."
+          ></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Actions -->
+    <div class="form-bottom-actions">
+      <button type="button" class="btn btn-outline" (click)="onCancel()" [disabled]="isSubmitting">
+        Hủy
+      </button>
+      <button type="submit" class="btn btn-primary" [disabled]="isSubmitting">
+        <span *ngIf="isSubmitting" class="spinner-inline"></span>
+        <span>{{ isSubmitting ? 'Đang lưu...' : (isEditMode ? 'Lưu thay đổi' : 'Lưu tài khoản') }}</span>
+      </button>
+    </div>
+
+  </form>
+</div>

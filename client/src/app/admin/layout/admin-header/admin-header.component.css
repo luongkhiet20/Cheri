@@ -1,0 +1,199 @@
+/* =============================================
+   ADMIN HEADER
+   ============================================= */
+
+.admin-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  height: var(--header-height);
+  background-color: var(--cheri-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-lg);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* ----- Brand ----- */
+.admin-header__brand {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.admin-header__logo {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  text-decoration: none;
+}
+
+.admin-header__logo-text {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--cheri-white);
+  letter-spacing: 1.5px;
+  font-style: italic;
+}
+
+.admin-header__logo-sub {
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.65);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* ----- Actions Area ----- */
+.admin-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+/* ----- User Section ----- */
+.admin-header__user {
+  position: relative;
+}
+
+.admin-header__user-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+  color: var(--cheri-white);
+}
+
+.admin-header__user-btn:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.admin-header__avatar {
+  width: 30px;
+  height: 30px;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--cheri-white);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.admin-header__avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+
+.admin-header__user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+}
+
+.admin-header__user-name {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--cheri-white);
+}
+
+.admin-header__user-role {
+  font-size: var(--font-size-xs);
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.admin-header__chevron {
+  color: rgba(255, 255, 255, 0.65);
+  transition: transform var(--transition-base);
+  flex-shrink: 0;
+}
+
+.admin-header__chevron.is-open {
+  transform: rotate(180deg);
+}
+
+/* ----- Dropdown Menu ----- */
+.admin-header__user-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 180px;
+  background-color: var(--cheri-white);
+  border: 1px solid var(--cheri-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  animation: menuFadeIn 0.15s ease;
+  z-index: 200;
+}
+
+@keyframes menuFadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.admin-header__menu-item {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  color: var(--cheri-text);
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  text-decoration: none;
+}
+
+.admin-header__menu-item:hover {
+  background-color: var(--cheri-background);
+  color: var(--cheri-text);
+}
+
+.admin-header__menu-item--danger {
+  color: var(--cheri-danger);
+}
+
+.admin-header__menu-item--danger:hover {
+  background-color: var(--cheri-danger-light);
+  color: var(--cheri-danger);
+}
+
+.admin-header__menu-divider {
+  height: 1px;
+  background-color: var(--cheri-divider);
+  margin: 4px 0;
+}
+
+/* ----- Responsive ----- */
+@media (max-width: 768px) {
+  .admin-header {
+    padding: 0 var(--space-md);
+  }
+
+  .admin-header__user-info {
+    display: none;
+  }
+
+  .admin-header__chevron {
+    display: none;
+  }
+}

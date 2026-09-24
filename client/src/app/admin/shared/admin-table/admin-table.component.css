@@ -1,0 +1,159 @@
+/* =============================================
+   ADMIN TABLE
+   ============================================= */
+
+.admin-table-wrapper {
+  background: var(--cheri-white);
+  border: 1px solid var(--cheri-border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+
+/* ----- Scrollable wrapper (horizontal scroll on tablet/mobile) ----- */
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ----- Table base ----- */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-base);
+  color: var(--cheri-text);
+}
+
+/* ----- Header row ----- */
+.admin-table__head-row {
+  background-color: var(--cheri-background);
+  border-bottom: 1px solid var(--cheri-border);
+}
+
+.admin-table__th {
+  padding: 11px var(--space-md);
+  text-align: left;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--cheri-text-secondary);
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--cheri-border);
+  vertical-align: middle;
+  user-select: none;
+}
+
+.admin-table__th--actions {
+  text-align: center;
+  width: 1%; /* shrink to content */
+}
+
+/* ----- Sortable columns ----- */
+.admin-table__th.is-sortable {
+  cursor: pointer;
+}
+.admin-table__th.is-sortable:hover {
+  color: var(--cheri-text);
+  background-color: var(--cheri-divider);
+}
+
+.admin-table__th-inner {
+  display: inline-flex; align-items: center; gap: 4px;
+}
+
+.sort-icon { opacity: 0.35; transition: opacity var(--transition-fast); }
+.admin-table__th.is-sortable:hover .sort-icon { opacity: 0.7; }
+.admin-table__th.is-sorted-asc .sort-icon,
+.admin-table__th.is-sorted-desc .sort-icon { opacity: 1; color: var(--cheri-primary); }
+
+/* ----- Data rows ----- */
+.admin-table__row {
+  border-bottom: 1px solid var(--cheri-divider);
+  transition: background-color var(--transition-fast);
+}
+.admin-table__row:last-child { border-bottom: none; }
+.admin-table__row:hover { background-color: #FDFCFC; }
+
+.admin-table__td {
+  padding: 13px var(--space-md);
+  vertical-align: middle;
+  color: var(--cheri-text);
+  font-size: var(--font-size-base);
+}
+
+.admin-table__td--actions {
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* ----- Image cell ----- */
+.cell-image img {
+  width: 40px; height: 40px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  border: 1px solid var(--cheri-border);
+  background: var(--cheri-background);
+}
+
+/* ----- Footer: Total + Pagination ----- */
+.table-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--space-md); flex-wrap: wrap;
+  padding: 10px var(--space-lg);
+  border-top: 1px solid var(--cheri-divider);
+  background: var(--cheri-white);
+}
+
+.table-footer__total {
+  font-size: var(--font-size-sm);
+  color: var(--cheri-text-secondary);
+  white-space: nowrap;
+}
+.table-footer__total strong {
+  color: var(--cheri-text);
+  font-weight: 600;
+}
+
+/* When pagination is present, move it to the right */
+.table-footer app-admin-pagination {
+  flex: 1;
+}
+
+/* ----- Responsive — Mobile ----- */
+@media (max-width: 640px) {
+  .admin-table__th { padding: 10px var(--space-sm); }
+  .admin-table__td { padding: 10px var(--space-sm); font-size: var(--font-size-sm); }
+
+  .table-footer { flex-direction: column; align-items: flex-start; padding: var(--space-sm) var(--space-md); }
+}
+
+/* ----- Checkbox Column (NEW) ----- */
+.admin-table__th--checkbox,
+.admin-table__td--checkbox {
+  width: 44px;
+  min-width: 44px;
+  padding: 0 var(--space-sm);
+  text-align: center;
+  vertical-align: middle;
+}
+
+.row-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--cheri-primary);
+  border-radius: var(--radius-sm);
+  display: block;
+  margin: 0 auto;
+  flex-shrink: 0;
+}
+
+/* ----- Selected Row Highlight ----- */
+.admin-table__row.is-selected {
+  background-color: var(--cheri-primary-light);
+}
+
+.admin-table__row.is-selected:hover {
+  background-color: #EDD9DA;
+}
+

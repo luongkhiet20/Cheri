@@ -1,0 +1,72 @@
+.pagination {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--space-md); flex-wrap: wrap;
+  padding: var(--space-md) var(--space-lg);
+  background: var(--cheri-white);
+  border-top: 1px solid var(--cheri-divider);
+}
+
+.pagination__info {
+  font-size: var(--font-size-sm);
+  color: var(--cheri-text-secondary);
+  white-space: nowrap;
+}
+
+.pagination__controls {
+  display: flex; align-items: center; gap: 3px;
+}
+
+.pagination__btn {
+  display: flex; align-items: center; justify-content: center;
+  min-width: 34px; height: 34px; padding: 0 6px;
+  background: var(--cheri-white);
+  border: 1px solid var(--cheri-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--cheri-text);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+.pagination__btn:hover:not(:disabled):not(.is-active) {
+  background: var(--cheri-background);
+  border-color: var(--cheri-text-light);
+}
+.pagination__btn.is-active {
+  background: var(--cheri-primary);
+  border-color: var(--cheri-primary);
+  color: white;
+}
+.pagination__btn:disabled {
+  opacity: 0.35; cursor: not-allowed;
+}
+
+.pagination__ellipsis {
+  padding: 0 4px; color: var(--cheri-text-light);
+  font-size: var(--font-size-sm); line-height: 34px;
+}
+
+.pagination__size {
+  display: flex; align-items: center; gap: var(--space-sm);
+  font-size: var(--font-size-sm); color: var(--cheri-text-secondary);
+}
+.pagination__size-select {
+  padding: 5px 8px; height: 32px;
+  border: 1px solid var(--cheri-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  color: var(--cheri-text);
+  background: var(--cheri-white);
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+.pagination__size-select:focus { border-color: var(--cheri-primary); }
+
+@media (max-width: 640px) {
+  .pagination { justify-content: center; }
+  .pagination__info { width: 100%; text-align: center; }
+  .pagination__size { display: none; }
+}

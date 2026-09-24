@@ -1,0 +1,150 @@
+<div class="main">
+  <div class="container">
+    <button (click)="goBack()" mat-raised-button color="primary">
+      <i class="material-icons left">arrow_back</i>
+      {{ 'Back' | translate | async }}
+    </button>
+
+    @if (!(order$())) {
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+    }
+
+    @if (order$()) {
+    <mat-card appearance="outlined" class="card">
+
+      <!-- Header -->
+      <mat-card-content class="order-top-content">
+        <div>
+          <h4>{{ order$()?.orderId }}</h4>
+          <div class="product-info">
+            <div class="stock">
+              Trạng thái: <strong>{{ order$()?.status }}</strong>
+              @if (type === 'EDIT') {
+              <div class="order-edit-toggle" (click)="toggleForm()">
+                {{ 'Edit' | translate | async }}
+              </div>
+              }
+            </div>
+            <div class="price">
+              Tổng tiền: <strong>{{ order$()?.totalAmount || order$()?.amount | priceFormat }} {{ order$()?.currency || 'VND' }}</strong>
+            </div>
+          </div>
+
+          @if (showForm) {
+          <div>
+            <form class="order-form" [formGroup]="statusForm">
+              <mat-select aria-label="Status" formControlName="status">
+                @for (option of statusOptions | keyvalue; track option) {
+                <mat-option [value]="option.value">{{ option.value }}</mat-option>
+                }
+              </mat-select>
+              <button type="submit" mat-raised-button color="primary"
+                [disabled]="statusForm.invalid" (click)="submit()">OK</button>
+            </form>
+          </div>
+          }
+
+          <mat-chip-listbox class="order-tags">
+            <mat-chip-option>Email: {{ order$()?.customerEmail }}</mat-chip-option>
+            @if (order$()?.customerPhone) {
+            <mat-chip-option>SĐT: {{ order$()?.customerPhone }}</mat-chip-option>
+            }
+            @if (order$()?.paymentStatus) {
+            <mat-chip-option>Thanh toán: {{ order$()?.paymentStatus }}</mat-chip-option>
+            }
+          </mat-chip-listbox>
+        </div>
+
+        <div>
+          <p>Ngày tạo: {{ order$()?.createdAt || order$()?.dateAdded | date: 'dd/MM/yyyy HH:mm' }}</p>
+          @if (order$()?.shippingMethodSnapshot) {
+          <p>Vận chuyển: {{ order$()?.shippingMethodSnapshot?.name }}</p>
+          <p>Phí ship: {{ order$()?.shippingFee | priceFormat }} {{ order$()?.currency }}</p>
+          }
+          @if (order$()?.paymentMethodSnapshot) {
+          <p>Thanh toán: {{ order$()?.paymentMethodSnapshot?.name }}</p>
+          }
+          @if (order$()?.trackingNumber) {
+          <p>Mã vận đơn: <strong>{{ order$()?.trackingNumber }}</strong></p>
+          }
+        </div>
+      </mat-card-content>
+
+      <!-- Địa chỉ giao hàng -->
+      @if (order$()?.shippingAddress; as addr) {
+      <mat-card-content class="order-content">
+        <h4>{{ 'About_customer' | translate | async }}</h4>
+        <p>Người nhận: {{ addr.fullName }}</p>
+        <p>SĐT: {{ addr.phone }}</p>
+        <p>Địa chỉ: {{ addr.address }}</p>
+        @if (addr.ward) { <p>Phường/Xã: {{ addr.ward }}</p> }
+        @if (addr.district) { <p>Quận/Huyện: {{ addr.district }}</p> }
+        @if (addr.province) { <p>Tỉnh/Thành: {{ addr.province }}</p> }
+      </mat-card-content>
+      }
+
+      <!-- Sản phẩm -->
+      <mat-card-content class="order-content">
+        <h4 class="order-cart-title">Sản phẩm đặt hàng</h4>
+        @for (item of order$()?.items; track item.productId) {
+        <div class="order-cart">
+          @if (item.productSnapshot?.image) {
+          <img class="order-cart-img" [src]="item.productSnapshot.image" [alt]="item.productSnapshot.title" />
+          }
+          <div class="order-cart-text">
+            <strong>{{ item.productSnapshot?.title }}</strong>
+            <span>SKU: {{ item.productSnapshot?.sku }}</span>
+            @if (item.productSnapshot?.variant) {
+            <span>
+              {{ item.productSnapshot.variant.color }}
+              {{ item.productSnapshot.variant.size }}
+              {{ item.productSnapshot.variant.classification }}
+            </span>
+            }
+            <span>SL: {{ item.quantity }} × {{ item.unitPrice | priceFormat }} = <strong>{{ item.subtotal | priceFormat }}</strong></span>
+          </div>
+        </div>
+        }
+
+        <!-- Tổng tiền -->
+        <div class="order-totals">
+          <div class="total-row">
+            <span>Tiền hàng:</span>
+            <span>{{ order$()?.subtotal | priceFormat }} {{ order$()?.currency }}</span>
+          </div>
+          @if (order$()?.shippingFee) {
+          <div class="total-row">
+            <span>Phí vận chuyển:</span>
+            <span>{{ order$()?.shippingFee | priceFormat }} {{ order$()?.currency }}</span>
+          </div>
+          }
+          @if (order$()?.paymentFee) {
+          <div class="total-row">
+            <span>Phí thanh toán:</span>
+            <span>{{ order$()?.paymentFee | priceFormat }} {{ order$()?.currency }}</span>
+          </div>
+          }
+          @if (order$()?.couponDiscount) {
+          <div class="total-row discount">
+            <span>Giảm giá coupon ({{ order$()?.couponCode }}):</span>
+            <span>-{{ order$()?.couponDiscount | priceFormat }}</span>
+          </div>
+          }
+          <div class="total-row grand-total">
+            <span>Tổng thanh toán:</span>
+            <span>{{ order$()?.totalAmount || order$()?.amount | priceFormat }} {{ order$()?.currency }}</span>
+          </div>
+        </div>
+      </mat-card-content>
+
+      <!-- Ghi chú -->
+      @if (order$()?.notes) {
+      <mat-card-content>
+        <p><strong>Ghi chú:</strong> {{ order$()?.notes }}</p>
+      </mat-card-content>
+      }
+
+    </mat-card>
+    }
+  </div>
+</div>

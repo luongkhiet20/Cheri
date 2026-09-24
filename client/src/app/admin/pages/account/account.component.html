@@ -1,0 +1,710 @@
+<div class="account-page">
+  <!-- Page Header -->
+  <div class="account-header">
+    <div class="account-header-info">
+      <div class="breadcrumb">
+        <a routerLink="/admin" class="breadcrumb-link">Quản trị</a>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current">Thông tin tài khoản</span>
+      </div>
+      <h1 class="page-title">Hồ sơ Quản trị viên</h1>
+      <p class="page-subtitle">
+        Quản lý thông tin cá nhân, ảnh đại diện và thiết lập bảo mật cho tài khoản đang đăng nhập
+      </p>
+    </div>
+    <div class="account-header-actions">
+      <button
+        type="button"
+        class="tab-btn"
+        [class.active]="activeTab === 'overview'"
+        (click)="setTab('overview')"
+        id="tab-btn-overview"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+        Hồ sơ tổng quan
+      </button>
+      <button
+        type="button"
+        class="tab-btn"
+        [class.active]="activeTab === 'edit'"
+        (click)="setTab('edit')"
+        id="tab-btn-edit"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+        </svg>
+        Chỉnh sửa thông tin
+      </button>
+      <button
+        type="button"
+        class="tab-btn"
+        [class.active]="activeTab === 'password'"
+        (click)="setTab('password')"
+        id="tab-btn-password"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+        Đổi mật khẩu
+      </button>
+    </div>
+  </div>
+
+  <!-- Notification Alerts -->
+  <div *ngIf="successMessage" class="alert-box alert-success" role="alert">
+    <div class="alert-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    </div>
+    <div class="alert-content">
+      <strong>Thành công:</strong> {{ successMessage }}
+    </div>
+    <button type="button" class="alert-close" (click)="clearAlerts()" aria-label="Đóng">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert-box alert-error" role="alert">
+    <div class="alert-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+    </div>
+    <div class="alert-content">
+      <strong>Thông báo:</strong> {{ errorMessage }}
+    </div>
+    <button type="button" class="alert-close" (click)="clearAlerts()" aria-label="Đóng">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading-state">
+    <div class="loading-spinner"></div>
+    <p>Đang tải thông tin tài khoản quản trị viên từ MongoDB...</p>
+  </div>
+
+  <!-- Main Content Grid -->
+  <div *ngIf="!isLoading && profile" class="account-grid">
+
+    <!-- ══════════════════════════════════════════════════════
+         KHU VỰC A — HỒ SƠ QUẢN TRỊ VIÊN
+         ══════════════════════════════════════════════════════ -->
+    <aside class="profile-card">
+      <div class="profile-card-header">
+        <!-- Avatar Wrapper with Change Trigger -->
+        <div class="avatar-container">
+          <div class="avatar-circle">
+            <img
+              *ngIf="profile.avatar"
+              [src]="profile.avatar"
+              [alt]="profile.fullName || 'Admin Avatar'"
+              class="avatar-img"
+              (error)="profile.avatar = null"
+            />
+            <span *ngIf="!profile.avatar" class="avatar-placeholder">
+              {{ userInitial }}
+            </span>
+          </div>
+          <button
+            type="button"
+            class="avatar-change-btn"
+            (click)="openAvatarModal()"
+            title="Đổi ảnh đại diện"
+            id="btn-open-avatar-modal"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+              <circle cx="12" cy="13" r="4"></circle>
+            </svg>
+          </button>
+        </div>
+
+        <h2 class="profile-name">{{ profile.fullName || profile.name || 'Admin' }}</h2>
+        <p class="profile-username">&#64;{{ profile.username || 'admin' }}</p>
+
+        <!-- Role & Status Badges (View-only) -->
+        <div class="profile-badges">
+          <span class="badge badge-role">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+            </svg>
+            {{ profile.role || 'Quản trị viên' }}
+          </span>
+          <span class="badge badge-status" [class.badge-active]="profile.status !== 'inactive' && profile.status !== 'Khóa'">
+            <span class="status-dot"></span>
+            {{ profile.status || 'Đang hoạt động' }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Profile Meta Details (View-only as per specification) -->
+      <div class="profile-details-list">
+        <div class="detail-item">
+          <span class="detail-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+            Email
+          </span>
+          <span class="detail-value text-ellipsis" [title]="profile.email">{{ profile.email || 'Chưa cập nhật' }}</span>
+        </div>
+
+        <div class="detail-item">
+          <span class="detail-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+            Số điện thoại
+          </span>
+          <span class="detail-value">{{ profile.phone || profile.phoneNumber || 'Chưa cập nhật' }}</span>
+        </div>
+
+        <div class="detail-item">
+          <span class="detail-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            Ngày tạo
+          </span>
+          <span class="detail-value">{{ formatDate(profile.dateAdded || profile.createdAt) }}</span>
+        </div>
+
+        <div class="detail-item">
+          <span class="detail-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            Lần đăng nhập gần nhất
+          </span>
+          <span class="detail-value">{{ formatDate(profile.lastLogin) }}</span>
+        </div>
+      </div>
+
+      <!-- Quick Action Buttons -->
+      <div class="profile-card-footer">
+        <button
+          type="button"
+          class="btn btn-outline-primary btn-block"
+          (click)="setTab('edit')"
+          *ngIf="activeTab !== 'edit'"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+          Chỉnh sửa thông tin
+        </button>
+        <button
+          type="button"
+          class="btn btn-outline-secondary btn-block"
+          (click)="setTab('password')"
+          *ngIf="activeTab !== 'password'"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          Đổi mật khẩu
+        </button>
+      </div>
+    </aside>
+
+    <!-- ══════════════════════════════════════════════════════
+         MAIN CONTENT AREA (TABS)
+         ══════════════════════════════════════════════════════ -->
+    <main class="main-content">
+
+      <!-- TAB 1: TỔNG QUAN HỒ SƠ -->
+      <div *ngIf="activeTab === 'overview'" class="tab-panel">
+        <!-- Overview Card -->
+        <div class="content-card">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Chi tiết tài khoản quản trị</h3>
+              <p class="card-desc">Thông tin tổng hợp được xác nhận từ cơ sở dữ liệu MongoDB</p>
+            </div>
+            <button type="button" class="btn btn-sm btn-primary" (click)="setTab('edit')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              Sửa hồ sơ
+            </button>
+          </div>
+
+          <div class="info-grid">
+            <div class="info-cell">
+              <span class="cell-label">Họ và tên</span>
+              <span class="cell-value font-medium">{{ profile.fullName || profile.name || 'Admin' }}</span>
+            </div>
+            <div class="info-cell">
+              <span class="cell-label">Tên đăng nhập (Username)</span>
+              <span class="cell-value font-mono">{{ profile.username || 'admin' }}</span>
+            </div>
+            <div class="info-cell">
+              <span class="cell-label">Địa chỉ Email</span>
+              <span class="cell-value">{{ profile.email || 'Chưa cập nhật' }}</span>
+            </div>
+            <div class="info-cell">
+              <span class="cell-label">Số điện thoại</span>
+              <span class="cell-value">{{ profile.phone || profile.phoneNumber || 'Chưa cập nhật' }}</span>
+            </div>
+            <div class="info-cell">
+              <span class="cell-label">Vai trò quản trị</span>
+              <span class="cell-value">
+                <span class="badge badge-role">{{ profile.role || 'Quản trị viên' }}</span>
+              </span>
+            </div>
+            <div class="info-cell">
+              <span class="cell-label">Trạng thái tài khoản</span>
+              <span class="cell-value">
+                <span class="badge badge-status badge-active">{{ profile.status || 'Đang hoạt động' }}</span>
+              </span>
+            </div>
+            <div class="info-cell">
+              <span class="cell-label">Ngày khởi tạo tài khoản</span>
+              <span class="cell-value">{{ formatDate(profile.dateAdded || profile.createdAt) }}</span>
+            </div>
+            <div class="info-cell">
+              <span class="cell-label">Lần đăng nhập gần nhất</span>
+              <span class="cell-value">{{ formatDate(profile.lastLogin) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Security Summary Card (Khu vực C Preview) -->
+        <div class="content-card">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Bảo mật & Đăng nhập</h3>
+              <p class="card-desc">Quản lý mật khẩu truy cập và phương thức bảo mật</p>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-primary" (click)="setTab('password')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+              Đổi mật khẩu
+            </button>
+          </div>
+
+          <div class="security-preview-row">
+            <div class="security-info">
+              <div class="security-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+              </div>
+              <div>
+                <div class="security-title">Mật khẩu tài khoản</div>
+                <div class="security-dots">••••••••••••••••</div>
+                <div class="security-hint">Mật khẩu được mã hóa an toàn bằng thuật toán bcrypt trong MongoDB</div>
+              </div>
+            </div>
+            <button type="button" class="btn btn-primary" (click)="setTab('password')">
+              Đổi mật khẩu
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           KHU VỰC B — CHỈNH SỬA THÔNG TIN CÁ NHÂN
+           ══════════════════════════════════════════════════════ -->
+      <div *ngIf="activeTab === 'edit'" class="tab-panel">
+        <div class="content-card">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Chỉnh sửa thông tin cá nhân</h3>
+              <p class="card-desc">Cập nhật họ tên, email và số điện thoại. Dữ liệu sẽ được lưu trực tiếp vào MongoDB.</p>
+            </div>
+          </div>
+
+          <form (ngSubmit)="onSaveProfile()" class="account-form" novalidate>
+            <div class="form-grid">
+
+              <!-- Họ và tên (Bắt buộc, Có chỉnh sửa) -->
+              <div class="form-group" [class.has-error]="editErrors['fullName']">
+                <label for="input-fullName" class="form-label">
+                  Họ và tên <span class="required-star">*</span>
+                </label>
+                <div class="input-wrapper">
+                  <input
+                    type="text"
+                    id="input-fullName"
+                    class="form-control"
+                    [(ngModel)]="editForm.fullName"
+                    name="fullName"
+                    placeholder="Nhập họ và tên quản trị viên"
+                    required
+                  />
+                </div>
+                <div *ngIf="editErrors['fullName']" class="error-feedback">
+                  {{ editErrors['fullName'] }}
+                </div>
+              </div>
+
+              <!-- Email (Bắt buộc, Có chỉnh sửa, Kiểm tra định dạng) -->
+              <div class="form-group" [class.has-error]="editErrors['email']">
+                <label for="input-email" class="form-label">
+                  Địa chỉ Email <span class="required-star">*</span>
+                </label>
+                <div class="input-wrapper">
+                  <input
+                    type="email"
+                    id="input-email"
+                    class="form-control"
+                    [(ngModel)]="editForm.email"
+                    name="email"
+                    placeholder="admin@example.com"
+                    required
+                  />
+                </div>
+                <div *ngIf="editErrors['email']" class="error-feedback">
+                  {{ editErrors['email'] }}
+                </div>
+              </div>
+
+              <!-- Số điện thoại (Có chỉnh sửa) -->
+              <div class="form-group" [class.has-error]="editErrors['phone']">
+                <label for="input-phone" class="form-label">
+                  Số điện thoại
+                </label>
+                <div class="input-wrapper">
+                  <input
+                    type="tel"
+                    id="input-phone"
+                    class="form-control"
+                    [(ngModel)]="editForm.phone"
+                    name="phone"
+                    placeholder="0901234567"
+                  />
+                </div>
+                <div *ngIf="editErrors['phone']" class="error-feedback">
+                  {{ editErrors['phone'] }}
+                </div>
+              </div>
+
+              <!-- Tên đăng nhập (Chỉ hiển thị, Không chỉnh sửa) -->
+              <div class="form-group">
+                <label class="form-label">
+                  Tên đăng nhập (Username)
+                  <span class="label-badge">Chỉ xem</span>
+                </label>
+                <div class="input-wrapper">
+                  <input
+                    type="text"
+                    class="form-control disabled-input"
+                    [value]="profile.username || 'admin'"
+                    disabled
+                    readonly
+                  />
+                </div>
+                <span class="field-hint">Tên đăng nhập là định danh duy nhất của tài khoản và không thể chỉnh sửa.</span>
+              </div>
+
+              <!-- Ngày tạo (Chỉ hiển thị) -->
+              <div class="form-group">
+                <label class="form-label">
+                  Ngày tạo tài khoản
+                  <span class="label-badge">Chỉ xem</span>
+                </label>
+                <input
+                  type="text"
+                  class="form-control disabled-input"
+                  [value]="formatDate(profile.dateAdded || profile.createdAt)"
+                  disabled
+                  readonly
+                />
+              </div>
+
+              <!-- Lần đăng nhập gần nhất (Chỉ hiển thị) -->
+              <div class="form-group">
+                <label class="form-label">
+                  Lần đăng nhập gần nhất
+                  <span class="label-badge">Chỉ xem</span>
+                </label>
+                <input
+                  type="text"
+                  class="form-control disabled-input"
+                  [value]="formatDate(profile.lastLogin)"
+                  disabled
+                  readonly
+                />
+              </div>
+
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                (click)="resetEditForm()"
+                [disabled]="isSavingProfile"
+              >
+                Đặt lại
+              </button>
+              <button
+                type="submit"
+                class="btn btn-primary"
+                [disabled]="isSavingProfile"
+                id="btn-save-profile"
+              >
+                <span *ngIf="isSavingProfile" class="spinner-sm"></span>
+                <span>{{ isSavingProfile ? 'Đang lưu thay đổi...' : 'Lưu thay đổi' }}</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           KHU VỰC C — BẢO MẬT & ĐỔI MẬT KHẨU
+           ══════════════════════════════════════════════════════ -->
+      <div *ngIf="activeTab === 'password'" class="tab-panel">
+        <div class="content-card">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Đổi mật khẩu tài khoản</h3>
+              <p class="card-desc">Cập nhật mật khẩu để bảo vệ tài khoản quản trị viên. Mật khẩu mới sẽ được mã hóa an toàn.</p>
+            </div>
+          </div>
+
+          <!-- Password Status Notice -->
+          <div class="password-status-banner">
+            <div class="status-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+            </div>
+            <div class="status-text">
+              <div class="status-title">Bảo mật mật khẩu cấp cao</div>
+              <div class="status-desc">Hệ thống áp dụng mã hóa bcrypt an toàn một chiều. Không ai có thể nhìn thấy mật khẩu thực tế của bạn.</div>
+            </div>
+          </div>
+
+          <form (ngSubmit)="onSavePassword()" class="account-form" novalidate>
+
+            <!-- Mật khẩu hiện tại (Bắt buộc) -->
+            <div class="form-group" [class.has-error]="passwordErrors['currentPassword']">
+              <label for="input-currentPass" class="form-label">
+                Mật khẩu hiện tại <span class="required-star">*</span>
+              </label>
+              <div class="input-password-wrapper">
+                <input
+                  [type]="showCurrentPass ? 'text' : 'password'"
+                  id="input-currentPass"
+                  class="form-control"
+                  [(ngModel)]="passwordForm.currentPassword"
+                  name="currentPassword"
+                  placeholder="Nhập mật khẩu hiện tại"
+                  required
+                />
+                <button
+                  type="button"
+                  class="toggle-pass-btn"
+                  (click)="showCurrentPass = !showCurrentPass"
+                  title="Ẩn/Hiện mật khẩu"
+                >
+                  <svg *ngIf="!showCurrentPass" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <svg *ngIf="showCurrentPass" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
+                </button>
+              </div>
+              <div *ngIf="passwordErrors['currentPassword']" class="error-feedback">
+                {{ passwordErrors['currentPassword'] }}
+              </div>
+            </div>
+
+            <!-- Mật khẩu mới (Bắt buộc, >= 6 ký tự, khác mật khẩu cũ) -->
+            <div class="form-group" [class.has-error]="passwordErrors['newPassword']">
+              <label for="input-newPass" class="form-label">
+                Mật khẩu mới <span class="required-star">*</span>
+              </label>
+              <div class="input-password-wrapper">
+                <input
+                  [type]="showNewPass ? 'text' : 'password'"
+                  id="input-newPass"
+                  class="form-control"
+                  [(ngModel)]="passwordForm.newPassword"
+                  name="newPassword"
+                  placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)"
+                  required
+                />
+                <button
+                  type="button"
+                  class="toggle-pass-btn"
+                  (click)="showNewPass = !showNewPass"
+                  title="Ẩn/Hiện mật khẩu"
+                >
+                  <svg *ngIf="!showNewPass" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <svg *ngIf="showNewPass" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
+                </button>
+              </div>
+              <div *ngIf="passwordErrors['newPassword']" class="error-feedback">
+                {{ passwordErrors['newPassword'] }}
+              </div>
+              <span class="field-hint">Mật khẩu phải có ít nhất 6 ký tự và không được trùng với mật khẩu hiện tại.</span>
+            </div>
+
+            <!-- Xác nhận mật khẩu mới (Bắt buộc, khớp mk mới) -->
+            <div class="form-group" [class.has-error]="passwordErrors['confirmPassword']">
+              <label for="input-confirmPass" class="form-label">
+                Xác nhận mật khẩu mới <span class="required-star">*</span>
+              </label>
+              <div class="input-password-wrapper">
+                <input
+                  [type]="showConfirmPass ? 'text' : 'password'"
+                  id="input-confirmPass"
+                  class="form-control"
+                  [(ngModel)]="passwordForm.confirmPassword"
+                  name="confirmPassword"
+                  placeholder="Nhập lại mật khẩu mới"
+                  required
+                />
+                <button
+                  type="button"
+                  class="toggle-pass-btn"
+                  (click)="showConfirmPass = !showConfirmPass"
+                  title="Ẩn/Hiện mật khẩu"
+                >
+                  <svg *ngIf="!showConfirmPass" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <svg *ngIf="showConfirmPass" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
+                </button>
+              </div>
+              <div *ngIf="passwordErrors['confirmPassword']" class="error-feedback">
+                {{ passwordErrors['confirmPassword'] }}
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                (click)="passwordForm = { currentPassword: '', newPassword: '', confirmPassword: '' }; passwordErrors = {}"
+                [disabled]="isSavingPassword"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="submit"
+                class="btn btn-primary"
+                [disabled]="isSavingPassword"
+                id="btn-save-password"
+              >
+                <span *ngIf="isSavingPassword" class="spinner-sm"></span>
+                <span>{{ isSavingPassword ? 'Đang cập nhật mật khẩu...' : 'Đổi mật khẩu' }}</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     MODAL: THAY ĐỔI ẢNH ĐẠI DIỆN (AVATAR)
+     ══════════════════════════════════════════════════════ -->
+<div *ngIf="isAvatarModalOpen" class="modal-backdrop" (click)="closeAvatarModal()">
+  <div class="modal-card" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3 class="modal-title">Thay đổi ảnh đại diện</h3>
+      <button type="button" class="modal-close-btn" (click)="closeAvatarModal()" aria-label="Đóng">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <!-- Avatar Preview -->
+      <div class="modal-avatar-preview">
+        <div class="preview-circle">
+          <img
+            *ngIf="avatarPreview"
+            [src]="avatarPreview"
+            alt="Preview Avatar"
+            class="preview-img"
+          />
+          <span *ngIf="!avatarPreview" class="preview-placeholder">
+            {{ userInitial }}
+          </span>
+        </div>
+        <p class="preview-caption">Xem trước ảnh đại diện</p>
+      </div>
+
+      <!-- Upload from Device -->
+      <div class="modal-upload-section">
+        <label class="btn-file-upload">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          <span>Tải ảnh lên từ máy tính</span>
+          <input
+            type="file"
+            accept="image/*"
+            (change)="onFileSelected($event)"
+            class="hidden-file-input"
+            id="file-avatar-upload"
+          />
+        </label>
+        <p class="file-note">Hỗ trợ JPG, PNG, WEBP, GIF. Kích thước tối đa 5MB.</p>
+      </div>
+
+      <div class="modal-divider">
+        <span>HOẶC</span>
+      </div>
+
+      <!-- Paste Image URL -->
+      <div class="form-group">
+        <label for="input-avatar-url" class="form-label">Dán đường dẫn ảnh (URL)</label>
+        <input
+          type="url"
+          id="input-avatar-url"
+          class="form-control"
+          placeholder="https://example.com/avatar.jpg"
+          [(ngModel)]="avatarUrlInput"
+          (input)="onAvatarUrlChange()"
+        />
+      </div>
+
+      <!-- Avatar Error Feedback -->
+      <div *ngIf="avatarError" class="modal-error-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        <span>{{ avatarError }}</span>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button
+        type="button"
+        class="btn btn-secondary"
+        (click)="closeAvatarModal()"
+        [disabled]="isUploadingAvatar"
+      >
+        Hủy bỏ
+      </button>
+      <button
+        type="button"
+        class="btn btn-primary"
+        (click)="onSaveAvatar()"
+        [disabled]="isUploadingAvatar || !avatarPreview"
+        id="btn-confirm-save-avatar"
+      >
+        <span *ngIf="isUploadingAvatar" class="spinner-sm"></span>
+        <span>{{ isUploadingAvatar ? 'Đang lưu ảnh...' : 'Lưu ảnh đại diện' }}</span>
+      </button>
+    </div>
+  </div>
+</div>

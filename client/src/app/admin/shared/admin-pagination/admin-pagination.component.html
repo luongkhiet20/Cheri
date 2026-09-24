@@ -1,0 +1,58 @@
+<div class="pagination" *ngIf="total > 0" role="navigation" aria-label="Phân trang">
+  <div class="pagination__info">
+    <span>{{ rangeStart }}–{{ rangeEnd }} / {{ total }}</span>
+  </div>
+
+  <div class="pagination__controls">
+    <button
+      class="pagination__btn"
+      (click)="goTo(page - 1)"
+      [disabled]="page <= 1"
+      aria-label="Trang trước"
+      id="pagination-prev"
+    >
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"></polyline>
+      </svg>
+    </button>
+
+    <ng-container *ngFor="let p of pages">
+      <button
+        *ngIf="p !== -1"
+        class="pagination__btn"
+        [class.is-active]="p === page"
+        (click)="goTo(p)"
+        [attr.aria-label]="'Trang ' + p"
+        [attr.aria-current]="p === page ? 'page' : null"
+        [id]="'page-btn-' + p"
+      >{{ p }}</button>
+      <span *ngIf="p === -1" class="pagination__ellipsis" aria-hidden="true">…</span>
+    </ng-container>
+
+    <button
+      class="pagination__btn"
+      (click)="goTo(page + 1)"
+      [disabled]="page >= totalPages"
+      aria-label="Trang tiếp theo"
+      id="pagination-next"
+    >
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6"></polyline>
+      </svg>
+    </button>
+  </div>
+
+  <div class="pagination__size">
+    <label class="pagination__size-label" for="page-size-select">Hiển thị</label>
+    <select
+      class="pagination__size-select"
+      id="page-size-select"
+      [value]="pageSize"
+      (change)="onPageSizeChange($event)"
+    >
+      <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
+    </select>
+  </div>
+</div>

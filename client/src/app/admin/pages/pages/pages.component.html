@@ -1,0 +1,74 @@
+<div class="page-content">
+
+  <!-- Header -->
+  <div class="page-top">
+    <div>
+      <h1 class="page-title">Quản lý trang</h1>
+      <p class="page-subtitle">Quản lý các trang tĩnh, bài viết điều khoản và giới thiệu trên website</p>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-primary" id="btn-add-page" routerLink="/admin/pages/new">
+        + Thêm trang mới
+      </button>
+    </div>
+  </div>
+
+  <!-- Alert Messages -->
+  <div *ngIf="errorMessage" class="alert-box alert-error mb-3">
+    <div class="alert-icon">⚠️</div>
+    <div class="alert-content">
+      <strong>Lỗi:</strong> {{ errorMessage }}
+    </div>
+  </div>
+
+  <div *ngIf="successMessage" class="alert-box alert-success mb-3">
+    <div class="alert-icon">✓</div>
+    <div class="alert-content">{{ successMessage }}</div>
+  </div>
+
+  <!-- Toolbar -->
+  <app-admin-toolbar
+    searchPlaceholder="Tìm theo tiêu đề, đường dẫn..."
+    [filterFields]="filterFields"
+    [selectable]="true"
+    [allSelected]="allSelected"
+    [indeterminate]="isIndeterminate"
+    [selectedCount]="selectedCount"
+    [showDeleteSelected]="true"
+    [total]="displayTotal"
+    [isLoading]="isLoading"
+    (searchChange)="onSearch($event)"
+    (filterChange)="onFilter($event)"
+    (refresh)="onRefresh()"
+    (selectAllChange)="onToolbarSelectAll()"
+    (deleteSelected)="onDeleteSelected()"
+  ></app-admin-toolbar>
+
+  <!-- Table -->
+  <app-admin-table
+    [columns]="columns"
+    [data]="data"
+    [loading]="isLoading"
+    [actions]="actions"
+    [pagination]="pagination"
+    [selectable]="true"
+    [selectedIds]="selectedIds"
+    totalLabel="trang"
+    (actionClick)="onAction($event)"
+    (selectionChange)="onSelectionChange($event)"
+    (pageChange)="onPageChange($event)"
+    (pageSizeChange)="onPageSizeChange($event)"
+  ></app-admin-table>
+
+</div>
+
+<!-- Delete Confirmation Dialog -->
+<app-confirm-dialog
+  [isOpen]="confirmOpen"
+  title="Xác nhận xóa trang"
+  [message]="confirmMessage"
+  confirmLabel="Xóa"
+  variant="danger"
+  (confirmed)="onConfirmDelete()"
+  (cancelled)="onCancelDelete()"
+></app-confirm-dialog>

@@ -15,7 +15,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { CheriService } from './cheri.service';
 import { ContactDto } from './dto/contact.dto';
 import { PageDto } from './dto/page.dto';
-import { RolesGuard } from '../auth/roles.guard';
+import { RolesGuard, AdminJwtAuthGuard } from '../auth/roles.guard';
 import { Page } from './models/page.model';
 import { Theme } from './models/theme.model';
 import { Config } from './models/config.model';
@@ -46,7 +46,7 @@ export class CheriController {
     return this.cheriService.getPages(lang, titles);
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
   @Post('/page')
   addOrEditPage(@Body() pageDto: PageDto): Promise<Page> {
     return this.cheriService.addOrEditPage(pageDto);
@@ -60,7 +60,7 @@ export class CheriController {
     return this.cheriService.getPage(titleUrl, lang);
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
   @Delete('/page/:titleUrl')
   deletePage(@Param('titleUrl') titleUrl: string): Promise<void> {
     return this.cheriService.deletePage(titleUrl);
@@ -71,13 +71,13 @@ export class CheriController {
     return this.cheriService.getThemes();
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
   @Post('/theme')
   addOrEditTheme(@Body() themeDto): Promise<Theme> {
     return this.cheriService.addOrEditTheme(themeDto);
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
   @Delete('/theme/:titleUrl')
   deleteTheme(@Param('titleUrl') titleUrl: string): Promise<void> {
     return this.cheriService.deleteTheme(titleUrl);
@@ -88,13 +88,13 @@ export class CheriController {
     return this.cheriService.getConfigs();
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
   @Post('/config')
   addOrEditConfig(@Body() configDto): Promise<Config> {
     return this.cheriService.addOrEditConfig(configDto);
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
   @Delete('/config/:titleUrl')
   deleteConfig(@Param('titleUrl') titleUrl: string): Promise<void> {
     return this.cheriService.deleteConfig(titleUrl);

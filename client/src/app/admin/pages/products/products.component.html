@@ -1,0 +1,99 @@
+<div class="page-content">
+
+  <!-- Page Header -->
+  <div class="page-top">
+    <div>
+      <h1 class="page-title">Quản lý sản phẩm</h1>
+      <p class="page-subtitle">Danh sách toàn bộ sản phẩm thực tế từ MongoDB (Database: cheri)</p>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-outline" id="btn-import-csv" (click)="openCsvModal()">
+        <svg class="btn-svg-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="12" y1="18" x2="12" y2="12"></line>
+          <line x1="9" y1="15" x2="15" y2="15"></line>
+        </svg>
+        Nhập sản phẩm bằng CSV
+      </button>
+      <button class="btn btn-primary" id="btn-add-product" (click)="onAddProduct()">
+        + Thêm sản phẩm
+      </button>
+    </div>
+  </div>
+
+  <!-- Success & Error Alert Messages -->
+  <div *ngIf="successMessage" class="alert-box alert-success">
+    <div class="alert-icon">✓</div>
+    <div class="alert-content">{{ successMessage }}</div>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert-box alert-error">
+    <div class="alert-icon">⚠️</div>
+    <div class="alert-content">{{ errorMessage }}</div>
+  </div>
+
+  <!-- Toolbar: Checkbox + Search + Filter + Refresh + Delete + Total -->
+  <app-admin-toolbar
+    searchPlaceholder="Tìm kiếm tên sản phẩm, slug..."
+    [filterFields]="filterFields"
+    [selectable]="true"
+    [allSelected]="allSelected"
+    [indeterminate]="isIndeterminate"
+    [selectedCount]="selectedCount"
+    [showDeleteSelected]="true"
+    [total]="displayTotal"
+    (searchChange)="onSearch($event)"
+    (filterChange)="onFilter($event)"
+    (refresh)="onRefresh()"
+    (selectAllChange)="onToolbarSelectAll()"
+    (deleteSelected)="onDeleteSelected()"
+  ></app-admin-toolbar>
+
+  <!-- Loading State -->
+  <app-loading-state *ngIf="isLoading" message="Đang tải dữ liệu sản phẩm từ MongoDB Atlas..."></app-loading-state>
+
+  <!-- Empty State -->
+  <app-empty-state
+    *ngIf="!isLoading && (!data || data.length === 0)"
+    title="Không tìm thấy sản phẩm nào"
+    description="Không có sản phẩm nào khớp với điều kiện tìm kiếm hoặc cơ sở dữ liệu chưa có sản phẩm."
+    actionLabel="+ Thêm sản phẩm mới"
+    (action)="onAddProduct()"
+  ></app-empty-state>
+
+  <!-- Data Table with row checkboxes -->
+  <app-admin-table
+    *ngIf="!isLoading && data && data.length > 0"
+    [columns]="columns"
+    [data]="data"
+    [actions]="actions"
+    [pagination]="pagination"
+    [selectable]="true"
+    [selectedIds]="selectedIds"
+    totalLabel="sản phẩm"
+    (actionClick)="onAction($event)"
+    (selectionChange)="onSelectionChange($event)"
+    (pageChange)="onPageChange($event)"
+    (pageSizeChange)="onPageSizeChange($event)"
+  ></app-admin-table>
+
+</div>
+
+<!-- Confirm Dialog -->
+<app-confirm-dialog
+  [isOpen]="confirmOpen"
+  title="Xác nhận xóa sản phẩm"
+  [message]="confirmMessage"
+  confirmLabel="Xóa"
+  variant="danger"
+  (confirmed)="onConfirmDelete()"
+  (cancelled)="onCancelDelete()"
+></app-confirm-dialog>
+
+<!-- Product CSV Import Modal -->
+<app-product-csv-modal
+  [isOpen]="isCsvModalOpen"
+  (closed)="isCsvModalOpen = false"
+  (imported)="onCsvImportSuccess($event)"
+></app-product-csv-modal>

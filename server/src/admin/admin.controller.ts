@@ -14,7 +14,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
 import multer from 'multer';
 
-import { RolesGuard } from '../auth/roles.guard';
+import { RolesGuard, AdminJwtAuthGuard } from '../auth/roles.guard';
 import { AdminService } from './admin.service';
 import { Images } from './utils/images';
 import { Product } from '../products/models/product.model';
@@ -25,7 +25,7 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 @Controller('api/admin')
-@UseGuards(AuthGuard('jwt'), RolesGuard)
+@UseGuards(AdminJwtAuthGuard, RolesGuard)
 export class AdminController {
   constructor(private adminService: AdminService) {}
 

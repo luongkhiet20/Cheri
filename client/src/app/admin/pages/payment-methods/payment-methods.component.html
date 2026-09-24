@@ -1,0 +1,66 @@
+<div class="page-content">
+
+  <!-- Page Header -->
+  <div class="page-top">
+    <div>
+      <h1 class="page-title">Quản lý phương thức thanh toán</h1>
+      <p class="page-subtitle">Quản lý và theo dõi các phương thức thanh toán</p>
+    </div>
+
+    <div class="page-actions">
+      <button class="btn btn-primary" id="btn-add-payment" type="button" (click)="onAddPaymentMethod()">
+        + Thêm phương thức thanh toán
+      </button>
+    </div>
+  </div>
+
+  <!-- Alert Messages -->
+  <div *ngIf="successMessage" class="alert-box alert-success">
+    <div class="alert-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    </div>
+
+    <div class="alert-content">
+      {{ successMessage }}
+    </div>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert-box alert-error">
+    <div class="alert-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+    </div>
+
+    <div class="alert-content">
+      {{ errorMessage }}
+    </div>
+  </div>
+
+  <!-- Reusable Toolbar -->
+  <app-admin-toolbar searchPlaceholder="Tìm kiếm theo tên, mã hoặc loại thanh toán..." [filterFields]="filterFields"
+    [selectable]="true" [allSelected]="allSelected" [indeterminate]="isIndeterminate" [selectedCount]="selectedCount"
+    [showDeleteSelected]="false" [total]="displayTotal" [isLoading]="isLoading" (searchChange)="onSearch($event)"
+    (filterChange)="onFilter($event)" (refresh)="onRefresh()" (selectAllChange)="onToolbarSelectAll()">
+  </app-admin-toolbar>
+
+  <!-- Reusable Table -->
+  <app-admin-table [columns]="columns" [data]="data" [loading]="isLoading" [actions]="actions" [pagination]="pagination"
+    [selectable]="true" [selectedIds]="selectedIds" totalLabel="phương thức" (actionClick)="onAction($event)"
+    (selectionChange)="onSelectionChange($event)" (pageChange)="onPageChange($event)"
+    (pageSizeChange)="onPageSizeChange($event)">
+  </app-admin-table>
+
+</div>
+
+<!-- Reusable Confirm Dialog -->
+<app-confirm-dialog [isOpen]="confirmOpen" [title]="confirmTitle" [message]="confirmMessage"
+  [confirmLabel]="confirmLabel" [variant]="confirmVariant" (confirmed)="onConfirmDialog()"
+  (cancelled)="onCancelDialog()">
+</app-confirm-dialog>

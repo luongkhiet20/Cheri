@@ -14,6 +14,7 @@ import {
 } from './models/product.model';
 import { GetProductDto } from './dto/get-product';
 import { Category, CategoryModel } from './models/category.model';
+import { ProductVariantDocument } from './models/product-variant.model';
 import { User } from '../auth/models/user.model';
 import { prepareProduct, toSlug } from '../shared/utils/prepareUtils';
 import { languages, paginationLimit } from '../shared/constans';
@@ -23,6 +24,8 @@ export class ProductsService {
   constructor(
     @InjectModel('Product') private productModel: ProductModel,
     @InjectModel('Category') private categoryModel: Model<CategoryModel>,
+    @InjectModel('ProductVariant')
+    private productVariantModel: Model<ProductVariantDocument>,
   ) {}
 
   async getProducts(
@@ -151,7 +154,123 @@ export class ProductsService {
       throw new NotFoundException(`Product with title ${name} not found`);
     }
 
-    return lang ? prepareProduct(found, lang) : found;
+    const variants = await this.productVariantModel
+      .find({ productId: found._id })
+      .lean();
+    const prepared = lang ? prepareProduct(found, lang) : found;
+    const result =
+      prepared && typeof (prepared as any).toObject === 'function'
+        ? (prepared as any).toObject()
+        : { ...prepared };
+    result.variants = variants;
+    return result;
+  }
+
+  async getProductVariants(productId: string): Promise<ProductVariantDocument[]> {
+    let query: any = {};
+    if (isValidObjectId(productId)) {
+      query = { productId };
+    } else {
+      const product = await this.productModel.findOne({
+        $or: [{ titleUrl: productId }, { id: productId }, { sku: productId }],
+      });
+      if (product) {
+        query = { productId: product._id };
+      } else {
+        return [];
+      }
+    }
+    return this.productVariantModel.find(query).lean();
+  }
+
+  async syncProductVariants(
+    productId: any,
+    baseSku: string,
+    variants: any[],
+  ): Promise<void> {
+    if (!productId) return;
+    try {
+      await this.productVariantModel.deleteMany({ productId });
+      if (!variants || !Array.isArray(variants) || variants.length === 0) {
+        return;
+      }
+
+      const cleanBaseSku = (baseSku || 'SKU').toString().trim().toUpperCase();
+      const docsToInsert = variants
+        .map((v, index) => {
+          if (!v) return null;
+          const sku = (
+            v.sku ||
+            `${cleanBaseSku}-VAR-${index + 1}-${Date.now().toString().slice(-4)}`
+          )
+            .toString()
+            .trim();
+
+          const color =
+            v.color ||
+            v.attributes?.['Màu sắc'] ||
+            v.attributes?.['Màu'] ||
+            v.attributes?.color ||
+            '';
+          const size =
+            v.size ||
+            v.attributes?.['Kích thước'] ||
+            v.attributes?.['Size'] ||
+            v.attributes?.size ||
+            '';
+          const classification =
+            v.classification ||
+            v.attributes?.['Phân loại'] ||
+            v.attributes?.classification ||
+            '';
+
+          const price = Math.max(0, Number(v.price) || 0);
+          const discountPrice = Math.max(
+            0,
+            Number(v.discountPrice !== undefined ? v.discountPrice : v.salePrice) || 0,
+          );
+          const stock = Math.max(
+            0,
+            Number(v.stock !== undefined ? v.stock : v.quantity) || 0,
+          );
+          const isActive =
+            v.isActive !== undefined
+              ? Boolean(v.isActive)
+              : v.status !== undefined
+              ? Boolean(v.status)
+              : true;
+
+          return {
+            productId,
+            sku,
+            color: String(color).trim(),
+            size: String(size).trim(),
+            classification: String(classification).trim(),
+            price,
+            discountPrice,
+            stock,
+            isActive,
+          };
+        })
+        .filter(Boolean);
+
+      if (docsToInsert.length > 0) {
+        const seenSkus = new Set<string>();
+        const uniqueDocs = [];
+        for (const doc of docsToInsert) {
+          let uniqueSku = doc.sku;
+          let counter = 1;
+          while (seenSkus.has(uniqueSku)) {
+            uniqueSku = `${doc.sku}-${counter++}`;
+          }
+          seenSkus.add(uniqueSku);
+          uniqueDocs.push({ ...doc, sku: uniqueSku });
+        }
+        await this.productVariantModel.insertMany(uniqueDocs);
+      }
+    } catch (err) {
+      console.error('Error syncing product variants:', err);
+    }
   }
 
   async addProduct(productReq, user: User): Promise<void> {
@@ -177,6 +296,28 @@ export class ProductsService {
       productReq.mainImage.name = productReq.titleUrl;
     }
 
+    // Extract and detach variants to ensure products collection never stores variants: []
+    const rawVariants =
+      productReq.variants ||
+      productReq.vi?.variants ||
+      productReq.en?.variants ||
+      [];
+    delete productReq.variants;
+    for (const lang of languages) {
+      if (productReq[lang] && productReq[lang].variants) {
+        delete productReq[lang].variants;
+      }
+    }
+
+    // Root level fields sync from vi (or primary language)
+    const primaryLang = productReq.vi || productReq.en || {};
+    if (primaryLang.title && !productReq.title) productReq.title = primaryLang.title;
+    if (primaryLang.regularPrice !== undefined && productReq.regularPrice === undefined) productReq.regularPrice = primaryLang.regularPrice;
+    if (primaryLang.salePrice !== undefined && productReq.salePrice === undefined) productReq.salePrice = primaryLang.salePrice;
+    if (primaryLang.quantity !== undefined && productReq.quantity === undefined) productReq.quantity = primaryLang.quantity;
+    if (primaryLang.visibility !== undefined && productReq.visibility === undefined) productReq.visibility = primaryLang.visibility;
+    if (primaryLang.description && !productReq.description) productReq.description = primaryLang.description;
+
     const newProduct = Object.assign(productReq, {
       _user: user ? user._id : undefined,
       dateAdded: Date.now(),
@@ -187,6 +328,13 @@ export class ProductsService {
       const product = new this.productModel(newProduct);
       await product.save();
       await this.addCategory(product);
+      if (Array.isArray(rawVariants) && rawVariants.length > 0) {
+        await this.syncProductVariants(
+          product._id,
+          product.sku || product.titleUrl,
+          rawVariants,
+        );
+      }
     } catch (err) {
       console.error('Error adding product:', err);
       throw new BadRequestException();
@@ -204,16 +352,54 @@ export class ProductsService {
       query = { id };
     }
 
+    const rawVariants =
+      productReq.variants !== undefined
+        ? productReq.variants
+        : productReq.vi?.variants !== undefined
+        ? productReq.vi.variants
+        : productReq.en?.variants;
+
+    delete productReq.variants;
+    for (const lang of languages) {
+      if (productReq[lang] && productReq[lang].variants) {
+        delete productReq[lang].variants;
+      }
+    }
+
+    // Sync root level fields from primary lang if present
+    const primary = productReq.vi || productReq.en;
+    if (primary) {
+      if (primary.title && !productReq.title) productReq.title = primary.title;
+      if (primary.regularPrice !== undefined && productReq.regularPrice === undefined) productReq.regularPrice = primary.regularPrice;
+      if (primary.salePrice !== undefined && productReq.salePrice === undefined) productReq.salePrice = primary.salePrice;
+      if (primary.quantity !== undefined && productReq.quantity === undefined) productReq.quantity = primary.quantity;
+      if (primary.visibility !== undefined && productReq.visibility === undefined) productReq.visibility = primary.visibility;
+      if (primary.description && !productReq.description) productReq.description = primary.description;
+    }
+
+    // Build atomic $set update so partial language updates don't wipe out other subdocument fields
+    const updateSet: Record<string, any> = {};
+    for (const [key, value] of Object.entries(productReq)) {
+      if (key === '_id' || key === 'id') continue;
+      if (languages.includes(key) && value && typeof value === 'object' && !Array.isArray(value)) {
+        for (const [subKey, subVal] of Object.entries(value)) {
+          updateSet[`${key}.${subKey}`] = subVal;
+        }
+      } else {
+        updateSet[key] = value;
+      }
+    }
+
     let found = await this.productModel.findOneAndUpdate(
       query,
-      productReq,
+      { $set: updateSet },
       { upsert: true, new: true },
     );
 
     if (!found && titleUrl) {
       found = await this.productModel.findOneAndUpdate(
         { titleUrl },
-        productReq,
+        { $set: updateSet },
         { upsert: true, new: true },
       );
     }
@@ -222,6 +408,13 @@ export class ProductsService {
       throw new NotFoundException(`Product with title ${titleUrl || id || _id} not found`);
     } else {
       await this.addCategory(productReq);
+      if (rawVariants !== undefined && Array.isArray(rawVariants)) {
+        await this.syncProductVariants(
+          found._id,
+          found.sku || found.titleUrl,
+          rawVariants,
+        );
+      }
     }
   }
 
@@ -236,6 +429,8 @@ export class ProductsService {
 
     if (!found) {
       throw new NotFoundException(`Product with title ${titleUrl} not found`);
+    } else {
+      await this.productVariantModel.deleteMany({ productId: found._id });
     }
   }
 
@@ -269,6 +464,18 @@ export class ProductsService {
           productReq.mainImage.name = productReq.titleUrl;
         }
 
+        const rawVariants =
+          productReq.variants ||
+          productReq.vi?.variants ||
+          productReq.en?.variants ||
+          [];
+        delete productReq.variants;
+        for (const lang of languages) {
+          if (productReq[lang] && productReq[lang].variants) {
+            delete productReq[lang].variants;
+          }
+        }
+
         const newProduct = Object.assign(productReq, {
           _user: user ? user._id : undefined,
           dateAdded: Date.now(),
@@ -278,6 +485,13 @@ export class ProductsService {
         const product = new this.productModel(newProduct);
         await product.save();
         await this.addCategory(product);
+        if (Array.isArray(rawVariants) && rawVariants.length > 0) {
+          await this.syncProductVariants(
+            product._id,
+            product.sku || product.titleUrl,
+            rawVariants,
+          );
+        }
         results.imported++;
       } catch (err) {
         console.error('Error importing product:', err);

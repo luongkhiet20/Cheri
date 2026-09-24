@@ -1,21 +1,15 @@
-export const languages = ['vi', 'en', 'sk', 'cs'];
+export const languages = ['vi'];
 
 export const currencyLang = {
   default: 'đ',
-  'vi' : 'đ',
-  'en' : 'đ',
-  'sk' : 'đ',
-  'cs' : 'đ'
-}
+  vi: 'đ',
+};
 
 export const countryLang = {
   default: 'vi',
-  'vi' : 'vi',
-  'vn' : 'vi',
-  'en' : 'en',
-  'sk' : 'sk',
-  'cz' : 'cs',
-}
+  vi: 'vi',
+  vn: 'vi',
+};
 
 export const accessTokenKey = 'accessToken';
 

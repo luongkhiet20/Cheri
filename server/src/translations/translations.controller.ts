@@ -1,77 +1,57 @@
-import { firstValueFrom } from 'rxjs';
 import { Controller, Get, Query, UseGuards, Patch, Body } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { AuthGuard } from '@nestjs/passport';
 
 import { Translation } from './translation.model';
 import { RolesGuard } from '../auth/roles.guard';
-import { countryLang, languages } from '../shared/constans';
 
 @Controller('api/translations')
 export class TranslationsController {
   constructor(
     @InjectModel('Translation') private translationModel: Model<Translation>,
-    private httpService: HttpService,
   ) {}
 
   @Get()
-  async getTranslations(@Query('lang') lang: string): Promise<Translation> {
-    if (!lang) {
-      const url = `https://geolocation-db.com/json/${process.env.GEO_LOCATION_API_KEY}`;
-      try {
-        const result = await firstValueFrom(this.httpService.post(url));
-        const country = result.data.country_code
-          ? result.data.country_code.toLowerCase()
-          : '';
-        const langCode = countryLang[country] || country['default'];
-
-        return await this.translationModel.findOne({ lang: langCode });
-      } catch {
-        return await this.translationModel.findOne({ lang: languages[0] });
-      }
+  async getTranslations(@Query('lang') lang?: string): Promise<Translation> {
+    let doc = await this.translationModel.findOne({ lang: 'vi' });
+    if (!doc) {
+      doc = await this.translationModel.create({ lang: 'vi', keys: {} });
     }
-
-    return await this.translationModel.findOne({ lang });
+    return doc;
   }
 
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Get('all')
   async getAllTranslations(): Promise<Translation[]> {
-    return await this.translationModel.find({});
+    return await this.translationModel.find({ lang: 'vi' });
   }
 
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Patch('all')
-  async updateTranslations(@Body() translations): Promise<Translation[]> {
-    const updateTranslations = translations.map(async (translation) => {
-      const langTranslation = await this.translationModel.findOne({
-        lang: translation.lang,
-      });
-      if (!langTranslation) {
-        const newTranslation = await new this.translationModel({
-          lang: translation.lang,
-          keys: translation.keys,
-        });
-        newTranslation.save();
-      }
-      return this.translationModel.updateOne(
-        { lang: translation.lang },
-        { $set: { keys: translation.keys } },
+  async updateTranslations(@Body() translations: any): Promise<any> {
+    const list = Array.isArray(translations) ? translations : [translations];
+    const viItem = list.find((t) => t.lang === 'vi') || list[0];
+    if (viItem) {
+      return this.translationModel.findOneAndUpdate(
+        { lang: 'vi' },
+        { $set: { keys: viItem.keys } },
+        { upsert: true, new: true },
       );
-    });
-    return Promise.all(updateTranslations);
+    }
+    return null;
   }
 
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Patch()
   async updateTranslation(
     @Query('lang') lang: string,
-    @Body() translation,
+    @Body() translation: any,
   ): Promise<Translation> {
-    return await this.translationModel.findOneAndUpdate({ lang }, translation, {
-      new: true,
-    });
+    return await this.translationModel.findOneAndUpdate(
+      { lang: 'vi' },
+      { keys: translation.keys || translation },
+      { upsert: true, new: true },
+    );
   }
 }

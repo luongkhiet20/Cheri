@@ -1,0 +1,9 @@
+<div class="action-buttons" role="group" aria-label="Thao tác">
+  <ng-container *ngFor="let action of actions">
+    <button *ngIf="isVisible(action)" [ngClass]="getButtonClass(action)" [disabled]="action.disabled"
+      (click)="onClick(action)" [id]="'action-' + action.key + '-' + (row?.id || 0)" [attr.aria-label]="action.label"
+      type="button">
+      {{ action.label }}
+    </button>
+  </ng-container>
+</div>

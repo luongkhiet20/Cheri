@@ -1,0 +1,21 @@
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2xl) var(--space-xl);
+  text-align: center;
+  gap: var(--space-md);
+}
+.empty-state__illustration { margin-bottom: var(--space-sm); opacity: 0.7; }
+.empty-state__title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--cheri-text);
+}
+.empty-state__description {
+  font-size: var(--font-size-base);
+  color: var(--cheri-text-secondary);
+  max-width: 360px;
+  line-height: 1.6;
+}

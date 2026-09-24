@@ -1,0 +1,161 @@
+<div class="page-content">
+
+  <!-- Breadcrumbs & Header -->
+  <div class="page-top">
+    <div>
+      <div class="breadcrumbs">
+        <a routerLink="/admin/pages" class="breadcrumb-link">Trang tĩnh</a>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current">{{ page?.title || 'Chi tiết trang' }}</span>
+      </div>
+      <div class="title-with-badge">
+        <h1 class="page-title mb-0">{{ page?.title || 'Chi tiết trang' }}</h1>
+        <span *ngIf="page" class="status-badge" [class.badge-published]="page.isPublished" [class.badge-draft]="!page.isPublished">
+          {{ page.status }}
+        </span>
+      </div>
+      <p class="page-subtitle">Quản lý và kiểm tra nội dung trang tĩnh trong cơ sở dữ liệu MongoDB</p>
+    </div>
+
+    <div class="page-actions" *ngIf="page">
+      <button type="button" class="btn btn-outline" routerLink="/admin/pages" id="btn-back">
+        ← Danh sách
+      </button>
+      <button type="button" class="btn btn-outline" (click)="onToggleStatus()" [disabled]="isToggling" id="btn-toggle-status">
+        <span *ngIf="isToggling" class="spinner-inline"></span>
+        {{ page.isPublished ? 'Chuyển sang Bản nháp' : 'Xuất bản công khai' }}
+      </button>
+      <button type="button" class="btn btn-primary" (click)="onEdit()" id="btn-edit">
+        ✏️ Chỉnh sửa
+      </button>
+      <button type="button" class="btn btn-danger-outline" (click)="openConfirmDelete()" id="btn-delete">
+        🗑️ Xóa
+      </button>
+    </div>
+  </div>
+
+  <!-- Alert Messages -->
+  <div *ngIf="errorMessage" class="alert-box alert-error">
+    <div class="alert-icon">⚠️</div>
+    <div class="alert-content">
+      <strong>Lỗi:</strong> {{ errorMessage }}
+    </div>
+  </div>
+
+  <div *ngIf="successMessage" class="alert-box alert-success">
+    <div class="alert-icon">✓</div>
+    <div class="alert-content">{{ successMessage }}</div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="form-loading-card">
+    <div class="spinner"></div>
+    <p class="loading-title">Đang tải dữ liệu trang từ MongoDB...</p>
+  </div>
+
+  <!-- Detail Content Layout -->
+  <div *ngIf="!isLoading && page" class="page-detail-layout">
+
+    <!-- LEFT COLUMN: Content Preview -->
+    <div class="detail-main-col">
+
+      <div class="form-card">
+        <div class="card-header-flex">
+          <h2 class="card-section-title mb-0">Nội dung trang</h2>
+          <div class="tab-toggle-group">
+            <button
+              type="button"
+              class="btn-tab"
+              [class.active]="activeTab === 'preview'"
+              (click)="activeTab = 'preview'"
+            >
+              👁️ Xem trước
+            </button>
+            <button
+              type="button"
+              class="btn-tab"
+              [class.active]="activeTab === 'html'"
+              (click)="activeTab = 'html'"
+            >
+              &lt;/&gt; Mã nguồn HTML
+            </button>
+          </div>
+        </div>
+
+        <!-- Rendered Preview -->
+        <div *ngIf="activeTab === 'preview'" class="html-preview-body">
+          <div *ngIf="page.contentHTML" [innerHTML]="page.contentHTML"></div>
+          <div *ngIf="!page.contentHTML" class="no-content-notice">
+            Trang này chưa có nội dung bài viết.
+          </div>
+        </div>
+
+        <!-- Raw HTML Source -->
+        <div *ngIf="activeTab === 'html'" class="html-raw-code">
+          <pre><code>{{ page.contentHTML || 'Chưa có nội dung HTML' }}</code></pre>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN: Metadata & Sidebar -->
+    <div class="detail-sidebar-col">
+
+      <!-- Metadata Card -->
+      <div class="form-card">
+        <h2 class="card-section-title">Thông tin hệ thống</h2>
+
+        <div class="meta-item">
+          <span class="meta-label">Đường dẫn truy cập (Slug):</span>
+          <span class="meta-value font-mono text-primary">{{ page.slug }}</span>
+        </div>
+
+        <div class="meta-item">
+          <span class="meta-label">Trạng thái:</span>
+          <span class="meta-value">
+            <span class="status-badge" [class.badge-published]="page.isPublished" [class.badge-draft]="!page.isPublished">
+              {{ page.status }}
+            </span>
+          </span>
+        </div>
+
+        <div class="meta-item">
+          <span class="meta-label">Ngày tạo:</span>
+          <span class="meta-value">{{ page.dateAdded ? (page.dateAdded | date:'dd/MM/yyyy HH:mm') : '—' }}</span>
+        </div>
+
+        <div class="meta-item">
+          <span class="meta-label">Cập nhật lần cuối:</span>
+          <span class="meta-value">{{ page.updatedAt ? (page.updatedAt | date:'dd/MM/yyyy') : '—' }}</span>
+        </div>
+
+        <div class="meta-item">
+          <span class="meta-label">Mã MongoDB (_id):</span>
+          <span class="meta-value font-mono text-muted">{{ page.id }}</span>
+        </div>
+      </div>
+
+      <!-- SEO Meta Card -->
+      <div class="form-card">
+        <h2 class="card-section-title">SEO Meta Description</h2>
+        <p class="meta-desc-text">
+          {{ page.metaDescription || 'Chưa thiết lập mô tả tóm tắt cho trang này.' }}
+        </p>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Delete Confirm Dialog inside Detail page -->
+<app-confirm-dialog
+  [isOpen]="confirmDeleteOpen"
+  title="Xác nhận xóa trang"
+  [message]="'Bạn có chắc chắn muốn xóa trang &quot;' + (page?.title || '') + '&quot; khỏi MongoDB không?'"
+  confirmLabel="Xóa trang"
+  variant="danger"
+  (confirmed)="onConfirmDelete()"
+  (cancelled)="onCancelDelete()"
+></app-confirm-dialog>

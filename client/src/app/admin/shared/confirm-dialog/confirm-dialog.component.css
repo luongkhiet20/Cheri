@@ -1,0 +1,56 @@
+.dialog-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 500;
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--space-md);
+  animation: overlayFadeIn 0.15s ease;
+}
+@keyframes overlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.dialog-panel {
+  background: var(--cheri-white);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  width: 100%; max-width: 440px;
+  animation: panelSlideIn 0.2s ease;
+}
+@keyframes panelSlideIn {
+  from { opacity: 0; transform: translateY(-12px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.dialog-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--space-lg);
+  border-bottom: 1px solid var(--cheri-divider);
+}
+.dialog-title { font-size: var(--font-size-lg); font-weight: 700; color: var(--cheri-text); }
+.dialog-close {
+  background: transparent; border: none; cursor: pointer;
+  font-size: 22px; line-height: 1; color: var(--cheri-text-light);
+  padding: 2px 6px; border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+.dialog-close:hover { color: var(--cheri-text); background: var(--cheri-background); }
+
+.dialog-body { padding: var(--space-lg); }
+.dialog-message { font-size: var(--font-size-base); color: var(--cheri-text-secondary); line-height: 1.6; }
+
+.dialog-footer {
+  display: flex; align-items: center; justify-content: flex-end;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  border-top: 1px solid var(--cheri-divider);
+}
+
+/* Danger variant override */
+.btn-danger-solid {
+  background-color: var(--cheri-danger) !important;
+  border-color: var(--cheri-danger) !important;
+  color: white !important;
+}
+.btn-danger-solid:hover {
+  background-color: #8B1A14 !important;
+  border-color: #8B1A14 !important;
+}

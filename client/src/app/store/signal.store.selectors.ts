@@ -1,4 +1,4 @@
-﻿import { User, Page, Theme, Config, Product, Cart, Category, Order, Pagination, Translations } from '../shared/models';
+import { User, Page, Theme, Config, Product, Cart, Category, Order, Pagination, Translations, ShippingMethod, PaymentMethod } from '../shared/models';
 import { languages, currencyLang } from '../shared/constants';
 import { signal, computed, Injectable } from '@angular/core';
 
@@ -37,6 +37,8 @@ export interface ProductState {
   position: { [component: string]: number };
   loading: boolean;
   error: string;
+  shippingMethods: ShippingMethod[];
+  paymentMethods: PaymentMethod[];
 }
 
 export interface DashboardState {
@@ -46,6 +48,8 @@ export interface DashboardState {
   translations: Array<Translations>;
   allProducts: Array<Product>;
   allCategories: Array<{ category: Category; productsWithCategory: string[] }>;
+  shippingMethods: ShippingMethod[];
+  paymentMethods: PaymentMethod[];
   loading: boolean;
 }
 
@@ -92,6 +96,8 @@ export class SignalStoreSelectors{
     position: null,
     loading: false,
     error: '',
+    shippingMethods: [],
+    paymentMethods: [],
   });
 
   public dashboardState = signal<DashboardState>({
@@ -101,6 +107,8 @@ export class SignalStoreSelectors{
     translations: [],
     allProducts: [],
     allCategories: [],
+    shippingMethods: [],
+    paymentMethods: [],
     loading: false,
   });
 
@@ -130,6 +138,8 @@ public readonly priceFilter = computed(() =>  this.productState().priceFilter);
 public readonly maxPrice = computed(() =>  this.productState().maxPrice);
 public readonly minPrice = computed(() =>  this.productState().minPrice);
 public readonly position = computed(() =>  this.productState().position);
+public readonly shippingMethods = computed(() => this.productState().shippingMethods);
+public readonly paymentMethods = computed(() => this.productState().paymentMethods);
 
 public readonly orders = computed(() =>  this.dashboardState().orders);
 public readonly dashboardOrder = computed(() =>  this.dashboardState().order);

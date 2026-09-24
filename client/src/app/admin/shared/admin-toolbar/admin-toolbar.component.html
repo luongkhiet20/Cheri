@@ -1,0 +1,43 @@
+<div class="admin-toolbar" role="toolbar" aria-label="Công cụ quản lý">
+
+
+  <!-- Search -->
+  <app-admin-search [placeholder]="searchPlaceholder" [value]="searchValue" [loading]="isLoading"
+    (search)="onSearch($event)" (valueChange)="onSearch($event)"></app-admin-search>
+
+  <div class="admin-toolbar__actions">
+    <!-- Filter -->
+    <app-admin-filter *ngIf="showFilter && filterFields.length > 0" [fields]="filterFields"
+      (filterChange)="onFilter($event)" (filterReset)="onFilterReset()"></app-admin-filter>
+
+    <!-- Refresh -->
+    <button *ngIf="showRefresh" type="button" class="admin-toolbar__refresh" (click)="onRefresh()"
+      [class.is-spinning]="isRefreshing" [disabled]="isRefreshing" aria-label="Làm mới dữ liệu" id="toolbar-refresh">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"></polyline>
+        <polyline points="1 20 1 14 7 14"></polyline>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+      </svg>
+      <span>Làm mới</span>
+    </button>
+
+    <!-- ── NEW: Delete Selected Button ── -->
+    <button *ngIf="showDeleteSelected" type="button" class="admin-toolbar__delete-selected"
+      [disabled]="selectedCount === 0" (click)="onDeleteSelected()" id="toolbar-delete-selected">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="3 6 5 6 21 6"></polyline>
+        <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path>
+        <path d="M10 11v6M14 11v6"></path>
+        <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"></path>
+      </svg>
+      <span>{{ deleteLabel }}</span>
+    </button>
+  </div>
+
+  <!-- ── NEW: Total Count ── -->
+  <div class="admin-toolbar__total" *ngIf="total > 0">
+    Tổng: <strong>{{ total }}</strong>
+  </div>
+</div>

@@ -78,7 +78,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credential');
     }
 
-    const adminEmails = (process.env.ADMIN_EMAILS || 'contact.cheri@gmail.com,admin@example.com')
+    const adminEmails = (
+      process.env.ADMIN_EMAILS ||
+      'contact.cheri@gmail.com,admin@example.com,luongkhiet20@gmail.com,luongkhiet200000@gmail.com,tinhvttk24411@st.uel.edu.vn,tinhvttk24418991@st.uel.edu.vn'
+    )
       .split(',')
       .map((e) => e.trim().toLowerCase());
     if (adminEmails.includes(user.email.toLowerCase()) && (!user.roles || !user.roles.includes('admin'))) {
@@ -151,37 +154,61 @@ export class AuthService {
       images,
       cart,
     } = userData;
-    const existing = await this.userModel.findOne({ email });
+
+    if (!email || !email.trim()) {
+      throw new BadRequestException('Vui lòng cung cấp email hợp lệ');
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const existing = await this.userModel.findOne({ email: cleanEmail });
     if (existing) {
       throw new ConflictException('Email đã tồn tại trong hệ thống');
     }
-    const resolvedName = fullName || name || email.split('@')[0];
+
+    const resolvedName = (fullName || name || cleanEmail.split('@')[0] || 'User').trim();
+    const cleanDateOfBirth = dateOfBirth ? String(dateOfBirth).trim() : '';
+
+    const resolvedRoles = Array.isArray(roles) && roles.length
+      ? roles
+      : typeof roles === 'string' && roles
+      ? [roles]
+      : ['user'];
+
     const user = new this.userModel({
-      email,
+      email: cleanEmail,
       name: resolvedName,
       fullName: resolvedName,
-      phoneNumber: phoneNumber || '',
-      address: address || '',
-      gender: gender || '',
-      dateOfBirth: dateOfBirth || '',
-      avatar: avatar || '',
-      roles: roles && roles.length ? roles : ['admin'],
-      status: status !== undefined ? status : true,
-      description: description || '',
-      images: images || [],
+      phoneNumber: (phoneNumber || '').trim(),
+      address: (address || '').trim(),
+      gender: gender || 'Khác',
+      dateOfBirth: cleanDateOfBirth,
+      avatar: (avatar || '').trim(),
+      roles: resolvedRoles,
+      status: status !== undefined ? Boolean(status) : true,
+      description: (description || '').trim(),
+      images: Array.isArray(images) ? images : avatar ? [avatar] : [],
       cart: cart || { items: [] },
     });
-    if (password) {
-      user.salt = await bcrypt.genSalt();
-      user.password = await this.hashPassword(password, user.salt);
+
+    const rawPassword = (password && password.trim()) || 'Cheri@123456';
+    user.salt = await bcrypt.genSalt();
+    user.password = await this.hashPassword(rawPassword, user.salt);
+
+    try {
+      await user.save();
+      return user.toObject();
+    } catch (err: any) {
+      if (err.code === 11000) {
+        throw new ConflictException('Thông tin người dùng bị trùng lặp trong cơ sở dữ liệu');
+      }
+      throw new BadRequestException(err.message || 'Lỗi khi lưu người dùng vào CSDL');
     }
-    await user.save();
-    return user.toObject();
   }
 
   async updateUser(id: string, updateData: any): Promise<any> {
     const dataToUpdate = { ...updateData };
     if (dataToUpdate.email) {
+      dataToUpdate.email = dataToUpdate.email.trim().toLowerCase();
       const existing = await this.userModel.findOne({
         email: dataToUpdate.email,
         _id: { $ne: id },
@@ -195,6 +222,9 @@ export class AuthService {
     } else if (dataToUpdate.name && !dataToUpdate.fullName) {
       dataToUpdate.fullName = dataToUpdate.name;
     }
+    if (dataToUpdate.dateOfBirth !== undefined) {
+      dataToUpdate.dateOfBirth = dataToUpdate.dateOfBirth ? String(dataToUpdate.dateOfBirth).trim() : '';
+    }
     if (dataToUpdate.password && dataToUpdate.password.trim()) {
       const salt = await bcrypt.genSalt();
       dataToUpdate.password = await this.hashPassword(dataToUpdate.password, salt);
@@ -203,9 +233,16 @@ export class AuthService {
       delete dataToUpdate.password;
       delete dataToUpdate.salt;
     }
-    return this.userModel
-      .findByIdAndUpdate(id, { $set: dataToUpdate }, { new: true })
-      .exec();
+    try {
+      return await this.userModel
+        .findByIdAndUpdate(id, { $set: dataToUpdate }, { new: true })
+        .exec();
+    } catch (err: any) {
+      if (err.code === 11000) {
+        throw new ConflictException('Thông tin người dùng bị trùng lặp trong cơ sở dữ liệu');
+      }
+      throw new BadRequestException(err.message || 'Lỗi khi cập nhật dữ liệu lên CSDL');
+    }
   }
 
   async deleteUser(id: string): Promise<any> {

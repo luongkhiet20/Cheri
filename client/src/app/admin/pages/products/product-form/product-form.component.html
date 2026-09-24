@@ -1,0 +1,774 @@
+<div class="page-content">
+
+  <!-- Breadcrumbs & Header -->
+  <div class="page-top">
+    <div>
+      <div class="breadcrumbs">
+        <a routerLink="/admin/products" class="breadcrumb-link">Sản phẩm</a>
+        <span class="breadcrumb-sep">/</span>
+        <a *ngIf="isEditMode && productId" [routerLink]="['/admin/products', productId]" class="breadcrumb-link">{{ product?.vi?.title || 'Chi tiết' }}</a>
+        <span *ngIf="isEditMode && productId" class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current">{{ isEditMode ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới' }}</span>
+      </div>
+      <h1 class="page-title">{{ isEditMode ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới' }}</h1>
+      <p class="page-subtitle">Dữ liệu được lưu trực tiếp vào collection <code>products</code> trong MongoDB Atlas</p>
+    </div>
+
+    <div class="page-actions">
+      <button type="button" class="btn btn-outline" (click)="onCancel()" [disabled]="isSubmitting">
+        Hủy
+      </button>
+      <button *ngIf="isEditMode" type="button" class="btn btn-danger-outline" (click)="openConfirmDelete()" [disabled]="isSubmitting">
+        🗑️ Xóa sản phẩm
+      </button>
+      <button type="button" class="btn btn-primary" (click)="onSubmit()" [disabled]="isSubmitting || isLoading">
+        <span *ngIf="isSubmitting" class="spinner-inline"></span>
+        {{ isSubmitting ? 'Đang lưu...' : (isEditMode ? 'Lưu thay đổi' : 'Lưu sản phẩm') }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Alert Messages -->
+  <div *ngIf="errorMessage" class="alert-box alert-error">
+    <div class="alert-icon">⚠️</div>
+    <div class="alert-content">
+      <strong>Lỗi:</strong> {{ errorMessage }}
+    </div>
+  </div>
+
+  <div *ngIf="successMessage" class="alert-box alert-success">
+    <div class="alert-icon">✓</div>
+    <div class="alert-content">{{ successMessage }}</div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="form-loading-card">
+    <div class="spinner"></div>
+    <p class="loading-title">Đang tải dữ liệu sản phẩm từ MongoDB...</p>
+  </div>
+
+  <!-- Form Layout -->
+  <form *ngIf="!isLoading" (ngSubmit)="onSubmit()" class="product-form-layout">
+
+    <!-- LEFT COLUMN -->
+    <div class="form-main-col">
+
+      <!-- 1. Basic Information -->
+      <div class="form-card">
+        <h2 class="card-section-title">Thông tin cơ bản</h2>
+
+        <div class="form-group">
+          <label class="form-label required">Tên sản phẩm (vi.title)</label>
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="product.vi.title"
+            (ngModelChange)="markDirty()"
+            name="title"
+            placeholder="Ví dụ: Đầm hoa cúc trắng cổ vuông dáng xòe"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label required">Mã sản phẩm / SKU (titleUrl)</label>
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="product.titleUrl"
+            (ngModelChange)="markDirty()"
+            name="titleUrl"
+            placeholder="Ví dụ: dam-hoa-cuc-trang-v2501"
+            required
+          />
+          <span class="form-hint">Định danh URL thân thiện và mã SKU gốc của sản phẩm</span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-6">
+            <label class="form-label">Loại sản phẩm (vi.productType)</label>
+            <select
+              class="form-control"
+              [(ngModel)]="product.vi.productType"
+              (ngModelChange)="markDirty()"
+              name="productType"
+            >
+              <option value="clothing">Quần áo (clothing)</option>
+              <option value="accessory">Phụ kiện (accessory)</option>
+              <option value="shoes">Giày dép (shoes)</option>
+              <option value="bag">Túi ví (bag)</option>
+            </select>
+          </div>
+
+          <div class="form-group col-6">
+            <label class="form-label required">Danh mục sản phẩm (vi.categoryLevel1)</label>
+            <select
+              class="form-control"
+              [(ngModel)]="product.vi.categoryLevel1"
+              (ngModelChange)="markDirty()"
+              name="categoryLevel1"
+              required
+            >
+              <option value="">-- Chọn danh mục sản phẩm --</option>
+              <option *ngFor="let cat of categories" [value]="cat.name">{{ cat.name }}</option>
+            </select>
+            <span class="form-hint">Danh mục chung (ví dụ: Quần Áo, Phụ Kiện). Không dùng cho phân loại bán lẻ (như Áo, Quần Jean) hay tags.</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Danh mục phụ / cấp 2 (vi.categoryLevel2)</label>
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="product.vi.categoryLevel2"
+            (ngModelChange)="markDirty()"
+            name="categoryLevel2"
+            placeholder="Ví dụ: Đầm dự tiệc, Áo sơ mi kiểu..."
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Mô tả ngắn (vi.description)</label>
+          <textarea
+            class="form-control"
+            rows="3"
+            [(ngModel)]="product.vi.description"
+            (ngModelChange)="markDirty()"
+            name="description"
+            placeholder="Mô tả tóm tắt sản phẩm..."
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Mô tả đầy đủ (vi.descriptionFull)</label>
+          <textarea
+            class="form-control"
+            rows="5"
+            [(ngModel)]="product.vi.descriptionFull"
+            (ngModelChange)="markDirty()"
+            name="descriptionFull"
+            placeholder="Chất liệu vải, form dáng, bảng size, lưu ý giặt ủi... (Mỗi đoạn 1 dòng)"
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- 2. Image Gallery -->
+      <div class="form-card">
+        <h2 class="card-section-title">Hình ảnh sản phẩm (mainImage & images)</h2>
+
+        <!-- Upload & URL input -->
+        <div class="image-input-box">
+          <div class="form-group">
+            <label class="form-label">Thêm ảnh từ URL</label>
+            <div class="input-btn-group">
+              <input
+                type="text"
+                class="form-control"
+                [(ngModel)]="imageUrlInput"
+                name="imageUrlInput"
+                placeholder="Dán đường dẫn hình ảnh (https://...)"
+                (keyup.enter)="addImageFromUrl()"
+              />
+              <button type="button" class="btn btn-secondary" (click)="addImageFromUrl()">+ Thêm URL</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Hoặc tải file từ máy tính</label>
+            <input type="file" class="form-control file-input" accept="image/*" (change)="onImageFileSelected($event)" />
+          </div>
+        </div>
+
+        <!-- Images Grid -->
+        <div class="images-manager" *ngIf="product.images && product.images.length > 0">
+          <div class="images-grid-title">Bộ sưu tập ảnh ({{ product.images.length }} ảnh):</div>
+          <div class="images-grid">
+            <div
+              class="image-item"
+              *ngFor="let img of product.images; let i = index"
+              [class.is-main]="product.mainImage?.url === img"
+            >
+              <div class="img-wrap">
+                <img [src]="img" alt="Ảnh sản phẩm" />
+              </div>
+              <div class="img-actions">
+                <button
+                  type="button"
+                  class="btn-badge-action"
+                  *ngIf="product.mainImage?.url !== img"
+                  (click)="setAsMainImage(img)"
+                  title="Đặt làm ảnh chính"
+                >
+                  ★ Đặt ảnh chính
+                </button>
+                <span class="badge-main-active" *ngIf="product.mainImage?.url === img">
+                  ✓ Ảnh chính
+                </span>
+                <button type="button" class="btn-remove-photo" (click)="removeImage(i)" title="Xóa ảnh">&times;</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="!product.images || product.images.length === 0" class="no-images-notice">
+          Chưa có hình ảnh nào. Hãy thêm ít nhất 1 ảnh cho sản phẩm.
+        </div>
+      </div>
+
+      <!-- 3. Attributes: Colors & Sizes & Classification -->
+      <div class="form-card">
+        <h2 class="card-section-title">THUỘC TÍNH & PHÂN LOẠI</h2>
+
+        <!-- TOGGLE 1: Sản phẩm có nhiều phân loại -->
+        <div class="attr-toggle-block">
+          <div class="toggle-header-row">
+            <div class="toggle-text-col">
+              <label class="toggle-title-label" for="toggleHasClassification">
+                Sản phẩm có nhiều phân loại
+              </label>
+              <p class="toggle-desc">
+                Cho phép sản phẩm có nhiều loại để bán lẻ, ví dụ Áo, Quần Jean.
+              </p>
+            </div>
+            <label class="switch-toggle" for="toggleHasClassification">
+              <input
+                type="checkbox"
+                id="toggleHasClassification"
+                [(ngModel)]="product.vi.hasClassification"
+                (ngModelChange)="onToggleClassification()"
+                name="hasClassification"
+              />
+              <span class="slider-round"></span>
+            </label>
+          </div>
+
+          <!-- When hasClassification = true -->
+          <div *ngIf="product.vi.hasClassification" class="attr-content-box mt-3">
+            <div class="attr-section-header">
+              <h3 class="attr-sub-title">PHÂN LOẠI SẢN PHẨM</h3>
+              <span class="form-label font-semibold">Chọn các phân loại sản phẩm</span>
+            </div>
+
+            <!-- Quick Suggestion Tags -->
+            <div class="quick-chips-row mb-2">
+              <span class="quick-chip-hint">Gợi ý nhanh:</span>
+              <button
+                type="button"
+                *ngFor="let suggestion of suggestedClassifications"
+                class="btn-quick-chip"
+                (click)="addClassification(suggestion)"
+                [disabled]="isClassificationAdded(suggestion)"
+              >
+                + {{ suggestion }}
+              </button>
+            </div>
+
+            <!-- Tag Input -->
+            <div class="input-btn-group">
+              <input
+                type="text"
+                class="form-control"
+                [(ngModel)]="classificationInput"
+                name="classificationInput"
+                placeholder="Nhập phân loại (ví dụ: Áo, Quần Jean, Váy...) và nhấn Enter"
+                (keyup.enter)="addClassification()"
+              />
+              <button type="button" class="btn btn-secondary" (click)="addClassification()">
+                + Thêm
+              </button>
+            </div>
+
+            <!-- Classification Chips -->
+            <div class="chips-container mt-3" *ngIf="product.vi.classifications && product.vi.classifications.length > 0">
+              <span class="chip-item classification-chip" *ngFor="let cls of product.vi.classifications; let ci = index">
+                🏷️ {{ cls }}
+                <button type="button" class="btn-chip-del" (click)="removeClassification(ci)" title="Xóa">&times;</button>
+              </span>
+            </div>
+
+            <!-- Warning if ON but empty -->
+            <div *ngIf="!product.vi.classifications || product.vi.classifications.length === 0" class="text-hint text-amber">
+              ⚠️ Vui lòng thêm ít nhất 1 phân loại sản phẩm hoặc tắt tùy chọn phân loại.
+            </div>
+          </div>
+        </div>
+
+        <!-- TOGGLE 2: Sản phẩm có nhiều màu sắc -->
+        <div class="attr-toggle-block mt-4">
+          <div class="toggle-header-row">
+            <div class="toggle-text-col">
+              <label class="toggle-title-label" for="toggleHasColors">
+                Sản phẩm có nhiều màu sắc
+              </label>
+              <p class="toggle-desc">
+                Cho phép sản phẩm có nhiều màu sắc.
+              </p>
+            </div>
+            <label class="switch-toggle" for="toggleHasColors">
+              <input
+                type="checkbox"
+                id="toggleHasColors"
+                [(ngModel)]="product.vi.hasColors"
+                (ngModelChange)="onToggleColors()"
+                name="hasColors"
+              />
+              <span class="slider-round"></span>
+            </label>
+          </div>
+
+          <!-- When hasColors = true -->
+          <div *ngIf="product.vi.hasColors" class="attr-content-box mt-3">
+            <h3 class="attr-sub-title">MÀU SẮC</h3>
+
+            <!-- Color picker & Input -->
+            <div class="color-picker-row">
+              <input
+                type="color"
+                class="color-picker-input"
+                [(ngModel)]="newColorHex"
+                name="newColorHex"
+                title="Chọn mã màu"
+              />
+              <input
+                type="text"
+                class="form-control color-name-input"
+                [(ngModel)]="newColorName"
+                name="newColorName"
+                placeholder="Tên màu (Ví dụ: Đen, Trắng, Đỏ Ruby...)"
+                (keyup.enter)="addColor()"
+              />
+              <button type="button" class="btn btn-secondary" (click)="addColor()">+ Thêm màu</button>
+            </div>
+
+            <!-- Quick color suggestions -->
+            <div class="quick-chips-row mt-2">
+              <span class="quick-chip-hint">Gợi ý màu:</span>
+              <button
+                type="button"
+                *ngFor="let col of suggestedColors"
+                class="btn-quick-chip"
+                (click)="addSuggestedColor(col.name, col.hex)"
+                [disabled]="isColorAdded(col.name)"
+              >
+                <span class="color-dot-sm" [style.backgroundColor]="col.hex"></span>
+                + {{ col.name }}
+              </button>
+            </div>
+
+            <!-- List of colors -->
+            <div class="chips-container mt-3" *ngIf="product.vi.colors && product.vi.colors.length > 0">
+              <span class="chip-item color-chip" *ngFor="let col of product.vi.colors; let ci = index">
+                <span class="color-preview" [style.backgroundColor]="col.hex"></span>
+                <span class="color-name-txt">{{ col.name }}</span>
+                <span class="color-hex-txt font-mono">({{ col.hex }})</span>
+                <button type="button" class="btn-chip-del" (click)="removeColor(ci)" title="Xóa">&times;</button>
+              </span>
+            </div>
+
+            <!-- Warning if ON but empty -->
+            <div *ngIf="!product.vi.colors || product.vi.colors.length === 0" class="text-hint text-amber">
+              ⚠️ Vui lòng thêm ít nhất 1 màu sắc hoặc tắt tùy chọn màu sắc.
+            </div>
+          </div>
+        </div>
+
+        <!-- TOGGLE 3: Sản phẩm có nhiều kích cỡ -->
+        <div class="attr-toggle-block mt-4">
+          <div class="toggle-header-row">
+            <div class="toggle-text-col">
+              <label class="toggle-title-label" for="toggleHasSizes">
+                Sản phẩm có nhiều kích cỡ
+              </label>
+              <p class="toggle-desc">
+                Cho phép sản phẩm có nhiều kích cỡ.
+              </p>
+            </div>
+            <label class="switch-toggle" for="toggleHasSizes">
+              <input
+                type="checkbox"
+                id="toggleHasSizes"
+                [(ngModel)]="product.vi.hasSizes"
+                (ngModelChange)="onToggleSizes()"
+                name="hasSizes"
+              />
+              <span class="slider-round"></span>
+            </label>
+          </div>
+
+          <!-- When hasSizes = true -->
+          <div *ngIf="product.vi.hasSizes" class="attr-content-box mt-3">
+            <h3 class="attr-sub-title">KÍCH CỠ</h3>
+
+            <!-- Standard Sizes Bar -->
+            <div class="standard-sizes-bar">
+              <span class="bar-title">Chọn nhanh:</span>
+              <button
+                type="button"
+                *ngFor="let sz of standardSizes"
+                class="btn-size-toggle"
+                [class.selected]="isStandardSizeSelected(sz)"
+                (click)="toggleStandardSize(sz)"
+              >
+                {{ sz }}
+              </button>
+            </div>
+
+            <!-- Custom Size Input -->
+            <div class="input-btn-group mt-2">
+              <input
+                type="text"
+                class="form-control"
+                [(ngModel)]="newCustomSize"
+                name="newCustomSize"
+                placeholder="Nhập kích cỡ tùy chỉnh khác..."
+                (keyup.enter)="addCustomSize()"
+              />
+              <button type="button" class="btn btn-secondary" (click)="addCustomSize()">Thêm size</button>
+            </div>
+
+            <!-- Selected Sizes Chips -->
+            <div class="chips-container mt-3" *ngIf="product.vi.sizes && product.vi.sizes.length > 0">
+              <span class="chip-item size-chip" *ngFor="let s of product.vi.sizes">
+                {{ s }}
+                <button type="button" class="btn-chip-del" (click)="removeSize(s)" title="Xóa">&times;</button>
+              </span>
+            </div>
+
+            <!-- Warning if ON but empty -->
+            <div *ngIf="!product.vi.sizes || product.vi.sizes.length === 0" class="text-hint text-amber">
+              ⚠️ Vui lòng chọn ít nhất 1 kích cỡ hoặc tắt tùy chọn kích cỡ.
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 4. VARIANTS COMBINATION TABLE (CARTESIAN PRODUCT) -->
+      <div class="form-card" *ngIf="product.variants && product.variants.length > 0">
+        <div class="card-header-flex">
+          <div>
+            <h2 class="card-section-title mb-0">QUẢN LÝ BIẾN THỂ SẢN PHẨM</h2>
+            <p class="section-desc">Được tạo tự động từ tổ hợp các thuộc tính đã chọn.</p>
+          </div>
+          <div class="badge-total-variants">
+            Tổng: <strong>{{ product.variants.length }}</strong> biến thể
+          </div>
+        </div>
+
+        <!-- Quick Batch Apply -->
+        <div class="batch-apply-toolbar">
+          <div class="batch-group">
+            <span class="batch-label">Áp dụng giá nhanh:</span>
+            <input type="number" class="form-control batch-input" [(ngModel)]="quickPrice" name="quickPrice" placeholder="Giá..." min="0" />
+            <button type="button" class="btn btn-sm btn-outline" (click)="applyQuickPrice()">Áp dụng</button>
+          </div>
+
+          <div class="batch-group">
+            <span class="batch-label">Áp dụng giá KM:</span>
+            <input type="number" class="form-control batch-input" [(ngModel)]="discountBatch" name="discountBatch" placeholder="Giá KM..." min="0" />
+            <button type="button" class="btn btn-sm btn-outline" (click)="applyDiscountBatch()">Áp dụng</button>
+          </div>
+
+          <div class="batch-group">
+            <span class="batch-label">Áp dụng tồn kho:</span>
+            <input type="number" class="form-control batch-input" [(ngModel)]="quickStock" name="quickStock" placeholder="Tồn..." min="0" />
+            <button type="button" class="btn btn-sm btn-outline" (click)="applyQuickStock()">Áp dụng</button>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-responsive mt-3">
+          <table class="variants-form-table">
+            <thead>
+              <tr>
+                <th style="width: 40px;" class="text-center">#</th>
+                <th *ngIf="product.vi.hasClassification">Phân loại</th>
+                <th *ngIf="product.vi.hasColors">Màu sắc</th>
+                <th *ngIf="product.vi.hasSizes">Kích cỡ</th>
+                <th style="width: 200px;">SKU</th>
+                <th style="width: 140px;">Giá bán (₫)</th>
+                <th style="width: 140px;">Giá KM (₫)</th>
+                <th style="width: 100px;">Tồn kho</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let v of product.variants; let vi = index">
+                <td class="text-center text-muted font-mono">{{ vi + 1 }}</td>
+                <td *ngIf="product.vi.hasClassification">
+                  <span class="v-tag class-v-tag">{{ v.classification || '—' }}</span>
+                </td>
+                <td *ngIf="product.vi.hasColors">
+                  <span class="v-tag color-v-tag">{{ v.color || '—' }}</span>
+                </td>
+                <td *ngIf="product.vi.hasSizes">
+                  <span class="v-tag size-v-tag">{{ v.size || '—' }}</span>
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    class="form-control input-sm font-mono"
+                    [(ngModel)]="v.sku"
+                    (ngModelChange)="markDirty()"
+                    [name]="'sku_' + vi"
+                    placeholder="Mã SKU"
+                    required
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    class="form-control input-sm text-right"
+                    [(ngModel)]="v.price"
+                    (ngModelChange)="markDirty()"
+                    [name]="'price_' + vi"
+                    min="0"
+                    placeholder="0"
+                    required
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    class="form-control input-sm text-right"
+                    [(ngModel)]="v.discountPrice"
+                    (ngModelChange)="markDirty()"
+                    [name]="'discount_' + vi"
+                    min="0"
+                    placeholder="0"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    class="form-control input-sm text-right"
+                    [(ngModel)]="v.stock"
+                    (ngModelChange)="markDirty(); onVariantStockChange()"
+                    [name]="'stock_' + vi"
+                    min="0"
+                    placeholder="0"
+                    required
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="form-sidebar-col">
+
+      <!-- Status & Publishing -->
+      <div class="form-card">
+        <h2 class="card-section-title">Trạng thái phát hành</h2>
+
+        <div class="form-group">
+          <label class="form-label">Hiển thị trên hệ thống (visibility)</label>
+          <select
+            class="form-control"
+            [(ngModel)]="product.visibility"
+            (ngModelChange)="markDirty()"
+            name="visibility"
+          >
+            <option [ngValue]="true">Đang bán (Hiển thị)</option>
+            <option [ngValue]="false">Tạm ẩn (Bản nháp)</option>
+          </select>
+        </div>
+
+        <div class="status-summary-box" [class.active]="product.visibility">
+          <div class="dot"></div>
+          <span>{{ product.visibility ? 'Sản phẩm sẽ hiển thị công khai trên Store' : 'Sản phẩm tạm thời được ẩn' }}</span>
+        </div>
+      </div>
+
+      <!-- Variant Stock Summary (When Variants Exist) -->
+      <div class="form-card variant-stock-summary-card" *ngIf="product.variants && product.variants.length > 0">
+        <h2 class="card-section-title">
+          <span>Tổng quan biến thể</span>
+          <span class="badge badge-primary">{{ product.variants.length }} biến thể</span>
+        </h2>
+        <p class="card-desc-hint">Sản phẩm có biến thể: Giá bán và Tồn kho được quản lý chi tiết tại từng biến thể. Tổng tồn kho sản phẩm được tự động tổng hợp.</p>
+
+        <div class="stock-summary-stat">
+          <div class="stat-label">Tổng tồn kho tự động (Product.quantity)</div>
+          <div class="stat-value">{{ totalVariantStock }} <span class="unit">sản phẩm</span></div>
+        </div>
+
+        <div class="stock-summary-info">
+          <div class="info-row">
+            <span class="label">Tình trạng kho:</span>
+            <span class="val badge" [ngClass]="totalVariantStock > 0 ? 'badge-success' : 'badge-danger'">
+              {{ totalVariantStock > 0 ? 'Còn hàng (onStock)' : 'Hết hàng (outOfStock)' }}
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="label">Phân loại hàng:</span>
+            <span class="val font-medium">{{ product.attributes?.classifications?.length || 0 }} loại</span>
+          </div>
+          <div class="info-row">
+            <span class="label">Màu sắc:</span>
+            <span class="val font-medium">{{ product.attributes?.colors?.length || 0 }} màu</span>
+          </div>
+          <div class="info-row">
+            <span class="label">Kích cỡ:</span>
+            <span class="val font-medium">{{ product.attributes?.sizes?.length || 0 }} size</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Price & Stock (Only When No Variants) -->
+      <div class="form-card" *ngIf="!product.variants || product.variants.length === 0">
+        <h2 class="card-section-title">Giá & Tồn kho chung</h2>
+        <p class="card-desc-hint">Sản phẩm không có biến thể. Quản lý giá bán và tồn kho trực tiếp tại đây.</p>
+
+        <div class="form-group">
+          <label class="form-label required">Giá niêm yết (vi.regularPrice)</label>
+          <div class="input-addon-wrapper">
+            <input
+              type="number"
+              class="form-control"
+              [(ngModel)]="product.vi.regularPrice"
+              (ngModelChange)="markDirty()"
+              name="regularPrice"
+              min="0"
+              required
+            />
+            <span class="addon">₫</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Giá khuyến mãi (vi.salePrice)</label>
+          <div class="input-addon-wrapper">
+            <input
+              type="number"
+              class="form-control"
+              [(ngModel)]="product.vi.salePrice"
+              (ngModelChange)="markDirty()"
+              name="salePrice"
+              min="0"
+            />
+            <span class="addon">₫</span>
+          </div>
+        </div>
+
+        <div class="checkbox-row mb-3">
+          <label class="checkbox-label">
+            <input
+              type="checkbox"
+              [(ngModel)]="product.vi.onSale"
+              (ngModelChange)="markDirty()"
+              name="onSale"
+            />
+            <span>Đang giảm giá (vi.onSale)</span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label required">Số lượng kho (vi.quantity)</label>
+          <input
+            type="number"
+            class="form-control"
+            [(ngModel)]="product.vi.quantity"
+            (ngModelChange)="markDirty()"
+            name="quantity"
+            min="0"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Tình trạng kho (vi.stock)</label>
+          <select
+            class="form-control"
+            [(ngModel)]="product.vi.stock"
+            (ngModelChange)="markDirty()"
+            name="stock"
+          >
+            <option value="onStock">Còn hàng (onStock)</option>
+            <option value="outOfStock">Hết hàng (outOfStock)</option>
+            <option value="preOrder">Đặt trước (preOrder)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Tags -->
+      <div class="form-card">
+        <h2 class="card-section-title">TAGS (THẺ TÌM KIẾM)</h2>
+        <span class="form-hint mb-2">Thẻ nhãn sản phẩm dùng tìm kiếm và phân loại nhanh, lưu trong <code>tags[]</code> (Không đưa tags vào danh mục cấp 1).</span>
+
+        <!-- Quick Suggested Tags -->
+        <div class="quick-chips-row mb-2">
+          <span class="quick-chip-hint">Gợi ý tag:</span>
+          <button
+            type="button"
+            *ngFor="let stag of suggestedTags"
+            class="btn-quick-chip"
+            (click)="addTag(stag)"
+            [disabled]="isTagAdded(stag)"
+          >
+            + {{ stag }}
+          </button>
+        </div>
+
+        <div class="input-btn-group mb-2">
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="tagInput"
+            name="tagInput"
+            placeholder="Nhập tag và nhấn Enter..."
+            (keyup.enter)="addTag()"
+          />
+          <button type="button" class="btn btn-secondary" (click)="addTag()">Thêm</button>
+        </div>
+
+        <div class="tags-container" *ngIf="product.tags && product.tags.length > 0">
+          <span class="tag-pill" *ngFor="let t of product.tags">
+            #{{ t }}
+            <button type="button" class="btn-tag-remove" (click)="removeTag(t)" title="Xóa">&times;</button>
+          </span>
+        </div>
+      </div>
+
+      <!-- Save Actions Box -->
+      <div class="form-card action-bottom-card">
+        <button
+          type="button"
+          class="btn btn-primary btn-block mb-2"
+          (click)="onSubmit()"
+          [disabled]="isSubmitting"
+        >
+          <span *ngIf="isSubmitting" class="spinner-inline"></span>
+          {{ isSubmitting ? 'Đang lưu...' : (isEditMode ? 'Lưu thay đổi' : 'Lưu sản phẩm') }}
+        </button>
+
+        <button
+          type="button"
+          class="btn btn-outline btn-block"
+          (click)="onCancel()"
+          [disabled]="isSubmitting"
+        >
+          Hủy bỏ
+        </button>
+      </div>
+
+    </div>
+
+  </form>
+
+</div>
+
+<!-- Delete Confirm Dialog inside Edit page -->
+<app-confirm-dialog
+  [isOpen]="confirmDeleteOpen"
+  title="Xác nhận xóa sản phẩm"
+  [message]="'Bạn có chắc chắn muốn xóa sản phẩm này khỏi MongoDB không?'"
+  confirmLabel="Xóa sản phẩm"
+  variant="danger"
+  (confirmed)="onConfirmDelete()"
+  (cancelled)="onCancelDelete()"
+></app-confirm-dialog>

@@ -100,15 +100,18 @@ export class AppComponent {
       })
      );
 
-    // Ẩn header/footer trên trang admin dashboard
+    // Ẩn header/footer trên trang admin
+    const checkIsAdmin = (url: string): boolean => {
+      return url.includes('/admin') || url.includes('/dashboard') || url.includes('/product-management');
+    };
     const initialUrl = this.router.url || '';
-    this.isDashboard = initialUrl.includes('/dashboard') || initialUrl.includes('/product-management');
+    this.isDashboard = checkIsAdmin(initialUrl);
 
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
     ).subscribe((event: NavigationEnd) => {
       const currentUrl = event.urlAfterRedirects || event.url || '';
-      this.isDashboard = currentUrl.includes('/dashboard') || currentUrl.includes('/product-management');
+      this.isDashboard = checkIsAdmin(currentUrl);
     });
   }
 

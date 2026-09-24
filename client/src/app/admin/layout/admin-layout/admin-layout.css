@@ -1,0 +1,41 @@
+/* =============================================
+   ADMIN SHELL LAYOUT
+   ============================================= */
+
+.admin-shell {
+  display: flex;
+  min-height: 100vh;
+  background-color: #F7F7F8;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.admin-main {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  margin-top: var(--header-height);
+  margin-left: var(--sidebar-width);
+  min-height: calc(100vh - var(--header-height));
+  padding: 24px;
+  box-sizing: border-box;
+  transition: margin-left var(--transition-base);
+}
+
+/* ----- Tablet ----- */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .admin-main {
+    margin-left: 200px;
+    padding: var(--space-lg);
+  }
+}
+
+/* ----- Mobile ----- */
+@media (max-width: 768px) {
+  .admin-main {
+    margin-left: 0;
+    padding: var(--space-md);
+  }
+}

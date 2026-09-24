@@ -1,0 +1,101 @@
+.admin-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  padding: var(--space-md) var(--space-lg);
+  background: var(--cheri-white);
+  border: 1px solid var(--cheri-border);
+  border-radius: var(--radius-xl);
+}
+
+.admin-toolbar__actions {
+  display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap;
+}
+
+/* ----- Refresh Button (existing) ----- */
+.admin-toolbar__refresh {
+  display: flex; align-items: center; gap: 6px;
+  height: 38px; padding: 0 14px;
+  background: var(--cheri-white); border: 1px solid var(--cheri-border);
+  border-radius: var(--radius-md); cursor: pointer;
+  font-family: var(--font-sans); font-size: var(--font-size-base);
+  color: var(--cheri-text);
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+  white-space: nowrap;
+}
+.admin-toolbar__refresh:hover:not(:disabled) {
+  background: var(--cheri-background);
+  border-color: var(--cheri-text-secondary);
+}
+.admin-toolbar__refresh:disabled { opacity: 0.5; cursor: not-allowed; }
+.admin-toolbar__refresh svg { transition: transform var(--transition-slow); }
+.admin-toolbar__refresh.is-spinning svg { animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ----- NEW: Select-All Checkbox Area ----- */
+.admin-toolbar__select {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.toolbar-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--cheri-primary);
+  display: block;
+  flex-shrink: 0;
+}
+
+/* ----- NEW: Delete Selected Button ----- */
+.admin-toolbar__delete-selected {
+  display: flex; align-items: center; gap: 6px;
+  height: 38px; padding: 0 14px;
+  background: var(--cheri-white);
+  border: 1px solid var(--cheri-danger);
+  border-radius: var(--radius-md);
+  color: var(--cheri-danger);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+.admin-toolbar__delete-selected:hover:not(:disabled) {
+  background: var(--cheri-danger-light);
+}
+.admin-toolbar__delete-selected:active:not(:disabled) {
+  background: #fee2e2;
+  transform: translateY(1px);
+}
+.admin-toolbar__delete-selected:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-color: var(--cheri-border);
+  color: var(--cheri-text-light);
+}
+
+/* ----- NEW: Total Count ----- */
+.admin-toolbar__total {
+  margin-left: auto;
+  font-size: var(--font-size-sm);
+  color: var(--cheri-text-secondary);
+  white-space: nowrap;
+  padding: 0 var(--space-xs);
+  flex-shrink: 0;
+}
+.admin-toolbar__total strong {
+  color: var(--cheri-text);
+  font-weight: 600;
+  font-size: var(--font-size-base);
+}
+
+/* ----- Responsive ----- */
+@media (max-width: 768px) {
+  .admin-toolbar { flex-direction: column; align-items: flex-start; }
+  .admin-toolbar__actions { width: 100%; }
+  .admin-toolbar__total { margin-left: 0; }
+}

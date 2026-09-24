@@ -1,3 +1,6 @@
+@import '../app/admin/styles.css';
+@import '../app/admin/shared/styles/admin-shared.css';
+
 :root {
   --font-sans: "SF Compact Text", "SF Compact Display", "SF Compact", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-serif: "SF Compact Text", "SF Compact Display", "SF Compact", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -2718,3 +2721,5 @@ a:hover {
 .mdc-text-field--filled:not(.mdc-text-field--disabled) {
   background-color: transparent !important;
 }
+
+

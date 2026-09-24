@@ -1,0 +1,90 @@
+/* =============================================
+   ADMIN SHARED — PAGE LAYOUT & PLACEHOLDERS
+   ============================================= */
+
+/* ----- Page Content Wrapper ----- */
+.page-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  max-width: 1400px;
+}
+
+/* ----- Page Top (Title + Actions) ----- */
+.page-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.page-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+/* ----- Placeholder Sections ----- */
+.placeholder-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-lg);
+}
+
+.placeholder-box {
+  background-color: var(--cheri-surface);
+  border: 1.5px dashed var(--cheri-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-xl) var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  transition: border-color var(--transition-fast);
+}
+
+.placeholder-box:hover {
+  border-color: var(--cheri-text-light);
+}
+
+.placeholder-box--wide {
+  grid-column: 1 / -1;
+  min-height: 280px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.placeholder-box__label {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--cheri-text);
+}
+
+.placeholder-box__desc {
+  font-size: var(--font-size-base);
+  color: var(--cheri-text-light);
+  line-height: 1.6;
+}
+
+/* ----- Responsive ----- */
+@media (max-width: 768px) {
+  .page-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .page-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .placeholder-section {
+    grid-template-columns: 1fr;
+  }
+
+  .placeholder-box--wide {
+    min-height: 200px;
+  }
+}

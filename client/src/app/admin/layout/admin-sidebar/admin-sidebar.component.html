@@ -1,0 +1,21 @@
+<nav class="admin-sidebar" [class.is-open]="isMobileOpen" role="navigation" aria-label="Admin navigation">
+  <!-- Mobile overlay -->
+  <div class="admin-sidebar__overlay" *ngIf="isMobileOpen" (click)="closeMobile()" aria-hidden="true"></div>
+
+  <div class="admin-sidebar__inner">
+    <ul class="admin-sidebar__nav" role="list">
+      <li class="admin-sidebar__item" *ngFor="let item of navItems">
+        <a
+          [routerLink]="item.route"
+          routerLinkActive="is-active"
+          [routerLinkActiveOptions]="item.exact ? { exact: true } : { exact: false }"
+          class="admin-sidebar__link"
+          [attr.aria-current]="isActive(item.route) ? 'page' : null"
+          (click)="closeMobile()"
+        >
+          <span class="admin-sidebar__link-text">{{ item.label }}</span>
+        </a>
+      </li>
+    </ul>
+  </div>
+</nav>

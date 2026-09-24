@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 
-import { RolesGuard } from './roles.guard';
+import { RolesGuard, AdminJwtAuthGuard } from './roles.guard';
 import { AuthCredentialDto } from './dto/auth-credential.dto';
 import { AuthService } from './auth.service';
 import { User } from './models/user.model';
@@ -24,25 +24,25 @@ import { GoogleUserDto } from './dto/google-user.dto';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
   @Get('/users')
   async getAllUsers() {
     return this.authService.getAllUsers();
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
   @Post('/users')
   async createUser(@Body() body: any) {
     return this.authService.createUser(body);
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
   @Put('/users/:id')
   async updateUser(@Param('id') id: string, @Body() body: any) {
     return this.authService.updateUser(id, body);
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
   @Delete('/users/:id')
   async deleteUser(@Param('id') id: string) {
     return this.authService.deleteUser(id);
@@ -55,7 +55,10 @@ export class AuthController {
     email: string;
     roles: string[];
   } {
-    const adminEmails = (process.env.ADMIN_EMAILS || 'contact.cheri@gmail.com,admin@example.com')
+    const adminEmails = (
+      process.env.ADMIN_EMAILS ||
+      'contact.cheri@gmail.com,admin@example.com,luongkhiet20@gmail.com,luongkhiet200000@gmail.com,tinhvttk24411@st.uel.edu.vn,tinhvttk24418991@st.uel.edu.vn'
+    )
       .split(',')
       .map((e) => e.trim().toLowerCase());
     const roles = Array.isArray(user.roles) ? [...user.roles] : [];

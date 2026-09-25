@@ -1,7 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
-import { ApiService } from '../../../services/api.service';
+import { AdminService } from '../../services/admin.service';
 
 @Component({
   selector: 'app-payment-methods',
@@ -66,10 +66,10 @@ export class PaymentMethodsComponent implements OnInit {
   get displayTotal(): number { return this.pagination?.total ?? this.data.length; }
 
   constructor(
-    private apiService: ApiService,
+    private apiService: AdminService,
     private router: Router,
     private cdr: ChangeDetectorRef
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.loadPaymentMethods();
@@ -150,6 +150,7 @@ export class PaymentMethodsComponent implements OnInit {
       this.confirmLabel = 'Tắt phương thức';
       this.confirmVariant = 'warning';
       this.confirmOpen = true;
+      this.cdr.markForCheck();
     } else if (e.action === 'toggle-on') {
       this.pendingItemId = itemId;
       this.pendingTargetActive = true;
@@ -159,6 +160,7 @@ export class PaymentMethodsComponent implements OnInit {
       this.confirmLabel = 'Bật phương thức';
       this.confirmVariant = 'default';
       this.confirmOpen = true;
+      this.cdr.markForCheck();
     } else if (e.action === 'delete') {
       this.pendingItemId = itemId;
       this.confirmActionType = 'delete';
@@ -167,12 +169,14 @@ export class PaymentMethodsComponent implements OnInit {
       this.confirmLabel = 'Xóa';
       this.confirmVariant = 'danger';
       this.confirmOpen = true;
+      this.cdr.markForCheck();
     }
   }
 
   onConfirmDialog(): void {
     if (!this.pendingItemId) {
       this.confirmOpen = false;
+      this.cdr.markForCheck();
       return;
     }
 
@@ -181,6 +185,7 @@ export class PaymentMethodsComponent implements OnInit {
       const targetActive = this.pendingTargetActive;
       this.confirmOpen = false;
       this.pendingItemId = null;
+      this.cdr.markForCheck();
 
       this.apiService.updatePaymentMethodStatus(targetId, targetActive).subscribe({
         next: (res) => {
@@ -191,12 +196,14 @@ export class PaymentMethodsComponent implements OnInit {
         error: (err) => {
           this.errorMessage = err.error?.message || 'Lỗi khi cập nhật trạng thái';
           console.error(err);
+          this.cdr.markForCheck();
         }
       });
     } else if (this.confirmActionType === 'delete') {
       const targetId = this.pendingItemId;
       this.confirmOpen = false;
       this.pendingItemId = null;
+      this.cdr.markForCheck();
 
       this.apiService.deletePaymentMethod(targetId).subscribe({
         next: (res) => {
@@ -207,6 +214,7 @@ export class PaymentMethodsComponent implements OnInit {
         error: (err) => {
           this.errorMessage = err.error?.message || 'Lỗi khi xóa phương thức thanh toán';
           console.error(err);
+          this.cdr.markForCheck();
         }
       });
     }
@@ -216,6 +224,7 @@ export class PaymentMethodsComponent implements OnInit {
     this.confirmOpen = false;
     this.pendingItemId = null;
     this.confirmActionType = null;
+    this.cdr.markForCheck();
   }
 
   onSearch(v: string): void {

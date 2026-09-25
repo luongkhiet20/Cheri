@@ -1,21 +1,20 @@
-﻿import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable } from 'rxjs';
 import { Injectable, Injector } from '@angular/core';
 import { CookieService } from 'ngx-cookie-service';
 
 import { ApiService } from './api.service';
-import { languages } from '../shared/constants';
-import { Translations } from '../shared/models';
+import { languages } from '../user/shared/constants';
+import { Translations } from '../user/shared/models';
 import { take } from 'rxjs/operators';
-
 
 @Injectable({
   providedIn: 'root'
 })
 export class TranslateService {
 
-  translationsSub$  : BehaviorSubject<{[key: string]: string}> = new BehaviorSubject({});
-  languageSub$      = new BehaviorSubject('');
-  lang: string;
+  translationsSub$: BehaviorSubject<{ [key: string]: string }> = new BehaviorSubject({});
+  languageSub$ = new BehaviorSubject(languages[0] || 'vi');
+  lang: string = languages[0] || 'vi';
 
   constructor(private injector: Injector) {}
 
@@ -31,7 +30,7 @@ export class TranslateService {
     return this.languageSub$.asObservable();
   }
 
-  getTranslations$(): Observable<{[key: string]: string}> {
+  getTranslations$(): Observable<{ [key: string]: string }> {
     return this.translationsSub$.asObservable();
   }
 

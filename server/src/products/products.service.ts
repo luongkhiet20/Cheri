@@ -32,7 +32,7 @@ export class ProductsService {
     getProductsDto: GetProductsDto,
     lang: string,
   ): Promise<ProductsWithPagination> {
-    const { page, sort, category, search, maxPrice, minPrice, stock, rating } = getProductsDto;
+    const { page, sort, category, search, maxPrice, minPrice, stock, rating, pageSize } = getProductsDto;
     const searchQuery = search ? { titleUrl: new RegExp(search, 'i') } : {};
     // Category filter: single or multiple (comma-separated or array)
     let categoryQuery: any = {};
@@ -86,6 +86,7 @@ export class ProductsService {
     }
 
     const visibilityQuery = {
+      visibility: { $ne: false },
       $or: [
         { [`${lang}.visibility`]: true },
         { [`vi.visibility`]: true },
@@ -104,7 +105,7 @@ export class ProductsService {
     const options = {
       page: parseFloat(page) || 1,
       sort: this.prepareSort(sort, lang),
-      limit: paginationLimit,
+      limit: Number(pageSize) || paginationLimit,
       lang: lang || 'vi',
       price: 'salePrice',
     };
@@ -114,11 +115,24 @@ export class ProductsService {
       options,
     );
 
+    const productIds = (productsWithPagination.all || []).map((product: any) => product._id);
+    const variantsList = await this.productVariantModel
+      .find({ productId: { $in: productIds }, isActive: true })
+      .lean();
+    const variantMap = new Map<string, any[]>();
+    for (const v of variantsList) {
+      const pid = v.productId.toString();
+      if (!variantMap.has(pid)) variantMap.set(pid, []);
+      variantMap.get(pid)!.push(v);
+    }
+
     return {
       ...productsWithPagination,
-      all: (productsWithPagination.all || []).map((product) =>
-        prepareProduct(product, lang, true),
-      ),
+      all: (productsWithPagination.all || []).map((product) => {
+        const pid = product._id ? product._id.toString() : '';
+        const attachedVariants = variantMap.get(pid) || product.variants || [];
+        return prepareProduct(product, lang, true, attachedVariants);
+      }),
     };
   }
 
@@ -157,30 +171,38 @@ export class ProductsService {
     const variants = await this.productVariantModel
       .find({ productId: found._id })
       .lean();
-    const prepared = lang ? prepareProduct(found, lang) : found;
+    const attachedVariants = (variants && variants.length > 0) ? variants : (found.variants || []);
+    const prepared = lang ? prepareProduct(found, lang, false, attachedVariants) : found;
     const result =
       prepared && typeof (prepared as any).toObject === 'function'
         ? (prepared as any).toObject()
         : { ...prepared };
-    result.variants = variants;
+    result.variants = attachedVariants;
     return result;
   }
 
-  async getProductVariants(productId: string): Promise<ProductVariantDocument[]> {
+  async getProductVariants(productId: string): Promise<any[]> {
+    let pDoc: any = null;
     let query: any = {};
     if (isValidObjectId(productId)) {
       query = { productId };
+      pDoc = await this.productModel.findById(productId);
     } else {
-      const product = await this.productModel.findOne({
+      pDoc = await this.productModel.findOne({
         $or: [{ titleUrl: productId }, { id: productId }, { sku: productId }],
       });
-      if (product) {
-        query = { productId: product._id };
+      if (pDoc) {
+        query = { productId: pDoc._id };
       } else {
         return [];
       }
     }
-    return this.productVariantModel.find(query).lean();
+    const variants = await this.productVariantModel.find(query).lean();
+    if (variants && variants.length > 0) return variants;
+    if (pDoc && Array.isArray(pDoc.variants) && pDoc.variants.length > 0) {
+      return pDoc.variants;
+    }
+    return [];
   }
 
   async syncProductVariants(

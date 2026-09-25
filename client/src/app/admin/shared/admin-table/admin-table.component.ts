@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, ViewChildren, QueryList, ElementRef, AfterViewChecked } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, ViewChildren, QueryList, ElementRef, AfterViewChecked, ChangeDetectorRef } from '@angular/core';
 import { TableColumn, RowAction, ActionEvent, PaginationConfig } from '../models/admin-table.models';
 
 @Component({
@@ -8,6 +8,8 @@ import { TableColumn, RowAction, ActionEvent, PaginationConfig } from '../models
   styleUrls: ['./admin-table.component.css']
 })
 export class AdminTableComponent implements OnChanges, AfterViewChecked {
+
+  constructor(private cdr: ChangeDetectorRef) {}
 
   readonly fallbackImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAAABmJLR0QA/wD/AP+gvaeTAAAASUlEQVRYhe3OMQEAAAQEsJl/aOMBHoQSqChJkiRJkiRJkiRJkiRJkiRJkiRJkiRJkiRJkiRJkiRJkiRJkiRJkiRJkiRJkjTpA8BoAAFBHaYcAAAAAElFTkSuQmCC';
 
@@ -53,6 +55,7 @@ export class AdminTableComponent implements OnChanges, AfterViewChecked {
         this.selectedIds = cleaned;
         this.selectionChange.emit(new Set(this.selectedIds));
       }
+      this.cdr.markForCheck();
     }
   }
 
@@ -150,6 +153,7 @@ export class AdminTableComponent implements OnChanges, AfterViewChecked {
       this.sortKey = col.key;
       this.sortDir = 'asc';
     }
+    this.cdr.markForCheck();
   }
 
   onPageChange(p: number): void { this.pageChange.emit(p); }

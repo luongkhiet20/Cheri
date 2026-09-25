@@ -1,5 +1,5 @@
-import { User, Page, Theme, Config, Product, Cart, Category, Order, Pagination, Translations, ShippingMethod, PaymentMethod } from '../shared/models';
-import { languages, currencyLang } from '../shared/constants';
+import { User, Page, Theme, Config, Product, Cart, Category, Order, Pagination, Translations, ShippingMethod, PaymentMethod } from '../user/shared/models';
+import { languages, currencyLang } from '../user/shared/constants';
 import { signal, computed, Injectable } from '@angular/core';
 
 export interface UserState {
@@ -57,7 +57,7 @@ export interface DashboardState {
 @Injectable({
   providedIn: 'root',
 })
-export class SignalStoreSelectors{
+export class SignalStoreSelectors {
   public userState = signal<UserState>({
     loading: false,
     user: null,
@@ -112,40 +112,40 @@ export class SignalStoreSelectors{
     loading: false,
   });
 
-public readonly user = computed(() => this.userState().user);
-public readonly appLang = computed(() =>  this.userState().lang);
-public readonly currency = computed(() =>  this.userState().currency);
-public readonly authLoading = computed(() =>  this.userState().loading);
+  public readonly user = computed(() => this.userState().user);
+  public readonly appLang = computed(() => this.userState().lang);
+  public readonly currency = computed(() => this.userState().currency);
+  public readonly authLoading = computed(() => this.userState().loading);
 
-public readonly cheriLoading = computed(() =>  this.cheriState().loading);
-public readonly cheriError = computed(() =>  this.cheriState().error);
-public readonly pages = computed(() =>  this.cheriState().pages);
-public readonly page = computed(() =>  this.cheriState().page);
-public readonly themes = computed(() =>  this.cheriState().themes);
-public readonly configs = computed(() =>  this.cheriState().configs);
+  public readonly cheriLoading = computed(() => this.cheriState().loading);
+  public readonly cheriError = computed(() => this.cheriState().error);
+  public readonly pages = computed(() => this.cheriState().pages);
+  public readonly page = computed(() => this.cheriState().page);
+  public readonly themes = computed(() => this.cheriState().themes);
+  public readonly configs = computed(() => this.cheriState().configs);
 
-public readonly products = computed(() =>  this.productState().products);
-public readonly loadingProducts = computed(() =>  this.productState().loadingProducts);
-public readonly categories = computed(() =>  this.productState().categories);
-public readonly pagination = computed(() =>  this.productState().pagination);
-public readonly product = computed(() =>  this.productState().product);
-public readonly cart = computed(() =>  this.productState().cart);
-public readonly productLoading = computed(() =>  this.productState().loadingProduct);
-public readonly userOrders = computed(() =>  this.productState().userOrders);
-public readonly order = computed(() =>  this.productState().order);
-public readonly productsTitles = computed(() =>  this.productState().productsTitles);
-public readonly priceFilter = computed(() =>  this.productState().priceFilter);
-public readonly maxPrice = computed(() =>  this.productState().maxPrice);
-public readonly minPrice = computed(() =>  this.productState().minPrice);
-public readonly position = computed(() =>  this.productState().position);
-public readonly shippingMethods = computed(() => this.productState().shippingMethods);
-public readonly paymentMethods = computed(() => this.productState().paymentMethods);
+  public readonly products = computed(() => this.productState().products);
+  public readonly loadingProducts = computed(() => this.productState().loadingProducts);
+  public readonly categories = computed(() => this.productState().categories);
+  public readonly pagination = computed(() => this.productState().pagination);
+  public readonly product = computed(() => this.productState().product);
+  public readonly cart = computed(() => this.productState().cart);
+  public readonly productLoading = computed(() => this.productState().loadingProduct);
+  public readonly userOrders = computed(() => this.productState().userOrders);
+  public readonly order = computed(() => this.productState().order);
+  public readonly productsTitles = computed(() => this.productState().productsTitles);
+  public readonly priceFilter = computed(() => this.productState().priceFilter);
+  public readonly maxPrice = computed(() => this.productState().maxPrice);
+  public readonly minPrice = computed(() => this.productState().minPrice);
+  public readonly position = computed(() => this.productState().position);
+  public readonly shippingMethods = computed(() => this.productState().shippingMethods);
+  public readonly paymentMethods = computed(() => this.productState().paymentMethods);
 
-public readonly orders = computed(() =>  this.dashboardState().orders);
-public readonly dashboardOrder = computed(() =>  this.dashboardState().order);
-public readonly productImages = computed(() =>  this.dashboardState().productImages);
-public readonly translations = computed(() =>  this.dashboardState().translations);
-public readonly allProducts = computed(() =>  this.dashboardState().allProducts);
-public readonly allCategories = computed(() =>  this.dashboardState().allCategories);
-public readonly dashboardLoading = computed(() =>  this.dashboardState().loading);
+  public readonly orders = computed(() => this.dashboardState().orders);
+  public readonly dashboardOrder = computed(() => this.dashboardState().order);
+  public readonly productImages = computed(() => this.dashboardState().productImages);
+  public readonly translations = computed(() => this.dashboardState().translations);
+  public readonly allProducts = computed(() => this.dashboardState().allProducts);
+  public readonly allCategories = computed(() => this.dashboardState().allCategories);
+  public readonly dashboardLoading = computed(() => this.dashboardState().loading);
 }

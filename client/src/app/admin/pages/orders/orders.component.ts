@@ -1,7 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
-import { ApiService } from '../../../services/api.service';
+import { AdminService } from '../../services/admin.service';
 
 @Component({
   selector: 'app-orders',
@@ -22,18 +22,22 @@ export class OrdersComponent implements OnInit {
     { key: 'view', label: 'Xem' },
   ];
   filterFields: FilterField[] = [
-    { key: 'status', label: 'Trạng thái', type: 'select', options: [
-      { value: 'Đã giao', label: 'Đã giao' },
-      { value: 'Đang giao', label: 'Đang giao' },
-      { value: 'Đang xử lý', label: 'Đang xử lý' },
-      { value: 'Chờ xác nhận', label: 'Chờ xác nhận' },
-      { value: 'Đã hủy', label: 'Đã hủy' },
-    ]},
-    { key: 'payment', label: 'Thanh toán', type: 'select', options: [
-      { value: 'COD', label: 'COD' },
-      { value: 'Chuyển khoản', label: 'Chuyển khoản' },
-      { value: 'MoMo', label: 'MoMo' },
-    ]},
+    {
+      key: 'status', label: 'Trạng thái', type: 'select', options: [
+        { value: 'Đã giao', label: 'Đã giao' },
+        { value: 'Đang giao', label: 'Đang giao' },
+        { value: 'Đang xử lý', label: 'Đang xử lý' },
+        { value: 'Chờ xác nhận', label: 'Chờ xác nhận' },
+        { value: 'Đã hủy', label: 'Đã hủy' },
+      ]
+    },
+    {
+      key: 'payment', label: 'Thanh toán', type: 'select', options: [
+        { value: 'COD', label: 'COD' },
+        { value: 'Chuyển khoản', label: 'Chuyển khoản' },
+        { value: 'MoMo', label: 'MoMo' },
+      ]
+    },
   ];
 
   data: any[] = [];
@@ -56,11 +60,11 @@ export class OrdersComponent implements OnInit {
   isBulkDelete = false;
 
   constructor(
-    private apiService: ApiService,
+    private apiService: AdminService,
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.route.queryParams.subscribe(params => {
@@ -130,18 +134,45 @@ export class OrdersComponent implements OnInit {
     if (this.pendingDeleteId) {
       this.apiService.deleteOrder(this.pendingDeleteId).subscribe({
         next: () => {
-          this.loadOrders();
           this.confirmOpen = false;
           this.pendingDeleteId = null;
+          this.loadOrders();
+          this.cdr.markForCheck();
         },
-        error: (err) => console.error(err)
+        error: (err) => {
+          this.confirmOpen = false;
+          this.pendingDeleteId = null;
+          console.error(err);
+          this.cdr.markForCheck();
+        }
+      });
+    } else if (this.isBulkDelete && this.selectedIds.size > 0) {
+      this.apiService.bulkDeleteOrders(Array.from(this.selectedIds)).subscribe({
+        next: () => {
+          this.selectedIds.clear();
+          this.confirmOpen = false;
+          this.isBulkDelete = false;
+          this.loadOrders();
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.confirmOpen = false;
+          this.isBulkDelete = false;
+          console.error('Lỗi xóa hàng loạt đơn hàng:', err);
+          this.cdr.markForCheck();
+        }
       });
     } else {
       this.confirmOpen = false;
+      this.cdr.markForCheck();
     }
   }
 
-  onCancelDelete(): void { this.confirmOpen = false; this.pendingDeleteId = null; }
+  onCancelDelete(): void {
+    this.confirmOpen = false;
+    this.pendingDeleteId = null;
+    this.cdr.markForCheck();
+  }
 
   onAction(e: ActionEvent): void {
     if (e.action === 'view') {
@@ -153,14 +184,18 @@ export class OrdersComponent implements OnInit {
   onSearch(v: string): void {
     if (!v) {
       this.data = [...this.allOrders];
+      this.pagination = { ...this.pagination, total: this.data.length };
+      this.cdr.markForCheck();
       return;
     }
     const q = v.toLowerCase();
     this.data = this.allOrders.filter(o =>
-      o.code.toLowerCase().includes(q) ||
-      o.customer.toLowerCase().includes(q) ||
-      o.payment.toLowerCase().includes(q)
+      (o.code || '').toLowerCase().includes(q) ||
+      (o.customer || '').toLowerCase().includes(q) ||
+      (o.payment || '').toLowerCase().includes(q)
     );
+    this.pagination = { ...this.pagination, total: this.data.length };
+    this.cdr.markForCheck();
   }
 
   onFilter(v: Record<string, any>): void {
@@ -172,9 +207,11 @@ export class OrdersComponent implements OnInit {
       filtered = filtered.filter(o => o.payment === v['payment']);
     }
     this.data = filtered;
+    this.pagination = { ...this.pagination, total: this.data.length };
+    this.cdr.markForCheck();
   }
 
   onRefresh(): void { this.loadOrders(); }
-  onPageChange(p: number): void { this.pagination = { ...this.pagination, page: p }; }
-  onPageSizeChange(s: number): void { this.pagination = { ...this.pagination, pageSize: s, page: 1 }; }
+  onPageChange(p: number): void { this.pagination = { ...this.pagination, page: p }; this.cdr.markForCheck(); }
+  onPageSizeChange(s: number): void { this.pagination = { ...this.pagination, pageSize: s, page: 1 }; this.cdr.markForCheck(); }
 }

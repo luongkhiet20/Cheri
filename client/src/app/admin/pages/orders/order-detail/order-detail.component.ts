@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ApiService } from '../../../../services/api.service';
+import { AdminService } from '../../../services/admin.service';
 
 interface StatusOption {
   code: string;
@@ -52,8 +52,9 @@ export class OrderDetailComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private apiService: ApiService
-  ) {}
+    private apiService: AdminService,
+    private cdr: ChangeDetectorRef
+  ) { }
 
   ngOnInit(): void {
     this.orderId = this.route.snapshot.paramMap.get('id');
@@ -81,6 +82,7 @@ export class OrderDetailComponent implements OnInit {
         } else {
           this.isNotFound = true;
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isLoading = false;
@@ -90,6 +92,7 @@ export class OrderDetailComponent implements OnInit {
           this.errorMessage = err.error?.message || 'Lỗi khi tải thông tin đơn hàng từ máy chủ MongoDB';
         }
         console.error('Error fetching order detail:', err);
+        this.cdr.markForCheck();
       }
     });
   }
@@ -186,18 +189,21 @@ export class OrderDetailComponent implements OnInit {
         } else {
           this.errorMessage = res.message || 'Cập nhật trạng thái thất bại';
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isUpdatingStatus = false;
         this.confirmOpen = false;
         this.errorMessage = err.error?.message || 'Không thể cập nhật trạng thái đơn hàng. Vui lòng kiểm tra lại.';
         console.error('Update order status error:', err);
+        this.cdr.markForCheck();
       }
     });
   }
 
   onCancelConfirmDialog(): void {
     this.confirmOpen = false;
+    this.cdr.markForCheck();
   }
 
   getItemTitle(it: any): string {

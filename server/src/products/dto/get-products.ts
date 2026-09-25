@@ -1,13 +1,17 @@
-import { IsIn, IsNotEmpty } from 'class-validator';
+import { IsIn, IsOptional } from 'class-validator';
 import { SortOptions } from '../models/sort.enum';
 
 export class GetProductsDto {
-  @IsNotEmpty()
-  lang: string;
+  @IsOptional()
+  lang?: string;
 
-  @IsNotEmpty()
-  page: string;
+  @IsOptional()
+  page?: string;
 
+  @IsOptional()
+  pageSize?: string | number;
+
+  @IsOptional()
   @IsIn([
     SortOptions.newest,
     SortOptions.oldest,
@@ -18,17 +22,23 @@ export class GetProductsDto {
     SortOptions.ratingdesc,
     SortOptions.ratingasc,
   ])
-  sort: SortOptions;
+  sort?: SortOptions;
 
+  @IsOptional()
   category?: string;
 
+  @IsOptional()
   search?: string;
 
+  @IsOptional()
   maxPrice?: number;
 
+  @IsOptional()
   minPrice?: number;
 
+  @IsOptional()
   stock?: string;
 
+  @IsOptional()
   rating?: any;
 }

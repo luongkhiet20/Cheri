@@ -1,5 +1,5 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { ApiService } from '../../../../services/api.service';
+import { Component, EventEmitter, Input, Output, ChangeDetectorRef } from '@angular/core';
+import { AdminService } from '../../../services/admin.service';
 
 @Component({
   selector: 'app-product-csv-modal',
@@ -30,7 +30,10 @@ export class ProductCsvModalComponent {
   // Filter preview rows
   previewFilter: 'all' | 'valid' | 'error' = 'all';
 
-  constructor(private apiService: ApiService) {}
+  constructor(
+    private apiService: AdminService,
+    private cdr: ChangeDetectorRef
+  ) { }
 
   get canImport(): boolean {
     return !!this.validationResult && this.validationResult.canImport && !this.isValidating && !this.isImporting;
@@ -130,21 +133,25 @@ export class ProductCsvModalComponent {
   validateFile(): void {
     if (!this.fileContent) {
       this.errorMessage = 'Vui lòng chọn file CSV trước khi kiểm tra dữ liệu.';
+      this.cdr.markForCheck();
       return;
     }
 
     this.isValidating = true;
     this.errorMessage = '';
+    this.cdr.markForCheck();
 
     this.apiService.validateProductsCsv(this.fileContent).subscribe({
       next: (res) => {
         this.isValidating = false;
         this.validationResult = res;
         this.previewFilter = res.summary?.errorRows > 0 ? 'all' : 'all';
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isValidating = false;
         this.errorMessage = 'Lỗi kiểm tra dữ liệu: ' + (err.error?.message || err.message);
+        this.cdr.markForCheck();
       }
     });
   }
@@ -155,6 +162,7 @@ export class ProductCsvModalComponent {
 
     this.isImporting = true;
     this.errorMessage = '';
+    this.cdr.markForCheck();
 
     const payload = {
       csvContent: this.fileContent,
@@ -168,10 +176,12 @@ export class ProductCsvModalComponent {
         this.importResult = res;
         // Emit imported event so parent products list reloads from API
         this.imported.emit(res);
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isImporting = false;
         this.errorMessage = 'Lỗi nhập dữ liệu vào MongoDB: ' + (err.error?.message || err.message);
+        this.cdr.markForCheck();
       }
     });
   }

@@ -33,7 +33,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const user = await this.userModel.findOne({ email });
 
     if (!user) {
-      throw new UnauthorizedException();
+      throw new UnauthorizedException('Người dùng không tồn tại');
+    }
+
+    if (user.status === false) {
+      throw new UnauthorizedException('Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động');
     }
 
     return user;

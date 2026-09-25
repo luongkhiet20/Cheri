@@ -1,7 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
-import { ApiService } from '../../../services/api.service';
+import { AdminService } from '../../services/admin.service';
 
 @Component({
   selector: 'app-shipping-methods',
@@ -75,10 +75,10 @@ export class ShippingMethodsComponent implements OnInit {
   get displayTotal(): number { return this.pagination?.total ?? this.data.length; }
 
   constructor(
-    private apiService: ApiService,
+    private apiService: AdminService,
     private router: Router,
     private cdr: ChangeDetectorRef
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.loadShippingMethods();
@@ -154,6 +154,7 @@ export class ShippingMethodsComponent implements OnInit {
       this.confirmLabel = 'Tắt';
       this.confirmVariant = 'warning';
       this.confirmOpen = true;
+      this.cdr.markForCheck();
     } else if (e.action === 'toggle_on') {
       this.pendingAction = { type: 'toggle', row };
       this.confirmTitle = 'Bật phương thức vận chuyển';
@@ -161,6 +162,7 @@ export class ShippingMethodsComponent implements OnInit {
       this.confirmLabel = 'Bật';
       this.confirmVariant = 'default';
       this.confirmOpen = true;
+      this.cdr.markForCheck();
     } else if (e.action === 'delete') {
       this.pendingAction = { type: 'delete', row };
       this.confirmTitle = 'Xóa phương thức vận chuyển';
@@ -168,12 +170,14 @@ export class ShippingMethodsComponent implements OnInit {
       this.confirmLabel = 'Xóa';
       this.confirmVariant = 'danger';
       this.confirmOpen = true;
+      this.cdr.markForCheck();
     }
   }
 
   onConfirmDialog(): void {
     if (!this.pendingAction) {
       this.confirmOpen = false;
+      this.cdr.markForCheck();
       return;
     }
 
@@ -191,12 +195,14 @@ export class ShippingMethodsComponent implements OnInit {
             this.loadShippingMethods();
           } else {
             this.showError(res?.message || 'Thao tác không thành công.');
+            this.cdr.markForCheck();
           }
         },
         error: (err) => {
           this.confirmOpen = false;
           this.pendingAction = null;
           this.showError(err?.error?.message || 'Lỗi khi cập nhật trạng thái.');
+          this.cdr.markForCheck();
         }
       });
     } else if (type === 'delete') {
@@ -209,12 +215,14 @@ export class ShippingMethodsComponent implements OnInit {
             this.loadShippingMethods();
           } else {
             this.showError(res?.message || 'Không thể xóa phương thức vận chuyển.');
+            this.cdr.markForCheck();
           }
         },
         error: (err) => {
           this.confirmOpen = false;
           this.pendingAction = null;
           this.showError(err?.error?.message || 'Lỗi khi xóa phương thức vận chuyển.');
+          this.cdr.markForCheck();
         }
       });
     }
@@ -223,6 +231,7 @@ export class ShippingMethodsComponent implements OnInit {
   onCancelDialog(): void {
     this.confirmOpen = false;
     this.pendingAction = null;
+    this.cdr.markForCheck();
   }
 
   onSearch(v: string): void {
@@ -254,6 +263,7 @@ export class ShippingMethodsComponent implements OnInit {
 
   onSelectionChange(ids: Set<any>): void {
     this.selectedIds = new Set(ids);
+    this.cdr.markForCheck();
   }
 
   onToolbarSelectAll(): void {
@@ -262,19 +272,28 @@ export class ShippingMethodsComponent implements OnInit {
     } else {
       this.selectedIds = new Set(this.data.map((r: any) => r._id || r.id));
     }
+    this.cdr.markForCheck();
   }
 
   private showSuccess(msg: string): void {
     this.successMessage = msg;
+    this.cdr.markForCheck();
     setTimeout(() => {
-      if (this.successMessage === msg) this.successMessage = '';
+      if (this.successMessage === msg) {
+        this.successMessage = '';
+        this.cdr.markForCheck();
+      }
     }, 4000);
   }
 
   private showError(msg: string): void {
     this.errorMessage = msg;
+    this.cdr.markForCheck();
     setTimeout(() => {
-      if (this.errorMessage === msg) this.errorMessage = '';
+      if (this.errorMessage === msg) {
+        this.errorMessage = '';
+        this.cdr.markForCheck();
+      }
     }, 5000);
   }
 }

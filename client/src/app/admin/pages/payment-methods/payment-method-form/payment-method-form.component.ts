@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ApiService } from '../../../../services/api.service';
+import { AdminService } from '../../../services/admin.service';
 
 interface PaymentMethodFormData {
   name: string;
@@ -47,8 +47,9 @@ export class PaymentMethodFormComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private apiService: ApiService
-  ) {}
+    private apiService: AdminService,
+    private cdr: ChangeDetectorRef
+  ) { }
 
   ngOnInit(): void {
     this.methodId = this.route.snapshot.paramMap.get('id');
@@ -83,11 +84,13 @@ export class PaymentMethodFormComponent implements OnInit {
         } else {
           this.errorMessage = res.message || 'Không tìm thấy phương thức thanh toán';
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isLoading = false;
         this.errorMessage = err.error?.message || 'Lỗi khi tải thông tin phương thức thanh toán từ máy chủ MongoDB';
         console.error('Error fetching payment method detail for edit:', err);
+        this.cdr.markForCheck();
       }
     });
   }
@@ -154,17 +157,20 @@ export class PaymentMethodFormComponent implements OnInit {
           this.isSubmitting = false;
           if (res.success) {
             this.successMessage = 'Cập nhật phương thức thanh toán thành công';
+            this.cdr.markForCheck();
             setTimeout(() => {
               this.router.navigate(['/admin/payment-methods', this.methodId]);
             }, 600);
           } else {
             this.errorMessage = res.message || 'Cập nhật thất bại';
+            this.cdr.markForCheck();
           }
         },
         error: (err) => {
           this.isSubmitting = false;
           this.errorMessage = err.error?.message || 'Lỗi khi cập nhật phương thức thanh toán lên máy chủ MongoDB';
           console.error('Update payment method error:', err);
+          this.cdr.markForCheck();
         }
       });
     } else {
@@ -174,17 +180,20 @@ export class PaymentMethodFormComponent implements OnInit {
           this.isSubmitting = false;
           if (res.success) {
             this.successMessage = 'Thêm phương thức thanh toán thành công';
+            this.cdr.markForCheck();
             setTimeout(() => {
               this.router.navigate(['/admin/payment-methods']);
             }, 600);
           } else {
             this.errorMessage = res.message || 'Thêm phương thức thất bại';
+            this.cdr.markForCheck();
           }
         },
         error: (err) => {
           this.isSubmitting = false;
           this.errorMessage = err.error?.message || 'Lỗi khi tạo mới phương thức thanh toán trên MongoDB';
           console.error('Create payment method error:', err);
+          this.cdr.markForCheck();
         }
       });
     }

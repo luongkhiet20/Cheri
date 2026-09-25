@@ -1,7 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
-import { ApiService } from '../../../services/api.service';
+import { AdminService } from '../../services/admin.service';
 
 @Component({
   selector: 'app-inventory',
@@ -23,11 +23,13 @@ export class InventoryComponent implements OnInit {
     { key: 'delete', label: 'Xóa', variant: 'danger' }
   ];
   filterFields: FilterField[] = [
-    { key: 'status', label: 'Tình trạng', type: 'select', options: [
-      { value: 'Còn hàng', label: 'Còn hàng' },
-      { value: 'Sắp hết', label: 'Sắp hết' },
-      { value: 'Hết hàng', label: 'Hết hàng' }
-    ]},
+    {
+      key: 'status', label: 'Tình trạng', type: 'select', options: [
+        { value: 'Còn hàng', label: 'Còn hàng' },
+        { value: 'Sắp hết', label: 'Sắp hết' },
+        { value: 'Hết hàng', label: 'Hết hàng' }
+      ]
+    },
   ];
   data: any[] = [];
   allData: any[] = [];
@@ -47,10 +49,10 @@ export class InventoryComponent implements OnInit {
   isLoading = false;
 
   constructor(
-    private apiService: ApiService,
+    private apiService: AdminService,
     private router: Router,
     private cdr: ChangeDetectorRef
-  ) {}
+  ) { }
 
   onImportInventory(): void {
     this.router.navigate(['/admin/inventory/import']);
@@ -96,13 +98,47 @@ export class InventoryComponent implements OnInit {
   }
 
   onConfirmDelete(): void {
-    this.confirmOpen = false;
-    this.pendingDeleteId = null;
+    if (this.pendingDeleteId) {
+      this.apiService.deleteProduct(this.pendingDeleteId).subscribe({
+        next: () => {
+          this.confirmOpen = false;
+          this.pendingDeleteId = null;
+          this.loadInventory();
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.confirmOpen = false;
+          this.pendingDeleteId = null;
+          console.error('Lỗi khi xóa sản phẩm từ kho:', err);
+          this.cdr.markForCheck();
+        }
+      });
+    } else if (this.isBulkDelete && this.selectedIds.size > 0) {
+      this.apiService.bulkDeleteProducts(Array.from(this.selectedIds)).subscribe({
+        next: () => {
+          this.selectedIds.clear();
+          this.confirmOpen = false;
+          this.isBulkDelete = false;
+          this.loadInventory();
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.confirmOpen = false;
+          this.isBulkDelete = false;
+          console.error('Lỗi khi xóa hàng loạt sản phẩm từ kho:', err);
+          this.cdr.markForCheck();
+        }
+      });
+    } else {
+      this.confirmOpen = false;
+      this.cdr.markForCheck();
+    }
   }
 
   onCancelDelete(): void {
     this.confirmOpen = false;
     this.pendingDeleteId = null;
+    this.cdr.markForCheck();
   }
 
   onAction(e: ActionEvent): void {
@@ -113,21 +149,36 @@ export class InventoryComponent implements OnInit {
       this.pendingDeleteId = e.row.id;
       this.confirmMessage = `Bạn có chắc muốn xóa "${e.row.name}" không?`;
       this.confirmOpen = true;
+      this.cdr.markForCheck();
     }
   }
 
   onSearch(v: string): void {
-    if (!v) { this.data = [...this.allData]; return; }
+    if (!v) {
+      this.data = [...this.allData];
+      this.pagination = { ...this.pagination, total: this.data.length };
+      this.cdr.markForCheck();
+      return;
+    }
     const q = v.toLowerCase();
-    this.data = this.allData.filter(d => d.name.toLowerCase().includes(q) || d.sku.toLowerCase().includes(q));
+    this.data = this.allData.filter(d => (d.name || '').toLowerCase().includes(q) || (d.sku || '').toLowerCase().includes(q));
+    this.pagination = { ...this.pagination, total: this.data.length };
+    this.cdr.markForCheck();
   }
 
   onFilter(v: Record<string, any>): void {
-    if (!v['status']) { this.data = [...this.allData]; return; }
+    if (!v['status']) {
+      this.data = [...this.allData];
+      this.pagination = { ...this.pagination, total: this.data.length };
+      this.cdr.markForCheck();
+      return;
+    }
     this.data = this.allData.filter(d => d.status === v['status']);
+    this.pagination = { ...this.pagination, total: this.data.length };
+    this.cdr.markForCheck();
   }
 
   onRefresh(): void { this.loadInventory(); }
-  onPageChange(p: number): void { this.pagination = { ...this.pagination, page: p }; }
-  onPageSizeChange(s: number): void { this.pagination = { ...this.pagination, pageSize: s, page: 1 }; }
+  onPageChange(p: number): void { this.pagination = { ...this.pagination, page: p }; this.cdr.markForCheck(); }
+  onPageSizeChange(s: number): void { this.pagination = { ...this.pagination, pageSize: s, page: 1 }; this.cdr.markForCheck(); }
 }

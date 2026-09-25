@@ -6,8 +6,8 @@ import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { isPlatformBrowser, isPlatformServer } from '@angular/common';
 
 import { environment } from '../../environments/environment';
-import { Translations } from '../shared/models';
-import { accessTokenKey } from '../shared/constants';
+import { Translations } from '../user/shared/models';
+import { accessTokenKey } from '../user/shared/constants';
 import { SignalStoreSelectors } from '../store/signal.store.selectors';
 import { BehaviorSubject, combineLatest, Observable, of } from 'rxjs';
 
@@ -164,7 +164,30 @@ export class ApiService {
           ...addCategory,
         };
       }),
-      catchError((error: Error) => of({ success: false, error, data: [], products: [] } as any)),
+      catchError((error: Error) => {
+        if (productsUrl.includes('localhost:4000')) {
+          const fallbackUrl = productsUrl.replace('localhost:4000', 'localhost:5000');
+          return this.http.get(fallbackUrl, this.getRequestOptions()).pipe(
+            map((data: any) => {
+              const productList = (data?.all || data?.data || (Array.isArray(data) ? data : [])).map((product: any) => ({
+                ...product,
+                tags: (product.tags || []).filter(Boolean).map((cat: string) => cat.toLowerCase()),
+              }));
+              return {
+                success: true,
+                data: productList,
+                products: productList,
+                pagination: data?.pagination || { total: productList.length, page: page, pageSize: pageSize || 20 },
+                maxPrice: data?.maxPrice,
+                minPrice: data?.minPrice,
+                ...addCategory,
+              };
+            }),
+            catchError((err2: Error) => of({ success: false, error: err2, data: [], products: [] } as any)),
+          );
+        }
+        return of({ success: false, error, data: [], products: [] } as any);
+      }),
     );
   }
 
@@ -172,7 +195,16 @@ export class ApiService {
     const categoriesUrl = this.apiUrl + '/api/products/categories?lang=' + lang;
     return this.http.get(categoriesUrl, this.getRequestOptions()).pipe(
       map((response: any) => response),
-      catchError((error: Error) => of({ error })),
+      catchError((error: Error) => {
+        if (categoriesUrl.includes('localhost:4000')) {
+          const fallbackUrl = categoriesUrl.replace('localhost:4000', 'localhost:5000');
+          return this.http.get(fallbackUrl, this.getRequestOptions()).pipe(
+            map((res: any) => res?.data || res),
+            catchError((err2: Error) => of({ error: err2 })),
+          );
+        }
+        return of({ error });
+      }),
     );
   }
 
@@ -187,8 +219,17 @@ export class ApiService {
   getProduct(params) {
     const productUrl = this.apiUrl + '/api/products/' + params;
     return this.http.get(productUrl, this.getRequestOptions()).pipe(
-      map((response: any) => response),
-      catchError((error: Error) => of({ error })),
+      map((response: any) => response?.raw || response?.data || response),
+      catchError((error: Error) => {
+        if (productUrl.includes('localhost:4000')) {
+          const fallbackUrl = productUrl.replace('localhost:4000', 'localhost:5000');
+          return this.http.get(fallbackUrl, this.getRequestOptions()).pipe(
+            map((res: any) => res?.raw || res?.data || res),
+            catchError((err2: Error) => of({ error: err2 })),
+          );
+        }
+        return of({ error });
+      }),
     );
   }
 
@@ -616,238 +657,5 @@ export class ApiService {
       }
     });
   }
-
-  // ══════════════════════════════════════════════
-  // ── ADMIN METHODS ─────────────────────────────
-  // ══════════════════════════════════════════════
-
-  // ── Dashboard ──────────────────────────────
-  getDashboardStats(timeRange?: string): Observable<any> {
-    let params = new HttpParams();
-    if (timeRange) params = params.set('timeRange', timeRange);
-    return this.http.get(`${this.apiUrl}/dashboard/stats`, { params });
-  }
-
-  // ── Products (Admin) ───────────────────────
-  getAdminProducts(params?: { page?: number; pageSize?: number; search?: string; category?: string; status?: string }): Observable<any> {
-    let httpParams = new HttpParams();
-    if (params) {
-      if (params.page) httpParams = httpParams.set('page', params.page.toString());
-      if (params.pageSize) httpParams = httpParams.set('pageSize', params.pageSize.toString());
-      if (params.search) httpParams = httpParams.set('search', params.search);
-      if (params.category) httpParams = httpParams.set('category', params.category);
-      if (params.status) httpParams = httpParams.set('status', params.status);
-    }
-    return this.http.get(`${this.apiUrl}/products`, { params: httpParams });
-  }
-
-  getProductById(id: string): Observable<any> {
-    return this.http.get(`${this.apiUrl}/products/${id}`);
-  }
-
-  createProduct(data: any): Observable<any> {
-    return this.http.post(`${this.apiUrl}/products`, data);
-  }
-
-  updateProduct(id: string, data: any): Observable<any> {
-    return this.http.put(`${this.apiUrl}/products/${id}`, data);
-  }
-
-  deleteProduct(id: string): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/products/${id}`);
-  }
-
-  bulkDeleteProducts(ids: string[]): Observable<any> {
-    return this.http.post(`${this.apiUrl}/products/bulk-delete`, { ids });
-  }
-
-  // ── CSV Import ─────────────────────────────
-  downloadProductCsvTemplate(): Observable<Blob> {
-    return this.http.get(`${this.apiUrl}/products/csv-template`, {
-      responseType: 'blob'
-    });
-  }
-
-  validateProductsCsv(csvContent: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/products/validate-csv`, { csvContent });
-  }
-
-  importProductsCsv(payload: { csvContent?: string; products?: any[] }): Observable<any> {
-    return this.http.post(`${this.apiUrl}/products/import-csv`, payload);
-  }
-
-  // ── Categories (Admin) ─────────────────────
-  getAdminCategories(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/categories`);
-  }
-
-  getCategoryById(id: string): Observable<any> {
-    return this.http.get(`${this.apiUrl}/categories/${id}`);
-  }
-
-  createCategory(data: any): Observable<any> {
-    return this.http.post(`${this.apiUrl}/categories`, data);
-  }
-
-  updateCategory(id: string, data: any): Observable<any> {
-    return this.http.put(`${this.apiUrl}/categories/${id}`, data);
-  }
-
-  deleteCategory(id: string): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/categories/${id}`);
-  }
-
-  // ── Orders (Admin) ─────────────────────────
-  getAdminOrders(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/orders`);
-  }
-
-  getOrderById(id: string): Observable<any> {
-    return this.http.get(`${this.apiUrl}/orders/${id}`);
-  }
-
-  updateOrderStatus(id: string, status: string, note?: string): Observable<any> {
-    return this.http.patch(`${this.apiUrl}/orders/${id}/status`, { status, note });
-  }
-
-  patchOrderStatus(id: string, status: string, note?: string): Observable<any> {
-    return this.http.patch(`${this.apiUrl}/orders/${id}/status`, { status, note });
-  }
-
-  // ── Users (Accounts) ────────────────────────
-  getUserById(id: string): Observable<any> {
-    return this.http.get(`${this.apiUrl}/api/auth/users/${id}`, this.getRequestOptions());
-  }
-
-  patchUser(id: string, data: any): Observable<any> {
-    return this.http.patch(`${this.apiUrl}/api/auth/users/${id}`, data, this.getRequestOptions());
-  }
-
-  updateUserStatus(id: string, status?: boolean): Observable<any> {
-    return this.http.patch(`${this.apiUrl}/api/auth/users/${id}/status`, status !== undefined ? { status } : {}, this.getRequestOptions());
-  }
-
-  toggleUserStatus(id: string): Observable<any> {
-    return this.http.patch(`${this.apiUrl}/api/auth/users/${id}/status`, {}, this.getRequestOptions());
-  }
-
-  bulkDeleteUsers(ids: string[]): Observable<any> {
-    return this.http.post(`${this.apiUrl}/api/auth/users/bulk-delete`, { ids }, this.getRequestOptions());
-  }
-
-  // ── Payment Methods (Admin extras) ────────────────────────
-  getPaymentMethodById(id: string): Observable<any> {
-    return this.http.get(`${this.apiUrl}/api/orders/payment-methods/${id}`, this.getRequestOptions());
-  }
-
-  createPaymentMethod(data: any): Observable<any> {
-    return this.savePaymentMethod(data);
-  }
-
-  updatePaymentMethod(id: string, data: any): Observable<any> {
-    return this.http.put(`${this.apiUrl}/api/orders/payment-methods/${id}`, data, this.getRequestOptions());
-  }
-
-  updatePaymentMethodStatus(id: string, isActive?: boolean): Observable<any> {
-    return this.http.patch(`${this.apiUrl}/api/orders/payment-methods/${id}/status`, isActive !== undefined ? { isActive } : {}, this.getRequestOptions());
-  }
-
-  togglePaymentMethod(id: string): Observable<any> {
-    return this.http.patch(`${this.apiUrl}/api/orders/payment-methods/${id}/status`, {}, this.getRequestOptions());
-  }
-
-  // ── Shipping Methods (Admin extras) ───────────────────────
-  getShippingMethodById(id: string): Observable<any> {
-    return this.http.get(`${this.apiUrl}/api/orders/shipping-methods/${id}`, this.getRequestOptions());
-  }
-
-  createShippingMethod(data: any): Observable<any> {
-    return this.saveShippingMethod(data);
-  }
-
-  updateShippingMethod(id: string, data: any): Observable<any> {
-    return this.http.put(`${this.apiUrl}/api/orders/shipping-methods/${id}`, data, this.getRequestOptions());
-  }
-
-  updateShippingMethodStatus(id: string, isActive?: boolean): Observable<any> {
-    return this.http.patch(`${this.apiUrl}/api/orders/shipping-methods/${id}/status`, isActive !== undefined ? { isActive } : {}, this.getRequestOptions());
-  }
-
-  toggleShippingMethod(id: string): Observable<any> {
-    return this.http.patch(`${this.apiUrl}/api/orders/shipping-methods/${id}/status`, {}, this.getRequestOptions());
-  }
-
-  // ── Inventory ──────────────────────────────
-  getInventory(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/inventory`);
-  }
-
-  importInventory(productId: string, quantity: number, note?: string): Observable<any> {
-    return this.http.patch(`${this.apiUrl}/products/${productId}/inventory`, { quantity, note });
-  }
-
-  // ── Pages (Admin) ──────────────────────────
-  getAdminPages(params?: { search?: string; status?: string }): Observable<any> {
-    let httpParams = new HttpParams();
-    if (params) {
-      if (params.search) httpParams = httpParams.set('search', params.search);
-      if (params.status) httpParams = httpParams.set('status', params.status);
-    }
-    return this.http.get(`${this.apiUrl}/pages`, { params: httpParams });
-  }
-
-  getPageById(id: string): Observable<any> {
-    return this.http.get(`${this.apiUrl}/pages/${id}`);
-  }
-
-  createPage(data: any): Observable<any> {
-    return this.http.post(`${this.apiUrl}/pages`, data);
-  }
-
-  updatePage(id: string, data: any): Observable<any> {
-    return this.http.put(`${this.apiUrl}/pages/${id}`, data);
-  }
-
-  patchPageStatus(id: string, status?: string): Observable<any> {
-    return this.http.patch(`${this.apiUrl}/pages/${id}/status`, { status });
-  }
-
-  deletePage(id: string): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/pages/${id}`);
-  }
-
-  // ── Account (Admin Profile) ─────────────────
-  getAccountProfile(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/account/me`).pipe(
-      tap((res: any) => {
-        if (res && res.success && res.data) {
-          this.currentUser$.next(res.data);
-        }
-      })
-    );
-  }
-
-  updateAccountProfile(data: { fullName: string; email: string; phone?: string }): Observable<any> {
-    return this.http.patch(`${this.apiUrl}/account/me`, data).pipe(
-      tap((res: any) => {
-        if (res && res.success && res.data) {
-          this.currentUser$.next(res.data);
-        }
-      })
-    );
-  }
-
-  uploadAccountAvatar(avatar: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/account/me/avatar`, { avatar }).pipe(
-      tap((res: any) => {
-        if (res && res.success && res.data) {
-          this.currentUser$.next(res.data);
-        }
-      })
-    );
-  }
-
-  changeAccountPassword(data: { currentPassword: string; newPassword: string; confirmPassword: string }): Observable<any> {
-    return this.http.patch(`${this.apiUrl}/account/me/password`, data);
-  }
 }
+

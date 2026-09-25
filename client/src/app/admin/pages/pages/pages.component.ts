@@ -1,7 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
-import { ApiService } from '../../../services/api.service';
+import { AdminService } from '../../services/admin.service';
 
 @Component({
   selector: 'app-pages',
@@ -53,10 +53,10 @@ export class PagesComponent implements OnInit {
   get displayTotal(): number { return this.pagination?.total ?? this.data.length; }
 
   constructor(
-    private apiService: ApiService,
+    private apiService: AdminService,
     private router: Router,
     private cdr: ChangeDetectorRef
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.loadPages();
@@ -87,10 +87,18 @@ export class PagesComponent implements OnInit {
     });
   }
 
-  onSelectionChange(ids: Set<any>): void { this.selectedIds = new Set(ids); }
+  onSelectionChange(ids: Set<any>): void {
+    this.selectedIds = new Set(ids);
+    this.cdr.markForCheck();
+  }
+
   onToolbarSelectAll(): void {
-    if (this.allSelected) { this.selectedIds = new Set(); }
-    else { this.selectedIds = new Set(this.data.map((r: any) => r.id)); }
+    if (this.allSelected) {
+      this.selectedIds = new Set();
+    } else {
+      this.selectedIds = new Set(this.data.map((r: any) => r.id));
+    }
+    this.cdr.markForCheck();
   }
 
   onDeleteSelected(): void {
@@ -100,12 +108,14 @@ export class PagesComponent implements OnInit {
     this.pendingDeleteId = null;
     this.confirmMessage = `Bạn có chắc chắn muốn xóa ${c} trang đã chọn khỏi MongoDB?`;
     this.confirmOpen = true;
+    this.cdr.markForCheck();
   }
 
   onConfirmDelete(): void {
     if (this.isBulkDelete) {
       const idsToDelete = Array.from(this.selectedIds);
       this.confirmOpen = false;
+      this.cdr.markForCheck();
       let completed = 0;
       idsToDelete.forEach(id => {
         this.apiService.deletePage(id).subscribe({
@@ -114,11 +124,18 @@ export class PagesComponent implements OnInit {
             if (completed === idsToDelete.length) {
               this.selectedIds.clear();
               this.successMessage = `Đã xóa thành công ${completed} trang`;
-              setTimeout(() => this.successMessage = '', 3000);
+              this.cdr.markForCheck();
+              setTimeout(() => {
+                this.successMessage = '';
+                this.cdr.markForCheck();
+              }, 3000);
               this.loadPages();
             }
           },
-          error: (err) => console.error('Lỗi khi xóa trang:', err)
+          error: (err) => {
+            console.error('Lỗi khi xóa trang:', err);
+            this.cdr.markForCheck();
+          }
         });
       });
     } else if (this.pendingDeleteId) {
@@ -128,22 +145,31 @@ export class PagesComponent implements OnInit {
           this.pendingDeleteId = null;
           if (res.success) {
             this.successMessage = 'Xóa trang thành công';
-            setTimeout(() => this.successMessage = '', 3000);
             this.loadPages();
           } else {
             this.errorMessage = res.message || 'Lỗi khi xóa trang';
-            setTimeout(() => this.errorMessage = '', 3000);
           }
+          this.cdr.markForCheck();
+          setTimeout(() => {
+            this.successMessage = '';
+            this.errorMessage = '';
+            this.cdr.markForCheck();
+          }, 3000);
         },
         error: (err) => {
           this.confirmOpen = false;
           this.pendingDeleteId = null;
           this.errorMessage = err.error?.message || 'Lỗi khi xóa trang khỏi MongoDB';
-          setTimeout(() => this.errorMessage = '', 3000);
+          this.cdr.markForCheck();
+          setTimeout(() => {
+            this.errorMessage = '';
+            this.cdr.markForCheck();
+          }, 3000);
         }
       });
     } else {
       this.confirmOpen = false;
+      this.cdr.markForCheck();
     }
   }
 
@@ -151,6 +177,7 @@ export class PagesComponent implements OnInit {
     this.confirmOpen = false;
     this.pendingDeleteId = null;
     this.isBulkDelete = false;
+    this.cdr.markForCheck();
   }
 
   onAction(e: ActionEvent): void {
@@ -164,16 +191,24 @@ export class PagesComponent implements OnInit {
         next: (res) => {
           if (res.success) {
             this.successMessage = res.message || 'Cập nhật trạng thái thành công';
-            setTimeout(() => this.successMessage = '', 3000);
             this.loadPages();
           } else {
             this.errorMessage = res.message || 'Lỗi khi đổi trạng thái';
-            setTimeout(() => this.errorMessage = '', 3000);
           }
+          this.cdr.markForCheck();
+          setTimeout(() => {
+            this.successMessage = '';
+            this.errorMessage = '';
+            this.cdr.markForCheck();
+          }, 3000);
         },
         error: (err) => {
           this.errorMessage = err.error?.message || 'Lỗi kết nối khi đổi trạng thái trang';
-          setTimeout(() => this.errorMessage = '', 3000);
+          this.cdr.markForCheck();
+          setTimeout(() => {
+            this.errorMessage = '';
+            this.cdr.markForCheck();
+          }, 3000);
         }
       });
     } else if (e.action === 'delete') {
@@ -181,21 +216,36 @@ export class PagesComponent implements OnInit {
       this.pendingDeleteId = e.row.id;
       this.confirmMessage = `Bạn có chắc muốn xóa trang "${e.row.title}" khỏi MongoDB không?`;
       this.confirmOpen = true;
+      this.cdr.markForCheck();
     }
   }
 
   onSearch(v: string): void {
-    if (!v) { this.data = [...this.allData]; return; }
-    const q = v.toLowerCase();
-    this.data = this.allData.filter(d => d.title.toLowerCase().includes(q) || d.slug.toLowerCase().includes(q));
+    if (!v) {
+      this.data = [...this.allData];
+    } else {
+      const q = v.toLowerCase();
+      this.data = this.allData.filter(d => d.title.toLowerCase().includes(q) || d.slug.toLowerCase().includes(q));
+    }
+    this.cdr.markForCheck();
   }
 
   onFilter(v: Record<string, any>): void {
-    if (!v['status']) { this.data = [...this.allData]; return; }
-    this.data = this.allData.filter(d => d.status === v['status']);
+    if (!v['status']) {
+      this.data = [...this.allData];
+    } else {
+      this.data = this.allData.filter(d => d.status === v['status']);
+    }
+    this.cdr.markForCheck();
   }
 
   onRefresh(): void { this.loadPages(); }
-  onPageChange(p: number): void { this.pagination = { ...this.pagination, page: p }; }
-  onPageSizeChange(s: number): void { this.pagination = { ...this.pagination, pageSize: s, page: 1 }; }
+  onPageChange(p: number): void {
+    this.pagination = { ...this.pagination, page: p };
+    this.cdr.markForCheck();
+  }
+  onPageSizeChange(s: number): void {
+    this.pagination = { ...this.pagination, pageSize: s, page: 1 };
+    this.cdr.markForCheck();
+  }
 }

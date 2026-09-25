@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ApiService } from '../../../../services/api.service';
+import { AdminService } from '../../../services/admin.service';
 
 @Component({
   selector: 'app-payment-method-detail',
@@ -28,14 +28,16 @@ export class PaymentMethodDetailComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private apiService: ApiService
-  ) {}
+    private apiService: AdminService,
+    private cdr: ChangeDetectorRef
+  ) { }
 
   ngOnInit(): void {
     this.methodId = this.route.snapshot.paramMap.get('id');
     if (!this.methodId || this.methodId.trim() === '') {
       this.isNotFound = true;
       this.isLoading = false;
+      this.cdr.markForCheck();
       return;
     }
     this.loadMethod(this.methodId);
@@ -54,6 +56,7 @@ export class PaymentMethodDetailComponent implements OnInit {
         } else {
           this.isNotFound = true;
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isLoading = false;
@@ -63,6 +66,7 @@ export class PaymentMethodDetailComponent implements OnInit {
           this.errorMessage = err.error?.message || 'Lỗi khi tải thông tin phương thức thanh toán';
         }
         console.error('Error fetching payment method detail:', err);
+        this.cdr.markForCheck();
       }
     });
   }
@@ -92,6 +96,7 @@ export class PaymentMethodDetailComponent implements OnInit {
       this.confirmVariant = 'default';
     }
     this.confirmOpen = true;
+    this.cdr.markForCheck();
   }
 
   onConfirmStatusChange(): void {
@@ -100,6 +105,7 @@ export class PaymentMethodDetailComponent implements OnInit {
     const currentActive = this.method.isActive !== false;
     const newActive = !currentActive;
     this.isStatusUpdating = true;
+    this.cdr.markForCheck();
 
     this.apiService.updatePaymentMethodStatus(this.methodId, newActive).subscribe({
       next: (res) => {
@@ -112,17 +118,20 @@ export class PaymentMethodDetailComponent implements OnInit {
         } else {
           this.errorMessage = res.message || 'Thao tác không thành công';
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isStatusUpdating = false;
         this.confirmOpen = false;
         this.errorMessage = err.error?.message || 'Lỗi khi cập nhật trạng thái';
         console.error('Status change error:', err);
+        this.cdr.markForCheck();
       }
     });
   }
 
   onCancelStatusChange(): void {
     this.confirmOpen = false;
+    this.cdr.markForCheck();
   }
 }

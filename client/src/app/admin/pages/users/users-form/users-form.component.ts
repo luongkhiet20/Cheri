@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ApiService } from '../../../../services/api.service';
+import { AdminService } from '../../../services/admin.service';
 
 interface UserFormData {
   email: string;
@@ -51,8 +51,9 @@ export class UsersFormComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private apiService: ApiService
-  ) {}
+    private apiService: AdminService,
+    private cdr: ChangeDetectorRef
+  ) { }
 
   ngOnInit(): void {
     this.userId = this.route.snapshot.paramMap.get('id');
@@ -92,11 +93,13 @@ export class UsersFormComponent implements OnInit {
         } else {
           this.errorMessage = res.message || 'Không tìm thấy thông tin tài khoản';
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isLoading = false;
         this.errorMessage = err.error?.message || 'Lỗi khi tải thông tin tài khoản từ máy chủ';
         console.error('Error fetching user detail for edit:', err);
+        this.cdr.markForCheck();
       }
     });
   }
@@ -185,17 +188,20 @@ export class UsersFormComponent implements OnInit {
           this.isSubmitting = false;
           if (res.success) {
             this.successMessage = 'Cập nhật tài khoản thành công';
+            this.cdr.markForCheck();
             setTimeout(() => {
               this.router.navigate(['/admin/users', this.userId]);
             }, 500);
           } else {
             this.errorMessage = res.message || 'Cập nhật thất bại';
+            this.cdr.markForCheck();
           }
         },
         error: (err) => {
           this.isSubmitting = false;
           this.errorMessage = err.error?.message || 'Lỗi khi cập nhật tài khoản lên máy chủ';
           console.error('Update user error:', err);
+          this.cdr.markForCheck();
         }
       });
     } else {
@@ -220,17 +226,20 @@ export class UsersFormComponent implements OnInit {
           this.isSubmitting = false;
           if (res.success) {
             this.successMessage = 'Thêm tài khoản thành công';
+            this.cdr.markForCheck();
             setTimeout(() => {
               this.router.navigate(['/admin/users']);
             }, 500);
           } else {
             this.errorMessage = res.message || 'Thêm tài khoản thất bại';
+            this.cdr.markForCheck();
           }
         },
         error: (err) => {
           this.isSubmitting = false;
           this.errorMessage = err.error?.message || 'Lỗi khi tạo mới tài khoản';
           console.error('Create user error:', err);
+          this.cdr.markForCheck();
         }
       });
     }

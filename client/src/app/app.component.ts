@@ -17,22 +17,22 @@ import { NavigationStart, NavigationEnd, Router, RouterOutlet } from '@angular/r
 
 import { TranslateService } from './services/translate.service';
 import { JsonLDService } from './services/jsonLD.service';
-import { User } from './shared/models';
-import { currencyLang } from './shared/constants';
+import { User } from './user/shared/models';
+import { currencyLang } from './user/shared/constants';
 import { SignalStore } from './store/signal.store';
 import { SignalStoreSelectors } from './store/signal.store.selectors';
-import { FooterComponent } from './shared/components/footer/footer.component';
-import { HeaderComponent } from './shared/components/header/header.component';
+import { FooterComponent } from './user/shared/components/footer/footer.component';
+import { HeaderComponent } from './user/shared/components/header/header.component';
 
 @Component({
-    selector: 'cheri-app',
-    imports: [CommonModule, RouterOutlet, FooterComponent, HeaderComponent],
-    templateUrl: './app.component.html',
-    styleUrls: ['./app.component.css']
+  selector: 'cheri-app',
+  imports: [CommonModule, RouterOutlet, FooterComponent, HeaderComponent],
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.css']
 })
 export class AppComponent {
 
-  rememberScroll  : {[component: string]: number} = {};
+  rememberScroll: { [component: string]: number } = {};
   position = 0;
   isDashboard = false;
 
@@ -52,39 +52,39 @@ export class AppComponent {
       .subscribe((lang: string) => {
         const langUpdate = {
           lang,
-          currency  : currencyLang[lang]
+          currency: currencyLang[lang]
         };
         this.signalStore.changeLanguage(langUpdate);
-    });
+      });
 
 
     toObservable(this.selectors.appLang)
       .pipe(filter(Boolean), skip(1))
       .subscribe((lang: string) => {
         translate.use(lang);
-    });
+      });
 
     toObservable(this.selectors.position)
       .pipe(filter(Boolean))
-      .subscribe((componentPosition: {[component: string]: number}) => {
-        this.rememberScroll = {...this.rememberScroll, ...componentPosition};
+      .subscribe((componentPosition: { [component: string]: number }) => {
+        this.rememberScroll = { ...this.rememberScroll, ...componentPosition };
         this.renderer.setProperty(this.elRef.nativeElement.querySelector('.main-scroll-wrap'), 'scrollTop', 0);
-    });
+      });
 
     this.signalStore.getUser();
 
     toObservable(this.selectors.user).pipe(delay(100))
       .subscribe((user: User) => {
-      if (user && user.email) {
-        this.signalStore.getUserOrders();
-      }
-    });
+        if (user && user.email) {
+          this.signalStore.getUserOrders();
+        }
+      });
 
     this.translate.getLang$()
       .pipe(filter(lang => !!lang && isPlatformBrowser(this.platformId)))
       .subscribe(lang => {
         this.signalStore.getCart(lang);
-        this.signalStore.getPages({lang, titles: true});
+        this.signalStore.getPages({ lang, titles: true });
       });
 
     if (isPlatformServer(this.platformId)) {
@@ -98,7 +98,7 @@ export class AppComponent {
         this.jsonLDService.insertSchema(this.jsonLDService.websiteSchema);
         this.jsonLDService.insertSchema(this.jsonLDService.orgSchema, 'structured-data-org');
       })
-     );
+    );
 
     // Ẩn header/footer trên trang admin
     const checkIsAdmin = (url: string): boolean => {
@@ -113,6 +113,13 @@ export class AppComponent {
       const currentUrl = event.urlAfterRedirects || event.url || '';
       this.isDashboard = checkIsAdmin(currentUrl);
     });
+  }
+
+  isAdmin(): boolean {
+    const user = this.selectors.user();
+    if (!user) return false;
+    const roles = user.roles || (user.role ? [user.role] : []);
+    return Array.isArray(roles) && roles.some((r: string) => r && r.toLowerCase() === 'admin');
   }
 
   onScrolling(event: Event): void {
@@ -133,7 +140,7 @@ export class AppComponent {
   onDeactivate(component: string): void {
     if (Object.keys(component).includes('component')) {
       const currentComponent = component['component'];
-      this.rememberScroll = {...this.rememberScroll, [currentComponent]: this.position};
+      this.rememberScroll = { ...this.rememberScroll, [currentComponent]: this.position };
     }
   }
 }

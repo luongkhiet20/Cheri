@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ApiService } from '../../../../services/api.service';
+import { AdminService } from '../../../services/admin.service';
 
 export interface CategoryFormData {
   title: string;
@@ -44,8 +44,9 @@ export class CategoryFormComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private apiService: ApiService
-  ) {}
+    private apiService: AdminService,
+    private cdr: ChangeDetectorRef
+  ) { }
 
   ngOnInit(): void {
     this.categoryId = this.route.snapshot.paramMap.get('id');
@@ -69,9 +70,11 @@ export class CategoryFormComponent implements OnInit {
           // If in edit mode, exclude self from parent options
           this.parentCategories = res.data.filter((c: any) => c.id !== this.categoryId);
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         console.error('Lỗi khi tải danh sách danh mục cha:', err);
+        this.cdr.markForCheck();
       }
     });
   }
@@ -100,10 +103,12 @@ export class CategoryFormComponent implements OnInit {
         } else {
           this.errorMessage = res.message || 'Không tìm thấy thông tin danh mục';
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isLoading = false;
         this.errorMessage = err.error?.message || 'Lỗi khi tải danh mục từ cơ sở dữ liệu MongoDB';
+        this.cdr.markForCheck();
       }
     });
   }
@@ -193,16 +198,19 @@ export class CategoryFormComponent implements OnInit {
           if (res.success) {
             this.successMessage = 'Cập nhật danh mục thành công!';
             this.isDirty = false;
+            this.cdr.markForCheck();
             setTimeout(() => {
               this.router.navigate(['/admin/categories']);
             }, 600);
           } else {
             this.errorMessage = res.message || 'Lỗi cập nhật danh mục';
+            this.cdr.markForCheck();
           }
         },
         error: (err) => {
           this.isSubmitting = false;
           this.errorMessage = err.error?.message || 'Lỗi khi cập nhật danh mục vào MongoDB';
+          this.cdr.markForCheck();
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
       });
@@ -214,16 +222,19 @@ export class CategoryFormComponent implements OnInit {
           if (res.success) {
             this.successMessage = 'Thêm danh mục thành công!';
             this.isDirty = false;
+            this.cdr.markForCheck();
             setTimeout(() => {
               this.router.navigate(['/admin/categories']);
             }, 600);
           } else {
             this.errorMessage = res.message || 'Lỗi thêm danh mục';
+            this.cdr.markForCheck();
           }
         },
         error: (err) => {
           this.isSubmitting = false;
           this.errorMessage = err.error?.message || 'Lỗi khi thêm danh mục vào MongoDB';
+          this.cdr.markForCheck();
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
       });

@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ApiService } from '../../../../services/api.service';
+import { AdminService } from '../../../services/admin.service';
 
 @Component({
   selector: 'app-shipping-method-detail',
@@ -29,14 +29,16 @@ export class ShippingMethodDetailComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private apiService: ApiService
-  ) {}
+    private apiService: AdminService,
+    private cdr: ChangeDetectorRef
+  ) { }
 
   ngOnInit(): void {
     this.methodId = this.route.snapshot.paramMap.get('id');
     if (!this.methodId || this.methodId.trim() === '') {
       this.isNotFound = true;
       this.isLoading = false;
+      this.cdr.markForCheck();
       return;
     }
     this.loadMethod(this.methodId);
@@ -55,6 +57,7 @@ export class ShippingMethodDetailComponent implements OnInit {
         } else {
           this.isNotFound = true;
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isLoading = false;
@@ -64,6 +67,7 @@ export class ShippingMethodDetailComponent implements OnInit {
           this.errorMessage = err.error?.message || 'Lỗi khi tải thông tin phương thức vận chuyển';
         }
         console.error('Error fetching shipping method detail:', err);
+        this.cdr.markForCheck();
       }
     });
   }
@@ -94,6 +98,7 @@ export class ShippingMethodDetailComponent implements OnInit {
       this.confirmVariant = 'default';
     }
     this.confirmOpen = true;
+    this.cdr.markForCheck();
   }
 
   onDeleteClick(): void {
@@ -105,6 +110,7 @@ export class ShippingMethodDetailComponent implements OnInit {
     this.confirmLabel = 'Xóa';
     this.confirmVariant = 'danger';
     this.confirmOpen = true;
+    this.cdr.markForCheck();
   }
 
   onConfirmDialog(): void {
@@ -122,15 +128,20 @@ export class ShippingMethodDetailComponent implements OnInit {
           if (res.success && res.data) {
             this.method = res.data;
             this.successMessage = res.message || `Đã ${targetActive ? 'bật' : 'tắt'} phương thức vận chuyển thành công`;
-            setTimeout(() => { this.successMessage = ''; }, 4000);
+            setTimeout(() => {
+              this.successMessage = '';
+              this.cdr.markForCheck();
+            }, 4000);
           } else {
             this.errorMessage = res.message || 'Không thể cập nhật trạng thái';
           }
+          this.cdr.markForCheck();
         },
         error: (err) => {
           this.isProcessing = false;
           this.confirmOpen = false;
           this.errorMessage = err.error?.message || 'Lỗi khi cập nhật trạng thái trong MongoDB';
+          this.cdr.markForCheck();
         }
       });
     } else if (this.dialogAction === 'delete') {
@@ -143,12 +154,14 @@ export class ShippingMethodDetailComponent implements OnInit {
             this.router.navigate(['/admin/shipping-methods']);
           } else {
             this.errorMessage = res.message || 'Không thể xóa phương thức vận chuyển';
+            this.cdr.markForCheck();
           }
         },
         error: (err) => {
           this.isProcessing = false;
           this.confirmOpen = false;
           this.errorMessage = err.error?.message || 'Lỗi khi xóa phương thức vận chuyển';
+          this.cdr.markForCheck();
         }
       });
     }
@@ -156,6 +169,7 @@ export class ShippingMethodDetailComponent implements OnInit {
 
   onCancelDialog(): void {
     this.confirmOpen = false;
+    this.cdr.markForCheck();
   }
 
   formatCurrency(value: number | null | undefined): string {

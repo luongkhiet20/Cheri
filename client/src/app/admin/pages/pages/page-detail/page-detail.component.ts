@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ApiService } from '../../../../services/api.service';
+import { AdminService } from '../../../services/admin.service';
 
 @Component({
   selector: 'app-page-detail',
@@ -22,8 +22,9 @@ export class PageDetailComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private apiService: ApiService
-  ) {}
+    private apiService: AdminService,
+    private cdr: ChangeDetectorRef
+  ) { }
 
   ngOnInit(): void {
     this.pageId = this.route.snapshot.paramMap.get('id');
@@ -31,6 +32,7 @@ export class PageDetailComponent implements OnInit {
       this.loadPageDetail(this.pageId);
     } else {
       this.errorMessage = 'ID trang không hợp lệ';
+      this.cdr.markForCheck();
     }
   }
 
@@ -46,10 +48,12 @@ export class PageDetailComponent implements OnInit {
         } else {
           this.errorMessage = res.message || 'Không tìm thấy thông tin trang';
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isLoading = false;
         this.errorMessage = err.error?.message || 'Lỗi khi tải thông tin trang từ cơ sở dữ liệu MongoDB';
+        this.cdr.markForCheck();
       }
     });
   }
@@ -67,14 +71,19 @@ export class PageDetailComponent implements OnInit {
         if (res.success && res.data) {
           this.page = res.data;
           this.successMessage = res.message || 'Cập nhật trạng thái thành công';
-          setTimeout(() => this.successMessage = '', 3000);
+          setTimeout(() => {
+            this.successMessage = '';
+            this.cdr.markForCheck();
+          }, 3000);
         } else {
           this.errorMessage = res.message || 'Lỗi khi chuyển trạng thái trang';
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isToggling = false;
         this.errorMessage = err.error?.message || 'Lỗi khi cập nhật trạng thái trong MongoDB';
+        this.cdr.markForCheck();
       }
     });
   }
@@ -87,6 +96,7 @@ export class PageDetailComponent implements OnInit {
 
   openConfirmDelete(): void {
     this.confirmDeleteOpen = true;
+    this.cdr.markForCheck();
   }
 
   onConfirmDelete(): void {
@@ -98,16 +108,19 @@ export class PageDetailComponent implements OnInit {
           this.router.navigate(['/admin/pages']);
         } else {
           this.errorMessage = res.message || 'Lỗi khi xóa trang';
+          this.cdr.markForCheck();
         }
       },
       error: (err) => {
         this.confirmDeleteOpen = false;
         this.errorMessage = err.error?.message || 'Lỗi khi xóa trang khỏi MongoDB';
+        this.cdr.markForCheck();
       }
     });
   }
 
   onCancelDelete(): void {
     this.confirmDeleteOpen = false;
+    this.cdr.markForCheck();
   }
 }

@@ -1,8 +1,8 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Location } from '@angular/common';
 import { Subscription } from 'rxjs';
-import { ApiService } from '../../../services/api.service';
+import { AdminService } from '../../services/admin.service';
 
 @Component({
   selector: 'app-account',
@@ -52,11 +52,12 @@ export class AccountComponent implements OnInit, OnDestroy {
   private routeSub: Subscription | null = null;
 
   constructor(
-    private apiService: ApiService,
+    private apiService: AdminService,
     private router: Router,
     private route: ActivatedRoute,
-    private location: Location
-  ) {}
+    private location: Location,
+    private cdr: ChangeDetectorRef
+  ) { }
 
   ngOnInit(): void {
     this.determineActiveTabFromUrl();
@@ -64,6 +65,7 @@ export class AccountComponent implements OnInit, OnDestroy {
 
     this.routeSub = this.route.url.subscribe(() => {
       this.determineActiveTabFromUrl();
+      this.cdr.markForCheck();
     });
   }
 
@@ -92,6 +94,7 @@ export class AccountComponent implements OnInit, OnDestroy {
     if (tab === 'edit') newUrl = '/admin/account/edit';
     if (tab === 'password') newUrl = '/admin/account/password';
     this.location.go(newUrl);
+    this.cdr.markForCheck();
   }
 
   loadProfile(): void {
@@ -106,11 +109,13 @@ export class AccountComponent implements OnInit, OnDestroy {
         } else {
           this.showError('Không thể tải thông tin tài khoản từ hệ thống.');
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isLoading = false;
         console.error('Error loading account profile:', err);
         this.showError(err?.error?.message || 'Lỗi kết nối khi tải hồ sơ tài khoản từ MongoDB.');
+        this.cdr.markForCheck();
       }
     });
   }
@@ -182,12 +187,14 @@ export class AccountComponent implements OnInit, OnDestroy {
         } else {
           this.showError(res?.message || 'Không thể cập nhật thông tin.');
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isSavingProfile = false;
         console.error('Error updating profile:', err);
         const msg = err?.error?.message || 'Không thể cập nhật thông tin tài khoản.';
         this.showError(msg);
+        this.cdr.markForCheck();
       }
     });
   }
@@ -201,6 +208,7 @@ export class AccountComponent implements OnInit, OnDestroy {
       };
       this.editErrors = {};
       this.clearAlerts();
+      this.cdr.markForCheck();
     }
   }
 
@@ -241,6 +249,7 @@ export class AccountComponent implements OnInit, OnDestroy {
 
   onSavePassword(): void {
     if (!this.validatePasswordForm()) {
+      this.cdr.markForCheck();
       return;
     }
 
@@ -267,12 +276,14 @@ export class AccountComponent implements OnInit, OnDestroy {
         } else {
           this.showError(res?.message || 'Không thể đổi mật khẩu.');
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isSavingPassword = false;
         console.error('Error changing password:', err);
         const msg = err?.error?.message || 'Không thể đổi mật khẩu. Vui lòng kiểm tra lại mật khẩu cũ.';
         this.showError(msg);
+        this.cdr.markForCheck();
       }
     });
   }
@@ -283,6 +294,7 @@ export class AccountComponent implements OnInit, OnDestroy {
     this.avatarPreview = this.profile?.avatar || null;
     this.avatarUrlInput = '';
     this.avatarError = '';
+    this.cdr.markForCheck();
   }
 
   closeAvatarModal(): void {
@@ -290,6 +302,7 @@ export class AccountComponent implements OnInit, OnDestroy {
     this.avatarPreview = null;
     this.avatarUrlInput = '';
     this.avatarError = '';
+    this.cdr.markForCheck();
   }
 
   onFileSelected(event: any): void {
@@ -299,12 +312,14 @@ export class AccountComponent implements OnInit, OnDestroy {
     // Check image type
     if (!file.type.startsWith('image/')) {
       this.avatarError = 'Chỉ chấp nhận tệp hình ảnh (JPG, PNG, GIF, WEBP).';
+      this.cdr.markForCheck();
       return;
     }
 
     // Check size limit (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       this.avatarError = 'Kích thước ảnh không được vượt quá 5MB.';
+      this.cdr.markForCheck();
       return;
     }
 
@@ -312,6 +327,7 @@ export class AccountComponent implements OnInit, OnDestroy {
     const reader = new FileReader();
     reader.onload = () => {
       this.avatarPreview = reader.result as string;
+      this.cdr.markForCheck();
     };
     reader.readAsDataURL(file);
   }
@@ -320,6 +336,7 @@ export class AccountComponent implements OnInit, OnDestroy {
     if (this.avatarUrlInput && this.avatarUrlInput.trim()) {
       this.avatarPreview = this.avatarUrlInput.trim();
       this.avatarError = '';
+      this.cdr.markForCheck();
     }
   }
 
@@ -327,6 +344,7 @@ export class AccountComponent implements OnInit, OnDestroy {
     const newAvatar = this.avatarPreview || this.avatarUrlInput.trim();
     if (!newAvatar) {
       this.avatarError = 'Vui lòng chọn ảnh từ thiết bị hoặc nhập URL ảnh hợp lệ.';
+      this.cdr.markForCheck();
       return;
     }
 
@@ -343,11 +361,13 @@ export class AccountComponent implements OnInit, OnDestroy {
         } else {
           this.avatarError = res?.message || 'Không thể lưu ảnh đại diện.';
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isUploadingAvatar = false;
         console.error('Error uploading avatar:', err);
         this.avatarError = err?.error?.message || 'Lỗi khi tải ảnh đại diện lên máy chủ.';
+        this.cdr.markForCheck();
       }
     });
   }
@@ -378,18 +398,22 @@ export class AccountComponent implements OnInit, OnDestroy {
   private showSuccess(msg: string): void {
     this.successMessage = msg;
     this.errorMessage = '';
+    this.cdr.markForCheck();
     if (this.messageTimer) clearTimeout(this.messageTimer);
     this.messageTimer = setTimeout(() => {
       this.successMessage = '';
+      this.cdr.markForCheck();
     }, 6000);
   }
 
   private showError(msg: string): void {
     this.errorMessage = msg;
     this.successMessage = '';
+    this.cdr.markForCheck();
     if (this.messageTimer) clearTimeout(this.messageTimer);
     this.messageTimer = setTimeout(() => {
       this.errorMessage = '';
+      this.cdr.markForCheck();
     }, 8000);
   }
 
@@ -397,5 +421,6 @@ export class AccountComponent implements OnInit, OnDestroy {
     this.successMessage = '';
     this.errorMessage = '';
     if (this.messageTimer) clearTimeout(this.messageTimer);
+    this.cdr.markForCheck();
   }
 }

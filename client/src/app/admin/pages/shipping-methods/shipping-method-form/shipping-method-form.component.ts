@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ApiService } from '../../../../services/api.service';
+import { AdminService } from '../../../services/admin.service';
 
 interface ShippingMethodFormData {
   name: string;
@@ -43,8 +43,9 @@ export class ShippingMethodFormComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private apiService: ApiService
-  ) {}
+    private apiService: AdminService,
+    private cdr: ChangeDetectorRef
+  ) { }
 
   ngOnInit(): void {
     this.methodId = this.route.snapshot.paramMap.get('id');
@@ -53,6 +54,7 @@ export class ShippingMethodFormComponent implements OnInit {
     if (this.isEditMode) {
       if (!this.methodId || this.methodId.trim() === '') {
         this.errorMessage = 'Mã định danh phương thức vận chuyển không hợp lệ';
+        this.cdr.markForCheck();
         return;
       }
       this.loadMethodDetail(this.methodId);
@@ -81,11 +83,13 @@ export class ShippingMethodFormComponent implements OnInit {
         } else {
           this.errorMessage = res.message || 'Không tìm thấy phương thức vận chuyển';
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isLoading = false;
         this.errorMessage = err.error?.message || 'Lỗi khi tải thông tin phương thức vận chuyển từ máy chủ MongoDB';
         console.error('Error fetching shipping method detail for edit:', err);
+        this.cdr.markForCheck();
       }
     });
   }
@@ -163,11 +167,13 @@ export class ShippingMethodFormComponent implements OnInit {
           } else {
             this.errorMessage = res.message || 'Cập nhật thất bại';
           }
+          this.cdr.markForCheck();
         },
         error: (err) => {
           this.isSubmitting = false;
           this.errorMessage = err.error?.message || 'Có lỗi xảy ra khi lưu vào MongoDB. Vui lòng kiểm tra lại.';
           console.error('Update shipping method error:', err);
+          this.cdr.markForCheck();
         }
       });
     } else {
@@ -183,11 +189,13 @@ export class ShippingMethodFormComponent implements OnInit {
           } else {
             this.errorMessage = res.message || 'Thêm mới thất bại';
           }
+          this.cdr.markForCheck();
         },
         error: (err) => {
           this.isSubmitting = false;
           this.errorMessage = err.error?.message || 'Có lỗi xảy ra khi tạo document mới trong MongoDB. Vui lòng kiểm tra lại.';
           console.error('Create shipping method error:', err);
+          this.cdr.markForCheck();
         }
       });
     }

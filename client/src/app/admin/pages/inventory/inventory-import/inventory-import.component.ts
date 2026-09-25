@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
-import { ApiService } from '../../../../services/api.service';
+import { AdminService } from '../../../services/admin.service';
 
 interface ProductOption {
   id: string;
@@ -46,9 +46,10 @@ export class InventoryImportComponent implements OnInit {
   }
 
   constructor(
-    private apiService: ApiService,
-    private router: Router
-  ) {}
+    private apiService: AdminService,
+    private router: Router,
+    private cdr: ChangeDetectorRef
+  ) { }
 
   ngOnInit(): void {
     this.loadProducts();
@@ -69,11 +70,13 @@ export class InventoryImportComponent implements OnInit {
           }));
           this.filteredProducts = [...this.products];
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isLoadingProducts = false;
         console.error('Lỗi khi tải danh sách sản phẩm:', err);
         this.errorMessage = 'Không thể tải danh sách sản phẩm từ hệ thống.';
+        this.cdr.markForCheck();
       }
     });
   }
@@ -88,6 +91,7 @@ export class InventoryImportComponent implements OnInit {
         p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)
       );
     }
+    this.cdr.markForCheck();
   }
 
   selectProduct(prod: ProductOption): void {
@@ -98,6 +102,7 @@ export class InventoryImportComponent implements OnInit {
 
     // Call API getProductById to fetch latest actual stock from MongoDB
     this.isLoadingProductDetail = true;
+    this.cdr.markForCheck();
     this.apiService.getProductById(this.selectedProductId).subscribe({
       next: (res) => {
         this.isLoadingProductDetail = false;
@@ -117,6 +122,7 @@ export class InventoryImportComponent implements OnInit {
           this.currentStock = prod.stock;
           this.sku = prod.sku;
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isLoadingProductDetail = false;
@@ -124,6 +130,7 @@ export class InventoryImportComponent implements OnInit {
         this.selectedProduct = prod;
         this.currentStock = prod.stock;
         this.sku = prod.sku;
+        this.cdr.markForCheck();
       }
     });
   }
@@ -173,12 +180,13 @@ export class InventoryImportComponent implements OnInit {
         if (res.success) {
           const finalStock = res.stock != null ? res.stock : (this.currentStock + qty);
           this.successMessage = res.message || `Đã nhập thêm ${qty} sản phẩm. Tồn kho hiện tại: ${finalStock}.`;
-
+          this.cdr.markForCheck();
           setTimeout(() => {
             this.router.navigate(['/admin/inventory']);
           }, 900);
         } else {
           this.errorMessage = res.message || 'Không thể nhập kho. Vui lòng thử lại.';
+          this.cdr.markForCheck();
         }
       },
       error: (err) => {
@@ -191,6 +199,7 @@ export class InventoryImportComponent implements OnInit {
         } else {
           this.errorMessage = err.error?.message || 'Không thể nhập kho. Vui lòng thử lại.';
         }
+        this.cdr.markForCheck();
       }
     });
   }

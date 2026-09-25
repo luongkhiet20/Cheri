@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ApiService } from '../../../../services/api.service';
+import { AdminService } from '../../../services/admin.service';
 
 export interface ProductVariant {
   key: string;            // Identity key e.g. "class:áo|color:đỏ|size:m"
@@ -144,8 +144,9 @@ export class ProductFormComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private apiService: ApiService
-  ) {}
+    private apiService: AdminService,
+    private cdr: ChangeDetectorRef
+  ) { }
 
   ngOnInit(): void {
     this.loadCategories();
@@ -158,6 +159,7 @@ export class ProductFormComponent implements OnInit {
 
   markDirty(): void {
     this.isDirty = true;
+    this.cdr.markForCheck();
   }
 
   loadCategories(): void {
@@ -168,10 +170,12 @@ export class ProductFormComponent implements OnInit {
         } else {
           this.categories = this.defaultCategories.map(name => ({ name }));
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         console.error('Lỗi tải danh mục, sử dụng danh mục chuẩn:', err);
         this.categories = this.defaultCategories.map(name => ({ name }));
+        this.cdr.markForCheck();
       }
     });
   }
@@ -268,10 +272,12 @@ export class ProductFormComponent implements OnInit {
         } else {
           this.errorMessage = 'Không tìm thấy sản phẩm trong cơ sở dữ liệu.';
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isLoading = false;
         this.errorMessage = 'Lỗi kết nối cơ sở dữ liệu: ' + (err.error?.message || err.message);
+        this.cdr.markForCheck();
       }
     });
   }
@@ -782,16 +788,19 @@ export class ProductFormComponent implements OnInit {
           if (res.success) {
             this.successMessage = 'Cập nhật sản phẩm thành công vào cơ sở dữ liệu MongoDB!';
             this.isDirty = false;
+            this.cdr.markForCheck();
             setTimeout(() => {
               this.router.navigate(['/admin/products', this.productId]);
             }, 600);
           } else {
             this.errorMessage = res.message || 'Lỗi cập nhật sản phẩm';
+            this.cdr.markForCheck();
           }
         },
         error: (err) => {
           this.isSubmitting = false;
           this.errorMessage = 'Lỗi lưu sản phẩm: ' + (err.error?.message || err.message);
+          this.cdr.markForCheck();
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
       });
@@ -803,6 +812,7 @@ export class ProductFormComponent implements OnInit {
           if (res.success) {
             this.successMessage = 'Thêm sản phẩm thành công vào cơ sở dữ liệu MongoDB!';
             this.isDirty = false;
+            this.cdr.markForCheck();
             const newId = res.id || res.data?._id;
             setTimeout(() => {
               if (newId) {
@@ -813,11 +823,13 @@ export class ProductFormComponent implements OnInit {
             }, 600);
           } else {
             this.errorMessage = res.message || 'Lỗi thêm sản phẩm';
+            this.cdr.markForCheck();
           }
         },
         error: (err) => {
           this.isSubmitting = false;
           this.errorMessage = 'Lỗi thêm sản phẩm: ' + (err.error?.message || err.message);
+          this.cdr.markForCheck();
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
       });

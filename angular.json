@@ -23,6 +23,11 @@
             "polyfills": [],
             "tsConfig": "client/tsconfig.app.json",
             "inlineStyleLanguage": "css",
+            "optimization": {
+              "fonts": {
+                "inline": false
+              }
+            },
             "assets": [
               {
                 "glob": "**/*",

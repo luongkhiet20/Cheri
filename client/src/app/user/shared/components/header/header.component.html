@@ -1,0 +1,137 @@
+@if (!isAdmin()) {
+<mat-toolbar class="nav nav-fixed" id="navbar" color="primary">
+
+  <div class="nav-left">
+    @for (item of leftNavItems; track item.page) {
+    <a class="nav-label" [routerLink]="item.page === 'home' ? ['/'] : ['/' + (lang$ | async) + '/' + item.page]"
+      routerLinkActive="active" [routerLinkActiveOptions]="{ exact: item.page === 'home' }">
+      {{ item.label }}
+    </a>
+    }
+  </div>
+
+  <div class="nav-center-logo">
+    <a [routerLink]="['/']" (click)="scrollToTop()" class="cheri-logo">Chéri</a>
+  </div>
+
+  <div class="nav-part-right">
+    <!-- 1. Tìm kiếm -->
+    <div class="nav-search-wrap">
+      @if (!isSearchOpen) {
+      <button type="button" class="nav-label nav-search-trigger" (click)="toggleSearch()">
+        Tìm kiếm
+      </button>
+      } @else {
+      <div class="nav-search-form active">
+        <mat-form-field class="nav-search-form-content" [ngClass]="{ 'focus-active': (showAutocomplete$ | async) }">
+          <input type="text" placeholder="Tìm kiếm..." matInput [formControl]="query" (focus)="onFocus()"
+            (blur)="onBlur()" [matAutocomplete]="auto" />
+          <button matSuffix mat-icon-button type="button" (click)="closeSearch()" class="search-close-btn"
+            aria-label="Close search">
+            <mat-icon>close</mat-icon>
+          </button>
+          <mat-autocomplete #auto="matAutocomplete">
+            @for (title of productTitles$(); track title) {
+            <mat-option [value]="title" [routerLink]="['/' + (lang$ | async) + '/product/' + title]"
+              (click)="onTitleLink()">
+              <a class="nav-autocomplete-link">{{ title }}</a>
+            </mat-option>
+            }
+          </mat-autocomplete>
+        </mat-form-field>
+      </div>
+      }
+    </div>
+
+    <!-- 2. Yêu thích -->
+    <div class="nav-right-links">
+      @for (item of rightNavItems; track item.page) {
+      <a class="nav-label" [routerLink]="['/' + (lang$ | async) + '/' + item.page]" routerLinkActive="active">
+        {{ item.label }}
+      </a>
+      }
+    </div>
+
+    <!-- 3. Giỏ hàng -->
+    <div class="nav-basic">
+      @if (cart$(); as cart) {
+      <a class="nav-label nav-cart-label" [routerLink]="['/' + (lang$ | async) + '/cart']" routerLinkActive="active">
+        Giỏ hàng@if (cart?.totalQty) { ({{ cart?.totalQty }}) }
+      </a>
+      } @else {
+      <a class="nav-label nav-cart-label" [routerLink]="['/' + (lang$ | async) + '/cart']" routerLinkActive="active">
+        Giỏ hàng
+      </a>
+      }
+    </div>
+
+    <div class="nav-mobile">
+      <button mat-icon-button [matMenuTriggerFor]="menu">
+        <mat-icon>menu</mat-icon>
+      </button>
+      <mat-menu #menu="matMenu" [overlapTrigger]="false">
+        <ng-container *ngTemplateOutlet="menuItems"></ng-container>
+      </mat-menu>
+    </div>
+
+    <div class="nav-desktop">
+      <ng-container *ngTemplateOutlet="menuItems"></ng-container>
+    </div>
+  </div>
+</mat-toolbar>
+
+<ng-template #menuItems>
+  <div class="mobile-nav-links">
+    @for (item of leftNavItems; track item.page) {
+    <button mat-menu-item [routerLink]="item.page === 'home' ? ['/'] : ['/' + (lang$ | async) + '/' + item.page]"
+      routerLinkActive="active">
+      <span class="nav-label">{{ item.label }}</span>
+    </button>
+    }
+
+    <button mat-menu-item (click)="toggleSearch()">
+      <span class="nav-label">Tìm kiếm</span>
+    </button>
+
+    @for (item of rightNavItems; track item.page) {
+    <button mat-menu-item [routerLink]="['/' + (lang$ | async) + '/' + item.page]" routerLinkActive="active">
+      <span class="nav-label">{{ item.label }}</span>
+    </button>
+    }
+
+    <button mat-menu-item [routerLink]="['/' + (lang$ | async) + '/cart']" routerLinkActive="active">
+      <span class="nav-label">Giỏ hàng@if (cart$()?.totalQty) { ({{ cart$()?.totalQty }}) }</span>
+    </button>
+    <div class="mobile-nav-divider"></div>
+  </div>
+
+  <!-- 1. GUEST: Chưa đăng nhập -->
+  @if (!user$()) {
+  <button mat-menu-item [routerLink]="['/' + ((lang$ | async) || 'vi') + '/authorize/signin']" routerLinkActive="nav-active-link" title="Đăng nhập">
+    <mat-icon>account_circle</mat-icon>
+    <a class="nav-link"> Đăng nhập</a>
+  </button>
+  }
+
+  <!-- 2. USER: Đã đăng nhập với roles: ['user'] -->
+  @if (isRegularUser()) {
+    @if (userOrders$()?.length) {
+    <button mat-menu-item [routerLink]="['/' + ((lang$ | async) || 'vi') + '/orders']" routerLinkActive="nav-active-link" title="Đơn hàng">
+      <mat-icon>assignment</mat-icon>
+      <a class="nav-link"> {{ 'Orders' | translate | async }}</a>
+    </button>
+    }
+
+    <button mat-menu-item [routerLink]="['/' + (lang$ | async) + '/profile']" routerLinkActive="nav-active-link" title="Hồ sơ cá nhân">
+      <mat-icon id="user_icon">person</mat-icon>
+      <a class="nav-link"> {{ getUserDisplayName() || 'Hồ sơ' }}</a>
+    </button>
+
+    <button mat-menu-item (click)="onLogout()" title="Đăng xuất">
+      <mat-icon>exit_to_app</mat-icon>
+      <a class="nav-link"> {{ 'Logout' | translate | async }}</a>
+    </button>
+  }
+
+</ng-template>
+}

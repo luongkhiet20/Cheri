@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { SettingsService } from './settings.service';
 import { AppSettings } from './settings.model';
 
@@ -81,7 +81,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
     { code: 'UTC', name: 'UTC (GMT+0)' }
   ];
 
-  constructor(private settingsService: SettingsService) {}
+  constructor(
+    private settingsService: SettingsService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
     this.loadSettings();
@@ -104,11 +107,13 @@ export class SettingsComponent implements OnInit, OnDestroy {
         } else {
           this.showError('Không thể tải cấu hình hệ thống từ MongoDB.');
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isLoading = false;
         console.error('Error fetching settings:', err);
         this.showError(err?.error?.message || 'Lỗi kết nối khi tải cài đặt hệ thống.');
+        this.cdr.markForCheck();
       }
     });
   }
@@ -186,11 +191,13 @@ export class SettingsComponent implements OnInit, OnDestroy {
         } else {
           this.showError(res?.message || 'Không thể lưu cài đặt.');
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isSaving = false;
         console.error('Error updating settings:', err);
         this.showError(err?.error?.message || 'Lỗi máy chủ khi cập nhật cấu hình hệ thống.');
+        this.cdr.markForCheck();
       }
     });
   }
@@ -200,6 +207,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
       this.settings = JSON.parse(JSON.stringify(this.originalSettings));
       this.errors = {};
       this.clearAlerts();
+      this.cdr.markForCheck();
     }
   }
 
@@ -207,21 +215,25 @@ export class SettingsComponent implements OnInit, OnDestroy {
   toggleStoreOpen(): void {
     if (!this.settings.store) this.settings.store = { isOpen: true };
     this.settings.store.isOpen = !this.settings.store.isOpen;
+    this.cdr.markForCheck();
   }
 
   toggleAllowOrder(): void {
     if (!this.settings.checkout) this.settings.checkout = { allowOrder: true };
     this.settings.checkout.allowOrder = !this.settings.checkout.allowOrder;
+    this.cdr.markForCheck();
   }
 
   toggleShippingEnabled(): void {
     if (!this.settings.shipping) this.settings.shipping = { enabled: true };
     this.settings.shipping.enabled = !this.settings.shipping.enabled;
+    this.cdr.markForCheck();
   }
 
   toggleMaintenance(): void {
     if (!this.settings.maintenance) this.settings.maintenance = { enabled: false, message: '' };
     this.settings.maintenance.enabled = !this.settings.maintenance.enabled;
+    this.cdr.markForCheck();
   }
 
   // ── LOGO MODAL ──────────────────────────────────────
@@ -229,12 +241,14 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.tempLogoUrl = this.settings.site.logo || '';
     this.modalError = '';
     this.isLogoModalOpen = true;
+    this.cdr.markForCheck();
   }
 
   closeLogoModal(): void {
     this.isLogoModalOpen = false;
     this.tempLogoUrl = '';
     this.modalError = '';
+    this.cdr.markForCheck();
   }
 
   onLogoFileSelected(event: any): void {
@@ -243,10 +257,12 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
     if (!file.type.startsWith('image/')) {
       this.modalError = 'Chỉ chấp nhận tệp hình ảnh (PNG, JPG, SVG, WEBP).';
+      this.cdr.markForCheck();
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
       this.modalError = 'Kích thước tệp logo không được vượt quá 5MB.';
+      this.cdr.markForCheck();
       return;
     }
 
@@ -254,6 +270,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     reader.onload = () => {
       this.tempLogoUrl = reader.result as string;
       this.modalError = '';
+      this.cdr.markForCheck();
     };
     reader.readAsDataURL(file);
   }
@@ -261,6 +278,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   saveLogo(): void {
     this.settings.site.logo = this.tempLogoUrl;
     this.closeLogoModal();
+    this.cdr.markForCheck();
   }
 
   // ── FAVICON MODAL ───────────────────────────────────
@@ -268,12 +286,14 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.tempFaviconUrl = this.settings.site.favicon || '';
     this.modalError = '';
     this.isFaviconModalOpen = true;
+    this.cdr.markForCheck();
   }
 
   closeFaviconModal(): void {
     this.isFaviconModalOpen = false;
     this.tempFaviconUrl = '';
     this.modalError = '';
+    this.cdr.markForCheck();
   }
 
   onFaviconFileSelected(event: any): void {
@@ -282,10 +302,12 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
     if (!file.type.startsWith('image/') && !file.name.endsWith('.ico')) {
       this.modalError = 'Chỉ chấp nhận định dạng ảnh hoặc ICO.';
+      this.cdr.markForCheck();
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
       this.modalError = 'Kích thước tệp favicon không được vượt quá 2MB.';
+      this.cdr.markForCheck();
       return;
     }
 
@@ -293,6 +315,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     reader.onload = () => {
       this.tempFaviconUrl = reader.result as string;
       this.modalError = '';
+      this.cdr.markForCheck();
     };
     reader.readAsDataURL(file);
   }
@@ -300,24 +323,29 @@ export class SettingsComponent implements OnInit, OnDestroy {
   saveFavicon(): void {
     this.settings.site.favicon = this.tempFaviconUrl;
     this.closeFaviconModal();
+    this.cdr.markForCheck();
   }
 
   // ── ALERTS ──────────────────────────────────────────
   private showSuccess(msg: string): void {
     this.successMessage = msg;
     this.errorMessage = '';
+    this.cdr.markForCheck();
     if (this.timer) clearTimeout(this.timer);
     this.timer = setTimeout(() => {
       this.successMessage = '';
+      this.cdr.markForCheck();
     }, 6000);
   }
 
   private showError(msg: string): void {
     this.errorMessage = msg;
     this.successMessage = '';
+    this.cdr.markForCheck();
     if (this.timer) clearTimeout(this.timer);
     this.timer = setTimeout(() => {
       this.errorMessage = '';
+      this.cdr.markForCheck();
     }, 8000);
   }
 
@@ -325,5 +353,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.successMessage = '';
     this.errorMessage = '';
     if (this.timer) clearTimeout(this.timer);
+    this.cdr.markForCheck();
   }
 }

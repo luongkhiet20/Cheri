@@ -8,7 +8,8 @@ export interface Product extends Document {
   description: string;
   descriptionFull: string[];
   tags: string[];
-  categoryLevel1?: string[];
+  categoryLevel1?: string[] | string;
+  categoryLevel2?: string;
   regularPrice: number;
   salePrice: number;
   titleUrl: string;

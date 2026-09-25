@@ -8,6 +8,7 @@
   "scripts": {
     "build:server": "cross-env NODE_ENV=production nest build --config ./server/nest-cli.json",
     "start:server": "cross-env NODE_ENV=production nest start --config ./server/nest-cli.json --path ./server/tsconfig.json",
+    "start:admin": "node server/admin-server.js",
     "start:dev": "cross-env NODE_ENV=development nest start --watch --config ./server/nest-cli.json --path ./server/tsconfig.json",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node server/dist/main",

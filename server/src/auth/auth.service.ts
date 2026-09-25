@@ -71,28 +71,22 @@ export class AuthService {
     roles?: string[];
   }> {
     const { email, password } = authCredentialsDto;
-    const user = await this.userModel.findOne({ email });
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const user = await this.userModel.findOne({ email: cleanEmail });
     const loggedUser = user && (await this.validatePassword(password, user));
     const userEmail = loggedUser ? user.email : null;
     if (!userEmail) {
-      throw new UnauthorizedException('Invalid credential');
+      throw new UnauthorizedException('Email hoặc mật khẩu không chính xác');
     }
 
-    const adminEmails = (
-      process.env.ADMIN_EMAILS ||
-      'contact.cheri@gmail.com,admin@example.com,luongkhiet20@gmail.com,luongkhiet200000@gmail.com,tinhvttk24411@st.uel.edu.vn,tinhvttk24418991@st.uel.edu.vn'
-    )
-      .split(',')
-      .map((e) => e.trim().toLowerCase());
-    if (adminEmails.includes(user.email.toLowerCase()) && (!user.roles || !user.roles.includes('admin'))) {
-      user.roles = [...(user.roles || []), 'admin'];
-      await this.userModel.updateOne({ _id: user._id }, { $addToSet: { roles: 'admin' } });
+    if (user.status === false) {
+      throw new UnauthorizedException('Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động');
     }
 
-    const payload: JwtPayload = { email };
+    const payload: JwtPayload = { email: user.email, id: user._id.toString(), roles: user.roles };
     const accessToken = await this.jwtService.sign(payload);
 
-    return { accessToken, id: user._id, roles: user.roles, email };
+    return { accessToken, id: user._id.toString(), roles: user.roles, email: user.email };
   }
 
   async signInGoogle(googleUserDto: GoogleUserDto) {

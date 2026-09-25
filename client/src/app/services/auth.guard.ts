@@ -6,7 +6,7 @@ import { SignalStore } from '../store/signal.store';
 import { ApiService } from './api.service';
 import { Observable, of } from 'rxjs';
 import { catchError, map, take } from 'rxjs/operators';
-import { accessTokenKey } from '../shared/constants';
+import { accessTokenKey } from '../user/shared/constants';
 
 export const checkIsAdmin = (user: any): boolean => {
   if (!user) return false;

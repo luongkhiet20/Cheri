@@ -8,7 +8,7 @@ import { environment } from '../../../../environments/environment';
   providedIn: 'root'
 })
 export class SettingsService {
-  private baseUrl = environment.apiUrl;
+  private baseUrl = environment.adminApiUrl || 'http://localhost:5000/api';
 
   constructor(private http: HttpClient) {}
 

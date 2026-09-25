@@ -1,8 +1,10 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID, ChangeDetectorRef } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { ApiService } from '../../../services/api.service';
+import { AdminService } from '../../services/admin.service';
+import { SignalStore } from '../../../store/signal.store';
+import { accessTokenKey } from '../../../user/shared/constants';
 
 @Component({
   selector: 'app-admin-header',
@@ -16,20 +18,26 @@ export class AdminHeaderComponent implements OnInit, OnDestroy {
   private userSub: Subscription | null = null;
 
   constructor(
-    private apiService: ApiService,
-    private router: Router
-  ) {}
+    private apiService: AdminService,
+    private router: Router,
+    private store: SignalStore,
+    private cdr: ChangeDetectorRef,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) { }
 
   ngOnInit(): void {
     // Subscribe to reactive user updates (triggered when user updates profile or avatar)
     this.userSub = this.apiService.currentUser$.subscribe(user => {
       this.currentUser = user;
+      this.cdr.markForCheck();
     });
 
     // Fetch initial profile
     this.apiService.getAccountProfile().subscribe({
-      next: () => {},
-      error: () => {}
+      next: () => {
+        this.cdr.markForCheck();
+      },
+      error: () => { }
     });
   }
 
@@ -60,6 +68,25 @@ export class AdminHeaderComponent implements OnInit, OnDestroy {
     this.isUserMenuOpen = false;
     this.router.navigate([path]);
   }
+
+  onLogout(): void {
+    this.closeUserMenu();
+    if (isPlatformBrowser(this.platformId)) {
+      try {
+        localStorage.removeItem(accessTokenKey);
+        sessionStorage.clear();
+        document.cookie = 'jwt=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+        document.cookie = 'token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+        document.cookie = 'accessToken=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+        document.cookie = 'connect.sid=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+      } catch (e) {}
+    }
+
+    this.store.signOut(() => {
+      this.router.navigate(['/vi/authorize/signin']);
+    });
+  }
 }
+
 
 

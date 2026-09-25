@@ -150,23 +150,23 @@ export class ReCaptchaV3Service {
       });
     };
     this.envConfigurationService.getConfigType$('FE_RECAPTCHA_CLIENT_KEY')
-    .pipe(filter(Boolean), take(1)).subscribe((siteKey) => {
-      this.zone.runOutsideAngular(() => {
-        try {
-          this.grecaptcha.execute(siteKey, { action }).then((token: string) => {
-            this.zone.run(() => {
-              subject.next(token);
-              subject.complete();
-              if (this.onExecuteSubject) {
-                this.onExecuteSubject.next({ action, token });
-              }
-            });
-          }, onError);
-        } catch (e) {
-          onError(e);
-        }
+      .pipe(filter(Boolean), take(1)).subscribe((siteKey) => {
+        this.zone.runOutsideAngular(() => {
+          try {
+            this.grecaptcha.execute(siteKey, { action }).then((token: string) => {
+              this.zone.run(() => {
+                subject.next(token);
+                subject.complete();
+                if (this.onExecuteSubject) {
+                  this.onExecuteSubject.next({ action, token });
+                }
+              });
+            }, onError);
+          } catch (e) {
+            onError(e);
+          }
+        });
       });
-    });
 
   }
 

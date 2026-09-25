@@ -1,7 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
-import { ApiService } from '../../../services/api.service';
+import { AdminService } from '../../services/admin.service';
 
 @Component({
   selector: 'app-products',
@@ -13,32 +13,36 @@ export class ProductsComponent implements OnInit {
 
   // ── Table Configuration ──────────────────────────────────────
   columns: TableColumn[] = [
-    { key: 'image',    label: '',              type: 'image',    width: '60px' },
-    { key: 'name',     label: 'Tên sản phẩm',  type: 'text',     sortable: true },
-    { key: 'price',    label: 'Giá',           type: 'currency', sortable: true, align: 'right' },
-    { key: 'category', label: 'Danh mục',      type: 'text' },
-    { key: 'stock',    label: 'Tồn kho',       type: 'number',   sortable: true, align: 'right' },
-    { key: 'status',   label: 'Trạng thái',    type: 'status' },
+    { key: 'image', label: '', type: 'image', width: '60px' },
+    { key: 'name', label: 'Tên sản phẩm', type: 'text', sortable: true },
+    { key: 'price', label: 'Giá', type: 'currency', sortable: true, align: 'right' },
+    { key: 'category', label: 'Danh mục', type: 'text' },
+    { key: 'stock', label: 'Tồn kho', type: 'number', sortable: true, align: 'right' },
+    { key: 'status', label: 'Trạng thái', type: 'status' },
   ];
 
   actions: RowAction[] = [
-    { key: 'view',   label: 'Xem' },
-    { key: 'edit',   label: 'Sửa' },
+    { key: 'view', label: 'Xem' },
+    { key: 'edit', label: 'Sửa' },
     { key: 'delete', label: 'Xóa', variant: 'danger' },
   ];
 
   filterFields: FilterField[] = [
-    { key: 'category', label: 'Danh mục', type: 'select', options: [
-      { value: 'Áo',       label: 'Áo' },
-      { value: 'Váy',      label: 'Váy' },
-      { value: 'Đầm & Váy',label: 'Đầm & Váy' },
-      { value: 'Phụ kiện', label: 'Phụ kiện' },
-    ]},
-    { key: 'status', label: 'Trạng thái', type: 'select', options: [
-      { value: 'active',   label: 'Đang bán' },
-      { value: 'inactive', label: 'Tạm ẩn' },
-      { value: 'out',      label: 'Hết hàng' },
-    ]},
+    {
+      key: 'category', label: 'Danh mục', type: 'select', options: [
+        { value: 'Áo', label: 'Áo' },
+        { value: 'Váy', label: 'Váy' },
+        { value: 'Đầm & Váy', label: 'Đầm & Váy' },
+        { value: 'Phụ kiện', label: 'Phụ kiện' },
+      ]
+    },
+    {
+      key: 'status', label: 'Trạng thái', type: 'select', options: [
+        { value: 'active', label: 'Đang bán' },
+        { value: 'inactive', label: 'Tạm ẩn' },
+        { value: 'out', label: 'Hết hàng' },
+      ]
+    },
   ];
 
   data: any[] = [];
@@ -80,10 +84,10 @@ export class ProductsComponent implements OnInit {
   isBulkDelete = false;
 
   constructor(
-    private apiService: ApiService,
+    private apiService: AdminService,
     private router: Router,
     private cdr: ChangeDetectorRef
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.loadProducts();
@@ -146,6 +150,7 @@ export class ProductsComponent implements OnInit {
 
   openCsvModal(): void {
     this.isCsvModalOpen = true;
+    this.cdr.markForCheck();
   }
 
   onCsvImportSuccess(result: any): void {
@@ -156,6 +161,7 @@ export class ProductsComponent implements OnInit {
   // ── Selection Handlers ───────────────────────────────────────
   onSelectionChange(ids: Set<any>): void {
     this.selectedIds = new Set(ids);
+    this.cdr.markForCheck();
   }
 
   onToolbarSelectAll(): void {
@@ -164,6 +170,7 @@ export class ProductsComponent implements OnInit {
     } else {
       this.selectedIds = new Set(this.data.map(r => r.id));
     }
+    this.cdr.markForCheck();
   }
 
   onDeleteSelected(): void {
@@ -173,6 +180,7 @@ export class ProductsComponent implements OnInit {
     this.pendingDeleteId = null;
     this.confirmMessage = `Bạn có chắc chắn muốn xóa ${count} sản phẩm đã chọn khỏi cơ sở dữ liệu MongoDB không? Hành động này không thể hoàn tác.`;
     this.confirmOpen = true;
+    this.cdr.markForCheck();
   }
 
   // ── Row Action Handler ───────────────────────────────────────
@@ -189,6 +197,7 @@ export class ProductsComponent implements OnInit {
       this.pendingDeleteName = event.row.name || '';
       this.confirmMessage = `Bạn có chắc chắn muốn xóa sản phẩm "${this.pendingDeleteName}" khỏi MongoDB không?`;
       this.confirmOpen = true;
+      this.cdr.markForCheck();
     }
   }
 
@@ -205,6 +214,7 @@ export class ProductsComponent implements OnInit {
         error: (err) => {
           this.confirmOpen = false;
           this.showError('Lỗi xóa sản phẩm: ' + (err.error?.message || err.message));
+          this.cdr.markForCheck();
         }
       });
     } else if (this.pendingDeleteId) {
@@ -219,6 +229,7 @@ export class ProductsComponent implements OnInit {
         error: (err) => {
           this.confirmOpen = false;
           this.showError('Lỗi xóa sản phẩm: ' + (err.error?.message || err.message));
+          this.cdr.markForCheck();
         }
       });
     }
@@ -228,17 +239,23 @@ export class ProductsComponent implements OnInit {
     this.confirmOpen = false;
     this.pendingDeleteId = null;
     this.pendingDeleteName = '';
+    this.cdr.markForCheck();
   }
 
   showSuccess(msg: string): void {
     this.successMessage = msg;
+    this.cdr.markForCheck();
     setTimeout(() => {
-      if (this.successMessage === msg) this.successMessage = '';
+      if (this.successMessage === msg) {
+        this.successMessage = '';
+        this.cdr.markForCheck();
+      }
     }, 4000);
   }
 
   showError(msg: string): void {
     this.errorMessage = msg;
+    this.cdr.markForCheck();
   }
 
   // ── Other Handlers ───────────────────────────────────────────

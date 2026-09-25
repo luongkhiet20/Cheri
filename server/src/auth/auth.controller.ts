@@ -55,16 +55,7 @@ export class AuthController {
     email: string;
     roles: string[];
   } {
-    const adminEmails = (
-      process.env.ADMIN_EMAILS ||
-      'contact.cheri@gmail.com,admin@example.com,luongkhiet20@gmail.com,luongkhiet200000@gmail.com,tinhvttk24411@st.uel.edu.vn,tinhvttk24418991@st.uel.edu.vn'
-    )
-      .split(',')
-      .map((e) => e.trim().toLowerCase());
-    const roles = Array.isArray(user.roles) ? [...user.roles] : [];
-    if (user.email && adminEmails.includes(user.email.toLowerCase()) && !roles.includes('admin')) {
-      roles.push('admin');
-    }
+    const roles = Array.isArray(user.roles) ? [...user.roles] : (user as any).role ? [(user as any).role] : ['user'];
     return { id: user._id, email: user.email, roles };
   }
 

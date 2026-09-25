@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ApiService } from '../../../../services/api.service';
+import { AdminService } from '../../../services/admin.service';
 
 export interface PageFormData {
   title: string;
@@ -40,8 +40,9 @@ export class PageFormComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private apiService: ApiService
-  ) {}
+    private apiService: AdminService,
+    private cdr: ChangeDetectorRef
+  ) { }
 
   ngOnInit(): void {
     this.pageId = this.route.snapshot.paramMap.get('id');
@@ -77,10 +78,12 @@ export class PageFormComponent implements OnInit {
         } else {
           this.errorMessage = res.message || 'Không tìm thấy trang để chỉnh sửa';
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isLoading = false;
         this.errorMessage = err.error?.message || 'Lỗi khi tải thông tin trang từ cơ sở dữ liệu MongoDB';
+        this.cdr.markForCheck();
       }
     });
   }
@@ -154,10 +157,12 @@ export class PageFormComponent implements OnInit {
           } else {
             this.errorMessage = res.message || 'Lỗi cập nhật trang';
           }
+          this.cdr.markForCheck();
         },
         error: (err) => {
           this.isSubmitting = false;
           this.errorMessage = err.error?.message || 'Lỗi khi cập nhật trang vào MongoDB';
+          this.cdr.markForCheck();
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
       });
@@ -180,10 +185,12 @@ export class PageFormComponent implements OnInit {
           } else {
             this.errorMessage = res.message || 'Lỗi tạo trang mới';
           }
+          this.cdr.markForCheck();
         },
         error: (err) => {
           this.isSubmitting = false;
           this.errorMessage = err.error?.message || 'Lỗi khi tạo trang mới trong MongoDB';
+          this.cdr.markForCheck();
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
       });
@@ -204,6 +211,7 @@ export class PageFormComponent implements OnInit {
 
   openConfirmDelete(): void {
     this.confirmDeleteOpen = true;
+    this.cdr.markForCheck();
   }
 
   onConfirmDelete(): void {
@@ -215,17 +223,20 @@ export class PageFormComponent implements OnInit {
           this.router.navigate(['/admin/pages']);
         } else {
           this.errorMessage = res.message || 'Lỗi khi xóa trang';
+          this.cdr.markForCheck();
         }
       },
       error: (err) => {
         this.confirmDeleteOpen = false;
         this.errorMessage = err.error?.message || 'Lỗi khi xóa trang khỏi MongoDB';
+        this.cdr.markForCheck();
       }
     });
   }
 
   onCancelDelete(): void {
     this.confirmDeleteOpen = false;
+    this.cdr.markForCheck();
   }
 
   slugify(text: string): string {

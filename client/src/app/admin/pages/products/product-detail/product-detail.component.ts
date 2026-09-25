@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ApiService } from '../../../../services/api.service';
+import { AdminService } from '../../../services/admin.service';
 
 export interface ProductVariant {
   key?: string;
@@ -38,8 +38,9 @@ export class ProductDetailComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private apiService: ApiService
-  ) {}
+    private apiService: AdminService,
+    private cdr: ChangeDetectorRef
+  ) { }
 
   ngOnInit(): void {
     this.productId = this.route.snapshot.paramMap.get('id');
@@ -48,6 +49,7 @@ export class ProductDetailComponent implements OnInit {
     } else {
       this.isNotFound = true;
       this.isLoading = false;
+      this.cdr.markForCheck();
     }
   }
 
@@ -66,6 +68,7 @@ export class ProductDetailComponent implements OnInit {
         } else {
           this.isNotFound = true;
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isLoading = false;
@@ -74,6 +77,7 @@ export class ProductDetailComponent implements OnInit {
         } else {
           this.errorMessage = 'Có lỗi khi kết nối máy chủ MongoDB: ' + (err.error?.message || err.message || 'Lỗi không xác định');
         }
+        this.cdr.markForCheck();
       }
     });
   }
@@ -127,12 +131,14 @@ export class ProductDetailComponent implements OnInit {
         this.isDeleting = false;
         this.confirmOpen = false;
         this.errorMessage = 'Lỗi xóa sản phẩm: ' + (err.error?.message || err.message);
+        this.cdr.markForCheck();
       }
     });
   }
 
   onCancelDelete(): void {
     this.confirmOpen = false;
+    this.cdr.markForCheck();
   }
 
   // =========================================================================

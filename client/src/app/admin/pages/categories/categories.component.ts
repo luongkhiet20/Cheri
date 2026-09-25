@@ -1,6 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
-import { ApiService } from '../../../services/api.service';
+import { AdminService } from '../../services/admin.service';
 
 import { Router } from '@angular/router';
 
@@ -26,6 +26,7 @@ export class CategoriesComponent implements OnInit {
   ];
 
   data: any[] = [];
+  allCategories: any[] = [];
   pagination: PaginationConfig = { page: 1, pageSize: 20, total: 0 };
   selectedIds: Set<any> = new Set();
   isLoading = false;
@@ -41,10 +42,10 @@ export class CategoriesComponent implements OnInit {
   isBulkDelete = false;
 
   constructor(
-    private apiService: ApiService,
+    private apiService: AdminService,
     private router: Router,
     private cdr: ChangeDetectorRef
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.loadCategories();
@@ -56,7 +57,8 @@ export class CategoriesComponent implements OnInit {
       next: (res) => {
         this.isLoading = false;
         if (res.success) {
-          this.data = res.data || [];
+          this.allCategories = res.data || [];
+          this.data = [...this.allCategories];
           this.pagination = { ...this.pagination, total: this.data.length };
         }
         this.cdr.markForCheck();
@@ -88,18 +90,45 @@ export class CategoriesComponent implements OnInit {
     if (this.pendingDeleteId) {
       this.apiService.deleteCategory(this.pendingDeleteId).subscribe({
         next: () => {
-          this.loadCategories();
           this.confirmOpen = false;
           this.pendingDeleteId = null;
+          this.loadCategories();
+          this.cdr.markForCheck();
         },
-        error: (err) => console.error('Lỗi xóa danh mục:', err)
+        error: (err) => {
+          this.confirmOpen = false;
+          this.pendingDeleteId = null;
+          console.error('Lỗi xóa danh mục:', err);
+          this.cdr.markForCheck();
+        }
+      });
+    } else if (this.isBulkDelete && this.selectedIds.size > 0) {
+      this.apiService.bulkDeleteCategories(Array.from(this.selectedIds)).subscribe({
+        next: () => {
+          this.selectedIds.clear();
+          this.confirmOpen = false;
+          this.isBulkDelete = false;
+          this.loadCategories();
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.confirmOpen = false;
+          this.isBulkDelete = false;
+          console.error('Lỗi xóa hàng loạt danh mục:', err);
+          this.cdr.markForCheck();
+        }
       });
     } else {
       this.confirmOpen = false;
+      this.cdr.markForCheck();
     }
   }
 
-  onCancelDelete(): void { this.confirmOpen = false; this.pendingDeleteId = null; }
+  onCancelDelete(): void {
+    this.confirmOpen = false;
+    this.pendingDeleteId = null;
+    this.cdr.markForCheck();
+  }
 
   onAction(e: ActionEvent): void {
     if (e.action === 'delete') {
@@ -107,6 +136,7 @@ export class CategoriesComponent implements OnInit {
       this.pendingDeleteId = e.row.id;
       this.confirmMessage = `Bạn có chắc chắn muốn xóa danh mục "${e.row.name}" khỏi MongoDB không?`;
       this.confirmOpen = true;
+      this.cdr.markForCheck();
     } else if (e.action === 'edit') {
       this.router.navigate(['/admin/categories', e.row.id, 'edit']);
     }
@@ -114,24 +144,32 @@ export class CategoriesComponent implements OnInit {
 
   onSearch(v: string): void {
     if (!v) {
-      this.loadCategories();
+      this.data = [...this.allCategories];
+      this.pagination = { ...this.pagination, total: this.data.length };
+      this.cdr.markForCheck();
       return;
     }
     const q = v.toLowerCase();
-    this.data = this.data.filter(c => c.name.toLowerCase().includes(q) || c.slug.toLowerCase().includes(q));
+    this.data = this.allCategories.filter(c => (c.name || '').toLowerCase().includes(q) || (c.slug || '').toLowerCase().includes(q));
+    this.pagination = { ...this.pagination, total: this.data.length };
+    this.cdr.markForCheck();
   }
 
   onFilter(v: Record<string, any>): void {
     const statusVal = v['status'];
     if (!statusVal) {
-      this.loadCategories();
+      this.data = [...this.allCategories];
+      this.pagination = { ...this.pagination, total: this.data.length };
+      this.cdr.markForCheck();
       return;
     }
     const target = statusVal === 'active' ? 'Hiển thị' : 'Ẩn';
-    this.data = this.data.filter(c => c.status === target);
+    this.data = this.allCategories.filter(c => c.status === target);
+    this.pagination = { ...this.pagination, total: this.data.length };
+    this.cdr.markForCheck();
   }
 
   onRefresh(): void { this.loadCategories(); }
-  onPageChange(p: number): void { this.pagination = { ...this.pagination, page: p }; }
-  onPageSizeChange(s: number): void { this.pagination = { ...this.pagination, pageSize: s, page: 1 }; }
+  onPageChange(p: number): void { this.pagination = { ...this.pagination, page: p }; this.cdr.markForCheck(); }
+  onPageSizeChange(s: number): void { this.pagination = { ...this.pagination, pageSize: s, page: 1 }; this.cdr.markForCheck(); }
 }

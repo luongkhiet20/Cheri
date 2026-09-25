@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ApiService } from '../../../../services/api.service';
+import { AdminService } from '../../../services/admin.service';
 
 @Component({
   selector: 'app-users-detail',
@@ -29,8 +29,9 @@ export class UsersDetailComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private apiService: ApiService
-  ) {}
+    private apiService: AdminService,
+    private cdr: ChangeDetectorRef
+  ) { }
 
   ngOnInit(): void {
     this.userId = this.route.snapshot.paramMap.get('id');
@@ -56,6 +57,7 @@ export class UsersDetailComponent implements OnInit {
         } else {
           this.isNotFound = true;
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isLoading = false;
@@ -65,6 +67,7 @@ export class UsersDetailComponent implements OnInit {
           this.errorMessage = err.error?.message || 'Lỗi khi tải thông tin tài khoản từ máy chủ MongoDB';
         }
         console.error('Error fetching account detail:', err);
+        this.cdr.markForCheck();
       }
     });
   }
@@ -94,6 +97,7 @@ export class UsersDetailComponent implements OnInit {
       this.confirmVariant = 'default';
     }
     this.confirmOpen = true;
+    this.cdr.markForCheck();
   }
 
   onConfirmStatusChange(): void {
@@ -113,18 +117,21 @@ export class UsersDetailComponent implements OnInit {
         } else {
           this.errorMessage = res.message || 'Thao tác không thành công';
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isStatusUpdating = false;
         this.confirmOpen = false;
         this.errorMessage = err.error?.message || 'Lỗi khi cập nhật trạng thái người dùng';
         console.error('Status change error:', err);
+        this.cdr.markForCheck();
       }
     });
   }
 
   onCancelStatusChange(): void {
     this.confirmOpen = false;
+    this.cdr.markForCheck();
   }
 
   get hasCartItems(): boolean {

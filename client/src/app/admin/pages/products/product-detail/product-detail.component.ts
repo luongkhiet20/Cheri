@@ -242,9 +242,9 @@ export class ProductDetailComponent implements OnInit {
    */
   get resolvedStockStatus(): { code: string; label: string; isAvailable: boolean } {
     if (this.quantity > 0) {
-      return { code: 'onStock', label: 'onStock – Còn hàng', isAvailable: true };
+      return { code: 'onStock', label: 'Còn hàng', isAvailable: true };
     }
-    return { code: 'unavailable', label: 'unavailable – Hết hàng', isAvailable: false };
+    return { code: 'unavailable', label: 'Hết hàng', isAvailable: false };
   }
 
   /**

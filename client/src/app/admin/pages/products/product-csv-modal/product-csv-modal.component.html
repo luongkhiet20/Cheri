@@ -146,15 +146,42 @@
           </div>
         </div>
 
-        <!-- Alert Banner: Errors Found -->
-        <div *ngIf="validationResult.summary?.errorRows > 0" class="callout-box callout-danger mb-3">
+        <!-- Alert Banner: Partial Valid (Has both valid & error rows) -->
+        <div *ngIf="validationResult.summary?.validRows > 0 && validationResult.summary?.errorRows > 0"
+          class="callout-box callout-warning mb-3">
           <div class="callout-header">
-            <span class="callout-icon">⛔</span>
-            <strong>Phát hiện {{ validationResult.summary?.errorRows }} dòng chứa lỗi không hợp lệ!</strong>
+            <span class="callout-icon">⚠️</span>
+            <strong>Tìm thấy {{ validationResult.summary?.validRows }} dòng hợp lệ và {{
+              validationResult.summary?.errorRows }} dòng bị lỗi!</strong>
           </div>
           <p class="callout-body">
-            Theo nguyên tắc bảo toàn dữ liệu, hệ thống chỉ cho phép nhập khi toàn bộ các dòng đều đạt yêu cầu. Vui lòng
-            xem chi tiết cột lỗi bên dưới, chỉnh sửa lại file CSV và upload kiểm tra lại.
+            Hệ thống sẽ <strong>chỉ nhập {{ validationResult.summary?.validRows }} dòng hợp lệ</strong> và <strong>tự
+              động bỏ qua {{ validationResult.summary?.errorRows }} dòng bị lỗi</strong>. Các dòng hợp lệ vẫn được nhập
+            bình thường. Bạn có thể tải danh sách lỗi để xem chi tiết và chỉnh sửa lại sau.
+          </p>
+          <div class="callout-action">
+            <button type="button" class="btn btn-sm btn-outline-danger btn-icon-gap" (click)="downloadErrorReport()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Tải danh sách {{ validationResult.summary?.errorRows }} dòng bị lỗi (.csv)
+            </button>
+          </div>
+        </div>
+
+        <!-- Alert Banner: All Rows Invalid (0 valid rows) -->
+        <div *ngIf="validationResult.summary?.validRows === 0 && validationResult.summary?.errorRows > 0"
+          class="callout-box callout-danger mb-3">
+          <div class="callout-header">
+            <span class="callout-icon">⛔</span>
+            <strong>Toàn bộ {{ validationResult.summary?.errorRows }} dòng đều chứa lỗi không hợp lệ!</strong>
+          </div>
+          <p class="callout-body">
+            Không có dòng nào đạt yêu cầu validation để nhập vào hệ thống. Vui lòng xem chi tiết cột lỗi bên dưới hoặc
+            tải báo cáo lỗi, chỉnh sửa lại file CSV và tải lên kiểm tra lại.
           </p>
           <div class="callout-action">
             <button type="button" class="btn btn-sm btn-outline-danger btn-icon-gap" (click)="downloadErrorReport()">
@@ -169,8 +196,9 @@
           </div>
         </div>
 
-        <!-- Alert Banner: All Valid Ready to Import -->
-        <div *ngIf="validationResult.canImport" class="callout-box callout-success mb-3">
+        <!-- Alert Banner: All Rows Valid (0 error rows) -->
+        <div *ngIf="validationResult.summary?.errorRows === 0 && validationResult.summary?.validRows > 0"
+          class="callout-box callout-success mb-3">
           <div class="callout-header">
             <span class="callout-icon">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -178,7 +206,8 @@
                 <polyline points="20 6 9 17 4 12"></polyline>
               </svg>
             </span>
-            <strong>Kiểm tra hoàn tất: Toàn bộ {{ validationResult.summary?.validRows }} dòng đều hợp lệ!</strong>
+            <strong>Kiểm tra hoàn tất: Toàn bộ {{ validationResult.summary?.validRows }} dòng đều hợp lệ và sẵn sàng
+              nhập!</strong>
           </div>
         </div>
 
@@ -288,11 +317,8 @@
             <polyline points="20 6 9 17 4 12"></polyline>
           </svg>
         </div>
-        <h3 class="completed-title mb-1">Nhập sản phẩm thành công vào MongoDB Atlas!</h3>
-        <p class="completed-desc text-muted mb-4">
-          Dữ liệu đã được lưu trực tiếp vào cơ sở dữ liệu. Danh sách sản phẩm của trang quản trị đã được đồng bộ tự
-          động.
-        </p>
+        <h3 class="completed-title mb-1">Nhập sản phẩm thành công!</h3>
+
 
         <!-- Result Stats -->
         <div class="completed-stats-row mb-4">
@@ -311,6 +337,10 @@
           <div class="completed-stat-box" *ngIf="importResult.summary?.failedCount > 0">
             <span class="val text-danger">{{ importResult.summary?.failedCount || 0 }}</span>
             <span class="lbl">Thất bại</span>
+          </div>
+          <div class="completed-stat-box" *ngIf="validationResult?.summary?.errorRows > 0">
+            <span class="val text-danger">{{ validationResult.summary.errorRows }}</span>
+            <span class="lbl">Dòng lỗi bị bỏ qua</span>
           </div>
         </div>
 
@@ -332,7 +362,8 @@
         <button type="button" class="btn btn-primary" id="btn-execute-import" (click)="importProducts()"
           [disabled]="!canImport || isImporting">
           <span *ngIf="isImporting" class="spinner-inline"></span>
-          {{ isImporting ? 'Đang lưu vào MongoDB Atlas...' : 'Xác nhận nhập vào MongoDB' }}
+          {{ isImporting ? 'Đang lưu vào MongoDB Atlas...' : (validationResult?.summary?.errorRows > 0 ? ('Xác nhận nhập
+          ' + validationResult?.summary?.validRows + ' dòng hợp lệ') : 'Xác nhận nhập') }}
         </button>
       </div>
     </div>

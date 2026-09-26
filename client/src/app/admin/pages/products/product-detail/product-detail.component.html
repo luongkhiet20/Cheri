@@ -166,20 +166,20 @@
 
         <!-- Technical Metadata Card -->
         <div class="detail-card">
-          <h3 class="card-title">Thông tin hệ thống & Cấu trúc</h3>
+          <h3 class="card-title">Thông tin sản phẩm</h3>
           <div class="spec-list">
             <div class="spec-item">
-              <span class="spec-k">_id (Khóa chính)</span>
+              <span class="spec-k">Mã sản phẩm (ID)</span>
               <span class="spec-v font-mono">{{ rawProduct._id }}</span>
             </div>
             <div class="spec-item">
-              <span class="spec-k">Mã sản phẩm (titleUrl)</span>
+              <span class="spec-k">Mã sản phẩm</span>
               <span class="spec-v font-mono">{{ rawProduct.titleUrl || '—' }}</span>
             </div>
             <div class="spec-item">
               <span class="spec-k">Cấu trúc sản phẩm</span>
               <span class="spec-v font-semibold">
-                <span *ngIf="hasVariants" class="text-primary-semibold">Có biến thể ({{ variantsCount }} biến
+                <span *ngIf="hasVariants" class="text-primary-semibold">({{ variantsCount }} biến
                   thể)</span>
                 <span *ngIf="!hasVariants" class="text-secondary-semibold">Sản phẩm đơn</span>
               </span>
@@ -194,14 +194,14 @@
               </span>
             </div>
             <div class="spec-item">
-              <span class="spec-k">Tổng tồn kho thực tế</span>
+              <span class="spec-k">Tổng tồn kho</span>
               <span class="spec-v font-bold">
                 {{ effectiveTotalStock }}
                 <span class="text-muted text-xs" *ngIf="hasVariants">(Σ stock)</span>
               </span>
             </div>
             <div class="spec-item">
-              <span class="spec-k">Ngày tạo (dateAdded)</span>
+              <span class="spec-k">Ngày tạo</span>
               <span class="spec-v">{{ rawProduct.dateAdded ? (rawProduct.dateAdded | slice:0:19) : '—' }}</span>
             </div>
             <div class="spec-item" *ngIf="rawProduct.updatedAt">
@@ -209,17 +209,17 @@
               <span class="spec-v">{{ rawProduct.updatedAt | slice:0:19 }}</span>
             </div>
             <div class="spec-item">
-              <span class="spec-k">Trạng thái root (visibility)</span>
+              <span class="spec-k">Trạng thái root</span>
               <span class="spec-v">
                 <span class="status-dot" [class.on]="rawProduct.visibility !== false"></span>
-                {{ rawProduct.visibility !== false ? 'true (Hiển thị)' : 'false (Ẩn)' }}
+                {{ rawProduct.visibility !== false ? 'Hiển thị' : 'Ẩn' }}
               </span>
             </div>
             <div class="spec-item">
-              <span class="spec-k">Trạng thái vi (vi.visibility)</span>
+              <span class="spec-k">Trạng thái vi</span>
               <span class="spec-v">
                 <span class="status-dot" [class.on]="rawProduct.vi?.visibility !== false"></span>
-                {{ rawProduct.vi?.visibility !== false ? 'true (Hiển thị)' : 'false (Ẩn)' }}
+                {{ rawProduct.vi?.visibility !== false ? 'Hiển thị' : 'Ẩn' }}
               </span>
             </div>
           </div>
@@ -253,7 +253,7 @@
                   <line x1="12" y1="22.08" x2="12" y2="12"></line>
                 </svg>
               </span>
-              <span>{{ hasVariants ? ('Có biến thể (' + variantsCount + ' biến thể)') : '(Sản phẩm
+              <span>{{ hasVariants ? ('(' + variantsCount + ' biến thể)') : '(Sản phẩm
                 đơn)' }}</span>
             </span>
 
@@ -307,7 +307,7 @@
                 <span class="price-struck-label">Giá niêm yết:</span>
                 <div class="regular-price-struck">{{ formatPrice(noVariantRegularPrice) }}</div>
                 <span class="badge-onsale">
-                  Giảm {{ noVariantDiscountPercent }}% (onSale = true)
+                  Giảm {{ noVariantDiscountPercent }}%
                 </span>
               </div>
 
@@ -387,7 +387,7 @@
             <!-- Trường 3: onSale -->
             <div class="field-spec-card">
               <div class="fsc-header">
-                <span class="fsc-name">Đang giảm giá (vi.onSale)</span>
+                <span class="fsc-name">Đang giảm giá</span>
                 <span class="fsc-opt">Không bắt buộc</span>
               </div>
               <div class="fsc-val">
@@ -401,7 +401,7 @@
             <!-- Trường 4: quantity -->
             <div class="field-spec-card">
               <div class="fsc-header">
-                <span class="fsc-name">Số lượng kho (vi.quantity)</span>
+                <span class="fsc-name">Số lượng kho</span>
                 <span class="fsc-req">Bắt buộc</span>
               </div>
               <div class="fsc-val font-bold text-dark">{{ quantity }} sản phẩm</div>
@@ -410,7 +410,7 @@
             <!-- Trường 5: stock -->
             <div class="field-spec-card">
               <div class="fsc-header">
-                <span class="fsc-name">Tình trạng kho (vi.stock)</span>
+                <span class="fsc-name">Tình trạng kho</span>
                 <span class="fsc-req">Bắt buộc</span>
               </div>
               <div class="fsc-val">
@@ -424,7 +424,7 @@
             <!-- Trường 6: stockDate -->
             <div class="field-spec-card">
               <div class="fsc-header">
-                <span class="fsc-name">Ngày cập nhật kho (vi.stockDate)</span>
+                <span class="fsc-name">Ngày cập nhật kho</span>
                 <span class="fsc-opt">Không bắt buộc</span>
               </div>
               <div class="fsc-val font-mono text-dark">{{ rawProduct.vi?.stockDate || '—' }}</div>

@@ -36,7 +36,8 @@ export class ProductCsvModalComponent {
   ) { }
 
   get canImport(): boolean {
-    return !!this.validationResult && this.validationResult.canImport && !this.isValidating && !this.isImporting;
+    const validCount = this.validationResult?.summary?.validRows || 0;
+    return !!this.validationResult && validCount > 0 && !this.isValidating && !this.isImporting;
   }
 
   get filteredRows(): any[] {

@@ -990,12 +990,20 @@ async function processCsvProducts(records) {
 
     // Validate title and category1
     if (!title) {
-      firstRow.errors.push('Tên sản phẩm (vi.title) không được để trống.');
-      firstRow.status = 'error';
+      for (const r of groupRows) {
+        if (!r.errors.includes('Tên sản phẩm (vi.title) không được để trống.')) {
+          r.errors.push('Tên sản phẩm (vi.title) không được để trống.');
+        }
+        r.status = 'error';
+      }
     }
     if (!category1) {
-      firstRow.errors.push('Danh mục cấp 1 (vi.categoryLevel1) không được để trống.');
-      firstRow.status = 'error';
+      for (const r of groupRows) {
+        if (!r.errors.includes('Danh mục cấp 1 (vi.categoryLevel1) không được để trống.')) {
+          r.errors.push('Danh mục cấp 1 (vi.categoryLevel1) không được để trống.');
+        }
+        r.status = 'error';
+      }
     }
 
     const descriptionFull = descriptionFullRaw
@@ -1016,7 +1024,7 @@ async function processCsvProducts(records) {
     if (hasAnyVariant) {
       // ── VARIABLE PRODUCT ──────────────────────────────────────
       const seenSkus = new Set();
-      const variants = [];
+      const validVariants = [];
       const classSet = new Set();
       const colorSet = new Set();
       const sizeSet = new Set();
@@ -1056,73 +1064,81 @@ async function processCsvProducts(records) {
           row.status = 'error';
         }
 
-        if (row.classification) classSet.add(row.classification);
-        if (row.color) colorSet.add(row.color);
-        if (row.size) sizeSet.add(row.size);
+        if (row.errors.length > 0) {
+          row.status = 'error';
+        } else {
+          row.status = 'valid';
+          if (row.classification) classSet.add(row.classification);
+          if (row.color) colorSet.add(row.color);
+          if (row.size) sizeSet.add(row.size);
 
-        variants.push({
-          sku: vSku || `SKU-${i + 1}`,
-          classification: row.classification || '',
-          color: row.color || '',
-          size: row.size || '',
-          price: vPrice >= 0 ? vPrice : 0,
-          discountPrice: vDiscount >= 0 ? vDiscount : 0,
-          stock: vStock >= 0 ? vStock : 0
-        });
+          validVariants.push({
+            sku: vSku || `SKU-${i + 1}`,
+            classification: row.classification || '',
+            color: row.color || '',
+            size: row.size || '',
+            price: vPrice >= 0 ? vPrice : 0,
+            discountPrice: vDiscount >= 0 ? vDiscount : 0,
+            stock: vStock >= 0 ? vStock : 0
+          });
+        }
       }
 
-      // Quantity is strictly SUM of all variant stocks
-      const totalQuantity = variants.reduce((sum, v) => sum + v.stock, 0);
-      const stockStatus = totalQuantity > 0 ? 'onStock' : 'outOfStock';
-      const minPrice = variants.length > 0 ? Math.min(...variants.map(v => v.price)) : 0;
-      const discountedVariants = variants.filter(v => v.discountPrice > 0 && v.discountPrice < v.price);
-      const minSalePrice = discountedVariants.length > 0
-        ? Math.min(...discountedVariants.map(v => v.discountPrice))
-        : minPrice;
-      const onSale = discountedVariants.length > 0;
+      // Only import product if it has valid variants and title/category
+      if (validVariants.length > 0 && title && category1) {
+        // Quantity is strictly SUM of valid variant stocks
+        const totalQuantity = validVariants.reduce((sum, v) => sum + v.stock, 0);
+        const stockStatus = totalQuantity > 0 ? 'onStock' : 'outOfStock';
+        const minPrice = validVariants.length > 0 ? Math.min(...validVariants.map(v => v.price)) : 0;
+        const discountedVariants = validVariants.filter(v => v.discountPrice > 0 && v.discountPrice < v.price);
+        const minSalePrice = discountedVariants.length > 0
+          ? Math.min(...discountedVariants.map(v => v.discountPrice))
+          : minPrice;
+        const onSale = discountedVariants.length > 0;
 
-      const classifications = Array.from(classSet);
-      const colors = Array.from(colorSet).map(c => ({ name: c, hex: '#2563eb' }));
-      const sizes = Array.from(sizeSet);
+        const classifications = Array.from(classSet);
+        const colors = Array.from(colorSet).map(c => ({ name: c, hex: '#2563eb' }));
+        const sizes = Array.from(sizeSet);
 
-      validatedProducts.push({
-        titleUrl: slugKey,
-        isUpdate,
-        existingId: existingDoc?._id,
-        mainImage: {
-          url: mainImageUrl,
-          name: title || 'product-image'
-        },
-        images,
-        tags,
-        visibility,
-        variants,
-        attributes: {
-          classifications,
-          colors,
-          sizes
-        },
-        vi: {
-          title,
-          description,
-          descriptionFull,
-          productType,
-          regularPrice: minPrice,
-          salePrice: minSalePrice,
-          onSale,
-          quantity: totalQuantity,
-          stock: stockStatus,
-          hasClassification: classifications.length > 0,
-          classifications,
-          hasColors: colors.length > 0,
-          colors,
-          hasSizes: sizes.length > 0,
-          sizes,
-          categoryLevel1: category1,
-          categoryLevel2: category2,
-          visibility
-        }
-      });
+        validatedProducts.push({
+          titleUrl: slugKey,
+          isUpdate,
+          existingId: existingDoc?._id,
+          mainImage: {
+            url: mainImageUrl,
+            name: title || 'product-image'
+          },
+          images,
+          tags,
+          visibility,
+          variants: validVariants,
+          attributes: {
+            classifications,
+            colors,
+            sizes
+          },
+          vi: {
+            title,
+            description,
+            descriptionFull,
+            productType,
+            regularPrice: minPrice,
+            salePrice: minSalePrice,
+            onSale,
+            quantity: totalQuantity,
+            stock: stockStatus,
+            hasClassification: classifications.length > 0,
+            classifications,
+            hasColors: colors.length > 0,
+            colors,
+            hasSizes: sizes.length > 0,
+            sizes,
+            categoryLevel1: category1,
+            categoryLevel2: category2,
+            visibility
+          }
+        });
+      }
 
     } else {
       // ── SIMPLE PRODUCT (No variants) ──────────────────────────
@@ -1160,48 +1176,57 @@ async function processCsvProducts(records) {
         }
       }
 
-      validatedProducts.push({
-        titleUrl: slugKey,
-        isUpdate,
-        existingId: existingDoc?._id,
-        mainImage: {
-          url: mainImageUrl,
-          name: title || 'product-image'
-        },
-        images,
-        tags,
-        visibility,
-        variants: [],
-        attributes: {
-          classifications: [],
-          colors: [],
-          sizes: []
-        },
-        vi: {
-          title,
-          description,
-          descriptionFull,
-          productType,
-          regularPrice: rPrice,
-          salePrice: sPrice > 0 ? sPrice : rPrice,
-          onSale,
-          quantity: pQuantity,
-          stock,
-          hasClassification: false,
-          classifications: [],
-          hasColors: false,
-          colors: [],
-          hasSizes: false,
-          sizes: [],
-          categoryLevel1: category1,
-          categoryLevel2: category2,
-          visibility
-        }
-      });
+      if (row.errors.length > 0) {
+        row.status = 'error';
+      } else {
+        row.status = 'valid';
+      }
+
+      // Only import simple product if row is valid and has title & category
+      if (row.status === 'valid' && title && category1) {
+        validatedProducts.push({
+          titleUrl: slugKey,
+          isUpdate,
+          existingId: existingDoc?._id,
+          mainImage: {
+            url: mainImageUrl,
+            name: title || 'product-image'
+          },
+          images,
+          tags,
+          visibility,
+          variants: [],
+          attributes: {
+            classifications: [],
+            colors: [],
+            sizes: []
+          },
+          vi: {
+            title,
+            description,
+            descriptionFull,
+            productType,
+            regularPrice: rPrice,
+            salePrice: sPrice > 0 ? sPrice : rPrice,
+            onSale,
+            quantity: pQuantity,
+            stock,
+            hasClassification: false,
+            classifications: [],
+            hasColors: false,
+            colors: [],
+            hasSizes: false,
+            sizes: [],
+            categoryLevel1: category1,
+            categoryLevel2: category2,
+            visibility
+          }
+        });
+      }
     }
   }
 
-  // Update row status
+  // Update row status and counts
   let totalErrors = 0;
   for (const r of previewRows) {
     if (r.errors.length > 0) {
@@ -1212,19 +1237,21 @@ async function processCsvProducts(records) {
     }
   }
 
+  const validRowsCount = previewRows.length - totalErrors;
+
   return {
     success: true,
     summary: {
       totalRows: previewRows.length,
-      validRows: previewRows.length - totalErrors,
+      validRows: validRowsCount,
       errorRows: totalErrors,
-      totalProducts: productGroups.size,
-      newProducts: newProductCount,
-      updateProducts: updateProductCount
+      totalProducts: validatedProducts.length,
+      newProducts: validatedProducts.filter(p => !p.isUpdate).length,
+      updateProducts: validatedProducts.filter(p => p.isUpdate).length
     },
     rows: previewRows,
     products: validatedProducts,
-    canImport: totalErrors === 0
+    canImport: validRowsCount > 0
   };
 }
 
@@ -1257,10 +1284,10 @@ app.post('/api/products/import-csv', async (req, res) => {
       }
       const records = parseProductsCSV(csvContent);
       const validated = await processCsvProducts(records);
-      if (!validated.canImport) {
+      if (!validated.canImport || validated.products.length === 0) {
         return res.status(400).json({
           success: false,
-          message: 'Dữ liệu CSV còn lỗi, không thể nhập vào MongoDB.',
+          message: 'Dữ liệu CSV không có dòng hợp lệ nào để nhập vào MongoDB.',
           summary: validated.summary,
           rows: validated.rows
         });

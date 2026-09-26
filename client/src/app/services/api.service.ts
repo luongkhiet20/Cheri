@@ -194,16 +194,24 @@ export class ApiService {
   getCategories(lang: string = 'vi'): Observable<any> {
     const categoriesUrl = this.apiUrl + '/api/products/categories?lang=' + lang;
     return this.http.get(categoriesUrl, this.getRequestOptions()).pipe(
-      map((response: any) => response),
+      map((response: any) => {
+        if (Array.isArray(response)) return response;
+        if (Array.isArray(response?.data)) return response.data;
+        return [];
+      }),
       catchError((error: Error) => {
         if (categoriesUrl.includes('localhost:4000')) {
           const fallbackUrl = categoriesUrl.replace('localhost:4000', 'localhost:5000');
           return this.http.get(fallbackUrl, this.getRequestOptions()).pipe(
-            map((res: any) => res?.data || res),
-            catchError((err2: Error) => of({ error: err2 })),
+            map((res: any) => {
+              if (Array.isArray(res)) return res;
+              if (Array.isArray(res?.data)) return res.data;
+              return [];
+            }),
+            catchError(() => of([])),
           );
         }
-        return of({ error });
+        return of([]);
       }),
     );
   }
@@ -219,12 +227,12 @@ export class ApiService {
   getProduct(params) {
     const productUrl = this.apiUrl + '/api/products/' + params;
     return this.http.get(productUrl, this.getRequestOptions()).pipe(
-      map((response: any) => response?.raw || response?.data || response),
+      map((response: any) => response?.data || response?.raw || response),
       catchError((error: Error) => {
         if (productUrl.includes('localhost:4000')) {
           const fallbackUrl = productUrl.replace('localhost:4000', 'localhost:5000');
           return this.http.get(fallbackUrl, this.getRequestOptions()).pipe(
-            map((res: any) => res?.raw || res?.data || res),
+            map((res: any) => res?.data || res?.raw || res),
             catchError((err2: Error) => of({ error: err2 })),
           );
         }

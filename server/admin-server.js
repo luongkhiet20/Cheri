@@ -325,32 +325,36 @@ app.get('/api/admin/dashboard', dashboardHandler);
 // ─────────────────────────────────────────────────────────────
 // 2. PRODUCTS API
 // ─────────────────────────────────────────────────────────────
-function formatProduct(p) {
-  const vi = p.vi || {};
-  const en = p.en || {};
+function formatProduct(p, lang = 'vi') {
+  const langData = p[lang] || p.vi || p.en || {};
+  const fallbackData = p.en || p.vi || {};
 
-  const name = vi.title || en.title || p.title || p.titleUrl?.replace(/-/g, ' ') || 'Sản phẩm chưa đặt tên';
-  const price = vi.salePrice || vi.regularPrice || p.salePrice || p.regularPrice || 0;
+  const name = langData.title || fallbackData.title || p.title || (p.titleUrl ? p.titleUrl.replace(/-/g, ' ') : 'Sản phẩm chưa đặt tên');
   
-  let stock = 0;
-  if (vi.quantity !== undefined && vi.quantity !== null && vi.quantity !== '') {
-    stock = Number(vi.quantity);
+  const regularPrice = Number(langData.regularPrice || fallbackData.regularPrice || p.regularPrice) || 0;
+  const salePrice = Number(langData.salePrice || fallbackData.salePrice || p.salePrice) || regularPrice;
+  const price = salePrice || regularPrice || 0;
+  
+  let quantity = 0;
+  if (langData.quantity !== undefined && langData.quantity !== null && langData.quantity !== '') {
+    quantity = Number(langData.quantity);
+  } else if (fallbackData.quantity !== undefined && fallbackData.quantity !== null && fallbackData.quantity !== '') {
+    quantity = Number(fallbackData.quantity);
   } else if (p.quantity !== undefined && p.quantity !== null && p.quantity !== '') {
-    stock = Number(p.quantity);
-  } else if (vi.stock !== undefined && !isNaN(Number(vi.stock))) {
-    stock = Number(vi.stock);
+    quantity = Number(p.quantity);
   }
-  if (isNaN(stock) || stock < 0) stock = 0;
+  if (isNaN(quantity) || quantity < 0) quantity = 0;
 
+  const stock = langData.stock || fallbackData.stock || (quantity > 0 ? 'onStock' : 'out');
   const image = p.mainImage?.url || (Array.isArray(p.images) && p.images[0]) || '';
-  const category = vi.categoryLevel1 || p.categoryLevel1 || 'Thời trang';
+  const category = langData.categoryLevel1 || fallbackData.categoryLevel1 || p.categoryLevel1 || 'Thời trang';
 
   let status = 'Đang bán';
   let statusVariant = 'success';
-  if (p.visibility === false || vi.visibility === false) {
+  if (p.visibility === false || (langData.visibility === false && fallbackData.visibility === false)) {
     status = 'Tạm ẩn';
     statusVariant = 'warning';
-  } else if (stock <= 0) {
+  } else if (quantity <= 0 && (stock === 'out' || stock === 'outOfStock')) {
     status = 'Hết hàng';
     statusVariant = 'danger';
   }
@@ -363,17 +367,25 @@ function formatProduct(p) {
     titleUrl: p.titleUrl || ('san-pham-' + p._id.toString()),
     category,
     price,
-    salePrice: price,
-    regularPrice: Number(vi.regularPrice || p.regularPrice) || price,
+    salePrice: salePrice || price,
+    regularPrice: regularPrice || price,
+    onSale: Boolean(langData.onSale !== undefined ? langData.onSale : (salePrice > 0 && regularPrice > 0 && salePrice < regularPrice)),
     stock,
-    quantity: stock,
+    quantity,
     status,
     statusVariant,
     image,
     mainImage: p.mainImage?.url ? p.mainImage : { url: image, name: name },
     images: Array.isArray(p.images) ? p.images : (image ? [image] : []),
     tags: Array.isArray(p.tags) ? p.tags : [],
-    sku: p.sku || vi.sku || ('SP-' + p._id.toString().slice(-6).toUpperCase()),
+    sku: p.sku || langData.sku || fallbackData.sku || ('SP-' + p._id.toString().slice(-6).toUpperCase()),
+    description: langData.description || fallbackData.description || p.description || '',
+    descriptionFull: langData.descriptionFull || fallbackData.descriptionFull || p.descriptionFull || [],
+    rating: p.rating !== undefined ? p.rating : 5,
+    colors: p.colors || langData.colors || fallbackData.colors || [],
+    sizes: p.sizes || langData.sizes || fallbackData.sizes || [],
+    hasColors: p.hasColors || false,
+    hasSizes: p.hasSizes || false,
     raw: p
   };
 }
@@ -399,27 +411,48 @@ app.get('/api/products', async (req, res) => {
     const search = req.query.search ? req.query.search.trim() : '';
     const category = req.query.category || '';
     const status = req.query.status || '';
+    const minPrice = parseFloat(req.query.minPrice);
+    const maxPrice = parseFloat(req.query.maxPrice);
+    const stockParam = req.query.stock || '';
+    const sortParam = req.query.sort || 'newest';
+    const lang = req.query.lang || req.headers['lang'] || 'vi';
 
     let queryConditions = [];
 
     if (search) {
+      const searchRegex = new RegExp(search, 'i');
       queryConditions.push({
         $or: [
-          { 'vi.title': { $regex: search, $options: 'i' } },
-          { 'en.title': { $regex: search, $options: 'i' } },
-          { title: { $regex: search, $options: 'i' } },
-          { titleUrl: { $regex: search, $options: 'i' } }
+          { 'vi.title': searchRegex },
+          { 'en.title': searchRegex },
+          { title: searchRegex },
+          { titleUrl: searchRegex },
+          { sku: searchRegex },
+          { tags: searchRegex }
         ]
       });
     }
 
-    if (category) {
-      queryConditions.push({
-        $or: [
-          { 'vi.categoryLevel1': { $regex: category, $options: 'i' } },
-          { categoryLevel1: { $regex: category, $options: 'i' } }
-        ]
-      });
+    if (category && category !== 'all') {
+      const cats = String(category).split(',').map(c => c.trim()).filter(Boolean);
+      if (cats.length > 0) {
+        const catConditions = cats.map(cat => {
+          const r = new RegExp(cat, 'i');
+          return {
+            $or: [
+              { tags: r },
+              { titleUrl: r },
+              { 'vi.categoryLevel1': r },
+              { 'vi.categoryLevel2': r },
+              { categoryLevel1: r },
+              { categoryLevel2: r },
+              { 'en.categoryLevel1': r },
+              { 'en.categoryLevel2': r }
+            ]
+          };
+        });
+        queryConditions.push({ $or: catConditions });
+      }
     }
 
     if (status) {
@@ -448,28 +481,86 @@ app.get('/api/products', async (req, res) => {
           $or: [
             { 'vi.quantity': { $lte: 0 } },
             { quantity: { $lte: 0 } },
-            { 'vi.stock': 'outOfStock' }
+            { 'vi.stock': 'outOfStock' },
+            { 'vi.stock': 'out' }
           ]
         });
       }
     }
+
+    if (!isNaN(minPrice) && minPrice > 0) {
+      queryConditions.push({
+        $or: [
+          { 'vi.salePrice': { $gte: minPrice } },
+          { 'vi.regularPrice': { $gte: minPrice } },
+          { 'en.salePrice': { $gte: minPrice } },
+          { 'en.regularPrice': { $gte: minPrice } },
+          { salePrice: { $gte: minPrice } },
+          { regularPrice: { $gte: minPrice } }
+        ]
+      });
+    }
+    if (!isNaN(maxPrice) && maxPrice > 0) {
+      queryConditions.push({
+        $or: [
+          { 'vi.salePrice': { $lte: maxPrice } },
+          { 'vi.regularPrice': { $lte: maxPrice } },
+          { 'en.salePrice': { $lte: maxPrice } },
+          { 'en.regularPrice': { $lte: maxPrice } },
+          { salePrice: { $lte: maxPrice } },
+          { regularPrice: { $lte: maxPrice } }
+        ]
+      });
+    }
+
+    if (stockParam && stockParam !== 'all') {
+      if (stockParam === 'onStock') {
+        queryConditions.push({
+          $or: [
+            { 'vi.stock': 'onStock' },
+            { 'en.stock': 'onStock' },
+            { 'vi.quantity': { $gt: 0 } },
+            { quantity: { $gt: 0 } }
+          ]
+        });
+      } else if (stockParam === 'out' || stockParam === 'outOfStock' || stockParam === 'unavailable') {
+        queryConditions.push({
+          $or: [
+            { 'vi.stock': 'out' },
+            { 'vi.stock': 'outOfStock' },
+            { 'en.stock': 'out' },
+            { 'vi.quantity': { $lte: 0 } },
+            { quantity: { $lte: 0 } }
+          ]
+        });
+      }
+    }
+
+    let sortObj = { _id: -1 };
+    if (sortParam === 'newest') sortObj = { _id: -1 };
+    else if (sortParam === 'oldest') sortObj = { _id: 1 };
+    else if (sortParam === 'price-asc') sortObj = { 'vi.salePrice': 1, 'vi.regularPrice': 1, _id: -1 };
+    else if (sortParam === 'price-desc') sortObj = { 'vi.salePrice': -1, 'vi.regularPrice': -1, _id: -1 };
+    else if (sortParam === 'title-asc') sortObj = { 'vi.title': 1, title: 1 };
+    else if (sortParam === 'title-desc') sortObj = { 'vi.title': -1, title: -1 };
 
     const query = queryConditions.length > 0 ? { $and: queryConditions } : {};
 
     const total = await db.collection('products').countDocuments(query);
     const productsRaw = await db.collection('products')
       .find(query)
-      .sort({ _id: -1 })
+      .sort(sortObj)
       .skip((page - 1) * pageSize)
       .limit(pageSize)
       .toArray();
 
-    const data = productsRaw.map(formatProduct);
+    const data = productsRaw.map(p => formatProduct(p, lang));
 
     res.json({
       success: true,
       all: data,
       data,
+      products: data,
       pagination: {
         page,
         pageSize,
@@ -1238,13 +1329,59 @@ app.post('/api/products/import-csv', async (req, res) => {
   }
 });
 
+// Categories for products (placed before /api/products/:id)
+app.get('/api/products/categories', async (req, res) => {
+  try {
+    const lang = req.query.lang || req.headers['lang'] || 'vi';
+    const categoriesRaw = await db.collection('categories').find({}).toArray();
+    const formatted = categoriesRaw.map(c => {
+      const langObj = c[lang] || c.vi || c.en || {};
+      const fallbackObj = c.vi || c.en || {};
+      return {
+        ...c,
+        id: c._id ? c._id.toString() : c.id,
+        _id: c._id ? c._id.toString() : c.id,
+        titleUrl: c.titleUrl,
+        title: langObj.title || fallbackObj.title || c.title || c.titleUrl,
+        description: langObj.description || fallbackObj.description || c.description || '',
+        visibility: langObj.visibility !== undefined ? langObj.visibility : (c.visibility !== false),
+        subCategories: Array.isArray(c.subCategories) ? c.subCategories : [],
+        mainImage: c.mainImage || { url: '', name: '' }
+      };
+    });
+    res.json(formatted);
+  } catch (err) {
+    res.json([]);
+  }
+});
+
+// Search product titles (placed before /api/products/:id)
+app.get('/api/products/search', async (req, res) => {
+  try {
+    const query = req.query.query || '';
+    if (!query) return res.json([]);
+    const regex = new RegExp(query, 'i');
+    const prods = await db.collection('products').find({
+      $or: [
+        { titleUrl: regex },
+        { title: regex },
+        { 'vi.title': regex },
+        { 'en.title': regex }
+      ]
+    }).limit(20).toArray();
+    res.json(prods.map(p => p.titleUrl || p.title));
+  } catch (err) {
+    res.json([]);
+  }
+});
+
 // Product variants
 app.get('/api/products/:id/variants', async (req, res) => {
   try {
     const id = req.params.id;
     let pDoc = null;
     let query = {};
-    if (ObjectId.isValid(id)) {
+    if (ObjectId.isValid(id) && id.length === 24) {
       query = { productId: new ObjectId(id) };
       pDoc = await db.collection('products').findOne({ _id: new ObjectId(id) });
     } else {
@@ -1274,14 +1411,23 @@ app.get('/api/products/:id/variants', async (req, res) => {
 // Single product
 app.get('/api/products/:id', async (req, res) => {
   try {
-    const p = await db.collection('products').findOne({ _id: new ObjectId(req.params.id) });
+    const id = req.params.id;
+    let query;
+    if (ObjectId.isValid(id) && id.length === 24) {
+      query = { $or: [{ _id: new ObjectId(id) }, { titleUrl: id }, { sku: id }] };
+    } else {
+      query = { $or: [{ titleUrl: id }, { sku: id }, { id: id }] };
+    }
+    const p = await db.collection('products').findOne(query);
     if (!p) return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm' });
 
-    const formatted = formatProduct(p);
+    const lang = req.query.lang || req.headers['lang'] || 'vi';
+    const formatted = formatProduct(p, lang);
     res.json({
       success: true,
       data: formatted,
-      raw: p
+      raw: p,
+      ...formatted
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -4175,13 +4321,81 @@ app.get('/api/translations', async (req, res) => {
   }
 });
 
-app.get('/api/products/categories', async (req, res) => {
+app.post('/api/auth/signup', async (req, res) => {
   try {
-    const categoriesRaw = await db.collection('categories').find({}).toArray();
-    res.json(categoriesRaw);
-  } catch (err) {
-    res.json([]);
+    const { email, password, name, fullName, phoneNumber, address } = req.body || {};
+    const cleanEmail = (email || '').trim().toLowerCase();
+
+    if (!cleanEmail || !/^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(cleanEmail)) {
+      return res.status(400).json({
+        error: { message: 'Email phải đúng định dạng @gmail.com mới được đăng ký' }
+      });
+    }
+
+    if (!password || password.length < 6) {
+      return res.status(400).json({
+        error: { message: 'Mật khẩu phải tối thiểu 6 ký tự' }
+      });
+    }
+
+    const existingUser = await db.collection('users').findOne({ email: cleanEmail });
+    if (existingUser) {
+      return res.status(409).json({
+        error: { message: 'Email đã tồn tại trong hệ thống. Vui lòng đăng nhập hoặc sử dụng email khác!' }
+      });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    const resolvedName = (fullName || name || cleanEmail.split('@')[0] || 'User').trim();
+
+    const newUser = {
+      email: cleanEmail,
+      password: hashedPassword,
+      salt,
+      name: resolvedName,
+      fullName: resolvedName,
+      phoneNumber: (phoneNumber || '').trim(),
+      address: (address || '').trim(),
+      roles: ['user'],
+      status: true,
+      cart: { items: [] },
+      images: [],
+      description: 'Người dùng hệ thống',
+      dateAdded: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const result = await db.collection('users').insertOne(newUser);
+
+    const payload = { email: cleanEmail, id: result.insertedId.toString(), roles: ['user'] };
+    const accessToken = jwt.sign(payload, process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789', {
+      expiresIn: process.env.JWT_EXPIRATION || '7d'
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Đăng ký tài khoản thành công',
+      accessToken,
+      id: result.insertedId.toString(),
+      email: cleanEmail,
+      roles: ['user'],
+      name: resolvedName
+    });
+  } catch (error) {
+    console.error('Error during signup:', error);
+    return res.status(500).json({
+      error: { message: error.message || 'Lỗi server khi đăng ký' }
+    });
   }
+});
+
+app.post('/api/auth/signout', (req, res) => {
+  res.clearCookie('jwt');
+  res.clearCookie('token');
+  res.clearCookie('accessToken');
+  return res.json({ success: true, message: 'Đăng xuất thành công' });
 });
 
 app.post('/api/auth/signin', async (req, res) => {

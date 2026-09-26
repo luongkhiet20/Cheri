@@ -19,19 +19,15 @@
       </button>
 
       <!-- Button Khóa / Mở khóa -->
-      <button
-        type="button"
-        [class]="user?.status !== false ? 'btn btn-warning-outline' : 'btn btn-success-outline'"
-        (click)="onToggleStatusClick()"
-        id="btn-toggle-status"
-      >
-        <svg *ngIf="user?.status !== false" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
+      <button type="button" [class]="user?.status !== false ? 'btn btn-warning-outline' : 'btn btn-success-outline'"
+        (click)="onToggleStatusClick()" id="btn-toggle-status">
+        <svg *ngIf="user?.status !== false" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
           <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
           <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
         </svg>
-        <svg *ngIf="user?.status === false" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
+        <svg *ngIf="user?.status === false" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
           <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
           <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
         </svg>
@@ -91,7 +87,8 @@
       </svg>
     </div>
     <h2 class="state-title">Không tìm thấy tài khoản</h2>
-    <p class="state-desc">Tài khoản có mã <code>{{ userId }}</code> không tồn tại trong collection <code>users</code> của MongoDB Atlas.</p>
+    <p class="state-desc">Tài khoản có mã <code>{{ userId }}</code> không tồn tại trong collection <code>users</code>
+      của MongoDB Atlas.</p>
     <button type="button" class="btn btn-outline" (click)="onBack()">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
         stroke-linecap="round" stroke-linejoin="round" class="btn-icon" aria-hidden="true">
@@ -109,23 +106,18 @@
     <div class="card profile-card">
       <div class="profile-header">
         <div class="profile-avatar-wrap">
-          <img
-            [src]="user.avatar || defaultAvatar"
-            [alt]="user.fullName || user.name || 'Avatar'"
-            class="profile-avatar"
-          />
+          <img [src]="user.avatar || defaultAvatar" [alt]="user.fullName || user.name || 'Avatar'"
+            class="profile-avatar" />
         </div>
         <div class="profile-main">
           <h2 class="profile-name">{{ user.fullName || user.name || 'Người dùng' }}</h2>
           <p class="profile-email">{{ user.email }}</p>
           <div class="profile-badges">
-            <span class="badge" [class.badge-primary]="user.roleText === 'Admin'" [class.badge-neutral]="user.roleText !== 'Admin'">
+            <span class="badge" [class.badge-primary]="user.roleText === 'Admin'"
+              [class.badge-neutral]="user.roleText !== 'Admin'">
               {{ user.roleText }}
             </span>
-            <app-admin-status-badge
-              [label]="user.statusText"
-              [variant]="user.statusVariant"
-            ></app-admin-status-badge>
+            <app-admin-status-badge [label]="user.statusText" [variant]="user.statusVariant"></app-admin-status-badge>
           </div>
         </div>
       </div>
@@ -156,7 +148,7 @@
           <span class="info-value font-medium">{{ user.email }}</span>
         </div>
         <div class="info-row">
-          <span class="info-label">Tên tài khoản (name):</span>
+          <span class="info-label">Tên tài khoản</span>
           <span class="info-value">{{ user.name || '—' }}</span>
         </div>
         <div class="info-row">
@@ -186,7 +178,7 @@
       </div>
       <div class="info-list">
         <div class="info-row">
-          <span class="info-label">Họ và tên (fullName):</span>
+          <span class="info-label">Họ và tên</span>
           <span class="info-value font-medium">{{ user.fullName || 'Chưa cập nhật' }}</span>
         </div>
         <div class="info-row">
@@ -199,14 +191,15 @@
         </div>
         <div class="info-row">
           <span class="info-label">Ngày sinh:</span>
-          <span class="info-value">{{ user.dateOfBirth ? (user.dateOfBirth | date:'dd/MM/yyyy') : 'Chưa cập nhật' }}</span>
+          <span class="info-value">{{ user.dateOfBirth ? (user.dateOfBirth | date:'dd/MM/yyyy') : 'Chưa cập nhật'
+            }}</span>
         </div>
         <div class="info-row">
           <span class="info-label">Địa chỉ:</span>
           <span class="info-value">{{ user.address || 'Chưa cập nhật' }}</span>
         </div>
         <div class="info-row">
-          <span class="info-label">Ảnh đại diện (avatar):</span>
+          <span class="info-label">Ảnh đại diện</span>
           <span class="info-value text-break">{{ user.avatar || 'Chưa cài đặt' }}</span>
         </div>
         <div class="info-row">
@@ -233,15 +226,15 @@
           <code class="info-code">{{ user._id }}</code>
         </div>
         <div class="info-row">
-          <span class="info-label">Ngày tạo (createdAt):</span>
+          <span class="info-label">Ngày tạo:</span>
           <span class="info-value">{{ user.createdAt || '—' }}</span>
         </div>
         <div class="info-row">
-          <span class="info-label">Ngày thêm (dateAdded):</span>
+          <span class="info-label">Ngày thêm:</span>
           <span class="info-value">{{ user.dateAdded || '—' }}</span>
         </div>
         <div class="info-row">
-          <span class="info-label">Cập nhật lần cuối (updatedAt):</span>
+          <span class="info-label">Cập nhật lần cuối:</span>
           <span class="info-value">{{ user.updatedAt || '—' }}</span>
         </div>
       </div>
@@ -273,7 +266,8 @@
           </div>
           <div class="cart-summary-box" *ngIf="cartTotalPrice > 0">
             <span class="cart-summary-label">Tổng giá trị tạm tính</span>
-            <span class="cart-summary-val font-semibold text-primary">{{ cartTotalPrice | currency:'VND':'symbol':'1.0-0' }}</span>
+            <span class="cart-summary-val font-semibold text-primary">{{ cartTotalPrice |
+              currency:'VND':'symbol':'1.0-0' }}</span>
           </div>
         </div>
 
@@ -309,15 +303,8 @@
   </div>
 
   <!-- Confirm Dialog for Lock/Unlock Account -->
-  <app-confirm-dialog
-    [isOpen]="confirmOpen"
-    [title]="confirmTitle"
-    [message]="confirmMessage"
-    [confirmLabel]="confirmLabel"
-    cancelLabel="Hủy"
-    [variant]="confirmVariant"
-    (confirmed)="onConfirmStatusChange()"
-    (cancelled)="onCancelStatusChange()"
-  ></app-confirm-dialog>
+  <app-confirm-dialog [isOpen]="confirmOpen" [title]="confirmTitle" [message]="confirmMessage"
+    [confirmLabel]="confirmLabel" cancelLabel="Hủy" [variant]="confirmVariant" (confirmed)="onConfirmStatusChange()"
+    (cancelled)="onCancelStatusChange()"></app-confirm-dialog>
 
 </div>

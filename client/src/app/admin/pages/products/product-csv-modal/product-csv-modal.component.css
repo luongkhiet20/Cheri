@@ -1,4 +1,8 @@
-/* Modal Backdrop & Wrapper */
+/* =========================================
+   MODAL BACKDROP & WRAPPER
+   Không thay đổi kích thước/layout
+========================================= */
+
 .modal-backdrop {
   position: fixed;
   top: 0;
@@ -31,14 +35,18 @@
   max-width: 1050px;
   max-height: 90vh;
   border-radius: 14px;
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.25), 0 0 1px 1px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.25),
+    0 0 1px 1px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Modal Header */
+/* =========================================
+   MODAL HEADER
+========================================= */
+
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -54,6 +62,7 @@
   gap: 14px;
 }
 
+/* ĐỎ CHÉRI */
 .header-icon-box {
   width: 44px;
   height: 44px;
@@ -63,7 +72,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #74070E;
+  color: #74070e;
 }
 
 .h-icon {
@@ -127,14 +136,20 @@
   gap: 4px;
 }
 
-/* Modal Body */
+/* =========================================
+   MODAL BODY
+========================================= */
+
 .modal-body {
   padding: 24px;
   overflow-y: auto;
   flex: 1;
 }
 
-/* Modal Footer */
+/* =========================================
+   MODAL FOOTER
+========================================= */
+
 .modal-footer {
   display: flex;
   justify-content: space-between;
@@ -144,14 +159,18 @@
   background: #f8fafc;
 }
 
-/* Instruction Banner */
+/* =========================================
+   INSTRUCTION BANNER
+   XANH → ĐỎ
+========================================= */
+
 .instruction-banner {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 20px;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  background: #fff5f5;
+  border: 1px solid #fecaca;
   border-radius: 10px;
   padding: 16px 20px;
 }
@@ -159,13 +178,13 @@
 .banner-title {
   font-size: 0.9375rem;
   font-weight: 600;
-  color: #166534;
+  color: #990000;
   margin: 0 0 4px 0;
 }
 
 .banner-desc {
   font-size: 0.8125rem;
-  color: #15803d;
+  color: #000000;
   line-height: 1.45;
   margin: 0;
 }
@@ -177,7 +196,70 @@
   vertical-align: -2px;
 }
 
-/* Dropzone */
+/* =========================================
+   BUTTON
+   Chỉ đổi màu, giữ nguyên kích thước
+========================================= */
+
+.btn-primary {
+  background: #990000;
+  border-color: #990000;
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background: #74070e;
+  border-color: #74070e;
+  color: #ffffff;
+}
+
+/* Nút tải CSV */
+.btn-outline-primary {
+  background: #ffffff;
+  border-color: #990000;
+  color: #990000;
+}
+
+.btn-outline-primary:hover {
+  background: #fff5f5;
+  border-color: #74070e;
+  color: #74070e;
+}
+
+/* Nút danger */
+.btn-outline-danger {
+  background: #ffffff;
+  border-color: #dc2626;
+  color: #b91c1c;
+}
+
+.btn-outline-danger:hover {
+  background: #fef2f2;
+  border-color: #b91c1c;
+  color: #991b1b;
+}
+
+/* Nút secondary giữ trung tính */
+.btn-secondary {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+/* Link danger */
+.btn-link-danger {
+  color: #990000;
+}
+
+.btn-link-danger:hover {
+  color: #74070e;
+}
+
+/* =========================================
+   DROPZONE
+   XANH → ĐỎ
+========================================= */
+
 .dropzone-box {
   border: 2px dashed #cbd5e1;
   border-radius: 12px;
@@ -191,8 +273,8 @@
 
 .dropzone-box:hover,
 .dropzone-box.dragging {
-  border-color: #2563eb;
-  background: #eff6ff;
+  border-color: #990000;
+  background: #fff5f5;
 }
 
 .hidden-input {
@@ -203,7 +285,7 @@
   width: 50px;
   height: 50px;
   margin: 0 auto 12px;
-  color: #3b82f6;
+  color: #990000;
 }
 
 .dropzone-icon svg {
@@ -218,7 +300,7 @@
 }
 
 .browse-link {
-  color: #2563eb;
+  color: #990000;
   font-weight: 600;
   cursor: pointer;
   margin-left: 4px;
@@ -226,6 +308,7 @@
 
 .browse-link:hover {
   text-decoration: underline;
+  color: #74070e;
 }
 
 .dropzone-hint {
@@ -233,7 +316,10 @@
   color: #94a3b8;
 }
 
-/* Selected File Bar */
+/* =========================================
+   SELECTED FILE
+========================================= */
+
 .file-info-bar {
   display: flex;
   justify-content: space-between;
@@ -270,7 +356,10 @@
   gap: 10px;
 }
 
-/* Stats Grid */
+/* =========================================
+   STATS GRID
+========================================= */
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -302,35 +391,67 @@
   margin-top: 4px;
 }
 
+/* SUCCESS → GIỮ XANH */
 .stat-card.stat-success {
   border-top: 3px solid #10b981;
 }
 
+/* ERROR → GIỮ ĐỎ */
 .stat-card.stat-error.has-error {
   border-top: 3px solid #ef4444;
   background: #fef2f2;
 }
 
+/* INFO → ĐỔI ĐỎ */
 .stat-card.stat-info {
-  border-top: 3px solid #2563eb;
+  border-top: 3px solid #990000;
 }
 
+/* WARNING → ĐỔI ĐỎ */
 .stat-card.stat-warning {
-  border-top: 3px solid #f59e0b;
+  border-top: 3px solid #990000;
 }
 
-/* Callout Box */
+/* =========================================
+   TEXT COLOR
+========================================= */
+
+.text-primary {
+  color: #990000 !important;
+}
+
+/* SUCCESS → GIỮ XANH */
+.text-success {
+  color: #15803d !important;
+}
+
+/* WARNING → ĐỔI ĐỎ */
+.text-warning {
+  color: #990000 !important;
+}
+
+/* DANGER → GIỮ ĐỎ */
+.text-danger {
+  color: #b91c1c !important;
+}
+
+/* =========================================
+   CALLOUT
+========================================= */
+
 .callout-box {
   border-radius: 8px;
   padding: 14px 16px;
 }
 
+/* ERROR → ĐỎ */
 .callout-danger {
   background: #fff1f2;
   border: 1px solid #fecdd3;
   color: #9f1239;
 }
 
+/* SUCCESS → GIỮ XANH */
 .callout-success {
   background: #f0fdf4;
   border: 1px solid #bbf7d0;
@@ -355,7 +476,10 @@
   margin-top: 8px;
 }
 
-/* Preview Toolbar */
+/* =========================================
+   PREVIEW TOOLBAR
+========================================= */
+
 .preview-toolbar {
   display: flex;
   justify-content: space-between;
@@ -384,23 +508,29 @@
   transition: all 0.15s;
 }
 
+/* ACTIVE → ĐỎ */
 .tab-btn.active {
-  background: #2563eb;
+  background: #990000;
   color: #ffffff;
-  border-color: #2563eb;
+  border-color: #990000;
 }
 
+/* SUCCESS TAB → GIỮ XANH */
 .tab-btn.tab-success.active {
   background: #10b981;
   border-color: #10b981;
 }
 
+/* ERROR TAB → GIỮ ĐỎ */
 .tab-btn.tab-danger.active {
   background: #ef4444;
   border-color: #ef4444;
 }
 
-/* Preview Table */
+/* =========================================
+   PREVIEW TABLE
+========================================= */
+
 .preview-table-container {
   max-height: 320px;
   overflow-y: auto;
@@ -454,11 +584,16 @@
   color: #64748b;
 }
 
+/* =========================================
+   VARIANT CHIP
+   XANH → ĐỎ
+========================================= */
+
 .variant-info-chip {
   display: inline-block;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  color: #1d4ed8;
+  background: #fff5f5;
+  border: 1px solid #fecaca;
+  color: #990000;
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 0.75rem;
@@ -482,7 +617,7 @@
   font-size: 0.6875rem;
   white-space: nowrap;
   z-index: 10;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   margin-bottom: 4px;
 }
 
@@ -490,7 +625,10 @@
   display: block;
 }
 
-/* Badges */
+/* =========================================
+   BADGES
+========================================= */
+
 .badge {
   display: inline-block;
   padding: 3px 8px;
@@ -500,13 +638,41 @@
   line-height: 1;
 }
 
-.badge-success { background: #dcfce7; color: #15803d; }
-.badge-danger { background: #fee2e2; color: #b91c1c; }
-.badge-primary { background: #dbeafe; color: #1d4ed8; }
-.badge-warning { background: #fef3c7; color: #b45309; }
-.badge-light { background: #f1f5f9; color: #475569; }
+/* SUCCESS → GIỮ XANH */
+.badge-success {
+  background: #dcfce7;
+  color: #15803d;
+}
 
-/* Completed State */
+/* ERROR → GIỮ ĐỎ */
+.badge-danger {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* PRIMARY → ĐỎ CHÉRI */
+.badge-primary {
+  background: #fce7e7;
+  color: #990000;
+}
+
+/* WARNING → ĐỎ CHÉRI */
+.badge-warning {
+  background: #fff1f2;
+  color: #990000;
+}
+
+/* LIGHT → GIỮ XÁM */
+.badge-light {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+/* =========================================
+   COMPLETED STATE
+   SUCCESS → GIỮ XANH
+========================================= */
+
 .completed-section {
   padding: 30px 20px;
 }
@@ -563,7 +729,10 @@
   margin-top: 4px;
 }
 
-/* Spinner */
+/* =========================================
+   SPINNER
+========================================= */
+
 .spinner-inline {
   display: inline-block;
   width: 14px;
@@ -577,24 +746,43 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
-/* Responsive */
+/* =========================================
+   RESPONSIVE
+   Giữ nguyên kích thước/layout gốc
+========================================= */
+
 @media (max-width: 768px) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
   .instruction-banner {
     flex-direction: column;
     align-items: flex-start;

@@ -96,36 +96,101 @@
   text-overflow: ellipsis;
 }
 
+/* ----- Mobile Top Bar inside Drawer ----- */
+.admin-sidebar__mobile-top {
+  display: none;
+}
+
 /* ----- Overlay (mobile) ----- */
 .admin-sidebar__overlay {
   display: none;
 }
 
-/* ----- Tablet (769px – 1024px) ----- */
-@media (max-width: 1024px) and (min-width: 769px) {
+/* ----- Mobile & Tablet (<= 1024px) ----- */
+@media (max-width: 1024px) {
   .admin-sidebar {
-    width: 200px;
-  }
-}
-
-/* ----- Mobile (<= 768px) ----- */
-@media (max-width: 768px) {
-  .admin-sidebar {
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    max-width: 85vw;
+    z-index: 1000;
     transform: translateX(-100%);
-    width: var(--sidebar-width);
     box-shadow: none;
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.28s ease;
   }
 
   .admin-sidebar.is-open {
     transform: translateX(0);
-    box-shadow: var(--shadow-lg);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  }
+
+  .admin-sidebar__mobile-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--cheri-divider);
+    margin-bottom: 8px;
+  }
+
+  .admin-sidebar__mobile-brand {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  .admin-sidebar__mobile-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--cheri-primary);
+    font-style: italic;
+    letter-spacing: 0.5px;
+  }
+
+  .admin-sidebar__mobile-sub {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--cheri-text-secondary);
+    letter-spacing: 1px;
+  }
+
+  .admin-sidebar__close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-md, 8px);
+    background: transparent;
+    border: 1px solid var(--cheri-divider);
+    color: var(--cheri-text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast, 0.15s ease);
+    padding: 0;
+  }
+
+  .admin-sidebar__close-btn:hover {
+    background: var(--cheri-background);
+    color: var(--cheri-primary);
+    border-color: var(--cheri-primary);
   }
 
   .admin-sidebar__overlay {
     display: block;
     position: fixed;
     inset: 0;
-    background-color: rgba(0, 0, 0, 0.4);
+    background-color: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
     z-index: -1;
+  }
+
+  .admin-sidebar__link {
+    padding: 12px 16px;
+    font-size: 15px;
+    min-height: 44px;
   }
 }

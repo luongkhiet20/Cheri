@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID, ChangeDetectorRef, Output, EventEmitter } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -13,9 +13,15 @@ import { accessTokenKey } from '../../../user/shared/constants';
   styleUrls: ['./admin-header.component.css']
 })
 export class AdminHeaderComponent implements OnInit, OnDestroy {
+  @Output() toggleMenu = new EventEmitter<void>();
+
   isUserMenuOpen = false;
   currentUser: any = null;
   private userSub: Subscription | null = null;
+
+  onToggleMenu(): void {
+    this.toggleMenu.emit();
+  }
 
   constructor(
     private apiService: AdminService,

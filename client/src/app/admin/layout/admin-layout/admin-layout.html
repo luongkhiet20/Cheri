@@ -1,5 +1,5 @@
 <div class="admin-shell">
-  <app-admin-header></app-admin-header>
+  <app-admin-header (toggleMenu)="sidebar.toggleMobile()"></app-admin-header>
   <app-admin-sidebar #sidebar></app-admin-sidebar>
 
   <main class="admin-main" id="main-content" role="main">

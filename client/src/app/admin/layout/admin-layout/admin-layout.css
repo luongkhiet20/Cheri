@@ -24,16 +24,8 @@
   transition: margin-left var(--transition-base);
 }
 
-/* ----- Tablet ----- */
-@media (max-width: 1024px) and (min-width: 769px) {
-  .admin-main {
-    margin-left: 200px;
-    padding: var(--space-lg);
-  }
-}
-
-/* ----- Mobile ----- */
-@media (max-width: 768px) {
+/* ----- Mobile & Tablet (<= 1024px) ----- */
+@media (max-width: 1024px) {
   .admin-main {
     margin-left: 0;
     padding: var(--space-md);

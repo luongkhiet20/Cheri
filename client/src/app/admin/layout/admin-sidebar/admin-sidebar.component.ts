@@ -1,5 +1,7 @@
-import { Component, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Router, NavigationEnd } from '@angular/router';
+import { Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 
 interface NavItem {
   label: string;
@@ -13,8 +15,9 @@ interface NavItem {
   templateUrl: './admin-sidebar.component.html',
   styleUrls: ['./admin-sidebar.component.css']
 })
-export class AdminSidebarComponent implements OnInit {
+export class AdminSidebarComponent implements OnInit, OnDestroy {
   isMobileOpen = false;
+  private routerSub: Subscription | null = null;
 
   navItems: NavItem[] = [
     { label: 'Dashboard',                     route: '/admin',                    exact: true },
@@ -30,7 +33,20 @@ export class AdminSidebarComponent implements OnInit {
 
   constructor(private router: Router) {}
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    // Tự động đóng mobile sidebar khi điều hướng hoàn tất
+    this.routerSub = this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd)
+    ).subscribe(() => {
+      this.closeMobile();
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (this.routerSub) {
+      this.routerSub.unsubscribe();
+    }
+  }
 
   isActive(route: string): boolean {
     return this.router.isActive(route, {

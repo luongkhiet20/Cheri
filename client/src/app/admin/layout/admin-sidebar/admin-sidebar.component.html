@@ -3,16 +3,27 @@
   <div class="admin-sidebar__overlay" *ngIf="isMobileOpen" (click)="closeMobile()" aria-hidden="true"></div>
 
   <div class="admin-sidebar__inner">
+    <!-- Header drawer dành cho mobile/tablet -->
+    <div class="admin-sidebar__mobile-top">
+      <div class="admin-sidebar__mobile-brand">
+        <span class="admin-sidebar__mobile-title">Chéri</span>
+
+      </div>
+      <button type="button" class="admin-sidebar__close-btn" (click)="closeMobile()" aria-label="Đóng menu quản trị"
+        title="Đóng menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
     <ul class="admin-sidebar__nav" role="list">
       <li class="admin-sidebar__item" *ngFor="let item of navItems">
-        <a
-          [routerLink]="item.route"
-          routerLinkActive="is-active"
-          [routerLinkActiveOptions]="item.exact ? { exact: true } : { exact: false }"
-          class="admin-sidebar__link"
-          [attr.aria-current]="isActive(item.route) ? 'page' : null"
-          (click)="closeMobile()"
-        >
+        <a [routerLink]="item.route" routerLinkActive="is-active"
+          [routerLinkActiveOptions]="item.exact ? { exact: true } : { exact: false }" class="admin-sidebar__link"
+          [attr.aria-current]="isActive(item.route) ? 'page' : null" (click)="closeMobile()">
           <span class="admin-sidebar__link-text">{{ item.label }}</span>
         </a>
       </li>

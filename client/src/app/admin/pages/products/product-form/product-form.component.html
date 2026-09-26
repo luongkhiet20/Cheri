@@ -78,58 +78,57 @@
         <h2 class="card-section-title">Thông tin cơ bản</h2>
 
         <div class="form-group" id="field-title">
-          <label class="form-label required">Tên sản phẩm (vi.title)</label>
-          <input type="text" class="form-control" [class.is-invalid]="errors['title']" [(ngModel)]="product.vi.title" (ngModelChange)="markDirty('title')"
-            name="title" id="title" placeholder="Ví dụ: Đầm hoa cúc trắng cổ vuông dáng xòe" required />
+          <label class="form-label required">Tên sản phẩm</label>
+          <input type="text" class="form-control" [class.is-invalid]="errors['title']" [(ngModel)]="product.vi.title"
+            (ngModelChange)="markDirty('title')" name="title" id="title"
+            placeholder="Ví dụ: Đầm hoa cúc trắng cổ vuông dáng xòe" required />
           <div *ngIf="errors['title']" class="field-error">{{ errors['title'] }}</div>
         </div>
 
         <div class="form-group">
-          <label class="form-label required">Mã sản phẩm / SKU (titleUrl)</label>
+          <label class="form-label required">Mã sản phẩm/SKU</label>
           <input type="text" class="form-control" [(ngModel)]="product.titleUrl" (ngModelChange)="markDirty()"
             name="titleUrl" placeholder="Ví dụ: dam-hoa-cuc-trang-v2501" required />
-          <span class="form-hint">Định danh URL thân thiện và mã SKU gốc của sản phẩm</span>
         </div>
 
         <div class="form-row">
           <div class="form-group col-6">
-            <label class="form-label">Loại sản phẩm (vi.productType)</label>
+            <label class="form-label">Loại sản phẩm</label>
             <select class="form-control" [(ngModel)]="product.vi.productType" (ngModelChange)="markDirty()"
               name="productType">
-              <option value="clothing">Quần áo (clothing)</option>
-              <option value="accessory">Phụ kiện (accessory)</option>
-              <option value="shoes">Giày dép (shoes)</option>
-              <option value="bag">Túi ví (bag)</option>
+              <option value="clothing">Quần áo</option>
+              <option value="accessory">Phụ kiện</option>
+              <option value="shoes">Giày dép</option>
+              <option value="bag">Túi ví</option>
             </select>
           </div>
 
           <div class="form-group col-6" id="field-categoryLevel1">
-            <label class="form-label required">Danh mục sản phẩm (vi.categoryLevel1)</label>
-            <select class="form-control" [class.is-invalid]="errors['categoryLevel1']" [(ngModel)]="product.vi.categoryLevel1" (ngModelChange)="markDirty('categoryLevel1')"
+            <label class="form-label required">Danh mục sản phẩm</label>
+            <select class="form-control" [class.is-invalid]="errors['categoryLevel1']"
+              [(ngModel)]="product.vi.categoryLevel1" (ngModelChange)="markDirty('categoryLevel1')"
               name="categoryLevel1" id="categoryLevel1" required>
               <option value="">-- Chọn danh mục sản phẩm --</option>
               <option *ngFor="let cat of categories" [value]="cat.name">{{ cat.name }}</option>
             </select>
             <div *ngIf="errors['categoryLevel1']" class="field-error">{{ errors['categoryLevel1'] }}</div>
-            <span class="form-hint" *ngIf="!errors['categoryLevel1']">Danh mục chung (ví dụ: Quần Áo, Phụ Kiện). Không dùng cho phân loại bán lẻ (như Áo,
-              Quần Jean) hay tags.</span>
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label">Danh mục phụ / cấp 2 (vi.categoryLevel2)</label>
+          <label class="form-label">Danh mục phụ/cấp 2 </label>
           <input type="text" class="form-control" [(ngModel)]="product.vi.categoryLevel2" (ngModelChange)="markDirty()"
             name="categoryLevel2" placeholder="Ví dụ: Đầm dự tiệc, Áo sơ mi kiểu..." />
         </div>
 
         <div class="form-group">
-          <label class="form-label">Mô tả ngắn (vi.description)</label>
+          <label class="form-label">Mô tả ngắn</label>
           <textarea class="form-control" rows="3" [(ngModel)]="product.vi.description" (ngModelChange)="markDirty()"
             name="description" placeholder="Mô tả tóm tắt sản phẩm..."></textarea>
         </div>
 
         <div class="form-group">
-          <label class="form-label">Mô tả đầy đủ (vi.descriptionFull)</label>
+          <label class="form-label">Mô tả đầy đủ</label>
           <textarea class="form-control" rows="5" [(ngModel)]="product.vi.descriptionFull" (ngModelChange)="markDirty()"
             name="descriptionFull"
             placeholder="Chất liệu vải, form dáng, bảng size, lưu ý giặt ủi... (Mỗi đoạn 1 dòng)"></textarea>
@@ -138,7 +137,7 @@
 
       <!-- 2. Image Gallery -->
       <div class="form-card" id="field-images" [class.card-has-error]="errors['images']">
-        <h2 class="card-section-title">Hình ảnh sản phẩm (mainImage & images)</h2>
+        <h2 class="card-section-title">Hình ảnh sản phẩm</h2>
 
         <!-- Upload & URL input -->
         <div class="image-input-box" [class.is-invalid]="errors['images']">
@@ -220,7 +219,7 @@
 
       <!-- 3. Attributes: Colors & Sizes & Classification -->
       <div class="form-card">
-        <h2 class="card-section-title">THUỘC TÍNH & PHÂN LOẠI</h2>
+        <h2 class="card-section-title">Thuộc tính và phân loại</h2>
 
         <!-- TOGGLE 1: Sản phẩm có nhiều phân loại -->
         <div class="attr-toggle-block">
@@ -230,7 +229,7 @@
                 Sản phẩm có nhiều phân loại
               </label>
               <p class="toggle-desc">
-                Cho phép sản phẩm có nhiều loại để bán lẻ, ví dụ Áo, Quần Jean.
+                Cho phép sản phẩm có nhiều loại để bán lẻ
               </p>
             </div>
             <label class="switch-toggle" for="toggleHasClassification">
@@ -241,7 +240,8 @@
           </div>
 
           <!-- When hasClassification = true -->
-          <div *ngIf="product.vi.hasClassification" class="attr-content-box mt-3" id="field-classifications" [class.box-has-error]="errors['classifications']">
+          <div *ngIf="product.vi.hasClassification" class="attr-content-box mt-3" id="field-classifications"
+            [class.box-has-error]="errors['classifications']">
             <div class="attr-section-header">
               <h3 class="attr-sub-title">PHÂN LOẠI SẢN PHẨM</h3>
               <span class="form-label font-semibold">Chọn các phân loại sản phẩm</span>
@@ -258,7 +258,8 @@
 
             <!-- Tag Input -->
             <div class="input-btn-group">
-              <input type="text" class="form-control" [class.is-invalid]="errors['classifications']" [(ngModel)]="classificationInput" name="classificationInput" id="classificationInput"
+              <input type="text" class="form-control" [class.is-invalid]="errors['classifications']"
+                [(ngModel)]="classificationInput" name="classificationInput" id="classificationInput"
                 placeholder="Nhập phân loại (ví dụ: Áo, Quần Jean, Váy...) và nhấn Enter"
                 (keyup.enter)="addClassification()" (input)="clearFieldError('classifications')" />
               <button type="button" class="btn btn-secondary btn-icon-gap" (click)="addClassification()">
@@ -327,15 +328,18 @@
           </div>
 
           <!-- When hasColors = true -->
-          <div *ngIf="product.vi.hasColors" class="attr-content-box mt-3" id="field-colors" [class.box-has-error]="errors['colors']">
+          <div *ngIf="product.vi.hasColors" class="attr-content-box mt-3" id="field-colors"
+            [class.box-has-error]="errors['colors']">
             <h3 class="attr-sub-title">MÀU SẮC</h3>
 
             <!-- Color picker & Input -->
             <div class="color-picker-row">
               <input type="color" class="color-picker-input" [(ngModel)]="newColorHex" name="newColorHex"
                 title="Chọn mã màu" />
-              <input type="text" class="form-control color-name-input" [class.is-invalid]="errors['colors']" [(ngModel)]="newColorName" name="newColorName" id="newColorName"
-                placeholder="Tên màu (Ví dụ: Đen, Trắng, Đỏ Ruby...)" (keyup.enter)="addColor()" (input)="clearFieldError('colors')" />
+              <input type="text" class="form-control color-name-input" [class.is-invalid]="errors['colors']"
+                [(ngModel)]="newColorName" name="newColorName" id="newColorName"
+                placeholder="Tên màu (Ví dụ: Đen, Trắng, Đỏ Ruby...)" (keyup.enter)="addColor()"
+                (input)="clearFieldError('colors')" />
               <button type="button" class="btn btn-secondary btn-icon-gap" (click)="addColor()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -406,7 +410,8 @@
           </div>
 
           <!-- When hasSizes = true -->
-          <div *ngIf="product.vi.hasSizes" class="attr-content-box mt-3" id="field-sizes" [class.box-has-error]="errors['sizes']">
+          <div *ngIf="product.vi.hasSizes" class="attr-content-box mt-3" id="field-sizes"
+            [class.box-has-error]="errors['sizes']">
             <h3 class="attr-sub-title">KÍCH CỠ</h3>
 
             <!-- Standard Sizes Bar -->
@@ -420,8 +425,9 @@
 
             <!-- Custom Size Input -->
             <div class="input-btn-group mt-2">
-              <input type="text" class="form-control" [class.is-invalid]="errors['sizes']" [(ngModel)]="newCustomSize" name="newCustomSize" id="newCustomSize"
-                placeholder="Nhập kích cỡ tùy chỉnh khác..." (keyup.enter)="addCustomSize()" (input)="clearFieldError('sizes')" />
+              <input type="text" class="form-control" [class.is-invalid]="errors['sizes']" [(ngModel)]="newCustomSize"
+                name="newCustomSize" id="newCustomSize" placeholder="Nhập kích cỡ tùy chỉnh khác..."
+                (keyup.enter)="addCustomSize()" (input)="clearFieldError('sizes')" />
               <button type="button" class="btn btn-secondary" (click)="addCustomSize()">Thêm size</button>
             </div>
             <div *ngIf="errors['sizes']" class="field-error mt-2">{{ errors['sizes'] }}</div>
@@ -459,7 +465,7 @@
       <div class="form-card" *ngIf="product.variants && product.variants.length > 0">
         <div class="card-header-flex">
           <div>
-            <h2 class="card-section-title mb-0">QUẢN LÝ BIẾN THỂ SẢN PHẨM</h2>
+            <h2 class="card-section-title mb-0">Quản lý biến thể sản phẩm</h2>
             <p class="section-desc">Được tạo tự động từ tổ hợp các thuộc tính đã chọn.</p>
           </div>
           <div class="badge-total-variants">
@@ -470,23 +476,23 @@
         <!-- Quick Batch Apply -->
         <div class="batch-apply-toolbar">
           <div class="batch-group">
-            <span class="batch-label">Áp dụng giá nhanh:</span>
+            <span class="batch-label">Áp dụng giá bán:</span>
             <input type="number" class="form-control batch-input" [(ngModel)]="quickPrice" name="quickPrice"
-              placeholder="Giá..." min="0" />
+              placeholder="Giá bán" min="0" />
             <button type="button" class="btn btn-sm btn-outline" (click)="applyQuickPrice()">Áp dụng</button>
           </div>
 
           <div class="batch-group">
-            <span class="batch-label">Áp dụng giá KM:</span>
+            <span class="batch-label">Áp dụng giá khuyến mãi:</span>
             <input type="number" class="form-control batch-input" [(ngModel)]="discountBatch" name="discountBatch"
-              placeholder="Giá KM..." min="0" />
+              placeholder="Giá khuyến mãi..." min="0" />
             <button type="button" class="btn btn-sm btn-outline" (click)="applyDiscountBatch()">Áp dụng</button>
           </div>
 
           <div class="batch-group">
             <span class="batch-label">Áp dụng tồn kho:</span>
             <input type="number" class="form-control batch-input" [(ngModel)]="quickStock" name="quickStock"
-              placeholder="Tồn..." min="0" />
+              placeholder="Tồn kho..." min="0" />
             <button type="button" class="btn btn-sm btn-outline" (click)="applyQuickStock()">Áp dụng</button>
           </div>
         </div>
@@ -528,20 +534,22 @@
                   <input type="number" class="form-control input-sm text-right" [(ngModel)]="v.price"
                     (ngModelChange)="markDirty('price_' + vi)" [name]="'price_' + vi" [id]="'price_' + vi"
                     [class.is-invalid]="errors['price_' + vi]" min="0" placeholder="0" required />
-                  <div *ngIf="errors['price_' + vi]" class="field-error table-field-error">{{ errors['price_' + vi] }}</div>
+                  <div *ngIf="errors['price_' + vi]" class="field-error table-field-error">{{ errors['price_' + vi] }}
+                  </div>
                 </td>
                 <td>
                   <input type="number" class="form-control input-sm text-right" [(ngModel)]="v.discountPrice"
                     (ngModelChange)="markDirty('discount_' + vi)" [name]="'discount_' + vi" [id]="'discount_' + vi"
                     [class.is-invalid]="errors['discount_' + vi]" min="0" placeholder="0" />
-                  <div *ngIf="errors['discount_' + vi]" class="field-error table-field-error">{{ errors['discount_' + vi] }}</div>
+                  <div *ngIf="errors['discount_' + vi]" class="field-error table-field-error">{{ errors['discount_' +
+                    vi] }}</div>
                 </td>
                 <td>
                   <input type="number" class="form-control input-sm text-right" [(ngModel)]="v.stock"
-                    (ngModelChange)="markDirty('stock_' + vi); onVariantStockChange()" [name]="'stock_' + vi" [id]="'stock_' + vi"
-                    [class.is-invalid]="errors['stock_' + vi]" min="0" placeholder="0"
-                    required />
-                  <div *ngIf="errors['stock_' + vi]" class="field-error table-field-error">{{ errors['stock_' + vi] }}</div>
+                    (ngModelChange)="markDirty('stock_' + vi); onVariantStockChange()" [name]="'stock_' + vi"
+                    [id]="'stock_' + vi" [class.is-invalid]="errors['stock_' + vi]" min="0" placeholder="0" required />
+                  <div *ngIf="errors['stock_' + vi]" class="field-error table-field-error">{{ errors['stock_' + vi] }}
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -556,10 +564,10 @@
 
       <!-- Status & Publishing -->
       <div class="form-card">
-        <h2 class="card-section-title">Trạng thái phát hành</h2>
+        <h2 class="card-section-title">Trạng thái hiển thị</h2>
 
         <div class="form-group">
-          <label class="form-label">Hiển thị trên hệ thống (visibility)</label>
+          <label class="form-label">Hiển thị trên hệ thống</label>
           <select class="form-control" [(ngModel)]="product.visibility" (ngModelChange)="markDirty()" name="visibility">
             <option [ngValue]="true">Đang bán (Hiển thị)</option>
             <option [ngValue]="false">Tạm ẩn (Bản nháp)</option>
@@ -578,11 +586,9 @@
           <span>Tổng quan biến thể</span>
           <span class="badge badge-primary">{{ product.variants.length }} biến thể</span>
         </h2>
-        <p class="card-desc-hint">Sản phẩm có biến thể: Giá bán và Tồn kho được quản lý chi tiết tại từng biến thể. Tổng
-          tồn kho sản phẩm được tự động tổng hợp.</p>
 
         <div class="stock-summary-stat">
-          <div class="stat-label">Tổng tồn kho tự động (Product.quantity)</div>
+          <div class="stat-label">Tổng tồn kho</div>
           <div class="stat-value">{{ totalVariantStock }} <span class="unit">sản phẩm</span></div>
         </div>
 
@@ -590,7 +596,7 @@
           <div class="info-row">
             <span class="label">Tình trạng kho:</span>
             <span class="val badge" [ngClass]="totalVariantStock > 0 ? 'badge-success' : 'badge-danger'">
-              {{ totalVariantStock > 0 ? 'Còn hàng (onStock)' : 'Hết hàng (outOfStock)' }}
+              {{ totalVariantStock > 0 ? 'Còn hàng' : 'Hết hàng' }}
             </span>
           </div>
           <div class="info-row">
@@ -611,23 +617,24 @@
       <!-- Price & Stock (Only When No Variants) -->
       <div class="form-card" *ngIf="!product.variants || product.variants.length === 0">
         <h2 class="card-section-title">Giá & Tồn kho chung</h2>
-        <p class="card-desc-hint">Sản phẩm không có biến thể. Quản lý giá bán và tồn kho trực tiếp tại đây.</p>
 
         <div class="form-group" id="field-regularPrice">
-          <label class="form-label required">Giá niêm yết (vi.regularPrice)</label>
+          <label class="form-label required">Giá niêm yết</label>
           <div class="input-addon-wrapper">
-            <input type="number" class="form-control" [class.is-invalid]="errors['regularPrice']" [(ngModel)]="product.vi.regularPrice"
-              (ngModelChange)="markDirty('regularPrice')" name="regularPrice" id="regularPrice" min="0" required />
+            <input type="number" class="form-control" [class.is-invalid]="errors['regularPrice']"
+              [(ngModel)]="product.vi.regularPrice" (ngModelChange)="markDirty('regularPrice')" name="regularPrice"
+              id="regularPrice" min="0" required />
             <span class="addon">₫</span>
           </div>
           <div *ngIf="errors['regularPrice']" class="field-error">{{ errors['regularPrice'] }}</div>
         </div>
 
         <div class="form-group" id="field-salePrice">
-          <label class="form-label">Giá khuyến mãi (vi.salePrice)</label>
+          <label class="form-label">Giá khuyến mãi</label>
           <div class="input-addon-wrapper">
-            <input type="number" class="form-control" [class.is-invalid]="errors['salePrice']" [(ngModel)]="product.vi.salePrice" (ngModelChange)="markDirty('salePrice')"
-              name="salePrice" id="salePrice" min="0" />
+            <input type="number" class="form-control" [class.is-invalid]="errors['salePrice']"
+              [(ngModel)]="product.vi.salePrice" (ngModelChange)="markDirty('salePrice')" name="salePrice"
+              id="salePrice" min="0" />
             <span class="addon">₫</span>
           </div>
           <div *ngIf="errors['salePrice']" class="field-error">{{ errors['salePrice'] }}</div>
@@ -636,18 +643,18 @@
         <div class="checkbox-row mb-3">
           <label class="checkbox-label">
             <input type="checkbox" [(ngModel)]="product.vi.onSale" (ngModelChange)="markDirty()" name="onSale" />
-            <span>Đang giảm giá (vi.onSale)</span>
+            <span>Đang giảm giá</span>
           </label>
         </div>
 
         <div class="form-group">
-          <label class="form-label required">Số lượng kho (vi.quantity)</label>
+          <label class="form-label required">Số lượng kho</label>
           <input type="number" class="form-control" [(ngModel)]="product.vi.quantity" (ngModelChange)="markDirty()"
             name="quantity" min="0" required />
         </div>
 
         <div class="form-group">
-          <label class="form-label">Tình trạng kho (vi.stock)</label>
+          <label class="form-label">Tình trạng kho</label>
           <select class="form-control" [(ngModel)]="product.vi.stock" (ngModelChange)="markDirty()" name="stock">
             <option value="onStock">Còn hàng</option>
             <option value="outOfStock">Hết hàng</option>
@@ -658,9 +665,7 @@
 
       <!-- Tags -->
       <div class="form-card">
-        <h2 class="card-section-title">TAGS (THẺ TÌM KIẾM)</h2>
-        <span class="form-hint mb-2">Thẻ nhãn sản phẩm dùng tìm kiếm và phân loại nhanh, lưu trong <code>tags[]</code>
-          (Không đưa tags vào danh mục cấp 1).</span>
+        <h2 class="card-section-title">Tags</h2>
 
         <!-- Quick Suggested Tags -->
         <div class="quick-chips-row mb-2">

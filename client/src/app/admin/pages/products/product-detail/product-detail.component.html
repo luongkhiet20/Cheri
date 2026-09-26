@@ -181,7 +181,7 @@
               <span class="spec-v font-semibold">
                 <span *ngIf="hasVariants" class="text-primary-semibold">Có biến thể ({{ variantsCount }} biến
                   thể)</span>
-                <span *ngIf="!hasVariants" class="text-secondary-semibold">Không có biến thể (Sản phẩm đơn)</span>
+                <span *ngIf="!hasVariants" class="text-secondary-semibold">Sản phẩm đơn</span>
               </span>
             </div>
             <div class="spec-item">
@@ -253,7 +253,7 @@
                   <line x1="12" y1="22.08" x2="12" y2="12"></line>
                 </svg>
               </span>
-              <span>{{ hasVariants ? ('Có biến thể (' + variantsCount + ' biến thể)') : 'Không có biến thể (Sản phẩm
+              <span>{{ hasVariants ? ('Có biến thể (' + variantsCount + ' biến thể)') : '(Sản phẩm
                 đơn)' }}</span>
             </span>
 

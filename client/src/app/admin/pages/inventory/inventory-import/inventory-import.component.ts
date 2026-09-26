@@ -136,7 +136,76 @@ export class InventoryImportComponent implements OnInit {
   }
 
   onQuantityChange(): void {
-    delete this.errors['quantity'];
+    this.clearFieldError('quantity');
+  }
+
+  clearFieldError(field: string): void {
+    if (this.errors[field]) {
+      delete this.errors[field];
+      if (Object.keys(this.errors).length === 0) {
+        this.errorMessage = '';
+      }
+      this.cdr.markForCheck();
+    }
+  }
+
+  scrollToFirstError(key: string): void {
+    setTimeout(() => {
+      let el: HTMLElement | null = null;
+
+      // 1. Direct query by id, name, or field wrapper
+      el = document.getElementById(key === 'product' ? 'product-select' : 'import-quantity')
+        || document.getElementById(key)
+        || document.querySelector<HTMLElement>(`[name="${key}"]`)
+        || document.getElementById(`field-${key}`);
+
+      // 2. Specific key targets
+      if (!el && key === 'product') {
+        el = document.querySelector<HTMLElement>('.product-picker-wrapper') || document.getElementById('product-select');
+      }
+
+      // 3. Fallback to first .is-invalid element
+      if (!el) {
+        el = document.querySelector<HTMLElement>('.is-invalid');
+      }
+
+      if (el) {
+        // Expand any collapsed ancestor details or hidden containers
+        let parent: HTMLElement | null = el.parentElement;
+        while (parent) {
+          if (parent.tagName === 'DETAILS' && !(parent as HTMLDetailsElement).open) {
+            (parent as HTMLDetailsElement).open = true;
+          }
+          if (parent.hidden) {
+            parent.hidden = false;
+          }
+          parent = parent.parentElement;
+        }
+
+        // Smooth scroll to the target element, centered in viewport
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // If product error, open dropdown or focus input
+        if (key === 'product') {
+          this.isProductDropdownOpen = true;
+          this.cdr.markForCheck();
+        }
+
+        // Find focusable interactive element
+        let focusTarget: HTMLElement | null = null;
+        if (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') {
+          focusTarget = el;
+        } else {
+          focusTarget = el.querySelector<HTMLElement>('input:not([type="hidden"]), select, textarea, button');
+        }
+
+        if (focusTarget && typeof focusTarget.focus === 'function') {
+          setTimeout(() => {
+            focusTarget?.focus({ preventScroll: true });
+          }, 200);
+        }
+      }
+    }, 50);
   }
 
   validate(): boolean {
@@ -167,6 +236,12 @@ export class InventoryImportComponent implements OnInit {
     this.successMessage = '';
 
     if (!this.validate()) {
+      const orderedCandidates: string[] = ['product', 'quantity'];
+      const firstKey = orderedCandidates.find(k => this.errors[k]) || Object.keys(this.errors)[0];
+      if (firstKey) {
+        this.scrollToFirstError(firstKey);
+      }
+      this.cdr.markForCheck();
       return;
     }
 

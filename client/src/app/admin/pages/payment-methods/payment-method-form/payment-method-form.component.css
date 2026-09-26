@@ -224,12 +224,31 @@
 
 .form-control.is-invalid {
   border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+.form-control.is-invalid:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.22);
 }
 
 .field-error {
   font-size: 12px;
-  color: #ef4444;
+  color: #dc2626;
+  font-weight: 500;
   margin-top: 4px;
+  animation: fadeInFieldError 0.18s ease-in-out;
+}
+
+@keyframes fadeInFieldError {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .form-hint {

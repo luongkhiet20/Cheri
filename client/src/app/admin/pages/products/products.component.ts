@@ -178,7 +178,7 @@ export class ProductsComponent implements OnInit {
     if (count === 0) return;
     this.isBulkDelete = true;
     this.pendingDeleteId = null;
-    this.confirmMessage = `Bạn có chắc chắn muốn xóa ${count} sản phẩm đã chọn khỏi cơ sở dữ liệu MongoDB không? Hành động này không thể hoàn tác.`;
+    this.confirmMessage = `Bạn có chắc chắn muốn xóa ${count} sản phẩm đã chọn khỏi không? Hành động này không thể hoàn tác.`;
     this.confirmOpen = true;
     this.cdr.markForCheck();
   }
@@ -195,7 +195,7 @@ export class ProductsComponent implements OnInit {
       this.isBulkDelete = false;
       this.pendingDeleteId = event.row.id;
       this.pendingDeleteName = event.row.name || '';
-      this.confirmMessage = `Bạn có chắc chắn muốn xóa sản phẩm "${this.pendingDeleteName}" khỏi MongoDB không?`;
+      this.confirmMessage = `Bạn có chắc chắn muốn xóa sản phẩm "${this.pendingDeleteName}" không?`;
       this.confirmOpen = true;
       this.cdr.markForCheck();
     }

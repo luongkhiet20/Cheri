@@ -66,7 +66,7 @@
       <div class="form-grid">
 
         <!-- [1] Tên phương thức thanh toán * -->
-        <div class="form-group col-span-2">
+        <div class="form-group col-span-2" id="field-name">
           <label class="form-label required" for="payment-name">Tên phương thức thanh toán</label>
           <input
             type="text"
@@ -75,6 +75,7 @@
             class="form-control"
             [class.is-invalid]="errors['name']"
             [(ngModel)]="formData.name"
+            (ngModelChange)="clearFieldError('name')"
             placeholder="Ví dụ: VNPay, MoMo, ZaloPay, Thanh toán khi nhận hàng (COD)"
             required
           />
@@ -83,7 +84,7 @@
         </div>
 
         <!-- [2] Mã phương thức thanh toán * -->
-        <div class="form-group">
+        <div class="form-group" id="field-code">
           <label class="form-label required" for="payment-code">Mã phương thức thanh toán</label>
           <input
             type="text"
@@ -101,7 +102,7 @@
         </div>
 
         <!-- [3] Loại thanh toán * -->
-        <div class="form-group">
+        <div class="form-group" id="field-type">
           <label class="form-label required" for="payment-type">Loại thanh toán</label>
           <select
             id="payment-type"
@@ -109,6 +110,7 @@
             class="form-control"
             [class.is-invalid]="errors['type']"
             [(ngModel)]="formData.type"
+            (ngModelChange)="clearFieldError('type')"
             required
           >
             <option *ngFor="let t of PAYMENT_TYPES" [value]="t">{{ t }}</option>

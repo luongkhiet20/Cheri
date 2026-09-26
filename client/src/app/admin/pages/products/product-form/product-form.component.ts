@@ -34,6 +34,7 @@ export class ProductFormComponent implements OnInit {
   // Feedback messages
   errorMessage = '';
   successMessage = '';
+  errors: { [key: string]: string } = {};
 
   // Delete confirm dialog
   confirmDeleteOpen = false;
@@ -157,9 +158,22 @@ export class ProductFormComponent implements OnInit {
     }
   }
 
-  markDirty(): void {
+  markDirty(field?: string): void {
     this.isDirty = true;
+    if (field) {
+      this.clearFieldError(field);
+    }
     this.cdr.markForCheck();
+  }
+
+  clearFieldError(field: string): void {
+    if (this.errors[field]) {
+      delete this.errors[field];
+      if (Object.keys(this.errors).length === 0) {
+        this.errorMessage = '';
+      }
+      this.cdr.markForCheck();
+    }
   }
 
   loadCategories(): void {
@@ -295,7 +309,7 @@ export class ProductFormComponent implements OnInit {
       if (!this.product.mainImage?.url) {
         this.product.mainImage = { url, name: this.product.vi.title || 'Ảnh sản phẩm' };
       }
-      this.markDirty();
+      this.markDirty('images');
     }
     this.imageUrlInput = '';
   }
@@ -312,7 +326,7 @@ export class ProductFormComponent implements OnInit {
       if (!this.product.mainImage?.url) {
         this.product.mainImage = { url: base64, name: file.name };
       }
-      this.markDirty();
+      this.markDirty('images');
     };
     reader.readAsDataURL(file);
     event.target.value = '';
@@ -374,6 +388,9 @@ export class ProductFormComponent implements OnInit {
   // 3. CLASSIFICATION ATTRIBUTES (Áo, Quần Jean, Váy, etc.)
   // ─────────────────────────────────────────────────────────────
   onToggleClassification(): void {
+    if (!this.product.vi.hasClassification) {
+      this.clearFieldError('classifications');
+    }
     this.markDirty();
     this.recalculateVariants();
   }
@@ -390,6 +407,7 @@ export class ProductFormComponent implements OnInit {
     if (!exists) {
       this.product.vi.classifications.push(name);
       this.classificationInput = '';
+      this.clearFieldError('classifications');
       this.markDirty();
       this.recalculateVariants();
     }
@@ -414,6 +432,9 @@ export class ProductFormComponent implements OnInit {
   // 4. COLOR ATTRIBUTES (name, hex)
   // ─────────────────────────────────────────────────────────────
   onToggleColors(): void {
+    if (!this.product.vi.hasColors) {
+      this.clearFieldError('colors');
+    }
     this.markDirty();
     this.recalculateVariants();
   }
@@ -429,6 +450,7 @@ export class ProductFormComponent implements OnInit {
     if (!this.product.vi.colors) this.product.vi.colors = [];
     if (!this.isColorAdded(name)) {
       this.product.vi.colors.push({ name, hex });
+      this.clearFieldError('colors');
       this.markDirty();
       this.recalculateVariants();
     }
@@ -444,6 +466,7 @@ export class ProductFormComponent implements OnInit {
     if (!exists) {
       this.product.vi.colors.push({ name, hex });
       this.newColorName = '';
+      this.clearFieldError('colors');
       this.markDirty();
       this.recalculateVariants();
     }
@@ -459,6 +482,9 @@ export class ProductFormComponent implements OnInit {
   // 5. SIZE ATTRIBUTES
   // ─────────────────────────────────────────────────────────────
   onToggleSizes(): void {
+    if (!this.product.vi.hasSizes) {
+      this.clearFieldError('sizes');
+    }
     this.markDirty();
     this.recalculateVariants();
   }
@@ -470,6 +496,9 @@ export class ProductFormComponent implements OnInit {
       this.product.vi.sizes.splice(index, 1);
     } else {
       this.product.vi.sizes.push(size);
+    }
+    if (this.product.vi.sizes.length > 0) {
+      this.clearFieldError('sizes');
     }
     this.markDirty();
     this.recalculateVariants();
@@ -486,6 +515,7 @@ export class ProductFormComponent implements OnInit {
     if (!this.product.vi.sizes.includes(s)) {
       this.product.vi.sizes.push(s);
       this.newCustomSize = '';
+      this.clearFieldError('sizes');
       this.markDirty();
       this.recalculateVariants();
     }
@@ -588,19 +618,28 @@ export class ProductFormComponent implements OnInit {
   // Batch actions (UI state helpers)
   applyQuickPrice(): void {
     if (this.quickPrice === null || this.quickPrice < 0) return;
-    this.product.variants.forEach((v: ProductVariant) => v.price = Number(this.quickPrice));
+    this.product.variants.forEach((v: ProductVariant, idx: number) => {
+      v.price = Number(this.quickPrice);
+      this.clearFieldError('price_' + idx);
+    });
     this.markDirty();
   }
 
   applyDiscountBatch(): void {
     if (this.discountBatch === null || this.discountBatch < 0) return;
-    this.product.variants.forEach((v: ProductVariant) => v.discountPrice = Number(this.discountBatch));
+    this.product.variants.forEach((v: ProductVariant, idx: number) => {
+      v.discountPrice = Number(this.discountBatch);
+      this.clearFieldError('discount_' + idx);
+    });
     this.markDirty();
   }
 
   applyQuickStock(): void {
     if (this.quickStock === null || this.quickStock < 0) return;
-    this.product.variants.forEach((v: ProductVariant) => v.stock = Number(this.quickStock));
+    this.product.variants.forEach((v: ProductVariant, idx: number) => {
+      v.stock = Number(this.quickStock);
+      this.clearFieldError('stock_' + idx);
+    });
     this.syncVariantStockToProduct();
     this.markDirty();
   }
@@ -612,69 +651,42 @@ export class ProductFormComponent implements OnInit {
   onSubmit(): void {
     this.errorMessage = '';
     this.successMessage = '';
+    this.errors = {};
 
     const vi = this.product.vi || {};
 
     if (!vi.title || !vi.title.trim()) {
-      this.errorMessage = 'Tên sản phẩm (vi.title) không được để trống';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
+      this.errors['title'] = 'Tên sản phẩm (vi.title) không được để trống';
     }
 
     if (!vi.categoryLevel1 || !vi.categoryLevel1.trim()) {
-      this.errorMessage = 'Vui lòng chọn Danh mục cấp 1 cho sản phẩm';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
+      this.errors['categoryLevel1'] = 'Vui lòng chọn Danh mục cấp 1 cho sản phẩm';
     }
 
     if (!this.product.mainImage?.url && (!this.product.images || this.product.images.length === 0)) {
-      this.errorMessage = 'Vui lòng thêm ít nhất 1 hình ảnh cho sản phẩm';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
+      this.errors['images'] = 'Vui lòng thêm ít nhất 1 hình ảnh cho sản phẩm';
     }
 
     if (!this.product.titleUrl || !this.product.titleUrl.trim()) {
-      this.product.titleUrl = this.generateSlug(vi.title);
-    }
-
-    const hasVariants = Array.isArray(this.product.variants) && this.product.variants.length > 0;
-
-    // Price validation for non-variant product
-    if (!hasVariants) {
-      if (vi.regularPrice < 0) {
-        this.errorMessage = 'Giá niêm yết không được là số âm';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
-      }
-      if (vi.onSale || (vi.salePrice !== undefined && vi.salePrice > 0)) {
-        if (Number(vi.salePrice) >= Number(vi.regularPrice)) {
-          this.errorMessage = `Giá khuyến mãi (${Number(vi.salePrice).toLocaleString('vi-VN')}₫) phải nhỏ hơn giá niêm yết (${Number(vi.regularPrice).toLocaleString('vi-VN')}₫).`;
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-          return;
-        }
-      }
+      this.product.titleUrl = this.generateSlug(vi.title || '');
     }
 
     // Validation for Classification
     if (vi.hasClassification && (!vi.classifications || vi.classifications.length === 0)) {
-      this.errorMessage = 'Bạn đã bật "Sản phẩm có nhiều phân loại". Vui lòng thêm ít nhất một phân loại (ví dụ: Áo, Quần Jean) hoặc tắt tùy chọn này.';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
+      this.errors['classifications'] = 'Bạn đã bật "Sản phẩm có nhiều phân loại". Vui lòng thêm ít nhất một phân loại (ví dụ: Áo, Quần Jean) hoặc tắt tùy chọn này.';
     }
 
     // Validation for Colors
     if (vi.hasColors && (!vi.colors || vi.colors.length === 0)) {
-      this.errorMessage = 'Bạn đã bật "Sản phẩm có nhiều màu sắc". Vui lòng thêm ít nhất một màu sắc hoặc tắt tùy chọn màu sắc.';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
+      this.errors['colors'] = 'Bạn đã bật "Sản phẩm có nhiều màu sắc". Vui lòng thêm ít nhất một màu sắc hoặc tắt tùy chọn màu sắc.';
     }
 
     // Validation for Sizes
     if (vi.hasSizes && (!vi.sizes || vi.sizes.length === 0)) {
-      this.errorMessage = 'Bạn đã bật "Sản phẩm có nhiều kích cỡ". Vui lòng chọn ít nhất một kích cỡ hoặc tắt tùy chọn kích cỡ.';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
+      this.errors['sizes'] = 'Bạn đã bật "Sản phẩm có nhiều kích cỡ". Vui lòng chọn ít nhất một kích cỡ hoặc tắt tùy chọn kích cỡ.';
     }
+
+    const hasVariants = Array.isArray(this.product.variants) && this.product.variants.length > 0;
 
     // Validation for Variants
     if (hasVariants) {
@@ -682,39 +694,66 @@ export class ProductFormComponent implements OnInit {
       for (let i = 0; i < this.product.variants.length; i++) {
         const v = this.product.variants[i];
         if (!v.sku || !v.sku.trim()) {
-          this.errorMessage = `Biến thể #${i + 1} chưa có mã SKU. Vui lòng nhập SKU cho tất cả biến thể.`;
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-          return;
+          this.errors['sku_' + i] = `Biến thể #${i + 1} chưa có mã SKU. Vui lòng nhập SKU cho tất cả biến thể.`;
+        } else {
+          const normalizedSku = v.sku.trim().toUpperCase();
+          if (skuSet.has(normalizedSku)) {
+            this.errors['sku_' + i] = `Mã SKU "${normalizedSku}" bị trùng giữa các biến thể. Mỗi biến thể phải có một SKU duy nhất.`;
+          } else {
+            skuSet.add(normalizedSku);
+          }
         }
-
-        const normalizedSku = v.sku.trim().toUpperCase();
-        if (skuSet.has(normalizedSku)) {
-          this.errorMessage = `Mã SKU "${normalizedSku}" bị trùng giữa các biến thể. Mỗi biến thể phải có một SKU duy nhất.`;
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-          return;
-        }
-        skuSet.add(normalizedSku);
 
         if (v.price === undefined || v.price === null || isNaN(Number(v.price)) || Number(v.price) < 0) {
-          this.errorMessage = `Giá bán của biến thể #${i + 1} (${v.sku}) phải là số >= 0.`;
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-          return;
+          this.errors['price_' + i] = `Giá bán của biến thể #${i + 1} (${v.sku}) phải là số >= 0.`;
         }
 
         if (v.discountPrice !== undefined && v.discountPrice !== null && Number(v.discountPrice) > 0) {
           if (Number(v.discountPrice) >= Number(v.price)) {
-            this.errorMessage = `Biến thể #${i + 1} (${v.sku}): Giá khuyến mãi (${Number(v.discountPrice).toLocaleString('vi-VN')}₫) phải nhỏ hơn giá bán (${Number(v.price).toLocaleString('vi-VN')}₫).`;
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            return;
+            this.errors['discount_' + i] = `Biến thể #${i + 1} (${v.sku}): Giá khuyến mãi (${Number(v.discountPrice).toLocaleString('vi-VN')}₫) phải nhỏ hơn giá bán (${Number(v.price).toLocaleString('vi-VN')}₫).`;
           }
         }
 
         if (v.stock === undefined || v.stock === null || isNaN(Number(v.stock)) || Number(v.stock) < 0) {
-          this.errorMessage = `Tồn kho của biến thể #${i + 1} (${v.sku}) phải là số >= 0.`;
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-          return;
+          this.errors['stock_' + i] = `Tồn kho của biến thể #${i + 1} (${v.sku}) phải là số >= 0.`;
         }
       }
+    } else {
+      // Price validation for non-variant product
+      if (vi.regularPrice < 0) {
+        this.errors['regularPrice'] = 'Giá niêm yết không được là số âm';
+      }
+      if (vi.onSale || (vi.salePrice !== undefined && vi.salePrice > 0)) {
+        if (Number(vi.salePrice) >= Number(vi.regularPrice)) {
+          this.errors['salePrice'] = `Giá khuyến mãi (${Number(vi.salePrice).toLocaleString('vi-VN')}₫) phải nhỏ hơn giá niêm yết (${Number(vi.regularPrice).toLocaleString('vi-VN')}₫).`;
+        }
+      }
+    }
+
+    const errorKeys = Object.keys(this.errors);
+    if (errorKeys.length > 0) {
+      const orderedCandidates: string[] = [
+        'title',
+        'categoryLevel1',
+        'images',
+        'classifications',
+        'colors',
+        'sizes'
+      ];
+      if (hasVariants) {
+        for (let i = 0; i < this.product.variants.length; i++) {
+          orderedCandidates.push(`sku_${i}`, `price_${i}`, `discount_${i}`, `stock_${i}`);
+        }
+      } else {
+        orderedCandidates.push('regularPrice', 'salePrice');
+      }
+
+      const firstKey = orderedCandidates.find(k => this.errors[k]) || errorKeys[0];
+      this.errorMessage = this.errors[firstKey] || 'Vui lòng kiểm tra lại các trường có lỗi.';
+      this.cdr.markForCheck();
+
+      this.scrollToFirstError(firstKey);
+      return;
     }
 
     this.isSubmitting = true;
@@ -894,5 +933,65 @@ export class ProductFormComponent implements OnInit {
       .trim()
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-');
+  }
+
+  scrollToFirstError(key: string): void {
+    setTimeout(() => {
+      let el: HTMLElement | null = null;
+
+      // 1. Check ID or name or field wrapper
+      el = document.getElementById(key)
+        || document.querySelector<HTMLElement>(`[name="${key}"]`)
+        || document.getElementById(`field-${key}`);
+
+      // 2. Specific key targets
+      if (!el) {
+        if (key === 'images') {
+          el = document.getElementById('field-images') || document.querySelector<HTMLElement>('.image-input-box');
+        } else if (key === 'classifications') {
+          el = document.getElementById('field-classifications') || document.querySelector<HTMLElement>('[name="classificationInput"]');
+        } else if (key === 'colors') {
+          el = document.getElementById('field-colors') || document.querySelector<HTMLElement>('[name="newColorName"]');
+        } else if (key === 'sizes') {
+          el = document.getElementById('field-sizes') || document.querySelector<HTMLElement>('.standard-sizes-bar') || document.querySelector<HTMLElement>('[name="newCustomSize"]');
+        }
+      }
+
+      // 3. Fallback to first invalid element
+      if (!el) {
+        el = document.querySelector<HTMLElement>('.is-invalid');
+      }
+
+      if (el) {
+        // Expand any collapsed ancestor details or hidden containers
+        let parent: HTMLElement | null = el.parentElement;
+        while (parent) {
+          if (parent.tagName === 'DETAILS' && !(parent as HTMLDetailsElement).open) {
+            (parent as HTMLDetailsElement).open = true;
+          }
+          if (parent.hidden) {
+            parent.hidden = false;
+          }
+          parent = parent.parentElement;
+        }
+
+        // Smooth scroll to the target element, centered in the viewport
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Find focusable input or interactive element
+        let focusTarget: HTMLElement | null = null;
+        if (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') {
+          focusTarget = el;
+        } else {
+          focusTarget = el.querySelector<HTMLElement>('input:not([type="hidden"]), select, textarea, button');
+        }
+
+        if (focusTarget && typeof focusTarget.focus === 'function') {
+          setTimeout(() => {
+            focusTarget?.focus({ preventScroll: true });
+          }, 200);
+        }
+      }
+    }, 50);
   }
 }

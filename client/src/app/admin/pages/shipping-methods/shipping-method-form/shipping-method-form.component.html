@@ -51,7 +51,7 @@
 
       <div class="form-grid">
         <!-- [1] Tên phương thức vận chuyển * -->
-        <div class="form-group">
+        <div class="form-group" id="field-name">
           <label class="form-label" for="shipping-name">
             Tên phương thức vận chuyển <span class="required">*</span>
           </label>
@@ -61,6 +61,7 @@
             class="form-control"
             [class.is-invalid]="errors['name']"
             [(ngModel)]="formData.name"
+            (ngModelChange)="clearFieldError('name')"
             name="name"
             placeholder="Ví dụ: Viettel Post, SPX Express, Giao hàng tiêu chuẩn"
             required
@@ -69,7 +70,7 @@
         </div>
 
         <!-- [2] Mã phương thức vận chuyển * -->
-        <div class="form-group">
+        <div class="form-group" id="field-code">
           <label class="form-label" for="shipping-code">
             Mã phương thức vận chuyển <span class="required">*</span>
           </label>
@@ -89,7 +90,7 @@
         </div>
 
         <!-- [3] Phí vận chuyển cơ bản (VNĐ) * -->
-        <div class="form-group">
+        <div class="form-group" id="field-baseCost">
           <label class="form-label" for="shipping-base-cost">
             Phí vận chuyển cơ bản (VNĐ) <span class="required">*</span>
           </label>
@@ -100,6 +101,7 @@
               class="form-control"
               [class.is-invalid]="errors['baseCost']"
               [(ngModel)]="formData.baseCost"
+              (ngModelChange)="clearFieldError('baseCost')"
               name="baseCost"
               placeholder="30000"
               min="0"
@@ -113,7 +115,7 @@
         </div>
 
         <!-- [4] Thời gian giao hàng dự kiến * -->
-        <div class="form-group">
+        <div class="form-group" id="field-estimatedDays">
           <label class="form-label" for="shipping-estimated-days">
             Thời gian giao hàng dự kiến <span class="required">*</span>
           </label>
@@ -123,6 +125,7 @@
             class="form-control"
             [class.is-invalid]="errors['estimatedDays']"
             [(ngModel)]="formData.estimatedDays"
+            (ngModelChange)="clearFieldError('estimatedDays')"
             name="estimatedDays"
             placeholder="Ví dụ: 2–5 ngày làm việc, 1-2 ngày, Trong ngày"
             required
@@ -131,7 +134,7 @@
         </div>
 
         <!-- [5] Phạm vi giao hàng -->
-        <div class="form-group">
+        <div class="form-group" id="field-coverageArea">
           <label class="form-label" for="shipping-coverage-area">
             Phạm vi giao hàng
           </label>
@@ -147,7 +150,7 @@
         </div>
 
         <!-- [6] Điều kiện miễn phí vận chuyển -->
-        <div class="form-group">
+        <div class="form-group" id="field-freeShippingThreshold">
           <label class="form-label" for="shipping-free-threshold">
             Miễn phí vận chuyển từ (VNĐ)
           </label>
@@ -158,6 +161,7 @@
               class="form-control"
               [class.is-invalid]="errors['freeShippingThreshold']"
               [(ngModel)]="formData.freeShippingThreshold"
+              (ngModelChange)="clearFieldError('freeShippingThreshold')"
               name="freeShippingThreshold"
               placeholder="500000"
               min="0"

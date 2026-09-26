@@ -956,7 +956,7 @@ textarea.form-control {
 .variants-form-table td {
   padding: 8px 10px;
   border-bottom: 1px solid #f3f4f6;
-  vertical-align: middle;
+  vertical-align: top;
 }
 
 .variants-form-table tbody tr:hover {
@@ -1236,4 +1236,67 @@ textarea.form-control {
     width: 100%;
     justify-content: space-between;
   }
+}
+
+/* ── 15. Validation Error & Highlighting States ────────────────────────── */
+.is-invalid {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12) !important;
+}
+
+.is-invalid:focus {
+  border-color: #b91c1c !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.22) !important;
+}
+
+.card-has-error {
+  border-color: #fca5a5 !important;
+}
+
+.box-has-error {
+  border-color: #fca5a5 !important;
+  background-color: #fef2f2 !important;
+}
+
+.field-error {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #dc2626;
+  font-size: 0.78125rem;
+  font-weight: 500;
+  margin-top: 5px;
+  line-height: 1.35;
+  animation: fadeInFieldError 0.18s ease-in-out;
+}
+
+@keyframes fadeInFieldError {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.section-error-banner {
+  background: #fef2f2;
+  border: 1px solid #fee2e2;
+  color: #b91c1c;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.table-field-error {
+  font-size: 0.71875rem;
+  color: #dc2626;
+  margin-top: 4px;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.25;
+  min-width: 120px;
 }

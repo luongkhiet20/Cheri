@@ -9,26 +9,15 @@
         <span class="breadcrumb-current">Cài đặt</span>
       </div>
       <h1 class="page-title">Cài đặt hệ thống</h1>
-      <p class="page-subtitle">Quản lý cấu hình chung cấp hệ thống của website thời trang Chéri</p>
     </div>
 
     <div class="header-actions">
-      <button
-        type="button"
-        class="btn btn-secondary"
-        (click)="onCancel()"
-        [disabled]="isSaving || isLoading"
-        id="btn-settings-cancel"
-      >
+      <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="isSaving || isLoading"
+        id="btn-settings-cancel">
         Hủy
       </button>
-      <button
-        type="button"
-        class="btn btn-primary"
-        (click)="onSave()"
-        [disabled]="isSaving || isLoading"
-        id="btn-settings-save"
-      >
+      <button type="button" class="btn btn-primary" (click)="onSave()" [disabled]="isSaving || isLoading"
+        id="btn-settings-save">
         <span *ngIf="isSaving" class="spinner-sm"></span>
         <span>{{ isSaving ? 'Đang lưu...' : 'Lưu thay đổi' }}</span>
       </button>
@@ -38,7 +27,8 @@
   <!-- Notification Alerts -->
   <div *ngIf="successMessage" class="alert-box alert-success" role="alert">
     <div class="alert-icon">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round">
         <polyline points="20 6 9 17 4 12"></polyline>
       </svg>
     </div>
@@ -46,13 +36,17 @@
       <strong>Thành công:</strong> {{ successMessage }}
     </div>
     <button type="button" class="alert-close" (click)="clearAlerts()" aria-label="Đóng">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
     </button>
   </div>
 
   <div *ngIf="errorMessage" class="alert-box alert-error" role="alert">
     <div class="alert-icon">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="10"></circle>
         <line x1="12" y1="8" x2="12" y2="12"></line>
         <line x1="12" y1="16" x2="12.01" y2="16"></line>
@@ -62,7 +56,10 @@
       <strong>Lỗi:</strong> {{ errorMessage }}
     </div>
     <button type="button" class="alert-close" (click)="clearAlerts()" aria-label="Đóng">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
     </button>
   </div>
 
@@ -89,7 +86,6 @@
         </div>
         <div>
           <h2 class="card-title">Thông tin Website</h2>
-          <p class="card-desc">Tên thương hiệu, biểu trưng logo, biểu tượng favicon và mô tả trang web</p>
         </div>
       </div>
 
@@ -100,15 +96,8 @@
             <label for="input-site-name" class="form-label">
               Tên website <span class="required-star">*</span>
             </label>
-            <input
-              type="text"
-              id="input-site-name"
-              class="form-control"
-              [(ngModel)]="settings.site.name"
-              name="siteName"
-              placeholder="Ví dụ: Chéri Paris"
-              required
-            />
+            <input type="text" id="input-site-name" class="form-control" [(ngModel)]="settings.site.name"
+              name="siteName" placeholder="Ví dụ: Chéri Paris" required />
             <div *ngIf="errors['site.name']" class="error-feedback">
               {{ errors['site.name'] }}
             </div>
@@ -117,14 +106,9 @@
           <!-- Mô tả website -->
           <div class="form-group full-width">
             <label for="input-site-desc" class="form-label">Mô tả ngắn gọn về website</label>
-            <textarea
-              id="input-site-desc"
-              class="form-control textarea-control"
-              rows="3"
-              [(ngModel)]="settings.site.description"
-              name="siteDesc"
-              placeholder="Thương hiệu thời trang thiết kế cao cấp..."
-            ></textarea>
+            <textarea id="input-site-desc" class="form-control textarea-control" rows="3"
+              [(ngModel)]="settings.site.description" name="siteDesc"
+              placeholder="Thương hiệu thời trang thiết kế cao cấp..."></textarea>
           </div>
 
           <!-- Logo & Favicon row -->
@@ -133,23 +117,14 @@
             <div class="media-item">
               <span class="media-label">Logo website</span>
               <div class="media-preview-box">
-                <img
-                  *ngIf="settings.site.logo"
-                  [src]="settings.site.logo"
-                  alt="Logo Preview"
-                  class="logo-preview-img"
-                  (error)="settings.site.logo = ''"
-                />
+                <img *ngIf="settings.site.logo" [src]="settings.site.logo" alt="Logo Preview" class="logo-preview-img"
+                  (error)="settings.site.logo = ''" />
                 <div *ngIf="!settings.site.logo" class="media-placeholder">
                   <span>Chưa có Logo</span>
                 </div>
               </div>
-              <button
-                type="button"
-                class="btn btn-sm btn-outline-primary"
-                (click)="openLogoModal()"
-                id="btn-change-logo"
-              >
+              <button type="button" class="btn btn-sm btn-outline-primary" (click)="openLogoModal()"
+                id="btn-change-logo">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                   <circle cx="12" cy="13" r="4"></circle>
@@ -162,23 +137,14 @@
             <div class="media-item">
               <span class="media-label">Favicon</span>
               <div class="media-preview-box favicon-box">
-                <img
-                  *ngIf="settings.site.favicon"
-                  [src]="settings.site.favicon"
-                  alt="Favicon Preview"
-                  class="favicon-preview-img"
-                  (error)="settings.site.favicon = ''"
-                />
+                <img *ngIf="settings.site.favicon" [src]="settings.site.favicon" alt="Favicon Preview"
+                  class="favicon-preview-img" (error)="settings.site.favicon = ''" />
                 <div *ngIf="!settings.site.favicon" class="media-placeholder">
                   <span>16x16</span>
                 </div>
               </div>
-              <button
-                type="button"
-                class="btn btn-sm btn-outline-primary"
-                (click)="openFaviconModal()"
-                id="btn-change-favicon"
-              >
+              <button type="button" class="btn btn-sm btn-outline-primary" (click)="openFaviconModal()"
+                id="btn-change-favicon">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                   <circle cx="12" cy="13" r="4"></circle>
@@ -198,7 +164,9 @@
       <div class="card-header">
         <div class="card-header-icon">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+            <path
+              d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z">
+            </path>
           </svg>
         </div>
         <div>
@@ -212,14 +180,8 @@
           <!-- Email liên hệ -->
           <div class="form-group" [class.has-error]="errors['contact.email']">
             <label for="input-contact-email" class="form-label">Email hỗ trợ</label>
-            <input
-              type="email"
-              id="input-contact-email"
-              class="form-control"
-              [(ngModel)]="settings.contact.email"
-              name="contactEmail"
-              placeholder="contact@cheri.vn"
-            />
+            <input type="email" id="input-contact-email" class="form-control" [(ngModel)]="settings.contact.email"
+              name="contactEmail" placeholder="contact@cheri.vn" />
             <div *ngIf="errors['contact.email']" class="error-feedback">
               {{ errors['contact.email'] }}
             </div>
@@ -228,27 +190,15 @@
           <!-- Số điện thoại -->
           <div class="form-group">
             <label for="input-contact-phone" class="form-label">Số điện thoại hotline</label>
-            <input
-              type="tel"
-              id="input-contact-phone"
-              class="form-control"
-              [(ngModel)]="settings.contact.phone"
-              name="contactPhone"
-              placeholder="0987654321"
-            />
+            <input type="tel" id="input-contact-phone" class="form-control" [(ngModel)]="settings.contact.phone"
+              name="contactPhone" placeholder="0987654321" />
           </div>
 
           <!-- Địa chỉ -->
           <div class="form-group full-width">
             <label for="input-contact-address" class="form-label">Địa chỉ trụ sở / Cửa hàng</label>
-            <input
-              type="text"
-              id="input-contact-address"
-              class="form-control"
-              [(ngModel)]="settings.contact.address"
-              name="contactAddress"
-              placeholder="123 Đồng Khởi, Bến Nghé, Quận 1, TP. Hồ Chí Minh"
-            />
+            <input type="text" id="input-contact-address" class="form-control" [(ngModel)]="settings.contact.address"
+              name="contactAddress" placeholder="123 Đồng Khởi, Bến Nghé, Quận 1, TP. Hồ Chí Minh" />
           </div>
         </div>
       </div>
@@ -268,7 +218,8 @@
         </div>
         <div>
           <h2 class="card-title">Cấu hình Cửa hàng</h2>
-          <p class="card-desc">Bật/tắt trạng thái mở cửa website, cho phép đặt hàng và phân phối vận chuyển toàn hệ thống</p>
+          <p class="card-desc">Bật/tắt trạng thái mở cửa website, cho phép đặt hàng và phân phối vận chuyển toàn hệ
+            thống</p>
         </div>
       </div>
 
@@ -280,19 +231,14 @@
             <div class="toggle-info">
               <span class="toggle-title">Website đang mở</span>
               <span class="toggle-desc">
-                Khi BẬT, website hoạt động bình thường cho khách hàng xem sản phẩm. Khi TẮT, website hiển thị thông báo tạm đóng cửa.
+                Khi BẬT, website hoạt động bình thường cho khách hàng xem sản phẩm. Khi TẮT, website hiển thị thông báo
+                tạm đóng cửa.
               </span>
             </div>
             <div class="toggle-action">
-              <button
-                type="button"
-                class="toggle-switch"
-                [class.is-on]="settings.store.isOpen"
-                (click)="toggleStoreOpen()"
-                id="toggle-store-is-open"
-                [attr.aria-checked]="settings.store.isOpen"
-                role="switch"
-              >
+              <button type="button" class="toggle-switch" [class.is-on]="settings.store.isOpen"
+                (click)="toggleStoreOpen()" id="toggle-store-is-open" [attr.aria-checked]="settings.store.isOpen"
+                role="switch">
                 <span class="toggle-knob"></span>
                 <span class="toggle-label">{{ settings.store.isOpen ? 'BẬT' : 'TẮT' }}</span>
               </button>
@@ -304,19 +250,14 @@
             <div class="toggle-info">
               <span class="toggle-title">Cho phép đặt hàng</span>
               <span class="toggle-desc">
-                Khi BẬT, khách hàng có thể thêm sản phẩm và tiến hành thanh toán giỏ hàng. Khi TẮT, hệ thống chặn tạo đơn hàng mới.
+                Khi BẬT, khách hàng có thể thêm sản phẩm và tiến hành thanh toán giỏ hàng. Khi TẮT, hệ thống chặn tạo
+                đơn hàng mới.
               </span>
             </div>
             <div class="toggle-action">
-              <button
-                type="button"
-                class="toggle-switch"
-                [class.is-on]="settings.checkout.allowOrder"
-                (click)="toggleAllowOrder()"
-                id="toggle-checkout-allow-order"
-                [attr.aria-checked]="settings.checkout.allowOrder"
-                role="switch"
-              >
+              <button type="button" class="toggle-switch" [class.is-on]="settings.checkout.allowOrder"
+                (click)="toggleAllowOrder()" id="toggle-checkout-allow-order"
+                [attr.aria-checked]="settings.checkout.allowOrder" role="switch">
                 <span class="toggle-knob"></span>
                 <span class="toggle-label">{{ settings.checkout.allowOrder ? 'BẬT' : 'TẮT' }}</span>
               </button>
@@ -332,15 +273,9 @@
               </span>
             </div>
             <div class="toggle-action">
-              <button
-                type="button"
-                class="toggle-switch"
-                [class.is-on]="settings.shipping.enabled"
-                (click)="toggleShippingEnabled()"
-                id="toggle-shipping-enabled"
-                [attr.aria-checked]="settings.shipping.enabled"
-                role="switch"
-              >
+              <button type="button" class="toggle-switch" [class.is-on]="settings.shipping.enabled"
+                (click)="toggleShippingEnabled()" id="toggle-shipping-enabled"
+                [attr.aria-checked]="settings.shipping.enabled" role="switch">
                 <span class="toggle-knob"></span>
                 <span class="toggle-label">{{ settings.shipping.enabled ? 'BẬT' : 'TẮT' }}</span>
               </button>
@@ -365,7 +300,8 @@
         </div>
         <div>
           <h2 class="card-title">Chế độ Bảo trì</h2>
-          <p class="card-desc">Tạm ngưng phục vụ khách hàng bên ngoài để thực hiện nâng cấp kỹ thuật (Admin vẫn có quyền truy cập)</p>
+          <p class="card-desc">Tạm ngưng phục vụ khách hàng bên ngoài để thực hiện nâng cấp kỹ thuật (Admin vẫn có quyền
+            truy cập)</p>
         </div>
       </div>
 
@@ -378,15 +314,9 @@
             </span>
           </div>
           <div class="toggle-action">
-            <button
-              type="button"
-              class="toggle-switch toggle-switch-warning"
-              [class.is-on]="settings.maintenance.enabled"
-              (click)="toggleMaintenance()"
-              id="toggle-maintenance-enabled"
-              [attr.aria-checked]="settings.maintenance.enabled"
-              role="switch"
-            >
+            <button type="button" class="toggle-switch toggle-switch-warning"
+              [class.is-on]="settings.maintenance.enabled" (click)="toggleMaintenance()" id="toggle-maintenance-enabled"
+              [attr.aria-checked]="settings.maintenance.enabled" role="switch">
               <span class="toggle-knob"></span>
               <span class="toggle-label">{{ settings.maintenance.enabled ? 'BẬT' : 'TẮT' }}</span>
             </button>
@@ -396,14 +326,9 @@
         <!-- Thông báo bảo trì -->
         <div class="form-group full-width maintenance-msg-group">
           <label for="input-maintenance-msg" class="form-label">Thông báo bảo trì hiển thị với khách hàng</label>
-          <textarea
-            id="input-maintenance-msg"
-            class="form-control textarea-control"
-            rows="3"
-            [(ngModel)]="settings.maintenance.message"
-            name="maintenanceMsg"
-            placeholder="Website đang trong quá trình bảo trì định kỳ. Quý khách vui lòng quay lại sau ít phút."
-          ></textarea>
+          <textarea id="input-maintenance-msg" class="form-control textarea-control" rows="3"
+            [(ngModel)]="settings.maintenance.message" name="maintenanceMsg"
+            placeholder="Website đang trong quá trình bảo trì định kỳ. Quý khách vui lòng quay lại sau ít phút."></textarea>
         </div>
       </div>
     </div>
@@ -431,12 +356,8 @@
           <!-- Ngôn ngữ -->
           <div class="form-group">
             <label for="select-language" class="form-label">Ngôn ngữ mặc định</label>
-            <select
-              id="select-language"
-              class="form-control select-control"
-              [(ngModel)]="settings.system.language"
-              name="systemLanguage"
-            >
+            <select id="select-language" class="form-control select-control" [(ngModel)]="settings.system.language"
+              name="systemLanguage">
               <option *ngFor="let lang of languages" [value]="lang.code">
                 {{ lang.name }}
               </option>
@@ -446,12 +367,8 @@
           <!-- Tiền tệ -->
           <div class="form-group">
             <label for="select-currency" class="form-label">Đơn vị tiền tệ</label>
-            <select
-              id="select-currency"
-              class="form-control select-control"
-              [(ngModel)]="settings.system.currency"
-              name="systemCurrency"
-            >
+            <select id="select-currency" class="form-control select-control" [(ngModel)]="settings.system.currency"
+              name="systemCurrency">
               <option *ngFor="let curr of currencies" [value]="curr.code">
                 {{ curr.name }}
               </option>
@@ -461,12 +378,8 @@
           <!-- Múi giờ -->
           <div class="form-group">
             <label for="select-timezone" class="form-label">Múi giờ hệ thống</label>
-            <select
-              id="select-timezone"
-              class="form-control select-control"
-              [(ngModel)]="settings.system.timezone"
-              name="systemTimezone"
-            >
+            <select id="select-timezone" class="form-control select-control" [(ngModel)]="settings.system.timezone"
+              name="systemTimezone">
               <option *ngFor="let tz of timezones" [value]="tz.code">
                 {{ tz.name }}
               </option>
@@ -478,21 +391,11 @@
 
     <!-- Bottom Form Actions -->
     <div class="bottom-actions">
-      <button
-        type="button"
-        class="btn btn-secondary"
-        (click)="onCancel()"
-        [disabled]="isSaving || isLoading"
-      >
+      <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="isSaving || isLoading">
         Hủy thay đổi
       </button>
-      <button
-        type="button"
-        class="btn btn-primary"
-        (click)="onSave()"
-        [disabled]="isSaving || isLoading"
-        id="btn-settings-save-bottom"
-      >
+      <button type="button" class="btn btn-primary" (click)="onSave()" [disabled]="isSaving || isLoading"
+        id="btn-settings-save-bottom">
         <span *ngIf="isSaving" class="spinner-sm"></span>
         <span>{{ isSaving ? 'Đang lưu thay đổi...' : 'Lưu thay đổi' }}</span>
       </button>
@@ -509,19 +412,17 @@
     <div class="modal-header">
       <h3 class="modal-title">Thay đổi Logo Website</h3>
       <button type="button" class="modal-close-btn" (click)="closeLogoModal()" aria-label="Đóng">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
       </button>
     </div>
     <div class="modal-body">
       <!-- Preview -->
       <div class="modal-preview-wrapper">
-        <img
-          *ngIf="tempLogoUrl"
-          [src]="tempLogoUrl"
-          alt="Preview Logo"
-          class="modal-logo-preview"
-          (error)="tempLogoUrl = ''"
-        />
+        <img *ngIf="tempLogoUrl" [src]="tempLogoUrl" alt="Preview Logo" class="modal-logo-preview"
+          (error)="tempLogoUrl = ''" />
         <div *ngIf="!tempLogoUrl" class="modal-placeholder">Chưa chọn Logo</div>
       </div>
 
@@ -533,12 +434,7 @@
           <line x1="12" y1="3" x2="12" y2="15"></line>
         </svg>
         <span>Tải ảnh logo từ máy tính</span>
-        <input
-          type="file"
-          accept="image/*"
-          (change)="onLogoFileSelected($event)"
-          class="hidden-file-input"
-        />
+        <input type="file" accept="image/*" (change)="onLogoFileSelected($event)" class="hidden-file-input" />
       </label>
 
       <div class="modal-divider"><span>HOẶC</span></div>
@@ -546,13 +442,8 @@
       <!-- Paste URL -->
       <div class="form-group">
         <label for="input-logo-url" class="form-label">Dán đường dẫn ảnh Logo (URL)</label>
-        <input
-          type="url"
-          id="input-logo-url"
-          class="form-control"
-          placeholder="https://example.com/logo.png"
-          [(ngModel)]="tempLogoUrl"
-        />
+        <input type="url" id="input-logo-url" class="form-control" placeholder="https://example.com/logo.png"
+          [(ngModel)]="tempLogoUrl" />
       </div>
 
       <div *ngIf="modalError" class="modal-error-box">
@@ -574,19 +465,17 @@
     <div class="modal-header">
       <h3 class="modal-title">Thay đổi Favicon</h3>
       <button type="button" class="modal-close-btn" (click)="closeFaviconModal()" aria-label="Đóng">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
       </button>
     </div>
     <div class="modal-body">
       <!-- Preview -->
       <div class="modal-preview-wrapper favicon-modal-preview">
-        <img
-          *ngIf="tempFaviconUrl"
-          [src]="tempFaviconUrl"
-          alt="Preview Favicon"
-          class="modal-favicon-preview"
-          (error)="tempFaviconUrl = ''"
-        />
+        <img *ngIf="tempFaviconUrl" [src]="tempFaviconUrl" alt="Preview Favicon" class="modal-favicon-preview"
+          (error)="tempFaviconUrl = ''" />
         <div *ngIf="!tempFaviconUrl" class="modal-placeholder">32x32</div>
       </div>
 
@@ -598,12 +487,7 @@
           <line x1="12" y1="3" x2="12" y2="15"></line>
         </svg>
         <span>Tải biểu tượng từ máy tính</span>
-        <input
-          type="file"
-          accept="image/*,.ico"
-          (change)="onFaviconFileSelected($event)"
-          class="hidden-file-input"
-        />
+        <input type="file" accept="image/*,.ico" (change)="onFaviconFileSelected($event)" class="hidden-file-input" />
       </label>
 
       <div class="modal-divider"><span>HOẶC</span></div>
@@ -611,13 +495,8 @@
       <!-- Paste URL -->
       <div class="form-group">
         <label for="input-favicon-url" class="form-label">Dán đường dẫn Favicon (URL)</label>
-        <input
-          type="url"
-          id="input-favicon-url"
-          class="form-control"
-          placeholder="https://example.com/favicon.ico"
-          [(ngModel)]="tempFaviconUrl"
-        />
+        <input type="url" id="input-favicon-url" class="form-control" placeholder="https://example.com/favicon.ico"
+          [(ngModel)]="tempFaviconUrl" />
       </div>
 
       <div *ngIf="modalError" class="modal-error-box">
@@ -626,7 +505,8 @@
     </div>
     <div class="modal-footer">
       <button type="button" class="btn btn-secondary" (click)="closeFaviconModal()">Hủy</button>
-      <button type="button" class="btn btn-primary" (click)="saveFavicon()" id="btn-confirm-favicon">Xác nhận Favicon</button>
+      <button type="button" class="btn btn-primary" (click)="saveFavicon()" id="btn-confirm-favicon">Xác nhận
+        Favicon</button>
     </div>
   </div>
 </div>

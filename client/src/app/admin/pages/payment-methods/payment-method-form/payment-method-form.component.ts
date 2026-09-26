@@ -100,6 +100,65 @@ export class PaymentMethodFormComponent implements OnInit {
       // Auto normalize uppercase and remove any whitespace
       this.formData.code = this.formData.code.toUpperCase().replace(/\s+/g, '');
     }
+    this.clearFieldError('code');
+  }
+
+  clearFieldError(field: string): void {
+    if (this.errors[field]) {
+      delete this.errors[field];
+      if (Object.keys(this.errors).length === 0) {
+        this.errorMessage = '';
+      }
+      this.cdr.markForCheck();
+    }
+  }
+
+  scrollToFirstError(key: string): void {
+    setTimeout(() => {
+      let el: HTMLElement | null = null;
+
+      // 1. Direct query by id, name, or field wrapper
+      el = document.getElementById(`payment-${key}`)
+        || document.getElementById(key)
+        || document.querySelector<HTMLElement>(`[name="${key}"]`)
+        || document.getElementById(`field-${key}`);
+
+      // 2. Fallback to first .is-invalid element
+      if (!el) {
+        el = document.querySelector<HTMLElement>('.is-invalid');
+      }
+
+      if (el) {
+        // Expand any collapsed ancestor details or hidden containers
+        let parent: HTMLElement | null = el.parentElement;
+        while (parent) {
+          if (parent.tagName === 'DETAILS' && !(parent as HTMLDetailsElement).open) {
+            (parent as HTMLDetailsElement).open = true;
+          }
+          if (parent.hidden) {
+            parent.hidden = false;
+          }
+          parent = parent.parentElement;
+        }
+
+        // Smooth scroll to the target element, centered in viewport
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Find focusable interactive element
+        let focusTarget: HTMLElement | null = null;
+        if (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') {
+          focusTarget = el;
+        } else {
+          focusTarget = el.querySelector<HTMLElement>('input:not([type="hidden"]), select, textarea, button');
+        }
+
+        if (focusTarget && typeof focusTarget.focus === 'function') {
+          setTimeout(() => {
+            focusTarget?.focus({ preventScroll: true });
+          }, 200);
+        }
+      }
+    }, 50);
   }
 
   validate(): boolean {
@@ -134,6 +193,12 @@ export class PaymentMethodFormComponent implements OnInit {
     if (this.isSubmitting || this.isLoading) return;
 
     if (!this.validate()) {
+      const orderedCandidates: string[] = ['name', 'code', 'type'];
+      const firstKey = orderedCandidates.find(k => this.errors[k]) || Object.keys(this.errors)[0];
+      if (firstKey) {
+        this.scrollToFirstError(firstKey);
+      }
+      this.cdr.markForCheck();
       return;
     }
 

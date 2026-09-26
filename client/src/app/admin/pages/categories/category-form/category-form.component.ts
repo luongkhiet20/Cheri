@@ -118,7 +118,11 @@ export class CategoryFormComponent implements OnInit {
     delete this.errors['title'];
     if (!this.isSlugCustomized) {
       this.formData.slug = this.slugify(this.formData.title);
+      if (this.errors['slug'] && /^[a-z0-9-]+$/.test(this.formData.slug)) {
+        delete this.errors['slug'];
+      }
     }
+    this.cdr.markForCheck();
   }
 
   onSlugChange(): void {
@@ -126,6 +130,72 @@ export class CategoryFormComponent implements OnInit {
     delete this.errors['slug'];
     this.isSlugCustomized = true;
     this.formData.slug = this.slugify(this.formData.slug);
+    this.cdr.markForCheck();
+  }
+
+  clearFieldError(field: string): void {
+    if (this.errors[field]) {
+      delete this.errors[field];
+      this.cdr.markForCheck();
+    }
+  }
+
+  scrollToFirstError(key: string): void {
+    setTimeout(() => {
+      let el: HTMLElement | null = null;
+
+      // 1. Direct query by id, name, or field wrapper
+      el = document.getElementById(`category-${key}`)
+        || document.getElementById(key)
+        || document.getElementById(`category${key.charAt(0).toUpperCase() + key.slice(1)}`)
+        || document.getElementById(`field-${key}`)
+        || document.querySelector<HTMLElement>(`[name="${key}"]`);
+
+      // 2. Specific key targets
+      if (!el) {
+        if (key === 'title') {
+          el = document.getElementById('categoryTitle');
+        } else if (key === 'slug') {
+          el = document.getElementById('categorySlug');
+        }
+      }
+
+      // 3. Fallback to first .is-invalid element
+      if (!el) {
+        el = document.querySelector<HTMLElement>('.is-invalid');
+      }
+
+      if (el) {
+        // Expand any collapsed ancestor details or hidden containers
+        let parent: HTMLElement | null = el.parentElement;
+        while (parent) {
+          if (parent.tagName === 'DETAILS' && !(parent as HTMLDetailsElement).open) {
+            (parent as HTMLDetailsElement).open = true;
+          }
+          if (parent.hidden) {
+            parent.hidden = false;
+          }
+          parent = parent.parentElement;
+        }
+
+        // Smooth scroll to the target element, centered in viewport
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Find focusable interactive element
+        let focusTarget: HTMLElement | null = null;
+        if (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') {
+          focusTarget = el;
+        } else {
+          focusTarget = el.querySelector<HTMLElement>('input:not([type="hidden"]), select, textarea, button');
+        }
+
+        if (focusTarget && typeof focusTarget.focus === 'function') {
+          setTimeout(() => {
+            focusTarget?.focus({ preventScroll: true });
+          }, 200);
+        }
+      }
+    }, 50);
   }
 
   onFileSelected(event: any): void {
@@ -165,7 +235,11 @@ export class CategoryFormComponent implements OnInit {
     this.successMessage = '';
 
     if (!this.validate()) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const fieldOrder = ['title', 'slug'];
+      const firstError = fieldOrder.find(k => !!this.errors[k]);
+      if (firstError) {
+        this.scrollToFirstError(firstError);
+      }
       return;
     }
 

@@ -82,6 +82,42 @@
   gap: var(--space-md);
 }
 
+/* ----- Notification Button ----- */
+.admin-header__notification-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background-color: var(--cheri-white, #ffffff);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  color: #74070E;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: background-color var(--transition-fast, 0.15s ease),
+              transform var(--transition-fast, 0.15s ease),
+              box-shadow var(--transition-fast, 0.15s ease);
+}
+
+.admin-header__notification-btn:hover {
+  background-color: #fdf2f2;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.16);
+}
+
+.admin-header__notification-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.admin-header__notification-btn:focus-visible {
+  outline: 2px solid var(--cheri-white, #ffffff);
+  outline-offset: 2px;
+}
+
 /* ----- User Section ----- */
 .admin-header__user {
   position: relative;

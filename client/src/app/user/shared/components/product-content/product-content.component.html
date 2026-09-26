@@ -3,8 +3,12 @@
     <h1 class="product-title">{{ product?.title }}</h1>
     <h2 class="product-description">{{ product?.description }}</h2>
     <div class="product-info">
-      <div class="product-stock">
+      <div class="product-stock" [class.product-stock--out]="isOutOfStock()">
+        @if (isOutOfStock()) {
+        <span style="color: #e53935; font-weight: 700; background: #fee2e2; padding: 4px 8px; border-radius: 4px;">Hết hàng</span>
+        } @else {
         {{ product?.stock | translate | async }}
+        }
       </div>
       <div class="product-price">
         <span>{{ product?.salePrice | priceFormat }} {{ currency }}</span>
@@ -13,11 +17,17 @@
         }
       </div>
       @if (lang) {
-      <button class="product-cart-wrap" mat-raised-button color="primary">
-        @if (cartIds && product) {
-        <app-cart-show [items]="cartIds[product._id]" (add)="onAddProduct(product._id)" (remove)="onRemoveProduct(product._id)"> </app-cart-show>
+        @if (isOutOfStock()) {
+        <button class="product-cart-wrap product-cart-wrap--disabled" mat-raised-button disabled style="opacity: 0.6; cursor: not-allowed; font-weight: 600;">
+          Hết hàng
+        </button>
+        } @else {
+        <button class="product-cart-wrap" mat-raised-button color="primary">
+          @if (cartIds && product) {
+          <app-cart-show [items]="cartIds[product._id]" (add)="onAddProduct(product._id)" (remove)="onRemoveProduct(product._id)"> </app-cart-show>
+          }
+        </button>
         }
-      </button>
       }
     </div>
     <mat-chip-listbox aria-label="Category selection" class="product-tags">

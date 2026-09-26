@@ -109,10 +109,22 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
 
     this._loadCategories();
     this._loadProducts();
+  }
 
+  isOutOfStock(product: any): boolean {
+    if (!product) return false;
+    const q = product.quantity;
+    if (q !== undefined && q !== null && Number(q) <= 0) return true;
+    const s = product.stock;
+    return s === '0' || s === 'out' || s === 'outOfStock' || s === 'unavailable';
   }
 
   addToCart(id: string): void {
+    const p = (this.products() || []).find((item: any) => (item._id || item.id) === id);
+    if (p && (this.isOutOfStock(p) || p.visibility === false)) {
+      this.snackBar.open('Sản phẩm hiện đã hết hàng', 'Đóng', { duration: 3000 });
+      return;
+    }
     this.store.addToCart('?id=' + id);
 
     this.translate.getTranslations$()

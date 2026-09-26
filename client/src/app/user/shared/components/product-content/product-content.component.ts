@@ -1,4 +1,4 @@
-﻿import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, input, computed } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, input, computed } from '@angular/core';
 
 import { Product, Category } from '../../models';
 import { CommonModule } from '@angular/common';
@@ -32,7 +32,16 @@ export class ProductContentComponent {
 
   constructor() { }
 
+  isOutOfStock(): boolean {
+    if (!this.product) return false;
+    const q = this.product.quantity;
+    if (q !== undefined && q !== null && Number(q) <= 0) return true;
+    const s = this.product.stock;
+    return s === '0' || s === 'out' || s === 'outOfStock' || s === 'unavailable';
+  }
+
   onAddProduct(id: string): void {
+    if (this.isOutOfStock()) return;
     this.addProduct.emit(id);
   }
 

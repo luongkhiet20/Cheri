@@ -32,9 +32,13 @@
   <div class="product_card-action">
     <div class="product_card-action-wrap">
       <div class="product_card-price-info">{{ (product?.salePrice || product?.regularPrice) | priceFormat }} {{ currency || 'đ' }}</div>
+      @if (isOutOfStock(product)) {
+      <p class="product_card-stock product_card-stock--out" style="color: #e53935; font-weight: 600;">Hết hàng</p>
+      } @else {
       <p class="product_card-stock">{{ product?.stock | translate | async }}</p>
       @if (cartIds) {
       <app-cart-show [items]="cartIds[product?._id]" (add)="onAddProduct(product?._id)" (remove)="onRemoveProduct(product?._id)"> </app-cart-show>
+      }
       }
     </div>
   </div>

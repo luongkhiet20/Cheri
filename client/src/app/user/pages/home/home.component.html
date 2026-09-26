@@ -118,7 +118,7 @@
                 class="home-product-img" />
 
               <!-- Badges -->
-              @if (product.stock === '0') {
+              @if (isOutOfStock(product)) {
               <span class="home-product-badge home-product-badge--sold">HẾT HÀNG</span>
               } @else if (product.onSale) {
               <span class="home-product-badge home-product-badge--sale">ƯU ĐÃI</span>
@@ -128,7 +128,7 @@
 
               <!-- Add to cart overlay -->
               <div class="home-product-overlay">
-                @if (product.stock !== '0') {
+                @if (!isOutOfStock(product)) {
                 <button type="button" class="home-product-add-btn"
                   (click)="addToCart(product._id); $event.stopPropagation()" title="Thêm vào giỏ">
                   <!-- ShoppingBag SVG -->

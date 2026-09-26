@@ -17,7 +17,7 @@
           [alt]="product.name || product.title" />
 
         <!-- Badges -->
-        @if (product.stock === '0' || product.stock === 'unavailable') {
+        @if (isOutOfStock(product)) {
         <span class="pcard-badge pcard-badge--sold">Hết hàng</span>
         } @else {
         <span class="pcard-badge pcard-badge--new">NEW</span>
@@ -38,7 +38,7 @@
 
         <!-- Hover overlay -->
         <div class="pcard-overlay">
-          @if (product.stock !== '0') {
+          @if (!isOutOfStock(product)) {
           <button type="button" class="pcard-overlay-btn pcard-overlay-btn--cart"
             (click)="addToCart(product); $event.stopPropagation()" title="Thêm vào giỏ hàng">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"

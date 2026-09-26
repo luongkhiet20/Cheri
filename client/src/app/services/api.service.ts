@@ -147,7 +147,7 @@ export class ApiService {
     const ratingQuery = ratStr && ratStr !== '0' ? '&rating=' + encodeURIComponent(ratStr) : '';
     const searchQuery = search ? '&search=' + encodeURIComponent(search) : '';
     const pageSizeQuery = pageSize ? '&pageSize=' + pageSize : '';
-    const productsUrl = this.apiUrl + '/api/products?lang=' + lang + '&page=' + page + '&sort=' + sort + categoryQuery + priceQuery + minPriceQuery + stockQuery + ratingQuery + searchQuery + pageSizeQuery;
+    const productsUrl = this.apiUrl + '/api/products?lang=' + lang + '&page=' + page + '&sort=' + sort + categoryQuery + priceQuery + minPriceQuery + stockQuery + ratingQuery + searchQuery + pageSizeQuery + '&scope=user';
     return this.http.get(productsUrl, this.getRequestOptions()).pipe(
       map((data: any) => {
         const productList = (data?.all || data?.data || (Array.isArray(data) ? data : [])).map((product: any) => ({

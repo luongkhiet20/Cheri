@@ -4,7 +4,6 @@
   <div class="page-top">
     <div>
       <h1 class="page-title">Quản lý sản phẩm</h1>
-      <p class="page-subtitle">Danh sách toàn bộ sản phẩm thực tế từ MongoDB (Database: cheri)</p>
     </div>
     <div class="page-actions">
       <button class="btn btn-outline" id="btn-import-csv" (click)="openCsvModal()">
@@ -34,66 +33,32 @@
   </div>
 
   <!-- Toolbar: Checkbox + Search + Filter + Refresh + Delete + Total -->
-  <app-admin-toolbar
-    searchPlaceholder="Tìm kiếm tên sản phẩm, slug..."
-    [filterFields]="filterFields"
-    [selectable]="true"
-    [allSelected]="allSelected"
-    [indeterminate]="isIndeterminate"
-    [selectedCount]="selectedCount"
-    [showDeleteSelected]="true"
-    [total]="displayTotal"
-    (searchChange)="onSearch($event)"
-    (filterChange)="onFilter($event)"
-    (refresh)="onRefresh()"
-    (selectAllChange)="onToolbarSelectAll()"
-    (deleteSelected)="onDeleteSelected()"
-  ></app-admin-toolbar>
+  <app-admin-toolbar searchPlaceholder="Tìm kiếm tên sản phẩm, slug..." [filterFields]="filterFields"
+    [selectable]="true" [allSelected]="allSelected" [indeterminate]="isIndeterminate" [selectedCount]="selectedCount"
+    [showDeleteSelected]="true" [total]="displayTotal" (searchChange)="onSearch($event)"
+    (filterChange)="onFilter($event)" (refresh)="onRefresh()" (selectAllChange)="onToolbarSelectAll()"
+    (deleteSelected)="onDeleteSelected()"></app-admin-toolbar>
 
   <!-- Loading State -->
   <app-loading-state *ngIf="isLoading" message="Đang tải dữ liệu sản phẩm từ MongoDB Atlas..."></app-loading-state>
 
   <!-- Empty State -->
-  <app-empty-state
-    *ngIf="!isLoading && (!data || data.length === 0)"
-    title="Không tìm thấy sản phẩm nào"
+  <app-empty-state *ngIf="!isLoading && (!data || data.length === 0)" title="Không tìm thấy sản phẩm nào"
     description="Không có sản phẩm nào khớp với điều kiện tìm kiếm hoặc cơ sở dữ liệu chưa có sản phẩm."
-    actionLabel="+ Thêm sản phẩm mới"
-    (action)="onAddProduct()"
-  ></app-empty-state>
+    actionLabel="+ Thêm sản phẩm mới" (action)="onAddProduct()"></app-empty-state>
 
   <!-- Data Table with row checkboxes -->
-  <app-admin-table
-    *ngIf="!isLoading && data && data.length > 0"
-    [columns]="columns"
-    [data]="data"
-    [actions]="actions"
-    [pagination]="pagination"
-    [selectable]="true"
-    [selectedIds]="selectedIds"
-    totalLabel="sản phẩm"
-    (actionClick)="onAction($event)"
-    (selectionChange)="onSelectionChange($event)"
-    (pageChange)="onPageChange($event)"
-    (pageSizeChange)="onPageSizeChange($event)"
-  ></app-admin-table>
+  <app-admin-table *ngIf="!isLoading && data && data.length > 0" [columns]="columns" [data]="data" [actions]="actions"
+    [pagination]="pagination" [selectable]="true" [selectedIds]="selectedIds" totalLabel="sản phẩm"
+    (actionClick)="onAction($event)" (selectionChange)="onSelectionChange($event)" (pageChange)="onPageChange($event)"
+    (pageSizeChange)="onPageSizeChange($event)"></app-admin-table>
 
 </div>
 
 <!-- Confirm Dialog -->
-<app-confirm-dialog
-  [isOpen]="confirmOpen"
-  title="Xác nhận xóa sản phẩm"
-  [message]="confirmMessage"
-  confirmLabel="Xóa"
-  variant="danger"
-  (confirmed)="onConfirmDelete()"
-  (cancelled)="onCancelDelete()"
-></app-confirm-dialog>
+<app-confirm-dialog [isOpen]="confirmOpen" title="Xác nhận xóa sản phẩm" [message]="confirmMessage" confirmLabel="Xóa"
+  variant="danger" (confirmed)="onConfirmDelete()" (cancelled)="onCancelDelete()"></app-confirm-dialog>
 
 <!-- Product CSV Import Modal -->
-<app-product-csv-modal
-  [isOpen]="isCsvModalOpen"
-  (closed)="isCsvModalOpen = false"
-  (imported)="onCsvImportSuccess($event)"
-></app-product-csv-modal>
+<app-product-csv-modal [isOpen]="isCsvModalOpen" (closed)="isCsvModalOpen = false"
+  (imported)="onCsvImportSuccess($event)"></app-product-csv-modal>

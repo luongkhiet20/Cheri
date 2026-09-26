@@ -38,13 +38,15 @@ export class AdminHeaderComponent implements OnInit, OnDestroy {
       this.cdr.markForCheck();
     });
 
-    // Fetch initial profile
-    this.apiService.getAccountProfile().subscribe({
-      next: () => {
-        this.cdr.markForCheck();
-      },
-      error: () => { }
-    });
+    // Fetch initial profile (only in browser)
+    if (isPlatformBrowser(this.platformId)) {
+      this.apiService.getAccountProfile().subscribe({
+        next: () => {
+          this.cdr.markForCheck();
+        },
+        error: () => { }
+      });
+    }
   }
 
   ngOnDestroy(): void {

@@ -1,21 +1,23 @@
 <div class="page-content">
   <div class="page-top">
-    <div><h1 class="page-title">Quản lý tồn kho</h1><p class="page-subtitle">Theo dõi số lượng tồn kho theo sản phẩm</p></div>
-    <div class="page-actions"><button class="btn btn-primary" id="btn-add-inventory" (click)="onImportInventory()">Nhập kho</button></div>
+    <div>
+      <h1 class="page-title">Quản lý tồn kho</h1>
+    </div>
+    <div class="page-actions"><button class="btn btn-primary" id="btn-add-inventory" (click)="onImportInventory()">Nhập
+        kho</button></div>
   </div>
-  <app-admin-toolbar searchPlaceholder="Tìm kiếm..." [filterFields]="filterFields"
-    [selectable]="true" [allSelected]="allSelected" [indeterminate]="isIndeterminate"
-    [selectedCount]="selectedCount" [showDeleteSelected]="true" [total]="displayTotal"
-    [isLoading]="isLoading"
-    (searchChange)="onSearch($event)" (filterChange)="onFilter($event)" (refresh)="onRefresh()"
-    (selectAllChange)="onToolbarSelectAll()" (deleteSelected)="onDeleteSelected()">
+  <app-admin-toolbar searchPlaceholder="Tìm kiếm..." [filterFields]="filterFields" [selectable]="true"
+    [allSelected]="allSelected" [indeterminate]="isIndeterminate" [selectedCount]="selectedCount"
+    [showDeleteSelected]="true" [total]="displayTotal" [isLoading]="isLoading" (searchChange)="onSearch($event)"
+    (filterChange)="onFilter($event)" (refresh)="onRefresh()" (selectAllChange)="onToolbarSelectAll()"
+    (deleteSelected)="onDeleteSelected()">
   </app-admin-toolbar>
-  <app-admin-table [columns]="columns" [data]="data" [loading]="isLoading" [actions]="actions"
-    [pagination]="pagination" [selectable]="true" [selectedIds]="selectedIds" totalLabel="sản phẩm"
-    (actionClick)="onAction($event)" (selectionChange)="onSelectionChange($event)"
-    (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)">
+  <app-admin-table [columns]="columns" [data]="data" [loading]="isLoading" [actions]="actions" [pagination]="pagination"
+    [selectable]="true" [selectedIds]="selectedIds" totalLabel="sản phẩm" (actionClick)="onAction($event)"
+    (selectionChange)="onSelectionChange($event)" (pageChange)="onPageChange($event)"
+    (pageSizeChange)="onPageSizeChange($event)">
   </app-admin-table>
 </div>
-<app-confirm-dialog [isOpen]="confirmOpen" title="Xác nhận xóa" [message]="confirmMessage"
-  confirmLabel="Xóa" variant="danger" (confirmed)="onConfirmDelete()" (cancelled)="onCancelDelete()">
+<app-confirm-dialog [isOpen]="confirmOpen" title="Xác nhận xóa" [message]="confirmMessage" confirmLabel="Xóa"
+  variant="danger" (confirmed)="onConfirmDelete()" (cancelled)="onCancelDelete()">
 </app-confirm-dialog>

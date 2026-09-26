@@ -1,4 +1,4 @@
-﻿import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 
 import { Product } from '../../models';
 import { TranslatePipe } from '../../../../pipes/translate.pipe';
@@ -27,7 +27,19 @@ export class ProductsListComponent {
 
   constructor() { }
 
+  isOutOfStock(product: any): boolean {
+    if (!product) return false;
+    const q = product.quantity;
+    if (q !== undefined && q !== null && Number(q) <= 0) return true;
+    const s = product.stock;
+    return s === '0' || s === 'out' || s === 'outOfStock' || s === 'unavailable';
+  }
+
   onAddProduct(id: string): void {
+    const p = (this.products || []).find((item: any) => (item._id || item.id) === id);
+    if (p && (this.isOutOfStock(p) || p.visibility === false)) {
+      return;
+    }
     this.addProduct.emit(id);
   }
 

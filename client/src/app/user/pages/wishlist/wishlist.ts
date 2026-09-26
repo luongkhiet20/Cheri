@@ -148,13 +148,21 @@ export class Wishlist implements OnInit, OnDestroy {
     return sale > 0 && regular > 0 && sale < regular;
   }
 
+  isOutOfStock(product: any): boolean {
+    if (!product) return false;
+    const q = product.quantity;
+    if (q !== undefined && q !== null && Number(q) <= 0) return true;
+    const s = product.stock;
+    return s === '0' || s === 'out' || s === 'outOfStock' || s === 'unavailable';
+  }
+
   get wishlistProducts(): any[] {
     if (!this.wishlist || this.wishlist.length === 0) {
       return [];
     }
-    return this.products.filter(
-      (p) => this.wishlist.includes(p.id) || this.wishlist.includes(p._id)
-    );
+    return this.products
+      .filter((p) => this.wishlist.includes(p.id) || this.wishlist.includes(p._id))
+      .filter((p) => p.visibility !== false && p.vi?.visibility !== false);
   }
 
   onRemoveClick(event: MouseEvent, productId: string): void {
@@ -173,6 +181,10 @@ export class Wishlist implements OnInit, OnDestroy {
   addToCart(product: any): void {
     const id = product._id || product.id;
     if (!id) return;
+    if (this.isOutOfStock(product) || product.visibility === false || product.vi?.visibility === false) {
+      this.showToast('Sản phẩm hiện đã hết hàng hoặc tạm ngưng bán', 'error');
+      return;
+    }
     this.store.addToCart('?id=' + id);
     const snackBarRef = this.snackBar.open('Đã thêm vào giỏ hàng', 'Xem giỏ hàng', {
       duration: 3000,

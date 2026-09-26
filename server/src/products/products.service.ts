@@ -85,14 +85,14 @@ export class ProductsService {
       }
     }
 
-    const visibilityQuery = {
+    const currentLang = lang || 'vi';
+    const visibilityQuery: any = {
       visibility: { $ne: false },
-      $or: [
-        { [`${lang}.visibility`]: true },
-        { [`vi.visibility`]: true },
-        { [`en.visibility`]: true },
-      ],
+      [`${currentLang}.visibility`]: { $ne: false },
     };
+    if (currentLang !== 'vi') {
+      visibilityQuery['vi.visibility'] = { $ne: false };
+    }
 
     const query = {
       ...searchQuery,

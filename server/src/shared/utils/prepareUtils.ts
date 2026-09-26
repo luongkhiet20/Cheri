@@ -85,9 +85,9 @@ export const prepareProduct = (
         name: p.mainImage?.name || p.titleUrl || title,
       };
 
-  // Visibility: both root (if explicitly set) and language visibility must permit
+  // Visibility: both root and language/vi visibility must permit
   const isGloballyVisible = p.visibility !== false;
-  const isLangVisible = langData.visibility !== false || p.vi?.visibility === true || p.en?.visibility === true;
+  const isLangVisible = langData.visibility !== false && (p.vi?.visibility !== false);
   const visibility = isGloballyVisible && isLangVisible;
 
   return {

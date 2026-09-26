@@ -1,4 +1,5 @@
 @charset "UTF-8";
+
 :host {
   display: block;
   width: 100%;
@@ -32,6 +33,7 @@
   overflow: hidden;
   box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.06);
 }
+
 @media (min-width: 768px) {
   :host .auth-card {
     grid-template-columns: 1fr 1.05fr;
@@ -45,6 +47,7 @@
   background-color: #f5f3ef;
   min-height: 500px;
 }
+
 @media (min-width: 768px) {
   :host .auth-banner {
     display: block;
@@ -57,7 +60,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: brightness(0.55);
+  filter: brightness(1.3);
 }
 
 :host .auth-banner-overlay {
@@ -96,6 +99,7 @@
   box-sizing: border-box;
   overflow-y: auto;
 }
+
 @media (min-width: 640px) {
   :host .auth-form-side {
     padding: 40px 44px;
@@ -137,6 +141,7 @@
   grid-template-columns: 1fr;
   gap: 14px;
 }
+
 @media (min-width: 480px) {
   :host .form-row-2col {
     grid-template-columns: 1fr 1fr;
@@ -177,10 +182,12 @@
   box-shadow: none !important;
   line-height: 1.4;
 }
+
 :host .form-input::placeholder {
   color: #b8b3ac;
   font-weight: 300;
 }
+
 :host .form-input:focus {
   background-color: #ffffff !important;
   border-color: rgba(116, 7, 14, 0.4) !important;
@@ -218,6 +225,7 @@
   border-color: #ef4444 !important;
   background-color: #fff9f9 !important;
 }
+
 :host .form-input.input-error:focus {
   border-color: #dc2626 !important;
   box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12) !important;
@@ -249,14 +257,17 @@
   letter-spacing: normal !important;
   user-select: none;
 }
+
 :host .form-checkbox-label.terms-label {
   align-items: flex-start;
   line-height: 1.45;
 }
+
 :host .form-checkbox-label.terms-label .form-checkbox {
   margin-top: 2px;
   flex-shrink: 0;
 }
+
 :host .form-checkbox-label span {
   text-transform: none !important;
   font-size: 12.5px !important;
@@ -296,23 +307,28 @@
   margin-top: 4px;
   line-height: 1;
 }
+
 :host .submit-sign-button:hover:not(:disabled),
 :host .auth-submit-btn:hover:not(:disabled) {
   background-color: #5a050a !important;
   box-shadow: 0 6px 18px rgba(116, 7, 14, 0.3) !important;
   transform: translateY(-1px);
 }
+
 :host .submit-sign-button:active:not(:disabled),
 :host .auth-submit-btn:active:not(:disabled) {
   transform: translateY(0);
 }
-:host .submit-sign-button:disabled, :host .submit-sign-button[disabled],
+
+:host .submit-sign-button:disabled,
+:host .submit-sign-button[disabled],
 :host .auth-submit-btn:disabled,
 :host .auth-submit-btn[disabled] {
   opacity: 0.5 !important;
   cursor: not-allowed;
   box-shadow: none !important;
 }
+
 :host .submit-sign-button .btn-sparkle,
 :host .auth-submit-btn .btn-sparkle {
   width: 14px;
@@ -402,6 +418,7 @@
   margin-left: 4px;
   cursor: pointer;
 }
+
 :host .signin-link:hover,
 :host .auth-highlight-link:hover {
   text-decoration: underline;
@@ -412,6 +429,7 @@
     opacity: 0;
     transform: translateY(8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);

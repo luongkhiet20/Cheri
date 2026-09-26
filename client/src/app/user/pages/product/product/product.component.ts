@@ -1,4 +1,4 @@
-﻿import { toObservable } from '@angular/core/rxjs-interop';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { JsonLDService } from '../../../../services/jsonLD.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { filter, map, take, distinctUntilChanged, skip, withLatestFrom } from 'rxjs/operators';
@@ -65,6 +65,12 @@ export class ProductComponent implements OnDestroy {
 
   cartEvent(id: string, type: string): void {
     if (type === 'add') {
+      const p = this.product$();
+      const isOut = !p || (p.quantity !== undefined && p.quantity !== null && Number(p.quantity) <= 0) || p.stock === '0' || p.stock === 'out' || p.stock === 'outOfStock' || p.stock === 'unavailable';
+      if (isOut || p.visibility === false || p.vi?.visibility === false) {
+        this.snackBar.open('Sản phẩm hiện đã hết hàng hoặc tạm ngưng bán', 'Đóng', { duration: 3000 });
+        return;
+      }
       this.store.addToCart('?id=' + id);
 
       this.translate

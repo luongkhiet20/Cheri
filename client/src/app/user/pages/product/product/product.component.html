@@ -9,41 +9,48 @@
     }
     @if (product$()) {
       @if (!productLoading$()) {
-    <mat-card appearance="outlined" class="product">
-      @if (product$().visibility && product$().salePrice) {
-
-      <app-product-content
-        [product]="product$()"
-        [categoriesInput]="categories$ | async"
-        [cartIds]="cartIds$ | async"
-        [currency]="currency$ | async"
-        [lang]="lang$ | async"
-        (addProduct)="cartEvent($event, 'add')"
-        (removeProduct)="cartEvent($event, 'remove')"
-      >
-      </app-product-content>
-      <mat-tab-group>
-        <mat-tab label="{{ 'Description' | translate | async }}">
-          <mat-card-content class="product-tab-content">
-            <div [innerHTML]="product$()?.descriptionFull"></div>
-          </mat-card-content>
-        </mat-tab>
-        <mat-tab label="{{ 'Images' | translate | async }}">
-          <mat-card-content class="product-tab-content">
-            <div class="product-images">
-              @for (imageSrc of product$()?.images; track imageSrc; let i = $index; let f = $first; let l = $last) {
-              <div class="product-images-content" (click)="openDialog(i, product$()?.images)">
-                <img class="product-images-image" [src]="imageSrc" />
-              </div>
-              }
-            </div>
-          </mat-card-content>
-        </mat-tab>
-      </mat-tab-group>
-
+        @if (product$().visibility !== false && product$().vi?.visibility !== false) {
+          <mat-card appearance="outlined" class="product">
+            <app-product-content
+              [product]="product$()"
+              [categoriesInput]="categories$ | async"
+              [cartIds]="cartIds$ | async"
+              [currency]="currency$ | async"
+              [lang]="lang$ | async"
+              (addProduct)="cartEvent($event, 'add')"
+              (removeProduct)="cartEvent($event, 'remove')"
+            >
+            </app-product-content>
+            <mat-tab-group>
+              <mat-tab label="{{ 'Description' | translate | async }}">
+                <mat-card-content class="product-tab-content">
+                  <div [innerHTML]="product$()?.descriptionFull"></div>
+                </mat-card-content>
+              </mat-tab>
+              <mat-tab label="{{ 'Images' | translate | async }}">
+                <mat-card-content class="product-tab-content">
+                  <div class="product-images">
+                    @for (imageSrc of product$()?.images; track imageSrc; let i = $index; let f = $first; let l = $last) {
+                    <div class="product-images-content" (click)="openDialog(i, product$()?.images)">
+                      <img class="product-images-image" [src]="imageSrc" />
+                    </div>
+                    }
+                  </div>
+                </mat-card-content>
+              </mat-tab>
+            </mat-tab-group>
+          </mat-card>
+        } @else {
+          <!-- Hidden product notice (Case 3 & Case 4) -->
+          <div class="product-unavailable-wrap" style="text-align: center; padding: 60px 20px; background: #fff; border-radius: 12px; margin-top: 24px; border: 1px solid #e2e8f0;">
+            <h2 style="font-size: 1.5rem; font-weight: 700; color: #1e293b; margin-bottom: 12px;">Sản phẩm không khả dụng</h2>
+            <p style="color: #64748b; font-size: 1rem; margin-bottom: 24px;">Sản phẩm này hiện đang tạm ẩn hoặc không còn được kinh doanh.</p>
+            <button mat-raised-button color="primary" [routerLink]="['/' + (lang$ | async) + '/product/all']">
+              Khám phá sản phẩm khác
+            </button>
+          </div>
+        }
       }
-    </mat-card>
     }
-  }
   </div>
 </div>

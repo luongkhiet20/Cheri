@@ -349,9 +349,13 @@ function formatProduct(p, lang = 'vi') {
   const image = p.mainImage?.url || (Array.isArray(p.images) && p.images[0]) || '';
   const category = langData.categoryLevel1 || fallbackData.categoryLevel1 || p.categoryLevel1 || 'Thời trang';
 
+  const isGloballyVisible = p.visibility !== false;
+  const isLangVisible = langData.visibility !== false && p.vi?.visibility !== false;
+  const visibility = isGloballyVisible && isLangVisible;
+
   let status = 'Đang bán';
   let statusVariant = 'success';
-  if (p.visibility === false || (langData.visibility === false && fallbackData.visibility === false)) {
+  if (!visibility) {
     status = 'Tạm ẩn';
     statusVariant = 'warning';
   } else if (quantity <= 0 && (stock === 'out' || stock === 'outOfStock')) {
@@ -372,6 +376,7 @@ function formatProduct(p, lang = 'vi') {
     onSale: Boolean(langData.onSale !== undefined ? langData.onSale : (salePrice > 0 && regularPrice > 0 && salePrice < regularPrice)),
     stock,
     quantity,
+    visibility,
     status,
     statusVariant,
     image,
@@ -418,6 +423,13 @@ app.get('/api/products', async (req, res) => {
     const lang = req.query.lang || req.headers['lang'] || 'vi';
 
     let queryConditions = [];
+
+    if (req.query.scope === 'user') {
+      queryConditions.push({
+        visibility: { $ne: false },
+        'vi.visibility': { $ne: false }
+      });
+    }
 
     if (search) {
       const searchRegex = new RegExp(search, 'i');

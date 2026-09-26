@@ -351,6 +351,13 @@ export class OrdersService {
       const product = await this.productModel.findById(productId).lean() as any;
       if (!product) continue;
 
+      // Chặn nếu sản phẩm bị Ẩn (Case 3 & 4)
+      if (product.visibility === false || product.vi?.visibility === false) {
+        throw new Error(`Sản phẩm "${product.title || product.vi?.title || 'Sản phẩm'}" hiện đang tạm ẩn, không thể đặt hàng.`);
+      }
+
+      let availableQty = product.quantity !== undefined ? product.quantity : (product.vi?.quantity || 0);
+
       let unitPrice = product.salePrice || product.regularPrice || 0;
       const snapshot: any = {
         title: product.title || '',
@@ -361,6 +368,7 @@ export class OrdersService {
       if (variantId) {
         const variant = await this.variantModel.findById(variantId).lean() as any;
         if (variant) {
+          availableQty = variant.stock !== undefined ? variant.stock : 0;
           unitPrice = variant.discountPrice || variant.price || unitPrice;
           snapshot.variant = {
             color: variant.color || '',
@@ -369,6 +377,14 @@ export class OrdersService {
           };
           snapshot.sku = variant.sku || snapshot.sku;
         }
+      }
+
+      // Chặn nếu hết hàng hoặc số lượng đặt vượt quá tồn kho (Case 2 & 4)
+      if (availableQty <= 0) {
+        throw new Error(`Sản phẩm "${snapshot.title || 'Sản phẩm'}" đã hết hàng.`);
+      }
+      if (quantity > availableQty) {
+        throw new Error(`Sản phẩm "${snapshot.title || 'Sản phẩm'}" chỉ còn ${availableQty} sản phẩm trong kho.`);
       }
 
       orderItems.push({

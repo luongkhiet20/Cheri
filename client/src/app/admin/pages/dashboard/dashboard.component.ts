@@ -1,4 +1,5 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { AdminService } from '../../services/admin.service';
 
@@ -11,6 +12,8 @@ import { AdminService } from '../../services/admin.service';
 export class DashboardComponent implements OnInit {
   // Constant configuration
   readonly LOW_STOCK_THRESHOLD = 5;
+
+  private platformId = inject(PLATFORM_ID);
 
   // State
   stats: any = null;
@@ -28,7 +31,9 @@ export class DashboardComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
-    this.loadStats();
+    if (isPlatformBrowser(this.platformId)) {
+      this.loadStats();
+    }
   }
 
   loadStats(isRefresh = false): void {

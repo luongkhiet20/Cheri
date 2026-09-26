@@ -9,7 +9,22 @@ const app = express();
 const PORT = process.env.ADMIN_PORT || process.env.PORT_ADMIN || 5000;
 const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://tinhvttk24411_db_user:gZ7aJJyCWgYffiXa@cluster0.cbvni8r.mongodb.net/cheri?retryWrites=true&w=majority";
 
-app.use(cors());
+const allowedOrigins = [
+  'https://cheri-three.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:4000',
+  process.env.ORIGIN
+].filter(Boolean);
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
+    return callback(null, true);
+  },
+  credentials: true
+}));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -17,14 +32,21 @@ let db = null;
 let client = null;
 
 async function connectToMongo() {
+  if (db && client) {
+    return db;
+  }
   try {
-    client = new MongoClient(MONGO_URI);
+    client = new MongoClient(MONGO_URI, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+    });
     await client.connect();
     db = client.db('cheri');
     console.log(' Successfully connected to MongoDB Database: cheri');
+    return db;
   } catch (err) {
     console.error(' MongoDB Connection Error:', err);
-    process.exit(1);
+    throw err;
   }
 }
 
@@ -4122,10 +4144,111 @@ app.patch('/api/settings', async (req, res) => {
   }
 });
 
-// Start Server
-connectToMongo().then(() => {
-  app.listen(PORT, () => {
-    console.log(` Backend API server running on http://localhost:${PORT}`);
-  });
+// ─────────────────────────────────────────────────────────────
+// 12. CUSTOMER FRONTEND SHARED ENDPOINTS (Config, Translations, Auth)
+// ─────────────────────────────────────────────────────────────
+app.get('/api/cheri/config', async (req, res) => {
+  try {
+    const activeConfig = await db.collection('configs').findOne({ active: true });
+    const theme = await db.collection('themes').findOne({ active: true });
+    const configFromEnv = Object.keys(process.env)
+      .filter((k) => k.startsWith('FE_'))
+      .reduce((acc, curr) => ({ ...acc, [curr]: process.env[curr] }), {});
+    const themeStyles = theme && theme.styles ? { styles: theme.styles } : {};
+    const payload = { ...configFromEnv, ...themeStyles, ...(activeConfig ? { config: activeConfig } : {}) };
+    res.json({
+      config: Buffer.from(JSON.stringify(payload)).toString('base64')
+    });
+  } catch (err) {
+    res.json({
+      config: Buffer.from(JSON.stringify({})).toString('base64')
+    });
+  }
 });
+
+app.get('/api/translations', async (req, res) => {
+  try {
+    const doc = await db.collection('translations').findOne({ lang: 'vi' });
+    res.json(doc || { lang: 'vi', keys: {} });
+  } catch (err) {
+    res.json({ lang: 'vi', keys: {} });
+  }
+});
+
+app.get('/api/products/categories', async (req, res) => {
+  try {
+    const categoriesRaw = await db.collection('categories').find({}).toArray();
+    res.json(categoriesRaw);
+  } catch (err) {
+    res.json([]);
+  }
+});
+
+app.post('/api/auth/signin', async (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    const cleanEmail = (email || '').trim().toLowerCase();
+    if (!cleanEmail || !password) {
+      return res.status(400).json({ error: 'Email và mật khẩu là bắt buộc' });
+    }
+    const user = await db.collection('users').findOne({ email: cleanEmail });
+    if (!user) {
+      return res.status(401).json({ error: 'Email hoặc mật khẩu không chính xác' });
+    }
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) {
+      return res.status(401).json({ error: 'Email hoặc mật khẩu không chính xác' });
+    }
+    const payload = { email: user.email, id: user._id.toString(), roles: user.roles || ['user'] };
+    const accessToken = jwt.sign(payload, process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789', {
+      expiresIn: process.env.JWT_EXPIRATION || '7d'
+    });
+    res.json({
+      accessToken,
+      id: user._id.toString(),
+      email: user.email,
+      roles: user.roles || ['user'],
+      name: user.name || user.fullName || user.email.split('@')[0]
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Lỗi server khi đăng nhập' });
+  }
+});
+
+app.get('/api/auth', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization || '';
+    if (!authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const token = authHeader.slice(7).trim();
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789');
+    if (!decoded || !decoded.email) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+    const user = await db.collection('users').findOne({ email: decoded.email.toLowerCase() });
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+    res.json({
+      id: user._id.toString(),
+      email: user.email,
+      roles: user.roles || ['user'],
+      name: user.name || user.fullName || user.email.split('@')[0]
+    });
+  } catch (err) {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
+// Start Server (Chỉ listen khi chạy trực tiếp file này bằng node server/admin-server.js)
+if (require.main === module) {
+  connectToMongo().then(() => {
+    app.listen(PORT, () => {
+      console.log(` Backend API server running on http://localhost:${PORT}`);
+    });
+  });
+}
+
+module.exports = { app, connectToMongo };
 

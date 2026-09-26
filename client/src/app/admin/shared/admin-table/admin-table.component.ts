@@ -39,11 +39,38 @@ export class AdminTableComponent implements OnChanges, AfterViewChecked {
   /** Emits the full Set of selected IDs whenever selection changes */
   @Output() selectionChange = new EventEmitter<Set<any>>();
 
+  // ── Sorting Outputs ──────────────────────────────────────────
+  /** Emits sort key and direction whenever sort state changes */
+  @Output() sortChange = new EventEmitter<{ key: string; dir: 'asc' | 'desc'; column: TableColumn }>();
+
   // ── References for indeterminate checkbox ────────────────────
   @ViewChildren('headerCheckbox') headerCheckboxRefs!: QueryList<ElementRef<HTMLInputElement>>;
 
-  sortKey: string = '';
-  sortDir: 'asc' | 'desc' = 'asc';
+  @Input() sortKey: string = '';
+  @Input() sortDir: 'asc' | 'desc' = 'asc';
+
+  private _cachedData: any[] = [];
+  private _cachedSortKey: string = '';
+  private _cachedSortDir: 'asc' | 'desc' = 'asc';
+  private _sortedData: any[] = [];
+
+  get sortedData(): any[] {
+    if (!this.sortKey) {
+      return this.data || [];
+    }
+    if (
+      this._cachedData === this.data &&
+      this._cachedSortKey === this.sortKey &&
+      this._cachedSortDir === this.sortDir
+    ) {
+      return this._sortedData;
+    }
+    this._cachedData = this.data;
+    this._cachedSortKey = this.sortKey;
+    this._cachedSortDir = this.sortDir;
+    this._sortedData = this.sortData(this.data, this.sortKey, this.sortDir);
+    return this._sortedData;
+  }
 
   // ── ngOnChanges: clear selection if data changes ─────────────
   ngOnChanges(changes: SimpleChanges): void {
@@ -153,7 +180,76 @@ export class AdminTableComponent implements OnChanges, AfterViewChecked {
       this.sortKey = col.key;
       this.sortDir = 'asc';
     }
+    this.sortChange.emit({ key: this.sortKey, dir: this.sortDir, column: col });
     this.cdr.markForCheck();
+  }
+
+  sortData(data: any[], key: string, dir: 'asc' | 'desc'): any[] {
+    if (!data || data.length === 0 || !key) {
+      return data || [];
+    }
+
+    const col = this.columns.find(c => c.key === key);
+    const colType = col?.type || 'text';
+    const multiplier = dir === 'desc' ? -1 : 1;
+
+    return [...data].sort((a, b) => {
+      const valA = this.getCellValue(a, key);
+      const valB = this.getCellValue(b, key);
+
+      const isEmptyA = valA == null || valA === '';
+      const isEmptyB = valB == null || valB === '';
+
+      if (isEmptyA && isEmptyB) return 0;
+      if (isEmptyA) return 1;
+      if (isEmptyB) return -1;
+
+      let cmp = 0;
+
+      if (colType === 'number' || colType === 'currency') {
+        const parseNum = (v: any): number => {
+          if (typeof v === 'number') return v;
+          if (!v && v !== 0) return NaN;
+          const s = String(v).trim().replace(/\s+/g, '').replace(/₫|VND|\$/gi, '');
+          if (s.includes('.') && !s.includes(',')) {
+            if (/^\d{1,3}(\.\d{3})+$/.test(s)) {
+              return Number(s.replace(/\./g, ''));
+            }
+          }
+          return Number(s.replace(/,/g, ''));
+        };
+
+        const numA = parseNum(valA);
+        const numB = parseNum(valB);
+
+        const isNaNA = isNaN(numA);
+        const isNaNB = isNaN(numB);
+
+        if (isNaNA && isNaNB) return 0;
+        if (isNaNA) return 1;
+        if (isNaNB) return -1;
+
+        cmp = numA < numB ? -1 : numA > numB ? 1 : 0;
+      } else if (colType === 'date') {
+        const timeA = valA instanceof Date ? valA.getTime() : new Date(valA).getTime();
+        const timeB = valB instanceof Date ? valB.getTime() : new Date(valB).getTime();
+
+        const isNaNA = isNaN(timeA);
+        const isNaNB = isNaN(timeB);
+
+        if (isNaNA && isNaNB) return 0;
+        if (isNaNA) return 1;
+        if (isNaNB) return -1;
+
+        cmp = timeA < timeB ? -1 : timeA > timeB ? 1 : 0;
+      } else {
+        const strA = String(valA).trim();
+        const strB = String(valB).trim();
+        cmp = strA.localeCompare(strB, 'vi', { sensitivity: 'base', numeric: true });
+      }
+
+      return cmp * multiplier;
+    });
   }
 
   onPageChange(p: number): void { this.pageChange.emit(p); }

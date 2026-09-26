@@ -22,15 +22,17 @@
           <!-- Data columns -->
           <th *ngFor="let col of columns" class="admin-table__th" [class.is-sortable]="col.sortable"
             [class.is-sorted-asc]="sortKey === col.key && sortDir === 'asc'"
-            [class.is-sorted-desc]="sortKey === col.key && sortDir === 'desc'" [style.width]="col.width || 'auto'"
+            [class.is-sorted-desc]="sortKey === col.key && sortDir === 'desc'"
+            [attr.aria-sort]="sortKey === col.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : (col.sortable ? 'none' : null)"
+            [style.width]="col.width || 'auto'"
             (click)="onSort(col)">
             <span class="admin-table__th-inner">
               {{ col.label }}
               <span *ngIf="col.sortable" class="sort-icon" aria-hidden="true">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
                   stroke-linecap="round">
-                  <polyline points="6 9 12 4 18 9"></polyline>
-                  <polyline points="6 15 12 20 18 15"></polyline>
+                  <polyline class="sort-arrow-up" points="6 9 12 4 18 9"></polyline>
+                  <polyline class="sort-arrow-down" points="6 15 12 20 18 15"></polyline>
                 </svg>
               </span>
             </span>
@@ -43,7 +45,7 @@
       </thead>
 
       <tbody>
-        <tr class="admin-table__row" *ngFor="let row of data; let i = index" [class.is-selected]="isRowSelected(row)"
+        <tr class="admin-table__row" *ngFor="let row of sortedData; let i = index" [class.is-selected]="isRowSelected(row)"
           [attr.aria-rowindex]="i + 1" [attr.aria-selected]="selectable ? isRowSelected(row) : null">
           <!-- ── Row checkbox (NEW) ── -->
           <td *ngIf="selectable" class="admin-table__td admin-table__td--checkbox">

@@ -38,6 +38,9 @@
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   transition: all 0.15s;
 }
 
@@ -55,6 +58,13 @@
   border-radius: 8px;
   margin-bottom: 24px;
   font-size: 0.875rem;
+}
+
+.alert-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .alert-error {

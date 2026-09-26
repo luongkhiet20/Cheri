@@ -22,7 +22,12 @@
           <p class="modal-subtitle">Thêm mới hoặc cập nhật hàng loạt sản phẩm và biến thể vào MongoDB Atlas (Collection: <code>products</code>)</p>
         </div>
       </div>
-      <button type="button" class="btn-close" (click)="closeModal()" aria-label="Đóng">&times;</button>
+      <button type="button" class="btn-close" (click)="closeModal()" aria-label="Đóng">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
     </div>
 
     <!-- Modal Body -->
@@ -30,7 +35,13 @@
 
       <!-- Error / Alert Message -->
       <div *ngIf="errorMessage" class="alert-box alert-error mb-4">
-        <span class="alert-icon">⚠️</span>
+        <span class="alert-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+        </span>
         <div class="alert-text">{{ errorMessage }}</div>
       </div>
 
@@ -87,7 +98,12 @@
         <!-- Selected File Info Bar -->
         <div *ngIf="selectedFile" class="file-info-bar mt-3">
           <div class="file-name-meta">
-            <span class="file-icon">📄</span>
+            <span class="file-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+            </span>
             <div class="file-details">
               <span class="file-name font-medium">{{ fileName }}</span>
               <span class="file-size text-muted">({{ fileSizeText }})</span>
@@ -149,8 +165,13 @@
             Theo nguyên tắc bảo toàn dữ liệu, hệ thống chỉ cho phép nhập khi toàn bộ các dòng đều đạt yêu cầu. Vui lòng xem chi tiết cột lỗi bên dưới, chỉnh sửa lại file CSV và upload kiểm tra lại.
           </p>
           <div class="callout-action">
-            <button type="button" class="btn btn-sm btn-outline-danger" (click)="downloadErrorReport()">
-              📥 Tải báo cáo lỗi chi tiết (.csv)
+            <button type="button" class="btn btn-sm btn-outline-danger btn-icon-gap" (click)="downloadErrorReport()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Tải báo cáo lỗi chi tiết (.csv)
             </button>
           </div>
         </div>
@@ -158,7 +179,11 @@
         <!-- Alert Banner: All Valid Ready to Import -->
         <div *ngIf="validationResult.canImport" class="callout-box callout-success mb-3">
           <div class="callout-header">
-            <span class="callout-icon">✓</span>
+            <span class="callout-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </span>
             <strong>Kiểm tra hoàn tất: Toàn bộ {{ validationResult.summary?.validRows }} dòng đều hợp lệ!</strong>
           </div>
           <p class="callout-body">
@@ -243,10 +268,21 @@
                 </td>
                 <td class="text-center">
                   <div *ngIf="row.status === 'valid'">
-                    <span class="badge badge-success">✓ Hợp lệ</span>
+                    <span class="badge badge-success badge-with-icon">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                      Hợp lệ
+                    </span>
                   </div>
                   <div *ngIf="row.status === 'error'" class="error-cell-wrapper">
-                    <span class="badge badge-danger">✗ Lỗi</span>
+                    <span class="badge badge-danger badge-with-icon">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
+                      Lỗi
+                    </span>
                     <div class="error-tooltip-content">
                       <div *ngFor="let err of row.errors">• {{ err }}</div>
                     </div>

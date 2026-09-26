@@ -36,7 +36,8 @@
 .admin-filter__panel-title { font-weight: 600; font-size: var(--font-size-md); color: var(--cheri-text); }
 .admin-filter__panel-close {
   background: transparent; border: none; cursor: pointer;
-  font-size: 20px; color: var(--cheri-text-light); padding: 2px 5px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--cheri-text-light); padding: 4px;
   border-radius: var(--radius-sm);
   transition: color var(--transition-fast);
 }

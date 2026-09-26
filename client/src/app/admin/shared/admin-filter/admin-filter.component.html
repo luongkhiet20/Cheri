@@ -21,7 +21,12 @@
   <div class="admin-filter__panel" *ngIf="isPanelOpen" role="dialog" aria-label="Bộ lọc">
     <div class="admin-filter__panel-header">
       <span class="admin-filter__panel-title">Bộ lọc</span>
-      <button class="admin-filter__panel-close" (click)="closePanel()" aria-label="Đóng bộ lọc">&times;</button>
+      <button class="admin-filter__panel-close" (click)="closePanel()" aria-label="Đóng bộ lọc">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
     </div>
 
     <div class="admin-filter__fields">
@@ -62,7 +67,10 @@
       <span>{{ af.label }}: <strong>{{ af.displayValue }}</strong></span>
       <button type="button" class="admin-filter__tag-remove"
               (click)="removeFilter(af.key)" [attr.aria-label]="'Xóa lọc ' + af.label">
-        &times;
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
       </button>
     </span>
   </div>

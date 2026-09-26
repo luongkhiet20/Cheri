@@ -19,7 +19,13 @@
         Hủy
       </button>
       <button *ngIf="isEditMode" type="button" class="btn btn-danger-outline" (click)="openConfirmDelete()" [disabled]="isSubmitting">
-        🗑️ Xóa sản phẩm
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+          <path d="M10 11v6M14 11v6"></path>
+          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+        </svg>
+        Xóa sản phẩm
       </button>
       <button type="button" class="btn btn-primary" (click)="onSubmit()" [disabled]="isSubmitting || isLoading">
         <span *ngIf="isSubmitting" class="spinner-inline"></span>
@@ -30,14 +36,24 @@
 
   <!-- Alert Messages -->
   <div *ngIf="errorMessage" class="alert-box alert-error">
-    <div class="alert-icon">⚠️</div>
+    <div class="alert-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+    </div>
     <div class="alert-content">
       <strong>Lỗi:</strong> {{ errorMessage }}
     </div>
   </div>
 
   <div *ngIf="successMessage" class="alert-box alert-success">
-    <div class="alert-icon">✓</div>
+    <div class="alert-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    </div>
     <div class="alert-content">{{ successMessage }}</div>
   </div>
 
@@ -170,7 +186,13 @@
                 placeholder="Dán đường dẫn hình ảnh (https://...)"
                 (keyup.enter)="addImageFromUrl()"
               />
-              <button type="button" class="btn btn-secondary" (click)="addImageFromUrl()">+ Thêm URL</button>
+              <button type="button" class="btn btn-secondary btn-icon-gap" (click)="addImageFromUrl()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Thêm URL
+              </button>
             </div>
           </div>
 
@@ -200,12 +222,23 @@
                   (click)="setAsMainImage(img)"
                   title="Đặt làm ảnh chính"
                 >
-                  ★ Đặt ảnh chính
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                  </svg>
+                  Đặt ảnh chính
                 </button>
                 <span class="badge-main-active" *ngIf="product.mainImage?.url === img">
-                  ✓ Ảnh chính
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                  Ảnh chính
                 </span>
-                <button type="button" class="btn-remove-photo" (click)="removeImage(i)" title="Xóa ảnh">&times;</button>
+                <button type="button" class="btn-remove-photo" (click)="removeImage(i)" title="Xóa ảnh" aria-label="Xóa ảnh">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
@@ -274,22 +307,40 @@
                 placeholder="Nhập phân loại (ví dụ: Áo, Quần Jean, Váy...) và nhấn Enter"
                 (keyup.enter)="addClassification()"
               />
-              <button type="button" class="btn btn-secondary" (click)="addClassification()">
-                + Thêm
+              <button type="button" class="btn btn-secondary btn-icon-gap" (click)="addClassification()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Thêm
               </button>
             </div>
 
             <!-- Classification Chips -->
             <div class="chips-container mt-3" *ngIf="product.vi.classifications && product.vi.classifications.length > 0">
               <span class="chip-item classification-chip" *ngFor="let cls of product.vi.classifications; let ci = index">
-                🏷️ {{ cls }}
-                <button type="button" class="btn-chip-del" (click)="removeClassification(ci)" title="Xóa">&times;</button>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                  <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                </svg>
+                {{ cls }}
+                <button type="button" class="btn-chip-del" (click)="removeClassification(ci)" title="Xóa" aria-label="Xóa">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
               </span>
             </div>
 
             <!-- Warning if ON but empty -->
-            <div *ngIf="!product.vi.classifications || product.vi.classifications.length === 0" class="text-hint text-amber">
-              ⚠️ Vui lòng thêm ít nhất 1 phân loại sản phẩm hoặc tắt tùy chọn phân loại.
+            <div *ngIf="!product.vi.classifications || product.vi.classifications.length === 0" class="text-hint text-amber hint-with-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <span>Vui lòng thêm ít nhất 1 phân loại sản phẩm hoặc tắt tùy chọn phân loại.</span>
             </div>
           </div>
         </div>
@@ -338,7 +389,13 @@
                 placeholder="Tên màu (Ví dụ: Đen, Trắng, Đỏ Ruby...)"
                 (keyup.enter)="addColor()"
               />
-              <button type="button" class="btn btn-secondary" (click)="addColor()">+ Thêm màu</button>
+              <button type="button" class="btn btn-secondary btn-icon-gap" (click)="addColor()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Thêm màu
+              </button>
             </div>
 
             <!-- Quick color suggestions -->
@@ -362,13 +419,23 @@
                 <span class="color-preview" [style.backgroundColor]="col.hex"></span>
                 <span class="color-name-txt">{{ col.name }}</span>
                 <span class="color-hex-txt font-mono">({{ col.hex }})</span>
-                <button type="button" class="btn-chip-del" (click)="removeColor(ci)" title="Xóa">&times;</button>
+                <button type="button" class="btn-chip-del" (click)="removeColor(ci)" title="Xóa" aria-label="Xóa">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
               </span>
             </div>
 
             <!-- Warning if ON but empty -->
-            <div *ngIf="!product.vi.colors || product.vi.colors.length === 0" class="text-hint text-amber">
-              ⚠️ Vui lòng thêm ít nhất 1 màu sắc hoặc tắt tùy chọn màu sắc.
+            <div *ngIf="!product.vi.colors || product.vi.colors.length === 0" class="text-hint text-amber hint-with-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <span>Vui lòng thêm ít nhất 1 màu sắc hoặc tắt tùy chọn màu sắc.</span>
             </div>
           </div>
         </div>
@@ -431,13 +498,23 @@
             <div class="chips-container mt-3" *ngIf="product.vi.sizes && product.vi.sizes.length > 0">
               <span class="chip-item size-chip" *ngFor="let s of product.vi.sizes">
                 {{ s }}
-                <button type="button" class="btn-chip-del" (click)="removeSize(s)" title="Xóa">&times;</button>
+                <button type="button" class="btn-chip-del" (click)="removeSize(s)" title="Xóa" aria-label="Xóa">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
               </span>
             </div>
 
             <!-- Warning if ON but empty -->
-            <div *ngIf="!product.vi.sizes || product.vi.sizes.length === 0" class="text-hint text-amber">
-              ⚠️ Vui lòng chọn ít nhất 1 kích cỡ hoặc tắt tùy chọn kích cỡ.
+            <div *ngIf="!product.vi.sizes || product.vi.sizes.length === 0" class="text-hint text-amber hint-with-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <span>Vui lòng chọn ít nhất 1 kích cỡ hoặc tắt tùy chọn kích cỡ.</span>
             </div>
           </div>
         </div>
@@ -729,7 +806,12 @@
         <div class="tags-container" *ngIf="product.tags && product.tags.length > 0">
           <span class="tag-pill" *ngFor="let t of product.tags">
             #{{ t }}
-            <button type="button" class="btn-tag-remove" (click)="removeTag(t)" title="Xóa">&times;</button>
+            <button type="button" class="btn-tag-remove" (click)="removeTag(t)" title="Xóa" aria-label="Xóa">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
           </span>
         </div>
       </div>

@@ -17,7 +17,11 @@
     <h2 class="state-title">Không tìm thấy phương thức vận chuyển</h2>
     <p class="state-desc">Phương thức vận chuyển có mã <code>{{ methodId }}</code> không tồn tại trong collection <code>shippingmethods</code>.</p>
     <button type="button" class="btn btn-primary" (click)="onBack()">
-      ← Quay lại danh sách
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="19" y1="12" x2="5" y2="12"></line>
+        <polyline points="12 19 5 12 12 5"></polyline>
+      </svg>
+      <span>Quay lại danh sách</span>
     </button>
   </div>
 
@@ -39,7 +43,11 @@
 
       <div class="detail-header-right">
         <button type="button" class="btn btn-secondary" (click)="onBack()">
-          ← Quay lại
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          <span>Quay lại</span>
         </button>
         <button
           type="button"

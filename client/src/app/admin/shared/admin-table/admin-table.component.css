@@ -61,10 +61,39 @@
   display: inline-flex; align-items: center; gap: 4px;
 }
 
-.sort-icon { opacity: 0.35; transition: opacity var(--transition-fast); }
+.sort-icon { 
+  opacity: 0.35; 
+  transition: opacity var(--transition-fast); 
+  display: inline-flex;
+  align-items: center;
+}
 .admin-table__th.is-sortable:hover .sort-icon { opacity: 0.7; }
 .admin-table__th.is-sorted-asc .sort-icon,
-.admin-table__th.is-sorted-desc .sort-icon { opacity: 1; color: var(--cheri-primary); }
+.admin-table__th.is-sorted-desc .sort-icon { 
+  opacity: 1; 
+  color: var(--cheri-primary); 
+}
+
+.sort-arrow-up,
+.sort-arrow-down {
+  transition: opacity var(--transition-fast), stroke var(--transition-fast);
+}
+
+.admin-table__th.is-sorted-asc .sort-arrow-up {
+  opacity: 1;
+  stroke: var(--cheri-primary);
+}
+.admin-table__th.is-sorted-asc .sort-arrow-down {
+  opacity: 0.15;
+}
+
+.admin-table__th.is-sorted-desc .sort-arrow-down {
+  opacity: 1;
+  stroke: var(--cheri-primary);
+}
+.admin-table__th.is-sorted-desc .sort-arrow-up {
+  opacity: 0.15;
+}
 
 /* ----- Data rows ----- */
 .admin-table__row {

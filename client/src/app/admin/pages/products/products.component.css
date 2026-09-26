@@ -33,8 +33,10 @@
 }
 
 .alert-icon {
-  font-size: 1.15rem;
-  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .btn-outline {
@@ -58,9 +60,10 @@
 }
 
 .btn-svg-inline {
-  width: 17px;
-  height: 17px;
-  color: #3b82f6;
+  width: 16px;
+  height: 16px;
+  color: currentColor;
+  flex-shrink: 0;
 }
 
 .page-actions {

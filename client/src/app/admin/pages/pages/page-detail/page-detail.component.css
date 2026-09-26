@@ -65,6 +65,9 @@
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   transition: all 0.15s;
 }
 
@@ -97,7 +100,10 @@
 }
 
 .alert-icon {
-  font-size: 1.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 /* Detail Layout */
@@ -169,6 +175,9 @@
   color: #64748b;
   border-radius: 4px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   transition: all 0.15s;
 }
 
@@ -178,7 +187,7 @@
 
 .btn-tab.active {
   background: #ffffff;
-  color: #2563eb;
+  color: var(--cheri-primary, #74070E);
   font-weight: 600;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }

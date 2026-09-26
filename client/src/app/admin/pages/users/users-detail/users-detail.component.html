@@ -93,7 +93,12 @@
     <h2 class="state-title">Không tìm thấy tài khoản</h2>
     <p class="state-desc">Tài khoản có mã <code>{{ userId }}</code> không tồn tại trong collection <code>users</code> của MongoDB Atlas.</p>
     <button type="button" class="btn btn-outline" (click)="onBack()">
-      ← Quay lại danh sách tài khoản
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round" class="btn-icon" aria-hidden="true">
+        <line x1="19" y1="12" x2="5" y2="12"></line>
+        <polyline points="12 19 5 12 12 5"></polyline>
+      </svg>
+      <span>Quay lại danh sách tài khoản</span>
     </button>
   </div>
 

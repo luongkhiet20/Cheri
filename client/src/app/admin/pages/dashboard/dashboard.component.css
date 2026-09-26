@@ -335,6 +335,9 @@
   font-weight: 600;
   font-size: 12px;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .kpi-card__hint {

@@ -4,7 +4,13 @@
       <h1 class="page-title">Quản lý tài khoản</h1>
     </div>
     <div class="page-actions">
-      <button class="btn btn-primary" id="btn-add-user" (click)="onAddUser()">+ Thêm tài khoản</button>
+      <button class="btn btn-primary" id="btn-add-user" (click)="onAddUser()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Thêm tài khoản
+      </button>
     </div>
   </div>
   <app-admin-toolbar searchPlaceholder="Tìm kiếm..." [filterFields]="filterFields" [selectable]="true"

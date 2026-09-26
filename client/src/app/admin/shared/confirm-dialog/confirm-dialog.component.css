@@ -28,8 +28,9 @@
 .dialog-title { font-size: var(--font-size-lg); font-weight: 700; color: var(--cheri-text); }
 .dialog-close {
   background: transparent; border: none; cursor: pointer;
-  font-size: 22px; line-height: 1; color: var(--cheri-text-light);
-  padding: 2px 6px; border-radius: var(--radius-sm);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--cheri-text-light);
+  padding: 4px; border-radius: var(--radius-sm);
   transition: color var(--transition-fast), background var(--transition-fast);
 }
 .dialog-close:hover { color: var(--cheri-text); background: var(--cheri-background); }

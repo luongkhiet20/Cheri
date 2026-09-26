@@ -58,12 +58,12 @@
   width: 44px;
   height: 44px;
   border-radius: 10px;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  background: rgba(116, 7, 14, 0.08);
+  border: 1px solid rgba(116, 7, 14, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #2563eb;
+  color: #74070E;
 }
 
 .h-icon {
@@ -87,11 +87,12 @@
 .btn-close {
   background: none;
   border: none;
-  font-size: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: #94a3b8;
   cursor: pointer;
-  line-height: 1;
-  padding: 4px 8px;
+  padding: 6px;
   border-radius: 6px;
   transition: all 0.15s;
 }
@@ -99,6 +100,31 @@
 .btn-close:hover {
   color: #0f172a;
   background: #e2e8f0;
+}
+
+.file-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+}
+
+.callout-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon-gap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.badge-with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 /* Modal Body */

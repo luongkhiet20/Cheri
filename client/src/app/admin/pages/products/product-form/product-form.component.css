@@ -38,12 +38,27 @@
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   transition: all 0.15s;
 }
 
 .btn-danger-outline:hover {
   background: #fef2f2;
   border-color: #ef4444;
+}
+
+.btn-icon-gap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hint-with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* Alert boxes */
@@ -302,6 +317,10 @@
   border-radius: 4px;
   cursor: pointer;
   text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
 }
 
 .badge-main-active {
@@ -312,6 +331,10 @@
   padding: 4px;
   border-radius: 4px;
   text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
 }
 
 .btn-remove-photo {
@@ -564,13 +587,32 @@
   border: none;
   color: #94a3b8;
   cursor: pointer;
-  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 0 2px;
   line-height: 1;
 }
 
 .btn-chip-del:hover {
   color: #ef4444;
+}
+
+.btn-tag-remove {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+.btn-tag-remove:hover {
+  opacity: 1;
 }
 
 /* Sizes Bar */

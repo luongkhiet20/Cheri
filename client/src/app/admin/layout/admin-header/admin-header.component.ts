@@ -5,6 +5,7 @@ import { Subscription } from 'rxjs';
 import { AdminService } from '../../services/admin.service';
 import { SignalStore } from '../../../store/signal.store';
 import { accessTokenKey } from '../../../user/shared/constants';
+import { SettingsService } from '../../pages/settings/settings.service';
 
 @Component({
   selector: 'app-admin-header',
@@ -17,7 +18,11 @@ export class AdminHeaderComponent implements OnInit, OnDestroy {
 
   isUserMenuOpen = false;
   currentUser: any = null;
+  logoUrl: string = '';
+  hasLogoError = false;
+
   private userSub: Subscription | null = null;
+  private settingsSub: Subscription | null = null;
 
   onToggleMenu(): void {
     this.toggleMenu.emit();
@@ -25,6 +30,7 @@ export class AdminHeaderComponent implements OnInit, OnDestroy {
 
   constructor(
     private apiService: AdminService,
+    private settingsService: SettingsService,
     private router: Router,
     private store: SignalStore,
     private cdr: ChangeDetectorRef,
@@ -38,7 +44,18 @@ export class AdminHeaderComponent implements OnInit, OnDestroy {
       this.cdr.markForCheck();
     });
 
-    // Fetch initial profile (only in browser)
+    // Subscribe to reactive settings updates (triggered when settings are loaded or saved)
+    this.settingsSub = this.settingsService.settings$.subscribe(settings => {
+      if (settings?.site?.logo) {
+        this.logoUrl = settings.site.logo;
+        this.hasLogoError = false;
+      } else if (settings?.site) {
+        this.logoUrl = '';
+      }
+      this.cdr.markForCheck();
+    });
+
+    // Fetch initial profile & settings (only in browser to prevent SSR blocking)
     if (isPlatformBrowser(this.platformId)) {
       this.apiService.getAccountProfile().subscribe({
         next: () => {
@@ -46,12 +63,31 @@ export class AdminHeaderComponent implements OnInit, OnDestroy {
         },
         error: () => { }
       });
+
+      this.settingsService.getSettings().subscribe({
+        next: (res) => {
+          if (res?.success && res.data?.site?.logo) {
+            this.logoUrl = res.data.site.logo;
+            this.hasLogoError = false;
+            this.cdr.markForCheck();
+          }
+        },
+        error: () => { }
+      });
     }
+  }
+
+  onLogoError(): void {
+    this.hasLogoError = true;
+    this.cdr.markForCheck();
   }
 
   ngOnDestroy(): void {
     if (this.userSub) {
       this.userSub.unsubscribe();
+    }
+    if (this.settingsSub) {
+      this.settingsSub.unsubscribe();
     }
   }
 

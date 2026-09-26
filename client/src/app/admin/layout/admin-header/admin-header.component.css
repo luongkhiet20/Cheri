@@ -54,9 +54,18 @@
 
 .admin-header__logo {
   display: flex;
-  align-items: baseline;
-  gap: 6px;
+  align-items: center;
+  gap: 8px;
   text-decoration: none;
+}
+
+.admin-header__logo-img {
+  max-height: 36px;
+  max-width: 140px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
 }
 
 .admin-header__logo-text {

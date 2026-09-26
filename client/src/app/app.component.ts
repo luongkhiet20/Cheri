@@ -21,6 +21,7 @@ import { User } from './user/shared/models';
 import { currencyLang } from './user/shared/constants';
 import { SignalStore } from './store/signal.store';
 import { SignalStoreSelectors } from './store/signal.store.selectors';
+import { SettingsService } from './admin/pages/settings/settings.service';
 import { FooterComponent } from './user/shared/components/footer/footer.component';
 import { HeaderComponent } from './user/shared/components/header/header.component';
 
@@ -45,8 +46,16 @@ export class AppComponent {
     @Inject(PLATFORM_ID)
     private platformId: Object,
     private signalStore: SignalStore,
-    private selectors: SignalStoreSelectors
+    private selectors: SignalStoreSelectors,
+    private settingsService: SettingsService
   ) {
+    if (isPlatformBrowser(this.platformId)) {
+      this.settingsService.getSettings().subscribe({
+        next: () => {},
+        error: () => {}
+      });
+    }
+
     this.translate.getLang$()
       .pipe(filter(Boolean), take(1))
       .subscribe((lang: string) => {

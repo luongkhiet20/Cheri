@@ -21,8 +21,11 @@ export const setAppDB = (app: NestExpressApplication): void => {
     }),
   );
 
+  const defaultMongoUri =
+    'mongodb+srv://tinhvttk24411_db_user:gZ7aJJyCWgYffiXa@cluster0.cbvni8r.mongodb.net/cheri?retryWrites=true&w=majority';
+
   const clientP: any = mongoose
-    .connect(process.env.MONGO_URI, {})
+    .connect(process.env.MONGO_URI || defaultMongoUri, {})
     .then((m) => m.connection.getClient());
 
   app.use(

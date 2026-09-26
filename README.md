@@ -1,95 +1,153 @@
+# Chéri - Nền Tảng Thương Mại Điện Tử (E-Commerce Platform)
 
+Hệ thống E-Commerce full-stack kết hợp giữa **NestJS 11** (Backend REST API) và **Angular 20** (Frontend SPA & Server-Side Rendering) cùng **Admin Server (Express & MongoDB)**.
 
+---
 
-KHÔNG ĐÚNG ĐỪNG ĐỌC, NHƯNG KO ĐC XÓA FILE NÀY
+## 📋 Yêu Cầu Hệ Thống (Prerequisites)
 
+- **Node.js**: >= 20.x (Khuyến nghị Node 24.x theo `engines`)
+- **npm**: >= 10.x / 11.x
+- **MongoDB**: Cụm MongoDB Atlas Cloud hoặc MongoDB Local
 
-One package.json contain now all neccessary for Nest and Angular, so server-side rendering with Angular is possible
+---
+
+## 🛠️ Cài Đặt (Installation)
+
+Cài đặt tất cả các dependencies cho cả Backend và Frontend:
 
 ```bash
-$ npm install
+npm install
 ```
 
-## Running the app
+---
+
+## ⚙️ Cấu Hình Môi Trường (.env)
+
+Sao chép file cấu hình mẫu `.env.example` thành `.env`:
 
 ```bash
-# development - start BE - port 4000
-$ npm run start:dev
+# Trên Windows (PowerShell / CMD):
+copy .env.example .env
 
-# development - start FE - port 3000
-$ npm run start:client
-
-# watch mode server
-$ npm run start:dev
-
-# build ssr and serve
-$ npm run build
-$ npm run start
+# Trên macOS / Linux:
+cp .env.example .env
 ```
 
-For another commands look to package.json
+Mở file `.env` và kiểm tra/cập nhật các thông số cần thiết:
 
-## Set enviroment for BE 
-
-- Rename .env.example to .env
-
-```bash
-# BE HOST
+```env
+# Cấu hình Server (Backend)
 PORT=4000
 SERVER_URL="http://localhost:4000"
 
-# FE HOST
+# Cấu hình Client (Frontend)
 ORIGIN="http://localhost:3000"
 
-# JWT settings
+# Cấu hình Admin Server
+ADMIN_PORT=5000
+
+# Bảo mật JWT & Session Cookie
 JWT_EXPIRATION="7d"
-JWT_SECRET="youhavetochoseone"
+JWT_SECRET="your_jwt_secret_key"
+COOKIE_KEY="your_cookie_secret_key"
 
-COOKIE_KEY="youhavetochoseone"
-
-# DB URI
-MONGO_URI="mongodb://{user}:{password}@{host}:{port}/{databaseName}"
-
-# Emails
-SENDGRID_KEY="set if you want have notification for order or contact from https://sendgrid.com (ADMIN_EMAILS and user will get notification)"
-
-# Images
-CLOUDINARY_NAME="set name from cloudinary api https://cloudinary.com (for images upload)"
-CLOUDINARY_KEY="set key from cloudinary api  https://cloudinary.com (for images upload)"
-CLOUDINARY_SECRET="set secret from cloudinary api https://cloudinary.com (for images upload)"
-
-# Pay
-STRIPE_PUBLISHABLE_KEY="set for paying with card for orders with stripe https://stripe.com"
-STRIPE_SECRETKEY="set for paying with card for orders with stripe https://stripe.com"
-
-# Google login
-GOOGLE_CLIENT_ID="set for google login activation"
-GOOGLE_CLIENT_SECRET="set for google login activation"
-
-# Admin emails get notification from sendgrid when order or contact are submitted
-ADMIN_EMAILS="your@email.com, another@mail.com"
-
-# Recaptcha server key from google
-RECAPTCHA_SERVER_KEY="RECAPTCHA_SERVER_KEY"
-
-# Get location from IP - https://geolocation-db.com
-GEO_LOCATION_API_KEY="GEO_LOCATION_API_KEY"
-
-# FE ENV SEND FROM BE
-FE_STRIPE_PUBLISHABLE_KEY="FE_STRIPE_PUBLISHABLE_KEY"
-FE_TINYMCE_API_KEY="FE_TINYMCE_API_KEY"
-FE_RECAPTCHA_CLIENT_KEY="FE_RECAPTCHA_CLIENT_KEY"
+# Kết nối Cơ sở dữ liệu (MongoDB Atlas)
+MONGO_URI="mongodb+srv://<user>:<password>@<cluster>.mongodb.net/cheri?retryWrites=true&w=majority"
 ```
-## Docker
+
+---
+
+## 🚀 Hướng Dẫn Chạy Dự Án (Running the Project)
+
+### 1. Chạy Môi Trường Development (Khuyến Nghị)
+
+Mở **2 cửa sổ Terminal**:
+
+#### **Terminal 1: Chạy Backend (Cổng 4000 & 5000)**
+```bash
+npm run start:dev
+```
+- API Server khách hàng chạy tại: `http://localhost:4000`
+- Tự động kích hoạt **Admin API Server** tại: `http://localhost:5000` (nếu chưa chạy).
+- Tự động restart khi sửa code (`--watch`).
+
+> *Lưu ý:* Bạn cũng có thể chạy riêng Admin Server bằng lệnh: `npm run start:admin`
+
+#### **Terminal 2: Chạy Frontend (Angular - Cổng 3000)**
+```bash
+npm run start:client
+```
+- Giao diện Client chạy tại: `http://localhost:3000`
+- Truy cập trang Admin tại: `http://localhost:3000/admin` *(Yêu cầu đăng nhập tài khoản có quyền `admin` như `admin@example.com`)*.
+- Tự động reload trình duyệt khi sửa code (Live Reload).
+
+---
+
+### 2. Bảng Lệnh Thường Dùng
+
+| Lệnh | Mô tả |
+| :--- | :--- |
+| `npm run start:dev` | Chạy Backend NestJS (port 4000) & tự kích hoạt Admin API (port 5000) |
+| `npm run start:client` | Chạy Frontend Angular (port 3000) |
+| `npm run start:admin` | Chạy riêng Admin API server trên cổng 5000 (`node server/admin-server.js`) |
+| `npm run start:client:https` | Chạy client với giao thức HTTPS trên cổng 3000 |
+| `npm run start:debug` | Chạy backend NestJS với chế độ Debug |
+| `npm run watch` | Theo dõi và build client ở chế độ development |
+
+---
+
+### 3. Chạy Môi Trường Production & SSR (Server-Side Rendering)
+
+Khi cần build và triển khai SSR:
 
 ```bash
-# pull docker
+# 1. Build ứng dụng SSR
+npm run build:ssr
+
+# 2. Khởi chạy Server SSR
+npm run serve:ssr
+# hoặc
+npm start
+```
+
+---
+
+### 4. Build Độc Lập
+
+```bash
+# Build riêng Backend
+npm run build:server
+
+# Build riêng Frontend Client
+npm run build:client
+```
+
+---
+
+## 🧹 Kiểm Tra & Định Dạng Code (Lint & Format)
+
+```bash
+# Format code backend bằng Prettier
+npm run format
+
+# Kiểm tra cú pháp TypeScript/ESLint
+npm run lint
+npm run lint:client
+
+# Kiểm tra & sửa CSS bằng Stylelint
+npm run lint:css
+npm run lint:css:fix
+```
+
+---
+
+## 🐳 Triển Khai Với Docker (Tùy Chọn)
+
+```bash
+# Kéo image Docker
 docker pull pararel/eshop-mean:latest
 
-# run docker with env file
-docker run --env-file $PathToEnv --network=host pararel/eshop-mean:latest
-
-# run docker with env set in cmd line
-docker run --e MONGO_URI=mongodbUrl --e OTHER_ENV=otherEnvValue --network=host pararel/eshop-mean:latest
-
+# Chạy Docker kèm file .env
+docker run --env-file .env --network=host pararel/eshop-mean:latest
 ```

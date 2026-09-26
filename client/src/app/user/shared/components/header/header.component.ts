@@ -32,7 +32,7 @@ export class HeaderComponent implements OnInit {
   productTitles$: Signal<string[]>;
   userOrders$: Signal<Order[]>;
   showAutocomplete$ = new BehaviorSubject(false);
-  lang$: Observable<string>;
+  lang$: Observable<string> = of('vi');
   showMobileNav = false;
 
   leftNavItems = [
@@ -75,7 +75,7 @@ export class HeaderComponent implements OnInit {
     private selectors: SignalStoreSelectors,
     public translate: TranslateService) {
 
-    this.lang$ = this.translate.getLang$();
+    this.lang$ = this.translate.getLang$() || of('vi');
   }
 
   ngOnInit() {
@@ -106,20 +106,25 @@ export class HeaderComponent implements OnInit {
   }
 
   isAdmin(): boolean {
-    const user = this.user$ ? this.user$() : null;
-    if (!user) return false;
+    const user = typeof this.user$ === 'function' ? this.user$() : null;
+    if (!user) {
+      console.log('[HeaderComponent] isAdmin(): false (Guest/No user)');
+      return false;
+    }
     const roles = user.roles || (user.role ? [user.role] : []);
-    return Array.isArray(roles) && roles.some((r: string) => r && r.toLowerCase() === 'admin');
+    const isAdm = Array.isArray(roles) && roles.some((r: string) => r && r.toLowerCase() === 'admin');
+    console.log('[HeaderComponent] isAdmin():', isAdm, 'Roles:', roles);
+    return isAdm;
   }
 
   isRegularUser(): boolean {
-    const user = this.user$ ? this.user$() : null;
+    const user = typeof this.user$ === 'function' ? this.user$() : null;
     if (!user) return false;
     return !this.isAdmin();
   }
 
   getUserDisplayName(): string {
-    const user = this.user$ ? this.user$() : null;
+    const user = typeof this.user$ === 'function' ? this.user$() : null;
     if (!user) return '';
     return user.fullName || user.name || (user.email ? user.email.split('@')[0] : '');
   }

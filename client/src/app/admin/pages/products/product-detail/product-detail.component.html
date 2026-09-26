@@ -10,7 +10,8 @@
       </div>
       <h1 class="page-title">{{ rawProduct?.vi?.title || 'Chi tiết sản phẩm' }}</h1>
       <p class="page-subtitle">Dữ liệu thực tế từ collection <code>products</code> trong MongoDB (ID:
-        <code>{{ productId }}</code>)</p>
+        <code>{{ productId }}</code>)
+      </p>
     </div>
 
     <div class="page-actions">
@@ -784,34 +785,8 @@
           </div>
         </div>
 
-        <!-- Shipping Info -->
-        <div class="detail-card">
-          <h3 class="card-title">Thông tin vận chuyển</h3>
-          <div class="spec-list">
-            <div class="spec-item">
-              <span class="spec-k">Phương thức (shipping)</span>
-              <span class="spec-v">{{ rawProduct.vi?.shipping || 'basic' }}</span>
-            </div>
-            <div class="spec-item">
-              <span class="spec-k">Phí vận chuyển chung</span>
-              <span class="spec-v">{{ formatPrice(rawProduct.vi?.shippingCost) }}</span>
-            </div>
-            <div class="spec-item">
-              <span class="spec-k">Vận chuyển tiêu chuẩn</span>
-              <span class="spec-v">
-                {{ rawProduct.vi?.shippingBasic ? 'Hỗ trợ — ' + formatPrice(rawProduct.vi?.shippingBasicCost) : 'Không
-                hỗ trợ' }}
-              </span>
-            </div>
-            <div class="spec-item">
-              <span class="spec-k">Vận chuyển hỏa tốc / mở rộng</span>
-              <span class="spec-v">
-                {{ rawProduct.vi?.shippingExtended ? 'Hỗ trợ — ' + formatPrice(rawProduct.vi?.shippingExtendedCost) :
-                'Không hỗ trợ' }}
-              </span>
-            </div>
-          </div>
-        </div>
+
+
 
       </div>
 

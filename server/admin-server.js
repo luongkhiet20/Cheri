@@ -93,7 +93,10 @@ const dashboardHandler = async (req, res) => {
 
     // 1. Concurrent queries to MongoDB Atlas for high performance & low latency
     const [pingRes, orders, products, categoriesCount, users] = await Promise.all([
-      db.command({ ping: 1 }).then(() => 'Connected').catch(() => 'Disconnected'),
+      db.command({ ping: 1 }).then(() => 'Connected').catch((err) => {
+        console.error('db.command ping failed:', err);
+        return 'Disconnected';
+      }),
       db.collection('orders').find({}).sort({ dateAdded: -1, _id: -1 }).toArray(),
       db.collection('products').find({}, {
         projection: {
@@ -252,8 +255,8 @@ const dashboardHandler = async (req, res) => {
     const system = {
       database: 'cheri',
       cluster: 'cluster0.cbvni8r.mongodb.net',
-      mongodb: mongoStatus === 'connected' ? 'Connected' : 'Disconnected',
-      mongodbStatusText: mongoStatus === 'connected' ? 'Đã kết nối thành công' : 'Mất kết nối MongoDB',
+      mongodb: mongoStatus,
+      mongodbStatusText: mongoStatusText,
       backend: 'Online',
       serverUrl: 'http://localhost:5000',
       productsInStock: inStockCount,

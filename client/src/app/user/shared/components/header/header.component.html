@@ -107,30 +107,29 @@
 
   <!-- 1. GUEST: Chưa đăng nhập -->
   @if (!user$()) {
-  <button mat-menu-item [routerLink]="['/' + ((lang$ | async) || 'vi') + '/authorize/signin']" routerLinkActive="nav-active-link" title="Đăng nhập">
+  <button mat-menu-item [routerLink]="['/' + ((lang$ | async) || 'vi') + '/authorize/signin']"
+    routerLinkActive="nav-active-link" title="Đăng nhập">
     <mat-icon>account_circle</mat-icon>
-    <a class="nav-link"> Đăng nhập</a>
   </button>
   }
 
   <!-- 2. USER: Đã đăng nhập với roles: ['user'] -->
   @if (isRegularUser()) {
-    @if (userOrders$()?.length) {
-    <button mat-menu-item [routerLink]="['/' + ((lang$ | async) || 'vi') + '/orders']" routerLinkActive="nav-active-link" title="Đơn hàng">
-      <mat-icon>assignment</mat-icon>
-      <a class="nav-link"> {{ 'Orders' | translate | async }}</a>
-    </button>
-    }
+  @if (userOrders$()?.length) {
+  <button mat-menu-item [routerLink]="['/' + ((lang$ | async) || 'vi') + '/orders']" routerLinkActive="nav-active-link"
+    title="Đơn hàng">
+    <mat-icon>assignment</mat-icon>
+    <a class="nav-link"> {{ 'Orders' | translate | async }}</a>
+  </button>
+  }
 
-    <button mat-menu-item [routerLink]="['/' + (lang$ | async) + '/profile']" routerLinkActive="nav-active-link" title="Hồ sơ cá nhân">
-      <mat-icon id="user_icon">person</mat-icon>
-      <a class="nav-link"> {{ getUserDisplayName() || 'Hồ sơ' }}</a>
-    </button>
+  <button mat-menu-item [routerLink]="['/' + (lang$ | async) + '/profile']" routerLinkActive="nav-active-link"
+    title="Hồ sơ cá nhân">
+    <mat-icon id="user_icon">person</mat-icon>
+    <a class="nav-link"> {{ getUserDisplayName() || 'Hồ sơ' }}</a>
+  </button>
 
-    <button mat-menu-item (click)="onLogout()" title="Đăng xuất">
-      <mat-icon>exit_to_app</mat-icon>
-      <a class="nav-link"> {{ 'Logout' | translate | async }}</a>
-    </button>
+
   }
 
 </ng-template>

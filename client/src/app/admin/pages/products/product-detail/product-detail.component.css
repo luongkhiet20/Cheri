@@ -12,7 +12,7 @@
 }
 
 .breadcrumb-link:hover {
-  color: #2563eb;
+  color: #990000;
   text-decoration: underline;
 }
 
@@ -79,14 +79,16 @@
   width: 36px;
   height: 36px;
   border: 3px solid #e2e8f0;
-  border-top-color: #2563eb;
+  border-top-color: #990000;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   margin: 0 auto 16px auto;
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .mt-4 {
@@ -200,7 +202,7 @@
 
 .gallery-thumb:hover,
 .gallery-thumb.active {
-  border-color: #2563eb;
+  border-color: #990000;
   transform: translateY(-1px);
 }
 
@@ -215,7 +217,7 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background: #2563eb;
+  background: #990000;
   color: #ffffff;
   font-size: 0.5625rem;
   text-align: center;
@@ -286,8 +288,8 @@
 }
 
 .pill-category {
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: #fff5f5;
+  color: #74070E;
   font-size: 0.75rem;
   font-weight: 600;
   padding: 3px 10px;
@@ -346,7 +348,7 @@
 .price-val {
   font-size: 1.95rem;
   font-weight: 700;
-  color: #2563eb;
+  color: #990000;
   letter-spacing: -0.02em;
 }
 
@@ -597,6 +599,7 @@
   background: #dcfce7;
   color: #15803d;
 }
+
 .variant-status--success .status-dot-mini {
   background: #16a34a;
 }
@@ -605,6 +608,7 @@
   background: #fef3c7;
   color: #b45309;
 }
+
 .variant-status--warning .status-dot-mini {
   background: #f59e0b;
 }
@@ -613,6 +617,7 @@
   background: #fee2e2;
   color: #dc2626;
 }
+
 .variant-status--danger .status-dot-mini {
   background: #ef4444;
 }
@@ -621,6 +626,7 @@
   background: #f1f5f9;
   color: #475569;
 }
+
 .variant-status--neutral .status-dot-mini {
   background: #94a3b8;
 }
@@ -646,9 +652,9 @@
 }
 
 .total-stock-highlight {
-  color: #2563eb;
+  color: #990000;
   font-weight: 700;
-  background: #eff6ff;
+  background: #fff5f5;
   padding: 2px 8px;
   border-radius: 4px;
 }
@@ -689,7 +695,7 @@
 }
 
 .text-primary-bold {
-  color: #2563eb;
+  color: #990000;
 }
 
 .text-success {
@@ -721,8 +727,8 @@
 }
 
 .variants-count-badge {
-  background: #eff6ff;
-  color: #2563eb;
+  background: #fff5f5;
+  color: #990000;
   font-size: 0.75rem;
   font-weight: 600;
   padding: 4px 10px;
@@ -737,8 +743,8 @@
 }
 
 .stock-summary-variants {
-  background: #f0f7ff;
-  border-color: #bfdbfe;
+  background: #fff7f7;
+  border-color: #e8b4b4;
 }
 
 .badge-stock-status {
@@ -816,8 +822,8 @@
 }
 
 .badge-single-pill {
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: #fff5f5;
+  color: #74070E;
   font-size: 0.75rem;
   font-weight: 600;
   padding: 3px 8px;
@@ -905,7 +911,7 @@
 
 /* General Pricing Card (Only when !hasVariants) */
 .general-pricing-card {
-  border-left: 4px solid #2563eb;
+  border-left: 4px solid #990000;
 }
 
 .general-price-banner {
@@ -1057,6 +1063,7 @@
   background: #dcfce7;
   color: #15803d;
 }
+
 .bool-true .bool-dot {
   background: #16a34a;
 }
@@ -1065,6 +1072,7 @@
   background: #f1f5f9;
   color: #64748b;
 }
+
 .bool-false .bool-dot {
   background: #94a3b8;
 }
@@ -1106,8 +1114,8 @@
 }
 
 .stat-box-highlight {
-  background: #eff6ff;
-  border-color: #bfdbfe;
+  background: #fff5f5;
+  border-color: #e8b4b4;
 }
 
 .stat-box-title {
@@ -1141,9 +1149,6 @@
 }
 
 .single-hint {
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: #fff5f5;
+  color: #74070E;
 }
-
-
-

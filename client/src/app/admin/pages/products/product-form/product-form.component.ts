@@ -842,11 +842,7 @@ export class ProductFormComponent implements OnInit {
       if (!confirmLeave) return;
     }
 
-    if (this.isEditMode && this.productId) {
-      this.router.navigate(['/admin/products', this.productId]);
-    } else {
-      this.router.navigate(['/admin/products']);
-    }
+    this.router.navigate(['/admin/products']);
   }
 
   // Delete product action inside Edit mode

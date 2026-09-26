@@ -129,6 +129,47 @@ export class HeaderComponent implements OnInit {
     return user.fullName || user.name || (user.email ? user.email.split('@')[0] : '');
   }
 
+  private lastUserId: string | null = null;
+  avatarLoadFailed = false;
+
+  getUserAvatar(): string | null {
+    const user = typeof this.user$ === 'function' ? this.user$() : null;
+    if (!user) return null;
+
+    const currentId = user.id || user._id || user.email;
+    if (currentId !== this.lastUserId) {
+      this.lastUserId = currentId;
+      this.avatarLoadFailed = false;
+    }
+
+    if (this.avatarLoadFailed) return null;
+
+    // Lấy ảnh đại diện từ user$()?.images
+    const imgs = (user as any).images;
+    if (Array.isArray(imgs) && imgs.length > 0) {
+      const first = imgs.find((img: any) => typeof img === 'string' && img.trim().length > 0);
+      if (first) return first;
+    }
+    if (typeof imgs === 'string' && (imgs as string).trim().length > 0) {
+      return (imgs as string).trim();
+    }
+    if (user.avatar && typeof user.avatar === 'string' && user.avatar.trim().length > 0) {
+      return user.avatar.trim();
+    }
+    return null;
+  }
+
+  getUserInitial(): string {
+    const user = typeof this.user$ === 'function' ? this.user$() : null;
+    if (!user) return 'C';
+    const name = user.fullName || user.name || user.email || 'C';
+    return name.charAt(0).toUpperCase();
+  }
+
+  onAvatarError(): void {
+    this.avatarLoadFailed = true;
+  }
+
   onLogout(): void {
     const currentLang = (this.translate as any)?.lang || 'vi';
     const targetUrl = `/${currentLang}`;

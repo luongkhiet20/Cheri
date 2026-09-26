@@ -34,6 +34,9 @@
         <a [routerLink]="['/admin/account']" class="admin-header__menu-item" role="menuitem" (click)="navigateTo('/admin/account', $event)" id="header-menu-account">
           Thông tin tài khoản
         </a>
+        <a [routerLink]="['/']" class="admin-header__menu-item" role="menuitem" (click)="navigateTo('/', $event)" id="header-menu-store">
+          Xem trang cửa hàng
+        </a>
         <a [routerLink]="['/admin/settings']" class="admin-header__menu-item" role="menuitem" (click)="navigateTo('/admin/settings', $event)" id="header-menu-settings">
           Cài đặt
         </a>

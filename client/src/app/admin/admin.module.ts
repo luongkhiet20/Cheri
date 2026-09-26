@@ -54,6 +54,7 @@ const routes: Routes = [
     component: AdminLayout,
     children: [
       { path: '', component: DashboardComponent },
+      { path: 'dashboard', component: DashboardComponent },
       { path: 'products', component: ProductsComponent },
       { path: 'products/add', component: ProductFormComponent },
       { path: 'products/:id', component: ProductDetailComponent },

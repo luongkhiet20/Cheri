@@ -68,7 +68,20 @@ export class InventoryComponent implements OnInit {
       next: (res) => {
         this.isLoading = false;
         if (res.success) {
-          this.allData = res.data || [];
+          this.allData = (res.data || []).map((item: any) => {
+            const raw = item.raw || item;
+            const hasVariants = Array.isArray(item.variants) && item.variants.length > 0;
+            const totalStock = hasVariants
+              ? item.variants.reduce((sum: number, v: any) => sum + (Number(v.stock) || 0), 0)
+              : Number(item.quantity !== undefined ? item.quantity : (raw.vi?.quantity ?? 0));
+            const reserved = item.reserved ?? 0;
+            const available = Math.max(0, totalStock - reserved);
+            return {
+              ...item,
+              quantity: totalStock,
+              available
+            };
+          });
           this.data = [...this.allData];
           this.pagination = { ...this.pagination, total: this.data.length };
         }

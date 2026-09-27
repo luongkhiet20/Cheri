@@ -27,48 +27,8 @@
           alt="Chéri Grand Campaign" referrerpolicy="no-referrer" class="home-hero-img" />
       </section>
 
-      <!-- ══════════════════════════════════════════
-           SECTION 2 – CTA Virtual Try-On
-      ══════════════════════════════════════════ -->
-      <section class="home-cta-section">
-        <div class="home-cta-card">
-          <!-- Decorative blur blob -->
-          <div class="home-cta-blob"></div>
 
-          <!-- Left: text -->
-          <div class="home-cta-text">
-            <div class="home-cta-badge">
-              <!-- Sparkle SVG -->
-              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                class="home-cta-badge-icon">
-                <polygon
-                  points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-              </svg>
-              <span>TRẢI NGHIỆM MỚI</span>
-            </div>
-            <h3 class="home-cta-title">Phác Họa Vóc Dáng</h3>
-            <p class="home-cta-desc">
-              "Đắm mình trong nét lãng mạn của từng thiết kế, tự tin sải bước
-              cùng những bộ đầm tinh tế. Công nghệ đo form tiên tiến mang đến độ
-              tương hợp với cơ thể chính xác đến 98%."
-            </p>
-          </div>
 
-          <!-- Right: button -->
-          <div class="home-cta-action">
-            <a class="home-cta-btn" [routerLink]="['/' + (lang() || 'vi') + '/virtual-try-on']">
-              <span>Trải Nghiệm</span>
-              <!-- Arrow SVG -->
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="5" y1="12" x2="19" y2="12" />
-                <polyline points="12 5 19 12 12 19" />
-              </svg>
-            </a>
-          </div>
-        </div>
-      </section>
 
       <!-- ══════════════════════════════════════════
            SECTION 3 – Featured Best-Sellers Slider
@@ -126,6 +86,9 @@
               <span class="home-product-badge home-product-badge--new">NEW</span>
               }
 
+              <!-- Heart / Wishlist button (bottom-right, always visible) -->
+              <app-wishlist-button [product]="product" [lang]="lang() || 'vi'"></app-wishlist-button>
+
               <!-- Add to cart overlay -->
               <div class="home-product-overlay">
                 @if (!isOutOfStock(product)) {
@@ -179,12 +142,8 @@
           <div class="home-muse-grid">
 
             <!-- Left Column: Model Imagery -->
-            <div class="home-muse-image-col"
-              [routerLink]="['/' + (lang() || 'vi') + '/product/all']"
-              (click)="goToProducts()"
-              role="button"
-              tabindex="0"
-              title="Xem tất cả sản phẩm">
+            <div class="home-muse-image-col" [routerLink]="['/' + (lang() || 'vi') + '/product/all']"
+              (click)="goToProducts()" role="button" tabindex="0" title="Xem tất cả sản phẩm">
               <div class="home-muse-img-wrapper">
                 <img src="https://static.wixstatic.com/media/911b80_c2c4f8245cbc4a1e80c6e871af920c1d~mv2.png"
                   alt="Nàng thơ Chéri" referrerpolicy="no-referrer" class="home-muse-img" />

@@ -126,7 +126,16 @@ export class ProductsComponent implements OnInit {
       next: (res) => {
         this.isLoading = false;
         if (res.success) {
-          this.data = res.data || [];
+          this.data = (res.data || []).map((p: any) => {
+            const hasVariants = Array.isArray(p.variants) && p.variants.length > 0;
+            const stock = hasVariants
+              ? p.variants.reduce((sum: number, v: any) => sum + (Number(v.stock) || 0), 0)
+              : Number(p.quantity !== undefined ? p.quantity : (p.raw?.vi?.quantity ?? (typeof p.stock === 'number' ? p.stock : 0)));
+            return {
+              ...p,
+              stock
+            };
+          });
           this.pagination = {
             ...this.pagination,
             total: res.pagination?.total ?? 0

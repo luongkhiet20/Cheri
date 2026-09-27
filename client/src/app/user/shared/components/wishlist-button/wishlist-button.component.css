@@ -1,0 +1,58 @@
+:host {
+  display: contents;
+}
+
+.pcard-wishlist-btn {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  left: auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 3;
+  color: #9ca3af;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  padding: 0;
+}
+
+.pcard-wishlist-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  transition: fill 0.2s ease, stroke 0.2s ease;
+  display: block;
+}
+
+.pcard-wishlist-btn:hover {
+  color: #74070e;
+  border-color: #fca5a5;
+  background: #fff;
+  transform: scale(1.08);
+  box-shadow: 0 3px 10px rgba(116, 7, 14, 0.15);
+}
+
+/* Active / in wishlist state */
+.pcard-wishlist-btn--active {
+  color: #74070e !important;
+  border-color: #fca5a5 !important;
+  background: #fff !important;
+}
+
+.pcard-wishlist-btn--active svg {
+  fill: #74070e !important;
+  stroke: #74070e !important;
+}
+
+.pcard-wishlist-btn--active:hover {
+  transform: scale(1.08);
+}

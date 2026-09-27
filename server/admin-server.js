@@ -336,7 +336,9 @@ function formatProduct(p, lang = 'vi') {
   const price = salePrice || regularPrice || 0;
   
   let quantity = 0;
-  if (langData.quantity !== undefined && langData.quantity !== null && langData.quantity !== '') {
+  if (p.variants && Array.isArray(p.variants) && p.variants.length > 0) {
+    quantity = p.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+  } else if (langData.quantity !== undefined && langData.quantity !== null && langData.quantity !== '') {
     quantity = Number(langData.quantity);
   } else if (fallbackData.quantity !== undefined && fallbackData.quantity !== null && fallbackData.quantity !== '') {
     quantity = Number(fallbackData.quantity);
@@ -393,6 +395,7 @@ function formatProduct(p, lang = 'vi') {
     hasSizes: Boolean(langData.hasSizes !== undefined ? langData.hasSizes : (p.hasSizes || false)),
     hasClassification: Boolean(langData.hasClassification !== undefined ? langData.hasClassification : (p.hasClassification || false)),
     classifications: langData.classifications || p.classifications || fallbackData.classifications || [],
+    variants: Array.isArray(p.variants) ? p.variants : [],
     raw: p
   };
 }
@@ -3477,12 +3480,14 @@ app.get('/api/inventory', async (req, res) => {
       const name = vi.title || p.title || p.titleUrl?.replace(/-/g, ' ') || 'Sản phẩm';
       
       let stock = 0;
-      if (vi.stock !== undefined && vi.stock !== null && vi.stock !== '') {
-        stock = Number(vi.stock);
+      if (p.variants && Array.isArray(p.variants) && p.variants.length > 0) {
+        stock = p.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
       } else if (vi.quantity !== undefined && vi.quantity !== null && vi.quantity !== '') {
         stock = Number(vi.quantity);
       } else if (p.quantity !== undefined && p.quantity !== null && p.quantity !== '') {
         stock = Number(p.quantity);
+      } else if (vi.stock !== undefined && vi.stock !== null && !isNaN(Number(vi.stock))) {
+        stock = Number(vi.stock);
       }
       if (isNaN(stock) || stock < 0) stock = 0;
 
@@ -3510,7 +3515,9 @@ app.get('/api/inventory', async (req, res) => {
         reserved,
         available,
         status,
-        statusVariant
+        statusVariant,
+        variants: Array.isArray(p.variants) ? p.variants : [],
+        raw: p
       };
     });
 

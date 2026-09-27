@@ -45,7 +45,11 @@
   </div>
   <div
     class="product-main-image"
-    [attr.aria-labelledby]="product.mainImage.name"
+    [attr.aria-labelledby]="product?.mainImage?.name || ''"
     [style.background]="'url(' + product?.mainImage?.url + ') no-repeat'"
-  ></div>
+  >
+    @if (product) {
+    <app-wishlist-button [product]="product" [lang]="lang || 'vi'"></app-wishlist-button>
+    }
+  </div>
 </div>

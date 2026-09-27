@@ -102,7 +102,7 @@ export class ProductFormComponent implements OnInit {
 
   // Helpers for classifications
   classificationInput = '';
-  suggestedClassifications = ['Áo', 'Quần Jean', 'Váy', 'Chân váy', 'Áo khoác', 'Set đồ', 'Phụ kiện'];
+  suggestedClassifications = ['Áo', 'Quần Jean', 'Đầm', 'Chân váy', 'Áo khoác', 'Full set', 'Phụ kiện'];
 
   // Helpers for colors
   newColorName = '';
@@ -110,10 +110,10 @@ export class ProductFormComponent implements OnInit {
   suggestedColors = [
     { name: 'Đen', hex: '#000000' },
     { name: 'Trắng', hex: '#ffffff' },
-    { name: 'Đỏ', hex: '#ef4444' },
-    { name: 'Xanh Navy', hex: '#1e3a8a' },
-    { name: 'Be', hex: '#d4b996' },
-    { name: 'Hồng', hex: '#ec4899' },
+    { name: 'Đỏ', hex: '#9a0a0aff' },
+    { name: 'Xanh', hex: '#14c8ceff' },
+    { name: 'Be', hex: '#eaefbbff' },
+    { name: 'Hồng', hex: '#f5bad8ff' },
     { name: 'Nâu', hex: '#78350f' }
   ];
 
@@ -123,7 +123,7 @@ export class ProductFormComponent implements OnInit {
 
   // Helpers for tags
   tagInput = '';
-  suggestedTags = ['bán-chạy', 'sale', 'mới-ra-mắt', 'hot-trend', 'hàng-mới', 'cao-cấp'];
+  suggestedTags = ['Bán chạy', 'Sale', 'Mới ra mắt', 'Hot trend', 'Hàng mới', 'cao-cấp'];
 
   // Quick batch actions for variants (UI helpers only, not stored in DB)
   quickPrice: number | null = null;

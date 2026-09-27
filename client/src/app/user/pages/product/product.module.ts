@@ -21,6 +21,7 @@ import { ProductContentComponent } from '../../shared/components/product-content
 import { ProductsListComponent } from '../../shared/components/products-list/products-list.component';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { SidebarComponent } from '../../shared/components/sidebar/sidebar.component';
+import { WishlistButtonComponent } from '../../shared/components/wishlist-button/wishlist-button.component';
 
 @NgModule({
   declarations: [
@@ -47,6 +48,7 @@ import { SidebarComponent } from '../../shared/components/sidebar/sidebar.compon
     ProductsListComponent,
     PaginationComponent,
     SidebarComponent,
+    WishlistButtonComponent,
 
     RouterModule.forChild([
       { path: '', redirectTo: 'all', pathMatch: 'full' },

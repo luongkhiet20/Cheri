@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, PLATFORM_ID, Inject, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, PLATFORM_ID, Inject, ChangeDetectorRef, effect } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -7,19 +7,24 @@ import { ApiService } from '../../../services/api.service';
 import { TranslateService } from '../../../services/translate.service';
 import { SignalStore } from '../../../store/signal.store';
 import { Product } from '../../shared/models';
+import { WishlistService } from '../../../services/wishlist.service';
+import { WishlistButtonComponent } from '../../shared/components/wishlist-button/wishlist-button.component';
 
 @Component({
   selector: 'app-wishlist',
   standalone: true,
-  imports: [CommonModule, RouterModule, MatSnackBarModule],
+  imports: [CommonModule, RouterModule, MatSnackBarModule, WishlistButtonComponent],
   templateUrl: './wishlist.html',
   styleUrl: './wishlist.css'
 })
 export class Wishlist implements OnInit, OnDestroy {
-  wishlist: string[] = [];
   products: any[] = [];
   currentLang = 'vi';
   private _storageListener?: (e: StorageEvent) => void;
+
+  get wishlist(): string[] {
+    return this.wishlistService.wishlistIds();
+  }
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
@@ -28,8 +33,15 @@ export class Wishlist implements OnInit, OnDestroy {
     private store: SignalStore,
     private router: Router,
     private snackBar: MatSnackBar,
-    private cdr: ChangeDetectorRef
-  ) { }
+    private cdr: ChangeDetectorRef,
+    private wishlistService: WishlistService
+  ) {
+    // Automatically trigger change detection when wishlist state changes
+    effect(() => {
+      this.wishlistService.wishlistIds();
+      this.cdr.markForCheck();
+    });
+  }
 
   ngOnInit(): void {
     this.translateService.getLang$().subscribe((lang) => {
@@ -59,29 +71,18 @@ export class Wishlist implements OnInit, OnDestroy {
   }
 
   loadWishlist(): void {
+    this.wishlistService.loadFromStorage();
     if (isPlatformBrowser(this.platformId)) {
-      try {
-        const saved = localStorage.getItem('cheri_wishlist') || localStorage.getItem('wishlist');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          this.wishlist = Array.isArray(parsed) ? parsed : [];
-        } else {
-          this.wishlist = [];
-        }
-      } catch (e) {
-        this.wishlist = [];
-      }
-
       try {
         const savedItemsStr = localStorage.getItem('cheri_wishlist_items');
         if (savedItemsStr) {
           const parsed = JSON.parse(savedItemsStr);
           if (Array.isArray(parsed) && parsed.length > 0) {
             this.products = parsed.map((p) => this.normalizeProduct(p));
-            // Keep this.wishlist IDs synced
+            // Keep wishlist IDs synced
             const itemIds = this.products.map((p) => p.id || p._id).filter(Boolean);
             if (this.wishlist.length === 0 && itemIds.length > 0) {
-              this.wishlist = itemIds;
+              this.wishlistService.setWishlistIds(itemIds);
             }
           }
         }
@@ -91,12 +92,10 @@ export class Wishlist implements OnInit, OnDestroy {
 
   saveWishlist(): void {
     if (isPlatformBrowser(this.platformId)) {
-      localStorage.setItem('cheri_wishlist', JSON.stringify(this.wishlist));
-      localStorage.setItem('wishlist', JSON.stringify(this.wishlist));
       const activeProducts = this.products.filter(
         (p) => this.wishlist.includes(p.id) || this.wishlist.includes(p._id)
       );
-      localStorage.setItem('cheri_wishlist_items', JSON.stringify(activeProducts));
+      this.wishlistService.setWishlist(this.wishlist, activeProducts);
     }
   }
 
@@ -172,9 +171,8 @@ export class Wishlist implements OnInit, OnDestroy {
   }
 
   onRemoveFromWishlist(productId: string): void {
-    this.wishlist = this.wishlist.filter((id) => id !== productId);
+    this.wishlistService.removeFromWishlist(productId);
     this.products = this.products.filter((p) => (p._id || p.id) !== productId);
-    this.saveWishlist();
     this.cdr.markForCheck();
   }
 

@@ -9,12 +9,13 @@ import { PriceFormatPipe } from '../../../../pipes/price.pipe';
 import { MatChipsModule } from '@angular/material/chips';
 import { CartShowComponent } from '../cart-show/cart-show.component';
 import { MatButtonModule } from '@angular/material/button';
+import { WishlistButtonComponent } from '../wishlist-button/wishlist-button.component';
 
 @Component({
   selector: 'app-product-content',
   templateUrl: './product-content.component.html',
   styleUrls: ['./product-content.component.css'],
-  imports: [CommonModule, TranslatePipe, RouterLink, PriceFormatPipe, MatChipsModule, CartShowComponent, MatButtonModule],
+  imports: [CommonModule, TranslatePipe, RouterLink, PriceFormatPipe, MatChipsModule, CartShowComponent, MatButtonModule, WishlistButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProductContentComponent {

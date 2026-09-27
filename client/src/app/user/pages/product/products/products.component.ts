@@ -8,6 +8,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
 
 import { TranslateService } from '../../../../services/translate.service';
+import { WishlistService } from '../../../../services/wishlist.service';
 import { sortOptions } from '../../../shared/constants';
 import { Product, Category, Pagination, Cart } from '../../../shared/models';
 import { SignalStore } from '../../../../store/signal.store';
@@ -48,8 +49,7 @@ export class ProductsComponent implements OnDestroy {
   selectedRatings = signal<number[]>([]);
   sidebarOpened = false;
   columnsView = signal<number>(4);
-  wishlistIds = signal<string[]>([]);
-  private _storageListener?: (e: StorageEvent) => void;
+  wishlistIds = computed(() => this.wishlistService.wishlistIds());
 
   // ── Computed active filters count ──
   activeFiltersCount = computed(() => {
@@ -113,91 +113,12 @@ export class ProductsComponent implements OnDestroy {
   }
 
   isInWishlist(id: string): boolean {
-    return !!id && this.wishlistIds().includes(id);
+    return this.wishlistService.isInWishlist(id);
   }
 
   toggleWishlist(event: MouseEvent, product: any): void {
     event.stopPropagation();
-    const id: string = product._id || product.id;
-    if (!id) return;
-    const current = this.wishlistIds();
-    const isIn = current.includes(id);
-    const next = isIn ? current.filter(x => x !== id) : [...current, id];
-    this.wishlistIds.set(next);
-
-    if (isPlatformBrowser(this.platformId)) {
-      localStorage.setItem('cheri_wishlist', JSON.stringify(next));
-      localStorage.setItem('wishlist', JSON.stringify(next));
-
-      try {
-        const savedItemsStr = localStorage.getItem('cheri_wishlist_items');
-        let savedItems: any[] = savedItemsStr ? JSON.parse(savedItemsStr) : [];
-        if (!Array.isArray(savedItems)) savedItems = [];
-
-        if (isIn) {
-          savedItems = savedItems.filter(item => (item._id || item.id) !== id);
-        } else {
-          const itemToSave = {
-            _id: id,
-            id: id,
-            title: product.title || product.name || '',
-            name: product.title || product.name || '',
-            titleUrl: product.titleUrl || id,
-            mainImage: product.mainImage,
-            images: product.images || [],
-            image: product.mainImage?.url || (product.images && product.images[0]) || '',
-            price: product.salePrice ?? product.regularPrice ?? product.price ?? 0,
-            salePrice: product.salePrice,
-            regularPrice: product.regularPrice,
-            stock: product.stock,
-            onSale: product.onSale,
-            tags: product.tags || [],
-            categoryName: (product.tags && product.tags[0]) || 'Thiết Kế'
-          };
-          savedItems = [itemToSave, ...savedItems.filter(item => (item._id || item.id) !== id)];
-        }
-        localStorage.setItem('cheri_wishlist_items', JSON.stringify(savedItems));
-      } catch (e) {
-        console.error('Error saving wishlist items', e);
-      }
-    }
-
-    const msg = isIn ? 'Đã bỏ khỏi yêu thích' : 'Đã thêm vào yêu thích ♡';
-    const action = isIn ? 'Đóng' : 'Xem yêu thích';
-    const snackBarRef = this.snackBar.open(msg, action, {
-      duration: 3000,
-      horizontalPosition: 'center',
-      verticalPosition: 'bottom'
-    });
-
-    if (!isIn) {
-      snackBarRef.onAction().pipe(take(1)).subscribe(() => {
-        this.router.navigate(['/' + (this.lang() || 'vi') + '/wishlist']);
-      });
-    }
-  }
-
-  private _loadWishlist(): void {
-    if (isPlatformBrowser(this.platformId)) {
-      try {
-        const saved = localStorage.getItem('cheri_wishlist') || localStorage.getItem('wishlist');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            this.wishlistIds.set(parsed);
-            return;
-          }
-        }
-        const savedItems = localStorage.getItem('cheri_wishlist_items');
-        if (savedItems) {
-          const parsedItems = JSON.parse(savedItems);
-          if (Array.isArray(parsedItems)) {
-            const ids = parsedItems.map((p: any) => p._id || p.id).filter(Boolean);
-            this.wishlistIds.set(ids);
-          }
-        }
-      } catch { }
-    }
+    this.wishlistService.toggleWishlist(product, this.lang() || 'vi');
   }
 
   readonly component = 'productsComponent';
@@ -211,7 +132,8 @@ export class ProductsComponent implements OnDestroy {
     private snackBar: MatSnackBar,
     private meta: Meta,
     private title: Title,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private wishlistService: WishlistService
   ) {
     this.category = toSignal(this.route.params.pipe(
       map((params) => params['category'])
@@ -257,16 +179,6 @@ export class ProductsComponent implements OnDestroy {
 
     this._loadCategories();
     this._loadProducts();
-    this._loadWishlist();
-
-    if (isPlatformBrowser(this.platformId)) {
-      this._storageListener = (e: StorageEvent) => {
-        if (e.key === 'cheri_wishlist' || e.key === 'wishlist' || e.key === 'cheri_wishlist_items') {
-          this._loadWishlist();
-        }
-      };
-      window.addEventListener('storage', this._storageListener);
-    }
   }
 
   addToCart(id: string): void {
@@ -402,9 +314,6 @@ export class ProductsComponent implements OnDestroy {
   ngOnDestroy(): void {
     this.categoriesSub.unsubscribe();
     this.productsSub.unsubscribe();
-    if (this._storageListener && isPlatformBrowser(this.platformId)) {
-      window.removeEventListener('storage', this._storageListener);
-    }
   }
 
   private _loadCategories(): void {

@@ -25,12 +25,13 @@ import { ProductsListComponent } from '../../shared/components/products-list/pro
 import { SignalStore } from '../../../store/signal.store';
 import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
 import { ThemeService } from '../../../services/theme.service';
+import { WishlistButtonComponent } from '../../shared/components/wishlist-button/wishlist-button.component';
 
 @Component({
   selector: 'app-home',
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.css'],
-  imports: [CommonModule, SlicePipe, MatSidenavModule, CategoriesListComponent, ProductContentComponent, ProductsListComponent, SidebarComponent, PaginationComponent, RouterLink, MatProgressBarModule, MatProgressSpinnerModule, TranslatePipe],
+  imports: [CommonModule, SlicePipe, MatSidenavModule, CategoriesListComponent, ProductContentComponent, ProductsListComponent, SidebarComponent, PaginationComponent, RouterLink, MatProgressBarModule, MatProgressSpinnerModule, TranslatePipe, WishlistButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class HomeComponent implements AfterViewInit, OnDestroy {

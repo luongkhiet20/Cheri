@@ -244,6 +244,64 @@
   color: #74070e;
 }
 
+:host .required-star {
+  color: #dc2626 !important;
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+/* ── Checkbox options ── */
+:host .form-checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+:host .form-checkbox-row {
+  display: flex;
+  align-items: center;
+  padding-bottom: 2px;
+}
+
+:host .form-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  font-size: 12.5px !important;
+  color: #555555 !important;
+  font-weight: 400 !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  user-select: none;
+}
+
+:host .form-checkbox-label.terms-label {
+  align-items: flex-start;
+  line-height: 1.45;
+}
+
+:host .form-checkbox-label.terms-label .form-checkbox {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+:host .form-checkbox-label span {
+  text-transform: none !important;
+  font-size: 12.5px !important;
+  color: #444444 !important;
+  font-weight: 400 !important;
+  letter-spacing: normal !important;
+}
+
+:host .form-checkbox {
+  accent-color: #74070e;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
 /* ── Submit button ── */
 :host .submit-sign-button,
 :host .auth-submit-btn {

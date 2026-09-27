@@ -41,7 +41,16 @@
 @media screen and (max-width: 600px) {
   :host .nav {
     height: 58px;
-    padding: 0 14px;
+    padding: 0 12px;
+  }
+
+  :host .nav-part-right {
+    gap: 8px;
+  }
+
+  :host .nav-admin-wrap .nav-label {
+    font-size: 12px;
+    padding: 4px 2px;
   }
 }
 
@@ -222,16 +231,19 @@
   align-items: center;
 }
 
-:host .nav-desktop {
+:host .nav-desktop,
+:host .nav-account-wrap {
   display: flex;
   align-items: center;
 }
 
-:host .nav-desktop ::ng-deep button.mat-mdc-menu-item {
+:host .nav-desktop ::ng-deep button.mat-mdc-menu-item,
+:host .nav-account-wrap ::ng-deep button.mat-mdc-menu-item {
   width: initial !important;
 }
 
-:host .nav-desktop ::ng-deep button.mat-mdc-menu-item a.nav-link {
+:host .nav-desktop ::ng-deep button.mat-mdc-menu-item a.nav-link,
+:host .nav-account-wrap ::ng-deep button.mat-mdc-menu-item a.nav-link {
   font-family: var(--font-sans);
   font-weight: 500;
   text-transform: none;
@@ -241,7 +253,8 @@
   white-space: nowrap;
 }
 
-:host .nav-desktop ::ng-deep button.mat-mdc-menu-item .mat-icon {
+:host .nav-desktop ::ng-deep button.mat-mdc-menu-item .mat-icon,
+:host .nav-account-wrap ::ng-deep button.mat-mdc-menu-item .mat-icon {
   color: #74070E !important;
   margin-right: 4px !important;
   font-size: 18px;
@@ -263,8 +276,15 @@
     padding: 0 16px;
   }
 
-  :host .nav .nav-desktop {
-    display: none;
+  /* Ẩn Giỏ hàng trên header khi thu nhỏ màn hình */
+  :host .nav-cart-wrap {
+    display: none !important;
+  }
+
+  /* Hiển thị [ẢNH ĐẠI DIỆN] trên header khi thu nhỏ màn hình */
+  :host .nav-desktop,
+  :host .nav-account-wrap {
+    display: flex !important;
   }
 
   :host .nav .nav-mobile {

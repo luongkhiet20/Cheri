@@ -52,7 +52,7 @@
     </div>
 
     <!-- 3. Giỏ hàng -->
-    <div class="nav-basic">
+    <div class="nav-basic nav-cart-wrap">
       @if (cart$(); as cart) {
       <a class="nav-label nav-cart-label" [routerLink]="['/' + (lang$ | async) + '/cart']" routerLinkActive="active">
         Giỏ hàng@if (cart?.totalQty) { ({{ cart?.totalQty }}) }
@@ -66,15 +66,15 @@
 
     <!-- 4. Quản trị (chỉ hiển thị khi isAdmin() === true) - CSS giống Giỏ hàng -->
     @if (isAdmin()) {
-    <div class="nav-basic">
+    <div class="nav-basic nav-admin-wrap">
       <a class="nav-label" [routerLink]="['/admin/dashboard']" routerLinkActive="active" title="Trang quản trị">
         Quản trị
       </a>
     </div>
     }
 
-    <!-- 5. Tài khoản: Desktop hiển thị [ẢNH ĐẠI DIỆN] lấy từ user$()?.images -->
-    <div class="nav-desktop">
+    <!-- 5. Tài khoản: Hiển thị [ẢNH ĐẠI DIỆN] lấy từ user$()?.images -->
+    <div class="nav-desktop nav-account-wrap">
       @if (!user$()) {
       <a class="nav-account-guest-btn" [routerLink]="['/' + ((lang$ | async) || 'vi') + '/authorize/signin']"
         routerLinkActive="active" title="Đăng nhập">
@@ -129,6 +129,8 @@
     <button mat-menu-item [routerLink]="['/' + (lang$ | async) + '/cart']" routerLinkActive="active">
       <span class="nav-label">Giỏ hàng@if (cart$()?.totalQty) { ({{ cart$()?.totalQty }}) }</span>
     </button>
+
+
     @if (isAdmin()) {
     <button mat-menu-item [routerLink]="['/admin/dashboard']" routerLinkActive="active">
       <span class="nav-label">Quản trị</span>

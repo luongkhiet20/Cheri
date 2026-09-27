@@ -147,8 +147,11 @@ export class HeaderComponent implements OnInit {
     // Lấy ảnh đại diện từ user$()?.images
     const imgs = (user as any).images;
     if (Array.isArray(imgs) && imgs.length > 0) {
-      const first = imgs.find((img: any) => typeof img === 'string' && img.trim().length > 0);
-      if (first) return first;
+      const first = imgs.find((img: any) =>
+        (typeof img === 'string' && img.trim().length > 0) ||
+        (img && typeof img.url === 'string' && img.url.trim().length > 0)
+      );
+      if (first) return typeof first === 'string' ? first.trim() : first.url.trim();
     }
     if (typeof imgs === 'string' && (imgs as string).trim().length > 0) {
       return (imgs as string).trim();

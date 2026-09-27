@@ -68,11 +68,7 @@
   </div>
 
   <!-- Loading State -->
-  <div *ngIf="isLoading" class="state-card loading-state">
-    <div class="spinner"></div>
-    <p class="state-title">Đang tải thông tin sản phẩm...</p>
-    <p class="state-desc">Đang truy vấn document từ MongoDB Atlas theo _id: {{ productId }}</p>
-  </div>
+  <app-loading-state *ngIf="isLoading" message="Đang tải dữ liệu sản phẩm..."></app-loading-state>
 
   <!-- Not Found State -->
   <div *ngIf="!isLoading && isNotFound" class="state-card not-found-state">
@@ -189,10 +185,7 @@
 
               <!-- Metadata Grid -->
               <div class="field-grid-inline mt-3">
-                <div class="field-item">
-                  <div class="page-subtitle">Mã sản phẩm</div>
-                  <div class="field-value field-value--mono">{{ rawProduct?.titleUrl || '—' }}</div>
-                </div>
+
 
                 <div class="field-item">
                   <div class="page-subtitle">URL</div>
@@ -335,7 +328,7 @@
               </div>
 
               <div class="field-item" *ngIf="noVariantSalePrice > 0">
-                <div class="page-subtitle">Giá khuyến mãi đã nhập</div>
+                <div class="page-subtitle">Giá khuyến mãi</div>
                 <div class="field-value field-value--mono">{{ formatPrice(noVariantSalePrice) }}</div>
               </div>
 
@@ -626,8 +619,7 @@
 
           <!-- Thông báo khi sản phẩm không có biến thể -->
           <div *ngIf="!hasVariants" class="editorial-empty-state">
-            <div class="field-value table-cell--muted">Sản phẩm này là sản phẩm đơn (không có biến thể). Toàn bộ giá và
-              tồn kho được quản lý trực tiếp tại mục GIÁ &amp; TỒN KHO.</div>
+            <div class="field-value table-cell--muted">Sản phẩm này là sản phẩm đơn. </div>
           </div>
         </div>
       </div>

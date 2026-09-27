@@ -97,6 +97,86 @@ export class ProductDetailComponent implements OnInit {
     return Number(val).toLocaleString('vi-VN') + ' ₫';
   }
 
+  // =========================================================================
+  // Mô tả sản phẩm (Mô tả ngắn & Mô tả chi tiết)
+  // =========================================================================
+
+  get descriptionText(): string {
+    return this.rawProduct?.vi?.description || this.rawProduct?.description || this.product?.description || '';
+  }
+
+  get descriptionFullList(): string[] {
+    const val = this.rawProduct?.vi?.descriptionFull !== undefined ? this.rawProduct.vi.descriptionFull : (this.rawProduct?.descriptionFull || this.product?.descriptionFull);
+    if (!val) return [];
+    if (Array.isArray(val)) {
+      return val
+        .map((item: any) => (typeof item === 'string' ? item.trim() : String(item || '').trim()))
+        .filter((item: string) => item.length > 0);
+    }
+    if (typeof val === 'string') {
+      return val
+        .split('\n')
+        .map((item: string) => item.trim())
+        .filter((item: string) => item.length > 0);
+    }
+    return [];
+  }
+
+  // =========================================================================
+  // Phân loại & Thuộc tính (Classifications, Colors, Sizes)
+  // =========================================================================
+
+  get hasClassification(): boolean {
+    if (this.rawProduct?.vi?.hasClassification !== undefined) {
+      return Boolean(this.rawProduct.vi.hasClassification);
+    }
+    return this.classificationsList.length > 0;
+  }
+
+  get classificationsList(): string[] {
+    const raw = this.rawProduct?.vi?.classifications || this.rawProduct?.attributes?.classifications || this.product?.classifications || [];
+    if (Array.isArray(raw)) {
+      return raw.map((c: any) => String(c || '').trim()).filter((c: string) => c.length > 0);
+    }
+    return [];
+  }
+
+  get hasColors(): boolean {
+    if (this.rawProduct?.vi?.hasColors !== undefined) {
+      return Boolean(this.rawProduct.vi.hasColors);
+    }
+    return this.colorsList.length > 0;
+  }
+
+  get colorsList(): { name: string; hex?: string }[] {
+    const raw = this.rawProduct?.vi?.colors || this.rawProduct?.attributes?.colors || this.rawProduct?.colors || this.product?.colors || [];
+    if (!Array.isArray(raw)) return [];
+    return raw.map((c: any) => {
+      if (typeof c === 'string') {
+        return { name: c.trim(), hex: '#2563eb' };
+      }
+      return {
+        name: c.name ? String(c.name).trim() : 'Màu chuẩn',
+        hex: c.hex ? String(c.hex).trim() : undefined
+      };
+    }).filter((c: any) => c.name.length > 0);
+  }
+
+  get hasSizes(): boolean {
+    if (this.rawProduct?.vi?.hasSizes !== undefined) {
+      return Boolean(this.rawProduct.vi.hasSizes);
+    }
+    return this.sizesList.length > 0;
+  }
+
+  get sizesList(): string[] {
+    const raw = this.rawProduct?.vi?.sizes || this.rawProduct?.attributes?.sizes || this.rawProduct?.sizes || this.product?.sizes || [];
+    if (Array.isArray(raw)) {
+      return raw.map((s: any) => String(s || '').trim()).filter((s: string) => s.length > 0);
+    }
+    return [];
+  }
+
   setActiveImage(url: string): void {
     if (url) this.activeImage = url;
   }

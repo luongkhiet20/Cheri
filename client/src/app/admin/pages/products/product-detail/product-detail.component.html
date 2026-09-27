@@ -1,27 +1,50 @@
 <div class="page-content">
 
-  <!-- Header & Actions -->
+  <!-- ══════════════════════════════════════════════════════════════
+       HEADER PAGE
+       Breadcrumbs, Tên sản phẩm, Mã sản phẩm, Trạng thái, Nút thao tác
+  ══════════════════════════════════════════════════════════════ -->
   <div class="page-top" *ngIf="!isLoading && !isNotFound">
-    <div>
+    <div class="page-header-info">
+      <!-- Breadcrumb -->
       <div class="breadcrumbs">
-        <a routerLink="/admin/products" class="breadcrumb-link">Sản phẩm</a>
+        <a routerLink="/admin/products" class="breadcrumb-link">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" class="breadcrumb-arrow">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          Quản lý sản phẩm
+        </a>
         <span class="breadcrumb-sep">/</span>
-        <span class="breadcrumb-current">{{ rawProduct?.vi?.title || rawProduct?.titleUrl || 'Chi tiết' }}</span>
+        <span class="breadcrumb-current">Chi tiết</span>
       </div>
+
+      <!-- Tên sản phẩm chính -->
       <h1 class="page-title">{{ rawProduct?.vi?.title || 'Chi tiết sản phẩm' }}</h1>
-      <p class="page-subtitle">Mã sản phẩm (ID): <code>{{ productId }}</code>
-      </p>
+
+      <!-- Mã sản phẩm & Trạng thái hoạt động -->
+      <div class="page-meta-line">
+        <span class="page-code">{{ rawProduct?.titleUrl || productId }}</span>
+        <span class="page-status" [class.page-status--active]="rawProduct?.vi?.visibility !== false"
+          [class.page-status--hidden]="rawProduct?.vi?.visibility === false">
+          <span class="status-indicator-dot"></span>
+          {{ rawProduct?.vi?.visibility !== false ? 'Đang hoạt động' : 'Tạm ẩn' }}
+        </span>
+      </div>
     </div>
 
+    <!-- Nút hành động -->
     <div class="page-actions">
       <button type="button" class="btn btn-outline" (click)="onBack()">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
           <line x1="19" y1="12" x2="5" y2="12"></line>
           <polyline points="12 19 5 12 12 5"></polyline>
         </svg>
-        <span>Quay lại danh sách</span>
+        <span>Quay lại</span>
       </button>
+
       <button type="button" class="btn btn-danger-outline" (click)="onDelete()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
@@ -32,13 +55,14 @@
         </svg>
         <span>Xóa</span>
       </button>
+
       <button type="button" class="btn btn-primary" (click)="onEdit()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
         </svg>
-        <span>Chỉnh sửa sản phẩm</span>
+        <span>Chỉnh sửa</span>
       </button>
     </div>
   </div>
@@ -97,681 +121,677 @@
     </div>
   </div>
 
-  <!-- Main Detail View (Read-Only) -->
-  <div *ngIf="!isLoading && !isNotFound && rawProduct" class="detail-container">
+  <!-- ══════════════════════════════════════════════════════════════
+       VERTICAL TIMELINE CONTAINER
+       Các Section 01 -> 08 nối liền bằng đường dọc mảnh 1px
+  ══════════════════════════════════════════════════════════════ -->
+  <div *ngIf="!isLoading && !isNotFound && rawProduct" class="timeline">
 
-    <div class="detail-grid">
-
-      <!-- LEFT COLUMN: Gallery & Technical Metadata -->
-      <div class="detail-left-col">
-
-        <!-- Image Gallery Card -->
-        <div class="detail-card">
-          <h3 class="card-title">Hình ảnh sản phẩm</h3>
-
-          <!-- Main Image Viewport -->
-          <div class="main-image-box">
-            <div class="main-img-badge" *ngIf="activeImage">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
-                <polygon
-                  points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
-                </polygon>
-              </svg>
-              <span>Ảnh chính</span>
-            </div>
-            <img *ngIf="activeImage" [src]="activeImage" [alt]="rawProduct.vi?.title || 'Ảnh sản phẩm'"
-              (error)="activeImage = ''" />
-            <div *ngIf="!activeImage" class="no-img-text">
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"
-                stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                <polyline points="21 15 16 10 5 21"></polyline>
-              </svg>
-              <span>Chưa có hình ảnh</span>
-            </div>
-          </div>
-
-          <!-- Thumbnails Gallery -->
-          <div class="gallery-label" *ngIf="rawProduct.images && rawProduct.images.length > 0">
-            Danh sách hình ảnh ({{ rawProduct.images.length }} ảnh)
-          </div>
-          <div class="gallery-grid" *ngIf="rawProduct.images && rawProduct.images.length > 0">
-            <!-- Main image thumb -->
-            <div *ngIf="rawProduct.mainImage?.url" class="gallery-thumb"
-              [class.active]="activeImage === rawProduct.mainImage.url"
-              (click)="setActiveImage(rawProduct.mainImage.url)">
-              <img [src]="rawProduct.mainImage.url" alt="Thumb chính" />
-              <span class="badge-mini-main">
-                <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor">
-                  <polygon
-                    points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
-                  </polygon>
-                </svg>
-                <span>Chính</span>
-              </span>
-            </div>
-
-            <!-- Other images -->
-            <div *ngFor="let img of rawProduct.images" class="gallery-thumb" [class.active]="activeImage === img"
-              (click)="setActiveImage(img)">
-              <img [src]="img" alt="Thumb" />
-            </div>
-          </div>
-          <div *ngIf="(!rawProduct.images || rawProduct.images.length === 0) && !rawProduct.mainImage?.url"
-            class="text-muted text-sm mt-2">
-            Chưa có hình ảnh nào được lưu trữ
-          </div>
-        </div>
-
-        <!-- Technical Metadata Card -->
-        <div class="detail-card">
-          <h3 class="card-title">Thông tin sản phẩm</h3>
-          <div class="spec-list">
-            <div class="spec-item">
-              <span class="spec-k">Mã sản phẩm (ID)</span>
-              <span class="spec-v font-mono">{{ rawProduct._id }}</span>
-            </div>
-            <div class="spec-item">
-              <span class="spec-k">Mã sản phẩm</span>
-              <span class="spec-v font-mono">{{ rawProduct.titleUrl || '—' }}</span>
-            </div>
-            <div class="spec-item">
-              <span class="spec-k">Cấu trúc sản phẩm</span>
-              <span class="spec-v font-semibold">
-                <span *ngIf="hasVariants" class="text-primary-semibold">({{ variantsCount }} biến
-                  thể)</span>
-                <span *ngIf="!hasVariants" class="text-secondary-semibold">Sản phẩm đơn</span>
-              </span>
-            </div>
-            <div class="spec-item">
-              <span class="spec-k">Giá và Tồn kho</span>
-              <span class="spec-v">
-                <span *ngIf="hasVariants" class="badge-structure-hint variant-hint">Theo từng biến thể (Ẩn khối Giá &
-                  Tồn kho chung)</span>
-                <span *ngIf="!hasVariants" class="badge-structure-hint single-hint">Quản lý trực tiếp cấp sản phẩm (Giá
-                  & Tồn kho chung)</span>
-              </span>
-            </div>
-            <div class="spec-item">
-              <span class="spec-k">Tổng tồn kho</span>
-              <span class="spec-v font-bold">
-                {{ effectiveTotalStock }}
-                <span class="text-muted text-xs" *ngIf="hasVariants">(Σ stock)</span>
-              </span>
-            </div>
-            <div class="spec-item">
-              <span class="spec-k">Ngày tạo</span>
-              <span class="spec-v">{{ rawProduct.dateAdded ? (rawProduct.dateAdded | slice:0:19) : '—' }}</span>
-            </div>
-            <div class="spec-item" *ngIf="rawProduct.updatedAt">
-              <span class="spec-k">Cập nhật lần cuối</span>
-              <span class="spec-v">{{ rawProduct.updatedAt | slice:0:19 }}</span>
-            </div>
-            <div class="spec-item">
-              <span class="spec-k">Trạng thái root</span>
-              <span class="spec-v">
-                <span class="status-dot" [class.on]="rawProduct.visibility !== false"></span>
-                {{ rawProduct.visibility !== false ? 'Hiển thị' : 'Ẩn' }}
-              </span>
-            </div>
-            <div class="spec-item">
-              <span class="spec-k">Trạng thái vi</span>
-              <span class="spec-v">
-                <span class="status-dot" [class.on]="rawProduct.vi?.visibility !== false"></span>
-                {{ rawProduct.vi?.visibility !== false ? 'Hiển thị' : 'Ẩn' }}
-              </span>
-            </div>
-          </div>
-        </div>
-
+    <!-- ── 01 THÔNG TIN SẢN PHẨM ───────────────────────────────── -->
+    <div class="timeline-section" id="section-01">
+      <div class="timeline-header">
+        <span class="timeline-number">01</span>
+        <div class="timeline-line"></div>
       </div>
 
-      <!-- RIGHT COLUMN: Product Info & Pricing & Variants -->
-      <div class="detail-right-col">
+      <div class="timeline-body">
+        <div class="timeline-content">
+          <h2 class="card-title">THÔNG TIN SẢN PHẨM</h2>
+          <div class="divider"></div>
 
-        <!-- Basic Header Card (Dành cho cả 2 trường hợp) -->
-        <div class="detail-card product-header-card">
-          <div class="detail-header-badges">
-            <!-- Product Structure Badge: Có biến thể vs Không có biến thể -->
-            <span class="pill-structure" [class.pill-structure-variant]="hasVariants"
-              [class.pill-structure-single]="!hasVariants">
-              <span class="structure-icon">
-                <svg *ngIf="hasVariants" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-                  <polyline points="2 17 12 22 22 17"></polyline>
-                  <polyline points="2 12 12 17 22 12"></polyline>
-                </svg>
-                <svg *ngIf="!hasVariants" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line>
-                  <path
-                    d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
-                  </path>
-                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                  <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                </svg>
-              </span>
-              <span>{{ hasVariants ? ('(' + variantsCount + ' biến thể)') : '(Sản phẩm
-                đơn)' }}</span>
-            </span>
-
-            <span class="pill-category" *ngIf="rawProduct.vi?.categoryLevel1">
-              {{ rawProduct.vi?.categoryLevel1 }}
-            </span>
-            <span class="pill-category-sub" *ngIf="rawProduct.vi?.categoryLevel2">
-              {{ rawProduct.vi?.categoryLevel2 }}
-            </span>
-            <span class="pill-type">
-              {{ rawProduct.vi?.productType || 'clothing' }}
-            </span>
-            <span class="pill-status" [class.status-active]="rawProduct.vi?.visibility !== false"
-              [class.status-hidden]="rawProduct.vi?.visibility === false">
-              {{ rawProduct.vi?.visibility !== false ? 'Đang bán' : 'Tạm ẩn' }}
-            </span>
-          </div>
-
-          <h2 class="detail-name">{{ rawProduct.vi?.title || 'Chưa đặt tên sản phẩm' }}</h2>
-        </div>
-
-        <!-- ========================================================================= -->
-        <!-- ĐIỀU KIỆN HIỂN THỊ:                                                       -->
-        <!-- 1. "KHỐI GIÁ & TỒN KHO CHUNG" CHỈ HIỂN THỊ KHI SẢN PHẨM KHÔNG CÓ BIẾN THỂ -->
-        <!-- 2. KHI CÓ BIẾN THỂ: ẨN KHỐI NÀY VÀ HIỂN THỊ BẢNG GIÁ & TỒN KHO THEO BIẾN THỂ -->
-        <!-- ========================================================================= -->
-
-        <!-- KHỐI 1: GIÁ & TỒN KHO CHUNG (CHỈ HIỂN THỊ KHI !hasVariants) -->
-        <div class="detail-card general-pricing-card" *ngIf="!hasVariants">
-          <div class="card-header-flex">
-            <div>
-              <h3 class="card-title">Giá và tồn kho</h3>
-              <p class="card-subtitle-desc">
-              </p>
+          <div class="editorial-product-info">
+            <!-- Left: Main Image Card -->
+            <div class="editorial-image-column">
+              <div class="image-card image-card--main">
+                <div class="image-card-badge" *ngIf="activeImage">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon
+                      points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                    </polygon>
+                  </svg>
+                  <span>ẢNH CHÍNH</span>
+                </div>
+                <img *ngIf="activeImage" [src]="activeImage" [alt]="rawProduct.vi?.title || 'Ảnh chính sản phẩm'"
+                  (error)="activeImage = ''" />
+                <div *ngIf="!activeImage" class="image-card-placeholder">
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                  </svg>
+                  <span>Chưa có hình ảnh</span>
+                </div>
+              </div>
             </div>
-            <span class="badge-single-pill">Quản lý cấp sản phẩm</span>
+
+            <!-- Right: Product Information Fields -->
+            <div class="editorial-fields-column">
+              <div class="field-item">
+                <div class="page-subtitle">Tên sản phẩm</div>
+                <div class="field-value field-value--emphasis">{{ rawProduct?.vi?.title || '—' }}</div>
+              </div>
+
+              <div class="field-item">
+                <div class="page-subtitle">Danh mục</div>
+                <div class="field-value">
+                  <ng-container *ngIf="rawProduct?.vi?.categoryLevel1">{{ rawProduct.vi.categoryLevel1 }}</ng-container>
+                  <ng-container *ngIf="rawProduct?.vi?.categoryLevel2"> / {{ rawProduct.vi.categoryLevel2
+                    }}</ng-container>
+                  <span *ngIf="!rawProduct?.vi?.categoryLevel1">—</span>
+                </div>
+              </div>
+
+              <div class="field-item">
+                <div class="page-subtitle">Loại sản phẩm</div>
+                <div class="field-value">{{ rawProduct?.vi?.productType || 'Thời trang nữ' }}</div>
+              </div>
+
+              <!-- Metadata Grid -->
+              <div class="field-grid-inline mt-3">
+                <div class="field-item">
+                  <div class="page-subtitle">Mã sản phẩm</div>
+                  <div class="field-value field-value--mono">{{ rawProduct?.titleUrl || '—' }}</div>
+                </div>
+
+                <div class="field-item">
+                  <div class="page-subtitle">URL</div>
+                  <div class="field-value field-value--mono">{{ rawProduct?.titleUrl || '—' }}</div>
+                </div>
+
+                <div class="field-item">
+                  <div class="page-subtitle">Ngày tạo</div>
+                  <div class="field-value">{{ rawProduct?.dateAdded ? (rawProduct.dateAdded | slice:0:10) : '—' }}</div>
+                </div>
+
+                <div class="field-item">
+                  <div class="page-subtitle">Cập nhật</div>
+                  <div class="field-value">{{ rawProduct?.updatedAt ? (rawProduct.updatedAt | slice:0:10) :
+                    (rawProduct?.dateAdded ? (rawProduct.dateAdded | slice:0:10) : '—') }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 02 HÌNH ẢNH ─────────────────────────────────────────── -->
+    <div class="timeline-section" id="section-02">
+      <div class="timeline-header">
+        <span class="timeline-number">02</span>
+        <div class="timeline-line"></div>
+      </div>
+
+      <div class="timeline-body">
+        <div class="timeline-content">
+          <div class="card-title-flex">
+            <h2 class="card-title">HÌNH ẢNH</h2>
+            <span class="tag tag--counter" *ngIf="rawProduct.images && rawProduct.images.length > 0">
+              {{ rawProduct.images.length + (rawProduct.mainImage?.url ? 1 : 0) }} ảnh
+            </span>
+          </div>
+          <div class="divider"></div>
+
+          <!-- Gallery Images Grid -->
+          <div class="editorial-gallery"
+            *ngIf="(rawProduct.images && rawProduct.images.length > 0) || rawProduct.mainImage?.url">
+            <!-- Ảnh chính thumbnail -->
+            <div *ngIf="rawProduct.mainImage?.url" class="image-card image-card--gallery"
+              [class.image-card--active]="activeImage === rawProduct.mainImage.url"
+              (click)="setActiveImage(rawProduct.mainImage.url)">
+              <img [src]="rawProduct.mainImage.url" alt="Ảnh chính" />
+              <span class="image-card-sublabel">Chính</span>
+            </div>
+
+            <!-- Các ảnh phụ trong danh sách -->
+            <div *ngFor="let img of rawProduct.images; let idx = index" class="image-card image-card--gallery"
+              [class.image-card--active]="activeImage === img" (click)="setActiveImage(img)">
+              <img [src]="img" [alt]="'Ảnh ' + (idx + 1)" />
+            </div>
           </div>
 
-          <!-- 1. Giá bán thực tế & Mối quan hệ giữa regularPrice, salePrice, onSale -->
-          <div class="general-price-banner mt-3">
-            <div class="price-val-row">
-              <div class="price-main-block">
-                <span class="price-main-label">Giá bán thực tế:</span>
-                <div class="price-val" [class.text-sale]="isNoVariantOnSaleValid">
+          <!-- Trạng thái không có ảnh -->
+          <div *ngIf="(!rawProduct.images || rawProduct.images.length === 0) && !rawProduct.mainImage?.url"
+            class="empty-gallery">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"
+              stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <circle cx="8.5" cy="8.5" r="1.5"></circle>
+              <polyline points="21 15 16 10 5 21"></polyline>
+            </svg>
+            <span class="empty-gallery-text">Chưa có hình ảnh nào được lưu trữ</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 03 GIÁ & TỒN KHO ───────────────────────────────────── -->
+    <div class="timeline-section" id="section-03">
+      <div class="timeline-header">
+        <span class="timeline-number">03</span>
+        <div class="timeline-line"></div>
+      </div>
+
+      <div class="timeline-body">
+        <div class="timeline-content">
+          <div class="card-title-flex">
+            <h2 class="card-title">GIÁ &amp; TỒN KHO</h2>
+            <span class="tag tag--structure-hint" *ngIf="!hasVariants">Quản lý cấp sản phẩm</span>
+            <span class="tag tag--structure-variant" *ngIf="hasVariants">Quản lý theo từng biến thể</span>
+          </div>
+          <div class="divider"></div>
+
+          <!-- TRƯỜNG HỢP 1: SẢN PHẨM ĐƠN (!hasVariants) -->
+          <ng-container *ngIf="!hasVariants">
+            <div class="pricing-summary-grid">
+              <div class="field-item">
+                <div class="page-subtitle">Giá niêm yết</div>
+                <div class="field-value">{{ formatPrice(noVariantRegularPrice) }}</div>
+              </div>
+
+              <div class="field-item">
+                <div class="page-subtitle">Giá bán</div>
+                <div class="field-value field-value--price" [class.field-value--sale]="isNoVariantOnSaleValid">
                   {{ formatPrice(actualSellingPrice) }}
                 </div>
               </div>
 
-              <!-- Khi đang giảm giá hợp lệ: hiện giá niêm yết gạch ngang -->
-              <div class="price-sub-block" *ngIf="isNoVariantOnSaleValid">
-                <span class="price-struck-label">Giá niêm yết:</span>
-                <div class="regular-price-struck">{{ formatPrice(noVariantRegularPrice) }}</div>
-                <span class="badge-onsale">
-                  Giảm {{ noVariantDiscountPercent }}%
-                </span>
+              <div class="field-item">
+                <div class="page-subtitle">Giảm giá</div>
+                <div class="field-value">
+                  <span class="tag tag--discount" *ngIf="isNoVariantOnSaleValid">
+                    {{ noVariantDiscountPercent }}%
+                  </span>
+                  <span *ngIf="!isNoVariantOnSaleValid">0%</span>
+                </div>
               </div>
 
-              <!-- Khi không giảm giá -->
-              <div class="price-sub-block" *ngIf="!isNoVariantOnSaleValid && !isSaleErrorGte">
-                <span class="badge-regular-status">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="8" x2="12" y2="12"></line>
-                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                  </svg>
-                  <span>{{ isOnSale ? 'Chưa áp dụng giá khuyến mãi' : 'Không giảm giá' }}</span>
-                </span>
+              <div class="field-item">
+                <div class="page-subtitle">Tồn kho</div>
+                <div class="field-value field-value--emphasis">{{ quantity }}</div>
               </div>
             </div>
 
-            <!-- Cảnh báo lỗi 1: onSale = true nhưng salePrice >= regularPrice -->
-            <div class="rule-alert alert-warning mt-3" *ngIf="isSaleErrorGte">
-              <span class="alert-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
-                  </path>
-                  <line x1="12" y1="9" x2="12" y2="13"></line>
-                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                </svg>
-              </span>
-              <div class="alert-body">
-                <strong>Vi phạm quy tắc Giá khuyến mãi:</strong> Khi <code>onSale = true</code>, giá khuyến mãi
-                (<code>vi.salePrice</code>: {{ formatPrice(noVariantSalePrice) }})
-                phải <strong>nhỏ hơn</strong> giá niêm yết (<code>vi.regularPrice</code>: {{
-                formatPrice(noVariantRegularPrice) }}).
+            <!-- Dòng thông tin phụ: On Sale & Tình trạng kho & Ngày cập nhật -->
+            <div class="field-grid-inline mt-4 pt-3 border-top-light">
+              <div class="field-item">
+                <div class="page-subtitle">On Sale</div>
+                <div class="field-value">
+                  <span class="tag" [class.tag--active]="isOnSale" [class.tag--inactive]="!isOnSale">
+                    {{ isOnSale ? 'Có' : 'Không' }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="field-item">
+                <div class="page-subtitle">Tình trạng kho</div>
+                <div class="field-value">
+                  <span class="tag" [class.tag--active]="resolvedStockStatus.isAvailable"
+                    [class.tag--danger]="!resolvedStockStatus.isAvailable">
+                    {{ resolvedStockStatus.label }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="field-item" *ngIf="noVariantSalePrice > 0">
+                <div class="page-subtitle">Giá khuyến mãi đã nhập</div>
+                <div class="field-value field-value--mono">{{ formatPrice(noVariantSalePrice) }}</div>
+              </div>
+
+              <div class="field-item" *ngIf="rawProduct.vi?.stockDate">
+                <div class="page-subtitle">Ngày cập nhật kho</div>
+                <div class="field-value field-value--mono">{{ rawProduct.vi.stockDate }}</div>
               </div>
             </div>
 
-            <!-- Cảnh báo lỗi 2: onSale = true nhưng salePrice <= 0 -->
-            <div class="rule-alert alert-info-warning mt-3" *ngIf="isSaleErrorZero">
-              <span class="alert-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <line x1="12" y1="8" x2="12" y2="12"></line>
-                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                </svg>
-              </span>
-              <div class="alert-body">
-                <strong>Lưu ý:</strong> Sản phẩm đang bật <code>vi.onSale = true</code> nhưng <code>vi.salePrice</code>
-                chưa được thiết lập (&le; 0). Hệ thống sử dụng giá niêm yết làm giá bán thực tế.
-              </div>
-            </div>
-          </div>
-
-          <!-- 2. Bảng chi tiết 6 trường thông tin Giá & Tồn kho chung -->
-          <div class="general-fields-grid mt-4">
-            <!-- Trường 1: regularPrice -->
-            <div class="field-spec-card">
-              <div class="fsc-header">
-                <span class="fsc-name">Giá niêm yết</span>
-                <span class="fsc-req">Bắt buộc</span>
-              </div>
-              <div class="fsc-val font-bold text-primary">{{ formatPrice(noVariantRegularPrice) }}</div>
-
+            <!-- Cảnh báo vi phạm quy tắc giảm giá -->
+            <div class="alert-box alert-box--warning mt-3" *ngIf="isSaleErrorGte">
+              <strong>Vi phạm quy tắc:</strong> Khi <code>onSale = true</code>, giá khuyến mãi
+              ({{ formatPrice(noVariantSalePrice) }}) phải <strong>nhỏ hơn</strong> giá niêm yết ({{
+              formatPrice(noVariantRegularPrice) }}).
             </div>
 
-            <!-- Trường 2: salePrice -->
-            <div class="field-spec-card">
-              <div class="fsc-header">
-                <span class="fsc-name">Giá khuyến mãi</span>
-                <span class="fsc-opt">Không bắt buộc</span>
-              </div>
-              <div class="fsc-val font-bold" [class.text-sale]="isNoVariantOnSaleValid">
-                {{ noVariantSalePrice > 0 ? formatPrice(noVariantSalePrice) : '0 ₫ (Không áp dụng)' }}
-              </div>
+            <div class="alert-box alert-box--info mt-3" *ngIf="isSaleErrorZero">
+              <strong>Lưu ý:</strong> Đang bật <code>onSale = true</code> nhưng giá khuyến mãi chưa thiết lập (&le; 0).
+              Hệ thống áp dụng giá niêm yết.
             </div>
 
-            <!-- Trường 3: onSale -->
-            <div class="field-spec-card">
-              <div class="fsc-header">
-                <span class="fsc-name">Đang giảm giá</span>
-                <span class="fsc-opt">Không bắt buộc</span>
-              </div>
-              <div class="fsc-val">
-                <span class="badge-boolean" [class.bool-true]="isOnSale" [class.bool-false]="!isOnSale">
-                  <span class="bool-dot"></span>
-                  {{ isOnSale ? 'Đang bật (true)' : 'Đang tắt (false)' }}
-                </span>
-              </div>
+            <div class="alert-box alert-box--warning mt-3" *ngIf="isStockConflict">
+              <strong>Cảnh báo dữ liệu kho:</strong> <code>quantity = {{ quantity }}</code> nhưng giá trị
+              <code>vi.stock = '{{ rawProduct.vi?.stock }}'</code>.
+              Trạng thái chuẩn: <strong>{{ resolvedStockStatus.label }}</strong>.
             </div>
+          </ng-container>
 
-            <!-- Trường 4: quantity -->
-            <div class="field-spec-card">
-              <div class="fsc-header">
-                <span class="fsc-name">Số lượng kho</span>
-                <span class="fsc-req">Bắt buộc</span>
-              </div>
-              <div class="fsc-val font-bold text-dark">{{ quantity }} sản phẩm</div>
-            </div>
-
-            <!-- Trường 5: stock -->
-            <div class="field-spec-card">
-              <div class="fsc-header">
-                <span class="fsc-name">Tình trạng kho</span>
-                <span class="fsc-req">Bắt buộc</span>
-              </div>
-              <div class="fsc-val">
-                <span class="badge-stock-status" [class.stock-on]="resolvedStockStatus.isAvailable"
-                  [class.stock-out]="!resolvedStockStatus.isAvailable">
-                  {{ resolvedStockStatus.label }}
-                </span>
-              </div>
-            </div>
-
-            <!-- Trường 6: stockDate -->
-            <div class="field-spec-card">
-              <div class="fsc-header">
-                <span class="fsc-name">Ngày cập nhật kho</span>
-                <span class="fsc-opt">Không bắt buộc</span>
-              </div>
-              <div class="fsc-val font-mono text-dark">{{ rawProduct.vi?.stockDate || '—' }}</div>
-            </div>
-          </div>
-
-          <!-- Cảnh báo nếu dữ liệu kho vi.stock trong DB mâu thuẫn với vi.quantity -->
-          <div class="rule-alert alert-warning mt-3" *ngIf="isStockConflict">
-            <span class="alert-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
-                </path>
-                <line x1="12" y1="9" x2="12" y2="13"></line>
-                <line x1="12" y1="17" x2="12.01" y2="17"></line>
-              </svg>
-            </span>
-            <div class="alert-body">
-              <strong>Cảnh báo mâu thuẫn dữ liệu:</strong> Số lượng kho <code>quantity = {{ quantity }}</code> nhưng giá
-              trị lưu trữ <code>vi.stock = '{{ rawProduct.vi?.stock }}'</code>.
-              Hệ thống tự động xác định trạng thái thực tế chuẩn là: <strong>{{ resolvedStockStatus.label }}</strong>.
-            </div>
-          </div>
-
-          <!-- KHỐI 2: TỔNG QUAN KHI CÓ BIẾN THỂ (CHỈ HIỂN THỊ KHI hasVariants) -->
-          <!-- Khối "Giá & Tồn kho chung" được ẨN HOÀN TOÀN, chỉ hiển thị tóm tắt biến thể -->
-          <div class="detail-card variants-overview-card" *ngIf="hasVariants">
-            <div class="card-header-flex">
-              <div>
-                <h3 class="card-title">Tổng quan Biến thể & Tồn kho</h3>
-                <p class="card-subtitle-desc">
-                  Sản phẩm có biến thể: Khối "Giá & Tồn kho chung" được ẩn theo quy tắc. Giá và tồn kho được quản lý
-                  riêng
-                  cho từng biến thể.
-                </p>
-              </div>
-              <span class="badge-variant-pill">Quản lý theo biến thể</span>
-            </div>
-
-            <div class="variant-overview-stats mt-3">
-              <!-- Khoảng giá -->
-              <div class="stat-box">
-                <span class="stat-box-title">Khoảng giá biến thể</span>
-                <div class="stat-box-val text-primary" *ngIf="!variantPriceSummary.hasSale">
+          <!-- TRƯỜNG HỢP 2: SẢN PHẨM CÓ BIẾN THỂ (hasVariants) -->
+          <ng-container *ngIf="hasVariants">
+            <div class="pricing-summary-grid">
+              <div class="field-item">
+                <div class="page-subtitle">Giá niêm yết</div>
+                <div class="field-value">
                   <span *ngIf="variantPriceSummary.isUniformPrice">{{ formatPrice(variantPriceSummary.minPrice)
                     }}</span>
-                  <span *ngIf="!variantPriceSummary.isUniformPrice">{{ formatPrice(variantPriceSummary.minPrice) }} – {{
+                  <span *ngIf="!variantPriceSummary.isUniformPrice">{{ formatPrice(variantPriceSummary.minPrice) }} ~ {{
                     formatPrice(variantPriceSummary.maxPrice) }}</span>
                 </div>
-                <div class="stat-box-val text-sale" *ngIf="variantPriceSummary.hasSale">
-                  <span *ngIf="variantPriceSummary.isUniformDiscountPrice">{{
-                    formatPrice(variantPriceSummary.minDiscountPrice) }}</span>
-                  <span *ngIf="!variantPriceSummary.isUniformDiscountPrice">{{
-                    formatPrice(variantPriceSummary.minDiscountPrice) }} – {{
-                    formatPrice(variantPriceSummary.maxDiscountPrice) }}</span>
-                </div>
-                <span class="stat-box-sub" *ngIf="variantPriceSummary.hasSale">
-                  Giá gốc: {{ formatPrice(variantPriceSummary.minPrice) }} – {{
-                  formatPrice(variantPriceSummary.maxPrice)
-                  }}
-                </span>
-                <span class="stat-box-sub" *ngIf="!variantPriceSummary.hasSale">Giá niêm yết từ các biến thể</span>
               </div>
 
-              <!-- Tổng tồn kho = Σ stock -->
-              <div class="stat-box stat-box-highlight">
-                <span class="stat-box-title">Tổng tồn kho (Σ stock)</span>
-                <div class="stat-box-val font-bold text-dark">{{ totalVariantStock }}</div>
-                <span class="stat-box-sub">= Tổng stock của {{ variantsCount }} biến thể</span>
-              </div>
-
-              <!-- Số lượng biến thể -->
-              <div class="stat-box">
-                <span class="stat-box-title">Số biến thể</span>
-                <div class="stat-box-val text-dark">{{ variantsCount }}</div>
-                <span class="stat-box-sub">Quản lý độc lập</span>
-              </div>
-
-              <!-- Tình trạng chung -->
-              <div class="stat-box">
-                <span class="stat-box-title">Tình trạng tổng</span>
-                <div class="stat-box-val" [class.text-success]="totalVariantStock > 0"
-                  [class.text-danger]="totalVariantStock === 0">
-                  {{ totalVariantStock > 0 ? 'Còn hàng' : 'Hết hàng' }}
-                </div>
-                <span class="stat-box-sub">{{ totalVariantStock > 0 ? (totalVariantStock + ' sản phẩm khả dụng') : 'Hết
-                  hàng tồn' }}</span>
-              </div>
-            </div>
-
-            <!-- Banner giải thích chuyển biến thể -->
-            <div class="principle-rule-banner mt-3">
-              <span class="banner-badge">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  stroke-linecap="round" stroke-linejoin="round" class="badge-svg">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                </svg>
-                <span>Quy tắc chuyển biến thể</span>
-              </span>
-              <span>
-                Khi sản phẩm có biến thể, giá và tồn kho thuộc về <strong>từng biến thể</strong> (<code>price</code>,
-                <code>discountPrice</code>, <code>stock</code>).
-                Khối “Giá & Tồn kho chung” không còn là dữ liệu quản lý trực tiếp. Tổng tồn kho =
-                <code>Σ stock_i</code>.
-              </span>
-            </div>
-          </div>
-
-          <!-- ================================================================= -->
-          <!-- BẢNG GIÁ & TỒN KHO THEO BIẾN THỂ (CHỈ HIỂN THỊ KHI hasVariants)     -->
-          <!-- ================================================================= -->
-          <div class="detail-card variants-card" *ngIf="hasVariants">
-            <div class="card-header-flex">
-              <div>
-                <h3 class="card-title">Bảng Giá & Tồn kho theo biến thể ({{ variantsCount }} biến thể)</h3>
-                <p class="card-subtitle-desc">
-                  Giá niêm yết (price), Giá khuyến mãi (discountPrice), Tồn kho (stock) và Trạng thái (status) của từng
-                  biến thể
-                </p>
-              </div>
-              <span class="variants-count-badge">{{ variantsCount }} biến thể</span>
-            </div>
-
-            <div class="table-responsive mt-3">
-              <table class="variants-table">
-                <thead>
-                  <tr>
-                    <th class="text-center" style="width: 40px;">#</th>
-                    <th>Thuộc tính biến thể</th>
-                    <th>Mã SKU</th>
-                    <th class="text-right">Giá niêm yết (price)</th>
-                    <th class="text-right">Giá khuyến mãi (discountPrice)</th>
-                    <th class="text-right">Tồn kho (stock)</th>
-                    <th class="text-center">Trạng thái (status)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let v of rawProduct.variants; let i = index">
-                    <!-- 1. STT -->
-                    <td class="text-center text-muted font-mono">{{ i + 1 }}</td>
-
-                    <!-- 2. Thuộc tính biến thể -->
-                    <td>
-                      <div class="variant-attrs">
-                        <span class="attr-pill" *ngIf="v.color">
-                          <svg width="6" height="6" viewBox="0 0 24 24" fill="currentColor" class="attr-dot-svg">
-                            <circle cx="12" cy="12" r="10"></circle>
-                          </svg>
-                          <span>{{ v.color }}</span>
-                        </span>
-                        <span class="attr-pill size-pill" *ngIf="v.size">
-                          Size: {{ v.size }}
-                        </span>
-                        <span *ngIf="!v.color && !v.size" class="text-muted text-sm">Biến thể #{{ i + 1 }}</span>
-                      </div>
-                    </td>
-
-                    <!-- 3. SKU -->
-                    <td class="font-mono text-sm">
-                      <span class="sku-tag" *ngIf="v.sku">{{ v.sku }}</span>
-                      <span class="text-muted" *ngIf="!v.sku">—</span>
-                    </td>
-
-                    <!-- 4. Giá niêm yết (price) -->
-                    <td class="text-right font-semibold">
-                      <span [class.text-struck]="isVariantSaleValid(v)">
-                        {{ formatPrice(v.price) }}
-                      </span>
-                    </td>
-
-                    <!-- 5. Giá khuyến mãi (discountPrice) -->
-                    <td class="text-right">
-                      <!-- Giá KM hợp lệ: discountPrice < price -->
-                      <div *ngIf="isVariantSaleValid(v)" class="discount-cell">
-                        <span class="discount-price-val">{{ formatPrice(v.discountPrice) }}</span>
-                        <span class="discount-badge-mini">-{{ getVariantDiscountPercent(v) }}%</span>
-                      </div>
-
-                      <!-- Vi phạm nguyên tắc: discountPrice >= price -->
-                      <div *ngIf="isVariantSaleInvalid(v)" class="discount-cell invalid-sale">
-                        <span class="discount-price-val text-danger">{{ formatPrice(v.discountPrice) }}</span>
-                        <span class="invalid-warning-tag" title="Giá khuyến mãi phải nhỏ hơn giá niêm yết">
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path
-                              d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
-                            </path>
-                            <line x1="12" y1="9" x2="12" y2="13"></line>
-                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                          </svg>
-                          <span>&ge; price</span>
-                        </span>
-                      </div>
-
-                      <!-- Không có giá khuyến mãi -->
-                      <span *ngIf="!v.discountPrice || v.discountPrice === 0" class="text-muted">—</span>
-                    </td>
-
-                    <!-- 6. Tồn kho (stock) -->
-                    <td class="text-right">
-                      <span class="stock-badge-num" [class.stock-empty]="!v.stock || v.stock === 0">
-                        {{ v.stock !== undefined ? v.stock : 0 }}
-                      </span>
-                    </td>
-
-                    <!-- 7. Trạng thái (status) -->
-                    <td class="text-center">
-                      <span class="variant-status-pill" [ngClass]="'variant-status--' + getVariantStatus(v).variant">
-                        <span class="status-dot-mini"></span>
-                        {{ getVariantStatus(v).label }}
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-
-                <!-- FOOTER TỔNG KẾT TỒN KHO THEO NGUYÊN TẮC: quantity = Σ stock_i -->
-                <tfoot class="variants-tfoot">
-                  <tr>
-                    <td colspan="3" class="tfoot-label">
-                      <strong>Tổng sản phẩm ({{ variantsCount }} biến thể):</strong>
-                      <span class="text-muted text-xs ms-1">Tổng tồn kho = Σ stock của các biến thể</span>
-                    </td>
-                    <td class="text-right font-mono text-sm">
-                      <span *ngIf="variantPriceSummary.isUniformPrice">{{ formatPrice(variantPriceSummary.minPrice)
-                        }}</span>
-                      <span *ngIf="!variantPriceSummary.isUniformPrice">{{ formatPrice(variantPriceSummary.minPrice) }}
-                        ~
-                        {{ formatPrice(variantPriceSummary.maxPrice) }}</span>
-                    </td>
-                    <td class="text-right font-mono text-sm">
-                      <ng-container *ngIf="variantPriceSummary.hasSale">
-                        <span *ngIf="variantPriceSummary.isUniformDiscountPrice">{{
-                          formatPrice(variantPriceSummary.minDiscountPrice) }}</span>
-                        <span *ngIf="!variantPriceSummary.isUniformDiscountPrice">{{
-                          formatPrice(variantPriceSummary.minDiscountPrice) }} ~ {{
-                          formatPrice(variantPriceSummary.maxDiscountPrice) }}</span>
-                      </ng-container>
-                      <span *ngIf="!variantPriceSummary.hasSale" class="text-muted">—</span>
-                    </td>
-                    <td class="text-right tfoot-total-stock">
-                      <span class="total-stock-highlight">{{ totalVariantStock }}</span>
-                    </td>
-                    <td class="text-center">
-                      <span class="variant-status-pill" [class.variant-status--success]="totalVariantStock > 0"
-                        [class.variant-status--danger]="totalVariantStock === 0">
-                        {{ totalVariantStock > 0 ? 'Còn hàng' : 'Hết hàng' }}
-                      </span>
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </div>
-
-          <!-- Description Card -->
-          <div class="detail-card">
-            <h3 class="card-title">Mô tả sản phẩm</h3>
-            <div class="desc-block">
-              <div class="desc-subtitle">Mô tả ngắn</div>
-              <div class="desc-content" *ngIf="rawProduct.vi?.description" [innerHTML]="rawProduct.vi.description">
-              </div>
-              <div class="desc-content text-muted" *ngIf="!rawProduct.vi?.description">—</div>
-            </div>
-
-            <div class="desc-block mt-4" *ngIf="rawProduct.vi?.descriptionFull">
-              <div class="desc-subtitle">Mô tả chi tiết</div>
-              <div class="desc-content" *ngIf="rawProduct.vi.descriptionFull.length > 0">
-                <ul class="bullet-list" *ngIf="isIterable(rawProduct.vi.descriptionFull)">
-                  <li *ngFor="let item of rawProduct.vi.descriptionFull">{{ item }}</li>
-                </ul>
-                <div *ngIf="!isIterable(rawProduct.vi.descriptionFull)">{{ rawProduct.vi.descriptionFull }}</div>
-              </div>
-              <div class="desc-content text-muted"
-                *ngIf="!rawProduct.vi.descriptionFull || rawProduct.vi.descriptionFull.length === 0">—</div>
-            </div>
-
-            <!-- Tags -->
-            <div class="desc-block mt-4">
-              <div class="desc-subtitle">Tags (Thẻ tìm kiếm):</div>
-              <div class="tags-row" *ngIf="rawProduct.tags && rawProduct.tags.length > 0">
-                <span class="tag-badge" *ngFor="let t of rawProduct.tags">#{{ t }}</span>
-              </div>
-              <div class="text-muted" *ngIf="!rawProduct.tags || rawProduct.tags.length === 0">—</div>
-            </div>
-          </div>
-
-          <!-- Classification & Attributes -->
-          <div class="detail-card">
-            <h3 class="card-title">Phân loại & Thuộc tính</h3>
-            <div class="spec-list">
-              <div class="spec-item">
-                <span class="spec-k">Có phân loại</span>
-                <span class="spec-v">{{ rawProduct.vi?.hasClassification ? 'Có' : 'Không' }}</span>
-              </div>
-              <div class="spec-item">
-                <span class="spec-k">Danh mục cấp 1</span>
-                <span class="spec-v">{{ rawProduct.vi?.categoryLevel1 || '—' }}</span>
-              </div>
-              <div class="spec-item">
-                <span class="spec-k">Danh mục cấp 2</span>
-                <span class="spec-v">{{ rawProduct.vi?.categoryLevel2 || '—' }}</span>
-              </div>
-
-              <!-- Colors -->
-              <div class="spec-item">
-                <span class="spec-k">Màu sắc</span>
-                <span class="spec-v">{{ rawProduct.vi?.hasColors ? 'Có' : 'Không' }}</span>
-              </div>
-              <div class="spec-item" *ngIf="rawProduct.vi?.hasColors">
-                <span class="spec-k">Màu sắc</span>
-                <div class="spec-v colors-wrap">
-                  <div *ngFor="let c of rawProduct.vi?.colors" class="color-badge-display">
-                    <span class="color-swatch" [style.backgroundColor]="c.hex || '#ccc'"></span>
-                    <span class="color-name">{{ c.name || c }}</span>
-                    <span class="color-hex font-mono" *ngIf="c.hex">({{ c.hex }})</span>
-                  </div>
-                  <span *ngIf="!rawProduct.vi?.colors || rawProduct.vi?.colors.length === 0" class="text-muted">—</span>
+              <div class="field-item">
+                <div class="page-subtitle">Giá bán</div>
+                <div class="field-value field-value--price" [class.field-value--sale]="variantPriceSummary.hasSale">
+                  <ng-container *ngIf="variantPriceSummary.hasSale">
+                    <span *ngIf="variantPriceSummary.isUniformDiscountPrice">{{
+                      formatPrice(variantPriceSummary.minDiscountPrice) }}</span>
+                    <span *ngIf="!variantPriceSummary.isUniformDiscountPrice">{{
+                      formatPrice(variantPriceSummary.minDiscountPrice) }} ~ {{
+                      formatPrice(variantPriceSummary.maxDiscountPrice) }}</span>
+                  </ng-container>
+                  <ng-container *ngIf="!variantPriceSummary.hasSale">
+                    <span *ngIf="variantPriceSummary.isUniformPrice">{{ formatPrice(variantPriceSummary.minPrice)
+                      }}</span>
+                    <span *ngIf="!variantPriceSummary.isUniformPrice">{{ formatPrice(variantPriceSummary.minPrice) }} ~
+                      {{ formatPrice(variantPriceSummary.maxPrice) }}</span>
+                  </ng-container>
                 </div>
               </div>
 
-              <!-- Sizes -->
-              <div class="spec-item">
-                <span class="spec-k">Kích thước </span>
-                <span class="spec-v">{{ rawProduct.vi?.hasSizes ? 'Có' : 'Không' }}</span>
-              </div>
-              <div class="spec-item" *ngIf="rawProduct.vi?.hasSizes">
-                <span class="spec-k">Kích thước (sizes)</span>
-                <div class="spec-v sizes-wrap">
-                  <span class="size-chip-display" *ngFor="let s of rawProduct.vi?.sizes">{{ s }}</span>
-                  <span *ngIf="!rawProduct.vi?.sizes || rawProduct.vi?.sizes.length === 0" class="text-muted">—</span>
+              <div class="field-item">
+                <div class="page-subtitle">Giảm giá</div>
+                <div class="field-value">
+                  <span class="tag tag--discount" *ngIf="variantPriceSummary.hasSale">Có biến thể giảm giá</span>
+                  <span *ngIf="!variantPriceSummary.hasSale">Không</span>
                 </div>
               </div>
+
+              <div class="field-item">
+                <div class="page-subtitle">Tồn kho</div>
+                <div class="field-value field-value--emphasis">{{ totalVariantStock }}</div>
+              </div>
             </div>
-          </div>
 
+            <div class="field-grid-inline mt-4 pt-3 border-top-light">
+              <div class="field-item">
+                <div class="page-subtitle">On Sale</div>
+                <div class="field-value">
+                  <span class="tag" [class.tag--active]="variantPriceSummary.hasSale"
+                    [class.tag--inactive]="!variantPriceSummary.hasSale">
+                    {{ variantPriceSummary.hasSale ? 'Có' : 'Không' }}
+                  </span>
+                </div>
+              </div>
 
+              <div class="field-item">
+                <div class="page-subtitle">Tình trạng tổng</div>
+                <div class="field-value">
+                  <span class="tag" [class.tag--active]="totalVariantStock > 0"
+                    [class.tag--danger]="totalVariantStock === 0">
+                    {{ totalVariantStock > 0 ? 'Còn hàng (' + totalVariantStock + ' sp)' : 'Hết hàng' }}
+                  </span>
+                </div>
+              </div>
 
-
+              <div class="field-item">
+                <div class="page-subtitle">Cơ chế quản lý</div>
+                <div class="field-value">Giá và tồn kho được quản lý chi tiết theo từng biến thể (Σ stock = {{
+                  totalVariantStock }})</div>
+              </div>
+            </div>
+          </ng-container>
         </div>
+      </div>
+    </div>
 
+    <!-- ── 04 CẤU TRÚC SẢN PHẨM ──────────────────────────────── -->
+    <div class="timeline-section" id="section-04">
+      <div class="timeline-header">
+        <span class="timeline-number">04</span>
+        <div class="timeline-line"></div>
       </div>
 
+      <div class="timeline-body">
+        <div class="timeline-content">
+          <h2 class="card-title">Cấu trúc sản phẩm</h2>
+          <div class="divider"></div>
+
+          <div class="structure-two-column-grid">
+            <div class="field-item">
+              <div class="page-subtitle">Có biến thể</div>
+              <div class="field-value">{{ hasVariants ? 'Có' : 'Không' }}</div>
+            </div>
+
+            <div class="field-item">
+              <div class="page-subtitle">Số biến thể</div>
+              <div class="field-value">{{ variantsCount }}</div>
+            </div>
+
+            <div class="field-item">
+              <div class="page-subtitle">Màu sắc</div>
+              <div class="field-value">
+                <ng-container *ngIf="hasColors && colorsList.length > 0">
+                  <span *ngFor="let c of colorsList; let last = last">{{ c.name }}<span *ngIf="!last"> · </span></span>
+                </ng-container>
+                <span *ngIf="!hasColors || colorsList.length === 0">—</span>
+              </div>
+            </div>
+
+            <div class="field-item">
+              <div class="page-subtitle">Kích thước</div>
+              <div class="field-value">
+                <ng-container *ngIf="hasSizes && sizesList.length > 0">
+                  <span *ngFor="let s of sizesList; let last = last">{{ s }}<span *ngIf="!last"> · </span></span>
+                </ng-container>
+                <span *ngIf="!hasSizes || sizesList.length === 0">—</span>
+              </div>
+            </div>
+
+            <div class="field-item" *ngIf="hasClassification && classificationsList.length > 0">
+              <div class="page-subtitle">Phân loại</div>
+              <div class="field-value">
+                <span *ngFor="let cls of classificationsList; let last = last">{{ cls }}<span *ngIf="!last"> ·
+                  </span></span>
+              </div>
+            </div>
+
+            <div class="field-item">
+              <div class="page-subtitle">Tổng tồn kho</div>
+              <div class="field-value">{{ effectiveTotalStock }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 05 BIẾN THỂ ────────────────────────────────────────── -->
+    <div class="timeline-section" id="section-05">
+      <div class="timeline-header">
+        <span class="timeline-number">05</span>
+        <div class="timeline-line"></div>
+      </div>
+
+      <div class="timeline-body">
+        <div class="timeline-content">
+          <div class="card-title-flex">
+            <h2 class="card-title">BIẾN THỂ</h2>
+            <span class="tag tag--counter">{{ variantsCount }} biến thể</span>
+          </div>
+          <div class="divider"></div>
+
+          <!-- Bảng biến thể khi có variants -->
+          <div class="table-container" *ngIf="hasVariants">
+            <table class="table">
+              <thead class="table-header">
+                <tr class="table-row">
+                  <th class="table-cell table-cell--center" style="width: 44px;">#</th>
+                  <th class="table-cell">Màu</th>
+                  <th class="table-cell">Size</th>
+                  <th class="table-cell">SKU</th>
+                  <th class="table-cell table-cell--right">Giá</th>
+                  <th class="table-cell table-cell--right">Giá KM</th>
+                  <th class="table-cell table-cell--right">Stock</th>
+                  <th class="table-cell table-cell--center">Status</th>
+                </tr>
+              </thead>
+              <tbody class="table-body">
+                <tr class="table-row" *ngFor="let v of rawProduct.variants; let i = index">
+                  <!-- STT -->
+                  <td class="table-cell table-cell--center table-cell--muted table-cell--mono">{{ i + 1 }}</td>
+
+                  <!-- Màu sắc -->
+                  <td class="table-cell font-medium">
+                    <span *ngIf="v.color">{{ v.color }}</span>
+                    <span *ngIf="!v.color" class="table-cell--muted">—</span>
+                  </td>
+
+                  <!-- Kích thước -->
+                  <td class="table-cell">
+                    <span *ngIf="v.size" class="tag tag--size">{{ v.size }}</span>
+                    <span *ngIf="!v.size" class="table-cell--muted">—</span>
+                  </td>
+
+                  <!-- Mã SKU -->
+                  <td class="table-cell table-cell--mono">
+                    <span *ngIf="v.sku">{{ v.sku }}</span>
+                    <span *ngIf="!v.sku" class="table-cell--muted">—</span>
+                  </td>
+
+                  <!-- Giá niêm yết -->
+                  <td class="table-cell table-cell--right" [class.table-cell--struck]="isVariantSaleValid(v)">
+                    {{ formatPrice(v.price) }}
+                  </td>
+
+                  <!-- Giá khuyến mãi -->
+                  <td class="table-cell table-cell--right">
+                    <div *ngIf="isVariantSaleValid(v)" class="discount-stack">
+                      <span class="discount-val">{{ formatPrice(v.discountPrice) }}</span>
+                      <span class="tag tag--discount-mini">-{{ getVariantDiscountPercent(v) }}%</span>
+                    </div>
+                    <div *ngIf="isVariantSaleInvalid(v)" class="discount-stack">
+                      <span class="discount-val text-danger">{{ formatPrice(v.discountPrice) }}</span>
+                      <span class="tag tag--warn-mini" title="Giá khuyến mãi phải nhỏ hơn giá niêm yết">&ge;
+                        price</span>
+                    </div>
+                    <span *ngIf="!v.discountPrice || v.discountPrice === 0" class="table-cell--muted">—</span>
+                  </td>
+
+                  <!-- Tồn kho (Stock) -->
+                  <td class="table-cell table-cell--right font-semibold">
+                    <span [class.text-danger]="!v.stock || v.stock === 0">{{ v.stock !== undefined ? v.stock : 0
+                      }}</span>
+                  </td>
+
+                  <!-- Trạng thái (Status) -->
+                  <td class="table-cell table-cell--center">
+                    <span class="tag" [ngClass]="'tag--status-' + getVariantStatus(v).variant">
+                      <span class="status-indicator-dot"></span>
+                      {{ getVariantStatus(v).label }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+
+              <!-- Footer tổng tồn kho -->
+              <tfoot class="table-footer">
+                <tr class="table-row">
+                  <td colspan="4" class="table-cell font-semibold">
+                    Tổng tồn kho: {{ totalVariantStock }} ({{ variantsCount }} biến thể)
+                  </td>
+                  <td class="table-cell table-cell--right table-cell--mono">
+                    <span *ngIf="variantPriceSummary.isUniformPrice">{{ formatPrice(variantPriceSummary.minPrice)
+                      }}</span>
+                    <span *ngIf="!variantPriceSummary.isUniformPrice">{{ formatPrice(variantPriceSummary.minPrice) }} ~
+                      {{ formatPrice(variantPriceSummary.maxPrice) }}</span>
+                  </td>
+                  <td class="table-cell table-cell--right table-cell--mono">
+                    <ng-container *ngIf="variantPriceSummary.hasSale">
+                      <span *ngIf="variantPriceSummary.isUniformDiscountPrice">{{
+                        formatPrice(variantPriceSummary.minDiscountPrice) }}</span>
+                      <span *ngIf="!variantPriceSummary.isUniformDiscountPrice">{{
+                        formatPrice(variantPriceSummary.minDiscountPrice) }} ~ {{
+                        formatPrice(variantPriceSummary.maxDiscountPrice) }}</span>
+                    </ng-container>
+                    <span *ngIf="!variantPriceSummary.hasSale" class="table-cell--muted">—</span>
+                  </td>
+                  <td class="table-cell table-cell--right font-bold text-cheri">{{ totalVariantStock }}</td>
+                  <td class="table-cell table-cell--center">
+                    <span class="tag" [class.tag--active]="totalVariantStock > 0"
+                      [class.tag--danger]="totalVariantStock === 0">
+                      {{ totalVariantStock > 0 ? 'Còn hàng' : 'Hết hàng' }}
+                    </span>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <!-- Thông báo khi sản phẩm không có biến thể -->
+          <div *ngIf="!hasVariants" class="editorial-empty-state">
+            <div class="field-value table-cell--muted">Sản phẩm này là sản phẩm đơn (không có biến thể). Toàn bộ giá và
+              tồn kho được quản lý trực tiếp tại mục GIÁ &amp; TỒN KHO.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 06 NỘI DUNG SẢN PHẨM ──────────────────────────────── -->
+    <div class="timeline-section" id="section-06">
+      <div class="timeline-header">
+        <span class="timeline-number">06</span>
+        <div class="timeline-line"></div>
+      </div>
+
+      <div class="timeline-body">
+        <div class="timeline-content">
+          <h2 class="card-title">Nội dung sản phẩm</h2>
+          <div class="divider"></div>
+
+          <!-- Mô tả ngắn -->
+          <div class="content-block">
+            <div class="page-subtitle">Mô tả</div>
+            <div class="field-value content-description" *ngIf="descriptionText" [innerHTML]="descriptionText"></div>
+            <div class="field-value table-cell--muted" *ngIf="!descriptionText">—</div>
+          </div>
+
+          <div class="divider mt-4"></div>
+
+          <!-- Mô tả chi tiết -->
+          <div class="content-block mt-4">
+            <div class="page-subtitle">Mô tả chi tiết</div>
+            <ul class="bullet-list" *ngIf="descriptionFullList.length > 0">
+              <li *ngFor="let item of descriptionFullList">{{ item }}</li>
+            </ul>
+            <div class="field-value table-cell--muted" *ngIf="descriptionFullList.length === 0">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 07 THUỘC TÍNH ──────────────────────────────────────── -->
+    <div class="timeline-section" id="section-07">
+      <div class="timeline-header">
+        <span class="timeline-number">07</span>
+        <div class="timeline-line"></div>
+      </div>
+
+      <div class="timeline-body">
+        <div class="timeline-content">
+          <h2 class="card-title">Thuộc tính</h2>
+          <div class="divider"></div>
+
+          <!-- PHÂN LOẠI -->
+          <div class="attribute-block">
+            <div class="page-subtitle">Phân loại</div>
+            <div class="tag-row mt-2" *ngIf="hasClassification && classificationsList.length > 0">
+              <span class="tag tag--neutral" *ngFor="let cls of classificationsList">{{ cls }}</span>
+            </div>
+            <div class="field-value table-cell--muted mt-1"
+              *ngIf="!hasClassification || classificationsList.length === 0">—</div>
+          </div>
+
+          <!-- MÀU SẮC -->
+          <div class="attribute-block mt-4">
+            <div class="page-subtitle">Màu sắc</div>
+            <div class="color-badges-row mt-2" *ngIf="hasColors && colorsList.length > 0">
+              <div *ngFor="let c of colorsList" class="color-badge-editorial">
+                <span class="color-dot" [style.backgroundColor]="c.hex || '#ccc'"></span>
+                <span class="color-name-text">{{ c.name }}</span>
+                <span class="color-hex-text font-mono" *ngIf="c.hex">{{ c.hex }}</span>
+              </div>
+            </div>
+            <div class="field-value table-cell--muted mt-1" *ngIf="!hasColors || colorsList.length === 0">—</div>
+          </div>
+
+          <!-- KÍCH THƯỚC -->
+          <div class="attribute-block mt-4">
+            <div class="page-subtitle">Kích thước</div>
+            <div class="tag-row mt-2" *ngIf="hasSizes && sizesList.length > 0">
+              <span class="tag tag--size" *ngFor="let s of sizesList">{{ s }}</span>
+            </div>
+            <div class="field-value table-cell--muted mt-1" *ngIf="!hasSizes || sizesList.length === 0">—</div>
+          </div>
+
+          <!-- TAGS -->
+          <div class="attribute-block mt-4">
+            <div class="page-subtitle">Tags</div>
+            <div class="tag-row mt-2" *ngIf="rawProduct?.tags && rawProduct.tags.length > 0">
+              <span class="tag tag--hashtag" *ngFor="let t of rawProduct.tags">#{{ t }}</span>
+            </div>
+            <div class="field-value table-cell--muted mt-1" *ngIf="!rawProduct?.tags || rawProduct.tags.length === 0">—
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 08 THÔNG TIN HỆ THỐNG ──────────────────────────────── -->
+    <div class="timeline-section" id="section-08">
+      <div class="timeline-header">
+        <span class="timeline-number">08</span>
+        <div class="timeline-line"></div>
+      </div>
+
+      <div class="timeline-body">
+        <div class="timeline-content">
+          <h2 class="card-title">Thông tin hệ thống</h2>
+          <div class="divider"></div>
+
+          <div class="system-fields-grid">
+            <div class="field-item">
+              <div class="page-subtitle">_id</div>
+              <div class="field-value field-value--mono">{{ rawProduct?._id || productId }}</div>
+            </div>
+
+            <div class="field-item">
+              <div class="page-subtitle">Ngày tạo</div>
+              <div class="field-value">{{ rawProduct?.dateAdded ? (rawProduct.dateAdded | slice:0:19) : '—' }}</div>
+            </div>
+
+            <div class="field-item">
+              <div class="page-subtitle">Cập nhật lần cuối</div>
+              <div class="field-value">{{ rawProduct?.updatedAt ? (rawProduct.updatedAt | slice:0:19) : '—' }}</div>
+            </div>
+
+            <div class="field-item">
+              <div class="page-subtitle">Trạng thái root</div>
+              <div class="field-value">
+                <span class="tag" [class.tag--active]="rawProduct?.visibility !== false"
+                  [class.tag--inactive]="rawProduct?.visibility === false">
+                  <span class="status-indicator-dot"></span>
+                  {{ rawProduct?.visibility !== false ? 'Hiển thị' : 'Ẩn' }}
+                </span>
+              </div>
+            </div>
+
+            <div class="field-item">
+              <div class="page-subtitle">Trạng thái vi</div>
+              <div class="field-value">
+                <span class="tag" [class.tag--active]="rawProduct?.vi?.visibility !== false"
+                  [class.tag--inactive]="rawProduct?.vi?.visibility === false">
+                  <span class="status-indicator-dot"></span>
+                  {{ rawProduct?.vi?.visibility !== false ? 'Hiển thị' : 'Ẩn' }}
+                </span>
+              </div>
+            </div>
+
+            <div class="field-item">
+              <div class="page-subtitle">URL Slug</div>
+              <div class="field-value field-value--mono">{{ rawProduct?.titleUrl || '—' }}</div>
+            </div>
+
+            <div class="field-item" *ngIf="rawProduct?.__v !== undefined">
+              <div class="page-subtitle">Document Version (__v)</div>
+              <div class="field-value field-value--mono">{{ rawProduct.__v }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
   </div>
 
-  <!-- Confirm Delete Dialog -->
+  <!-- Confirm Delete Dialog (giữ nguyên logic modal) -->
   <app-confirm-dialog [isOpen]="confirmOpen" title="Xác nhận xóa sản phẩm" [message]="confirmMessage"
     confirmLabel="Xóa sản phẩm" variant="danger" (confirmed)="onConfirmDelete()"
     (cancelled)="onCancelDelete()"></app-confirm-dialog>
+
+</div>

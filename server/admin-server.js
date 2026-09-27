@@ -387,10 +387,12 @@ function formatProduct(p, lang = 'vi') {
     description: langData.description || fallbackData.description || p.description || '',
     descriptionFull: langData.descriptionFull || fallbackData.descriptionFull || p.descriptionFull || [],
     rating: p.rating !== undefined ? p.rating : 5,
-    colors: p.colors || langData.colors || fallbackData.colors || [],
-    sizes: p.sizes || langData.sizes || fallbackData.sizes || [],
-    hasColors: p.hasColors || false,
-    hasSizes: p.hasSizes || false,
+    colors: langData.colors || p.colors || fallbackData.colors || [],
+    sizes: langData.sizes || p.sizes || fallbackData.sizes || [],
+    hasColors: Boolean(langData.hasColors !== undefined ? langData.hasColors : (p.hasColors || false)),
+    hasSizes: Boolean(langData.hasSizes !== undefined ? langData.hasSizes : (p.hasSizes || false)),
+    hasClassification: Boolean(langData.hasClassification !== undefined ? langData.hasClassification : (p.hasClassification || false)),
+    classifications: langData.classifications || p.classifications || fallbackData.classifications || [],
     raw: p
   };
 }

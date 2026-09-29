@@ -28,22 +28,22 @@ export class OrdersComponent implements OnInit {
         { value: 'Đang giao', label: 'Đang giao' },
         { value: 'Đang xử lý', label: 'Đang xử lý' },
         { value: 'Chờ xác nhận', label: 'Chờ xác nhận' },
+        { value: 'Đã xác nhận', label: 'Đã xác nhận' },
         { value: 'Đã hủy', label: 'Đã hủy' },
+        { value: 'Đã hoàn trả', label: 'Đã hoàn trả' },
       ]
     },
     {
-      key: 'payment', label: 'Thanh toán', type: 'select', options: [
-        { value: 'COD', label: 'COD' },
-        { value: 'Chuyển khoản', label: 'Chuyển khoản' },
-        { value: 'MoMo', label: 'MoMo' },
-      ]
+      key: 'payment', label: 'Thanh toán', type: 'select', options: []
     },
   ];
 
   data: any[] = [];
   allOrders: any[] = [];
+  paymentMethods: any[] = [];
   pagination: PaginationConfig = { page: 1, pageSize: 20, total: 0 };
   isLoading = false;
+  isLoadingPaymentMethods = false;
   initialStatusFilter = '';
 
   selectedIds: Set<any> = new Set();
@@ -67,6 +67,7 @@ export class OrdersComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
+    this.loadPaymentMethods();
     this.route.queryParams.subscribe(params => {
       const st = params['status'];
       if (st) {
@@ -74,14 +75,71 @@ export class OrdersComponent implements OnInit {
         const map: Record<string, string> = {
           'delivered': 'Đã giao',
           'pending': 'Chờ xác nhận',
+          'confirmed': 'Đã xác nhận',
           'processing': 'Đang xử lý',
           'shipping': 'Đang giao',
-          'cancelled': 'Đã hủy'
+          'cancelled': 'Đã hủy',
+          'returned': 'Đã hoàn trả'
         };
         this.initialStatusFilter = map[st.toLowerCase()] || st;
       }
       this.loadOrders();
     });
+  }
+
+  loadPaymentMethods(): void {
+    this.isLoadingPaymentMethods = true;
+    this.loadPaymentMethodsPage(1, []);
+  }
+
+  private loadPaymentMethodsPage(page: number, accumulatedMethods: any[]): void {
+    this.apiService.getPaymentMethods({ page, limit: 100 }).subscribe({
+      next: (res) => {
+        if (!res.success || !Array.isArray(res.data)) {
+          this.finishPaymentMethodsLoad([]);
+          return;
+        }
+
+        const methods = [...accumulatedMethods, ...res.data];
+        const rawTotalPages = Number(res.totalPages ?? res.pagination?.totalPages ?? 1);
+        const totalPages = Number.isFinite(rawTotalPages) && rawTotalPages > 0
+          ? Math.floor(rawTotalPages)
+          : 1;
+
+        if (page < totalPages) {
+          this.loadPaymentMethodsPage(page + 1, methods);
+          return;
+        }
+
+        this.finishPaymentMethodsLoad(methods);
+      },
+      error: (err) => {
+        console.error('Lỗi khi tải phương thức thanh toán cho bộ lọc đơn hàng:', err);
+        this.finishPaymentMethodsLoad([]);
+      }
+    });
+  }
+
+  private finishPaymentMethodsLoad(methods: any[]): void {
+    const seen = new Set<string>();
+    this.isLoadingPaymentMethods = false;
+    this.paymentMethods = methods
+      .map((method: any) => ({
+        ...method,
+        filterValue: this.getPaymentMethodFilterValue(method)
+      }))
+      .filter((method: any) => {
+        if (!method.filterValue || seen.has(method.filterValue)) return false;
+        seen.add(method.filterValue);
+        return true;
+      });
+
+    const options = this.paymentMethods.map((method: any) => ({
+      value: method.filterValue,
+      label: this.getDisplayString(method.name) || this.getDisplayString(method.code) || method.filterValue
+    }));
+    this.setPaymentFilterOptions(options);
+    this.cdr.markForCheck();
   }
 
   loadOrders(): void {
@@ -204,14 +262,56 @@ export class OrdersComponent implements OnInit {
       filtered = filtered.filter(o => o.status === v['status']);
     }
     if (v['payment']) {
-      filtered = filtered.filter(o => o.payment === v['payment']);
+      const paymentFilter = this.normalizePaymentValue(v['payment']);
+      filtered = filtered.filter(o => this.getOrderPaymentFilterValue(o) === paymentFilter);
     }
     this.data = filtered;
     this.pagination = { ...this.pagination, total: this.data.length };
     this.cdr.markForCheck();
   }
 
-  onRefresh(): void { this.loadOrders(); }
+  onRefresh(): void { this.loadPaymentMethods(); this.loadOrders(); }
   onPageChange(p: number): void { this.pagination = { ...this.pagination, page: p }; this.cdr.markForCheck(); }
   onPageSizeChange(s: number): void { this.pagination = { ...this.pagination, pageSize: s, page: 1 }; this.cdr.markForCheck(); }
+
+  private setPaymentFilterOptions(options: Array<{ value: string; label: string }>): void {
+    this.filterFields = this.filterFields.map(field =>
+      field.key === 'payment' ? { ...field, options } : field
+    );
+  }
+
+  private getPaymentMethodFilterValue(method: any): string {
+    return this.normalizePaymentValue(method?.code)
+      || this.normalizePaymentValue(method?._id)
+      || this.normalizePaymentValue(method?.id)
+      || '';
+  }
+
+  private getOrderPaymentFilterValue(order: any): string {
+    const snapshotCode = this.normalizePaymentValue(order?.paymentMethodSnapshot?.code);
+    if (snapshotCode) return snapshotCode;
+
+    const explicitCode = this.normalizePaymentValue(order?.paymentMethodCode);
+    if (explicitCode) return explicitCode;
+
+    const paymentMethodId = this.getDisplayString(order?.paymentMethodId);
+    if (paymentMethodId) {
+      const method = this.paymentMethods.find((candidate: any) =>
+        this.getDisplayString(candidate?._id) === paymentMethodId
+        || this.getDisplayString(candidate?.id) === paymentMethodId
+      );
+      if (method?.filterValue) return method.filterValue;
+    }
+
+    return '';
+  }
+
+  private normalizePaymentValue(value: any): string {
+    const text = this.getDisplayString(value);
+    return text ? text.toUpperCase() : '';
+  }
+
+  private getDisplayString(value: any): string | null {
+    return typeof value === 'string' && value.trim() ? value.trim() : null;
+  }
 }

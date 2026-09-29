@@ -57,10 +57,12 @@ const LOW_STOCK_THRESHOLD = 5;
 
 const ORDER_STATUS_CONFIG = [
   { code: 'PENDING', label: 'Chờ xác nhận', queryParam: 'Chờ xác nhận', variant: 'neutral' },
+  { code: 'CONFIRMED', label: 'Đã xác nhận', queryParam: 'Đã xác nhận', variant: 'primary' },
   { code: 'PROCESSING', label: 'Đang xử lý', queryParam: 'Đang xử lý', variant: 'warning' },
   { code: 'SHIPPING', label: 'Đang giao', queryParam: 'Đang giao', variant: 'primary' },
   { code: 'DELIVERED', label: 'Đã giao', queryParam: 'Đã giao', variant: 'success' },
-  { code: 'CANCELLED', label: 'Đã hủy', queryParam: 'Đã hủy', variant: 'danger' }
+  { code: 'CANCELLED', label: 'Đã hủy', queryParam: 'Đã hủy', variant: 'danger' },
+  { code: 'RETURNED', label: 'Đã hoàn trả', queryParam: 'Đã hoàn trả', variant: 'warning' }
 ];
 
 function getRevenueTimeline(orders, timeRange) {
@@ -91,7 +93,7 @@ function getRevenueTimeline(orders, timeRange) {
   }
 
   for (const o of orders) {
-    const rawSt = (o.statusHistory?.[0]?.status || o.status || '').toUpperCase();
+    const rawSt = (o.status || o.statusHistory?.[0]?.status || '').toUpperCase();
     if (rawSt === 'DELIVERED') {
       const oDate = new Date(o.dateAdded || o.createdAt || (o._id ? o._id.getTimestamp() : null));
       if (!isNaN(oDate.getTime()) && oDate >= startDate && oDate <= endDate) {
@@ -136,7 +138,7 @@ const dashboardHandler = async (req, res) => {
     // Calculate Total Revenue (orders with status DELIVERED)
     let totalRevenue = 0;
     orders.forEach(o => {
-      const rawSt = (o.statusHistory?.[0]?.status || o.status || '').toUpperCase();
+      const rawSt = (o.status || o.statusHistory?.[0]?.status || '').toUpperCase();
       if (rawSt === 'DELIVERED') {
         const p = Number(o.cart?.totalPrice !== undefined ? o.cart.totalPrice : (o.amount || 0));
         if (!isNaN(p)) totalRevenue += p;
@@ -147,11 +149,9 @@ const dashboardHandler = async (req, res) => {
     const statusCounts = {};
     ORDER_STATUS_CONFIG.forEach(c => statusCounts[c.code] = 0);
     orders.forEach(o => {
-      const rawSt = (o.statusHistory?.[0]?.status || o.status || 'PENDING').toUpperCase();
+      const rawSt = (o.status || o.statusHistory?.[0]?.status || '').toUpperCase();
       if (statusCounts[rawSt] !== undefined) {
         statusCounts[rawSt]++;
-      } else {
-        statusCounts.PENDING++;
       }
     });
 
@@ -255,8 +255,9 @@ const dashboardHandler = async (req, res) => {
     const recentOrders = orders.slice(0, 6).map(o => {
       const address = o.addresses?.[0] || {};
       const statusHistory = o.statusHistory || [];
-      const rawStatus = (statusHistory[0]?.status || o.status || 'PENDING').toUpperCase();
-      const statusCfg = ORDER_STATUS_CONFIG.find(c => c.code === rawStatus) || { label: 'Chờ xác nhận', variant: 'neutral' };
+      const rawStatus = (o.status || statusHistory[0]?.status || '').toUpperCase();
+      const statusCfg = ORDER_STATUS_CONFIG.find(c => c.code === rawStatus)
+        || { label: rawStatus || '—', variant: 'neutral' };
       const totalPrice = o.cart?.totalPrice !== undefined ? o.cart.totalPrice : (o.amount || 0);
 
       return {
@@ -2125,66 +2126,214 @@ app.post('/api/categories/bulk-delete', async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 const VALID_ORDER_TRANSITIONS = {
   PENDING: ['PROCESSING', 'CANCELLED'],
+  CONFIRMED: [],
   PROCESSING: ['SHIPPING', 'CANCELLED'],
   SHIPPING: ['DELIVERED', 'CANCELLED'],
   DELIVERED: [], // final state
-  CANCELLED: []  // final state
+  CANCELLED: [], // final state
+  RETURNED: []
 };
 
-const ORDER_STATUS_MAP = {
-  PENDING: { label: 'Chờ xác nhận', variant: 'neutral' },
-  PROCESSING: { label: 'Đang xử lý', variant: 'warning' },
-  SHIPPING: { label: 'Đang giao', variant: 'primary' },
-  DELIVERED: { label: 'Đã giao', variant: 'success' },
-  CANCELLED: { label: 'Đã hủy', variant: 'danger' }
-};
+const ORDER_STATUS_MAP = Object.fromEntries(
+  ORDER_STATUS_CONFIG.map(({ code, label, variant }) => [code, { label, variant }])
+);
 
-function formatOrder(o) {
-  const address = o.addresses?.[0] || {};
-  const customerName = address.name || 'Khách hàng';
-  const statusHistory = o.statusHistory || [];
-  const rawStatus = (statusHistory[0]?.status || o.status || 'PENDING').toUpperCase();
-  const statusCode = ['PENDING', 'PROCESSING', 'SHIPPING', 'DELIVERED', 'CANCELLED'].includes(rawStatus)
-    ? rawStatus
-    : 'PENDING';
+function getFiniteNumber(value) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
 
-  const statusMeta = ORDER_STATUS_MAP[statusCode] || { label: 'Chờ xác nhận', variant: 'neutral' };
+function getNonEmptyString(value) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
 
-  let payment = 'COD';
-  if (o.outcome?.seller_message) {
-    if (o.outcome.seller_message.includes('MOMO')) payment = 'MoMo';
-    else if (o.outcome.seller_message.includes('BANK')) payment = 'Chuyển khoản';
-    else payment = 'COD';
+function isUsableNormalizedItem(item) {
+  if (!item || typeof item !== 'object' || !item.productSnapshot || typeof item.productSnapshot !== 'object') {
+    return false;
   }
 
-  const itemsCount = o.cart?.totalQty || o.cart?.items?.reduce((acc, it) => acc + (it.qty || 1), 0) || 1;
-  const totalPrice = o.cart?.totalPrice !== undefined ? o.cart.totalPrice : (o.amount || 0);
+  return Boolean(
+    getNonEmptyString(item.productSnapshot.title)
+    || getNonEmptyString(item.productSnapshot.sku)
+    || item.productId != null
+  );
+}
+
+function normalizeOrderItem(item) {
+  if (!item || typeof item !== 'object') return item;
+
+  // Keep the original item shape intact. The additive aliases let the Admin
+  // detail page consume normalized and legacy orders without losing snapshots.
+  const legacyProduct = item.item && typeof item.item === 'object' ? item.item : {};
+  const firstLegacyImage = Array.isArray(legacyProduct.images) ? legacyProduct.images[0] : null;
+  const legacyImage = legacyProduct.mainImage?.url
+    || (typeof firstLegacyImage === 'string' ? firstLegacyImage : firstLegacyImage?.url)
+    || '';
+  const quantity = getFiniteNumber(item.quantity) ?? getFiniteNumber(item.qty);
+  const unitPrice = getFiniteNumber(item.unitPrice) ?? getFiniteNumber(item.price);
+  const explicitSubtotal = getFiniteNumber(item.subtotal);
+  const subtotal = explicitSubtotal ?? (
+    quantity !== null && unitPrice !== null ? quantity * unitPrice : null
+  );
+
+  if (isUsableNormalizedItem(item)) {
+    return {
+      ...item,
+      quantity,
+      unitPrice,
+      subtotal
+    };
+  }
 
   return {
-    id: o._id.toString(),
-    _id: o._id.toString(),
-    orderId: o.orderId || ('#DH' + o._id.toString().slice(-6).toUpperCase()),
-    code: o.orderId || ('#DH' + o._id.toString().slice(-6).toUpperCase()),
+    ...item,
+    productId: item.productId ?? item.id ?? legacyProduct._id ?? null,
+    variantId: item.variantId ?? null,
+    productSnapshot: {
+      title: legacyProduct.title || item.title || legacyProduct.name || legacyProduct.titleUrl?.replace(/-/g, ' ') || '',
+      sku: legacyProduct.sku || item.sku || '',
+      image: legacyImage,
+      variant: {
+        color: Array.isArray(legacyProduct.colors) ? legacyProduct.colors.join(', ') : (legacyProduct.color || ''),
+        size: Array.isArray(legacyProduct.sizes) ? legacyProduct.sizes.join(', ') : (legacyProduct.size || ''),
+        classification: legacyProduct.productType || legacyProduct.classification || ''
+      }
+    },
+    quantity,
+    unitPrice,
+    subtotal
+  };
+}
+
+function getLegacyPaymentCode(order) {
+  const sellerMessage = typeof order.outcome?.seller_message === 'string'
+    ? order.outcome.seller_message.trim().toUpperCase()
+    : '';
+
+  if (sellerMessage === 'MOMO') return 'MOMO';
+  if (['BANK', 'TRANSFER', 'BANK_TRANSFER'].includes(sellerMessage)) return 'BANK_TRANSFER';
+  if (['COD', 'CASH ON DELIVERY', 'CASH_ON_DELIVERY', 'PAYMENT_ON_DELIVERY'].includes(sellerMessage)) return 'COD';
+  return null;
+}
+
+function getLegacyPaymentDisplay(order) {
+  const paymentCode = getLegacyPaymentCode(order);
+  if (paymentCode === 'MOMO') return 'MoMo';
+  if (paymentCode === 'BANK_TRANSFER') return 'Chuyển khoản';
+  if (paymentCode === 'COD') return 'COD';
+  return null;
+}
+
+function formatOrder(o) {
+  const mongoId = o._id?.toString?.() || '';
+  const fallbackOrderCode = mongoId ? '#DH' + mongoId.slice(-6).toUpperCase() : '';
+  const orderCode = o.orderId || fallbackOrderCode;
+
+  const normalizedItems = Array.isArray(o.items) ? o.items.filter(isUsableNormalizedItem) : [];
+  const legacyItems = Array.isArray(o.cart?.items)
+    ? o.cart.items.filter(item => item && typeof item === 'object')
+    : [];
+  const usesNormalizedItems = normalizedItems.length > 0;
+  const sourceItems = usesNormalizedItems ? normalizedItems : legacyItems;
+  const items = sourceItems.map(normalizeOrderItem);
+  const allItemQuantitiesKnown = items.every(item => getFiniteNumber(item?.quantity) !== null);
+  const computedItemsCount = allItemQuantitiesKnown
+    ? items.reduce((total, item) => total + item.quantity, 0)
+    : null;
+  const legacyTotalQty = getFiniteNumber(o.cart?.totalQty);
+  const itemsCount = !usesNormalizedItems && legacyTotalQty !== null
+    ? legacyTotalQty
+    : computedItemsCount;
+
+  const shippingAddress = o.shippingAddress && typeof o.shippingAddress === 'object'
+    ? o.shippingAddress
+    : null;
+  const legacyAddress = Array.isArray(o.addresses) ? (o.addresses[0] || {}) : {};
+  const customerName = shippingAddress?.fullName || legacyAddress.name || null;
+  const customerEmail = o.customerEmail || legacyAddress.email || null;
+  const customerPhone = o.customerPhone || shippingAddress?.phone || legacyAddress.phone || null;
+
+  const statusHistory = Array.isArray(o.statusHistory) ? o.statusHistory : [];
+  const rawStatusValue = o.status ?? statusHistory[0]?.status ?? '';
+  const statusCode = typeof rawStatusValue === 'string' ? rawStatusValue.toUpperCase() : String(rawStatusValue);
+  const statusMeta = ORDER_STATUS_MAP[statusCode];
+  const statusText = statusMeta?.label || statusCode || '';
+
+  const normalizedPayment = getNonEmptyString(o.paymentMethodSnapshot?.name)
+    || getNonEmptyString(o.paymentMethodSnapshot?.code)
+    || getNonEmptyString(o.paymentProvider);
+  const payment = normalizedPayment || getLegacyPaymentDisplay(o);
+  const explicitPaymentMethodCode = getNonEmptyString(o.paymentMethodSnapshot?.code)
+    || getNonEmptyString(o.paymentMethodCode);
+  const paymentMethodCode = explicitPaymentMethodCode
+    ? explicitPaymentMethodCode.toUpperCase()
+    : (o.paymentMethodId != null ? null : getLegacyPaymentCode(o));
+
+  const totalPrice = getFiniteNumber(o.totalAmount)
+    ?? getFiniteNumber(o.cart?.totalPrice)
+    ?? getFiniteNumber(o.amount);
+  const createdDate = o.createdAt ?? o.dateAdded ?? null;
+  const shippingFee = getFiniteNumber(o.shippingFee)
+    ?? getFiniteNumber(o.shippingMethodSnapshot?.fee)
+    ?? getFiniteNumber(o.cart?.shippingCost);
+  const paymentFee = getFiniteNumber(o.paymentFee)
+    ?? getFiniteNumber(o.paymentMethodSnapshot?.paymentFee);
+  const refundedAmount = getFiniteNumber(o.refundedAmount)
+    ?? getFiniteNumber(o.amount_refunded);
+
+  return {
+    id: mongoId,
+    _id: mongoId,
+    orderId: orderCode,
+    code: orderCode,
     customer: customerName,
-    customerEmail: o.customerEmail || address.email || '',
-    phone: address.phone || '090***',
+    customerEmail,
+    customerPhone,
+    phone: customerPhone,
     total: totalPrice,
-    amount: o.amount !== undefined ? o.amount : totalPrice,
-    currency: o.currency || 'VND',
-    type: o.type || 'standard',
+    amount: getFiniteNumber(o.amount) ?? totalPrice,
+    currency: o.currency || null,
+    type: o.type || null,
     notes: o.notes || '',
+    items,
     itemsCount,
     payment,
+    paymentMethodCode,
+    paymentMethodId: o.paymentMethodId ?? null,
+    paymentMethodSnapshot: o.paymentMethodSnapshot ?? null,
+    paymentStatus: o.paymentStatus ?? null,
+    transactionId: o.transactionId || null,
+    paymentProvider: o.paymentProvider || null,
+    paymentFee,
+    paidAt: o.paidAt ?? null,
+    refundedAmount,
+    refundedAt: o.refundedAt ?? null,
+    shippingAddress,
+    shippingMethodId: o.shippingMethodId ?? null,
+    shippingMethodSnapshot: o.shippingMethodSnapshot ?? null,
+    shippingFee,
+    shippingProvider: o.shippingProvider || null,
+    trackingNumber: o.trackingNumber || null,
+    estimatedDeliveryDate: o.estimatedDeliveryDate ?? null,
+    shippedAt: o.shippedAt ?? null,
+    deliveredAt: o.deliveredAt ?? null,
+    subtotal: getFiniteNumber(o.subtotal),
+    discountAmount: getFiniteNumber(o.discountAmount),
+    taxAmount: getFiniteNumber(o.taxAmount),
+    couponCode: o.couponCode || null,
+    couponDiscount: getFiniteNumber(o.couponDiscount),
+    totalAmount: totalPrice,
     statusCode,
-    status: statusMeta.label,
-    statusText: statusMeta.label,
-    statusVariant: statusMeta.variant,
-    dateAdded: o.dateAdded || o.createdAt || new Date().toISOString(),
-    createdAt: (o.dateAdded || o.createdAt || new Date()).toString().slice(0, 10),
-    cart: o.cart || { items: [], totalQty: 0, totalPrice: 0 },
+    rawStatus: statusCode || null,
+    status: statusText,
+    statusText,
+    statusVariant: statusMeta?.variant || 'neutral',
+    dateAdded: createdDate,
+    createdAt: createdDate,
+    updatedAt: o.updatedAt ?? null,
+    cart: o.cart || { items: [], totalQty: 0, totalPrice: null },
     addresses: Array.isArray(o.addresses) ? o.addresses : [],
     outcome: o.outcome || {},
-    statusHistory: Array.isArray(o.statusHistory) ? o.statusHistory : [],
+    statusHistory,
     raw: o
   };
 }

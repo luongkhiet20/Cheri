@@ -1,16 +1,43 @@
 <mat-drawer-container class="products-sidebar-container" autosize hasBackdrop>
   <!-- Mobile drawer sidebar -->
-  <mat-drawer #sideBar [(opened)]="sidebarOpened" class="products-sidebar-drawer" mode="over">
-    <app-sidebar [class.disabled]="loadingProducts()" [categories]="categories()" [price]="filterPrice()"
-      [maxPrice]="maxPrice()" [minPrice]="minPrice()" [filterMinPrice]="filterMinPrice()"
-      [filterMaxPrice]="filterPrice()" [stock]="filterStock()" [rating]="filterRating()"
-      [selectedRatings]="selectedRatings()"
-      [activeCategory]="selectedCategories().length > 0 ? selectedCategories().join(',') : category()"
-      [activeCategories]="selectedCategories()" [sortOptions]="sortOptions" [currency]="currency()" [lang]="lang()"
-      [choosenSort]="sortBy()" [activeFiltersCount]="activeFiltersCount()" (changeMinPrice)="changeMinPrice($event)"
-      (changeMaxPrice)="priceRange($event)" (changeSort)="changeSort($event)" (changeCategory)="changeCategory($event)"
-      (changeStock)="changeStock($event)" (changeRating)="changeRating($event)" (clearFilters)="clearAllFilters()">
-    </app-sidebar>
+  <mat-drawer #sideBar [(opened)]="sidebarOpened" (closed)="onSidebarClosed()" class="products-sidebar-drawer" mode="over">
+    <!-- Header with Close Button -->
+    <div class="products-drawer-header">
+      <div class="products-drawer-title-group">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="6" x2="20" y2="6" />
+          <line x1="4" y1="12" x2="14" y2="12" />
+          <line x1="4" y1="18" x2="11" y2="18" />
+        </svg>
+        <span class="products-drawer-title">Bộ lọc</span>
+        @if (activeFiltersCount() > 0) {
+        <span class="products-drawer-count">{{ activeFiltersCount() }}</span>
+        }
+      </div>
+      <button type="button" class="products-drawer-close-btn" (click)="closeSidebar()" aria-label="Đóng bộ lọc">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Drawer Body containing Sidebar Component -->
+    <div class="products-drawer-body">
+      <app-sidebar [class.disabled]="loadingProducts()" [categories]="categories()" [price]="filterPrice()"
+        [maxPrice]="maxPrice()" [minPrice]="minPrice()" [filterMinPrice]="filterMinPrice()"
+        [filterMaxPrice]="filterPrice()" [stock]="filterStock()" [rating]="filterRating()"
+        [selectedRatings]="selectedRatings()"
+        [activeCategory]="selectedCategories().length > 0 ? selectedCategories().join(',') : category()"
+        [activeCategories]="selectedCategories()" [sortOptions]="sortOptions" [currency]="currency()" [lang]="lang()"
+        [choosenSort]="sortBy()" [activeFiltersCount]="activeFiltersCount()" (changeMinPrice)="changeMinPrice($event)"
+        (changeMaxPrice)="priceRange($event)" (changeSort)="changeSort($event)" (changeCategory)="changeCategory($event)"
+        (changeStock)="changeStock($event)" (changeRating)="changeRating($event)" (clearFilters)="clearAllFilters()"
+        (applyFilters)="closeSidebar()">
+      </app-sidebar>
+    </div>
   </mat-drawer>
 
   <mat-drawer-content>

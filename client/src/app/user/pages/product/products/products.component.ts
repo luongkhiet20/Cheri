@@ -1,6 +1,6 @@
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { map, distinctUntilChanged, filter, take, skip } from 'rxjs/operators';
-import { Component, ChangeDetectionStrategy, OnDestroy, Signal, computed, effect, signal, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef, OnDestroy, Signal, computed, effect, signal, Inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { combineLatest, Subscription } from 'rxjs';
@@ -133,7 +133,8 @@ export class ProductsComponent implements OnDestroy {
     private meta: Meta,
     private title: Title,
     private translate: TranslateService,
-    private wishlistService: WishlistService
+    private wishlistService: WishlistService,
+    private cdr: ChangeDetectorRef
   ) {
     this.category = toSignal(this.route.params.pipe(
       map((params) => params['category'])
@@ -307,8 +308,24 @@ export class ProductsComponent implements OnDestroy {
     this.store.updatePosition({ productsComponent: 0 });
   }
 
-  toggleSidebar() {
+  toggleSidebar(): void {
     this.sidebarOpened = !this.sidebarOpened;
+    this.cdr.markForCheck();
+  }
+
+  closeSidebar(): void {
+    this.sidebarOpened = false;
+    this.cdr.markForCheck();
+  }
+
+  openSidebar(): void {
+    this.sidebarOpened = true;
+    this.cdr.markForCheck();
+  }
+
+  onSidebarClosed(): void {
+    this.sidebarOpened = false;
+    this.cdr.markForCheck();
   }
 
   ngOnDestroy(): void {

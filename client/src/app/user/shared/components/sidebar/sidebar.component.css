@@ -1,7 +1,9 @@
-/* ── Cheri Sidebar (Mockup Accurate Design) ── */
+/* ── Cheri Sidebar (Responsive Product Filter Component) ── */
 :host {
   display: block;
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   --cheri-primary: #74070E;
   --cheri-primary-hover: #58050a;
   --cheri-text: #1f2937;
@@ -10,29 +12,41 @@
   --cheri-border: #e5e7eb;
 }
 
+:host * {
+  box-sizing: border-box;
+}
+
 .sf-container {
   width: 100%;
+  max-width: 100%;
   background: #ffffff;
-  padding: 4px 14px 20px;
+  padding: 12px 14px 20px;
   font-family: var(--font-sans, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
   color: var(--cheri-text);
   box-sizing: border-box;
+  overflow: visible;
 }
 
 /* ── Header ── */
 .sf-header {
   width: 100%;
+  box-sizing: border-box;
 }
 
 .sf-header-top {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .sf-header-brand-wrap {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  flex: 1;
 }
 
 .sf-eyebrow {
@@ -44,11 +58,12 @@
 }
 
 .sf-main-title {
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 700;
   color: #111827;
   margin: 0;
-  line-height: 1.2;
+  line-height: 1.25;
+  word-break: break-word;
 }
 
 .sf-count-bubble {
@@ -60,7 +75,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
   flex-shrink: 0;
   box-shadow: 0 2px 5px rgba(116, 7, 14, 0.25);
@@ -70,12 +85,19 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 5px;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-top: 6px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .sf-sub-text {
   font-size: 12px;
   color: #8c8686;
+  word-break: break-word;
+  min-width: 0;
+  flex: 1;
 }
 
 .sf-clear-link {
@@ -88,6 +110,8 @@
   cursor: pointer;
   font-family: inherit;
   font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .sf-clear-link:hover {
@@ -98,25 +122,29 @@
 .sf-divider {
   height: 1px;
   background-color: var(--cheri-line);
-  margin: 11px 0;
+  margin: 12px 0;
   width: 100%;
+  box-sizing: border-box;
 }
 
 /* ── Section Accordion Header ── */
 .sf-section {
   width: 100%;
+  box-sizing: border-box;
 }
 
 .sf-section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   width: 100%;
   background: none;
   border: none;
-  padding: 0 0 8px 0;
+  padding: 4px 0 8px 0;
   cursor: pointer;
   text-align: left;
+  box-sizing: border-box;
 }
 
 .sf-section-title {
@@ -124,6 +152,9 @@
   font-weight: 600;
   color: #1f2937;
   letter-spacing: -0.01em;
+  word-break: break-word;
+  min-width: 0;
+  flex: 1;
 }
 
 .sf-chevron {
@@ -140,16 +171,22 @@
 
 .sf-section-body {
   padding-top: 2px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* ── 1. Select Dropdown ── */
 .sf-select-container {
   position: relative;
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .sf-select {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 9px 34px 9px 12px;
   font-size: 13px;
   color: #374151;
@@ -162,6 +199,9 @@
   cursor: pointer;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
   font-family: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .sf-select:focus {
@@ -184,27 +224,35 @@
 .sf-checkbox-list {
   display: flex;
   flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .sf-checkbox-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   padding: 6px 0;
   text-decoration: none;
   cursor: pointer;
   transition: color 0.15s ease;
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .sf-checkbox-left {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
+  flex: 1;
 }
 
 .sf-custom-checkbox {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
   border: 1.5px solid #d1d5db;
   border-radius: 3px;
   display: flex;
@@ -231,6 +279,9 @@
   font-size: 13px;
   color: #4b5563;
   transition: color 0.15s ease;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  min-width: 0;
 }
 
 .sf-checkbox-row:hover .sf-checkbox-label {
@@ -246,24 +297,31 @@
   font-size: 12px;
   color: #d1d5db;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 /* ── 3. Price Boxes & Slider ── */
 .sf-price-boxes {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 6px;
   margin-bottom: 12px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .sf-price-box {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
   border: 1px solid var(--cheri-border);
   border-radius: 7px;
-  padding: 7px 10px;
+  padding: 6px 8px;
   display: flex;
   flex-direction: column;
   background: #ffffff;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .sf-box-label {
@@ -272,32 +330,60 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin-bottom: 1px;
+  margin-bottom: 2px;
+  line-height: 1;
 }
 
 .sf-box-value {
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   color: #1f2937;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
 }
 
 .sf-box-dash {
   color: #9ca3af;
   font-size: 13px;
   font-weight: 500;
+  flex-shrink: 0;
+  padding: 0 1px;
 }
 
 .sf-slider-wrapper {
   margin-top: 4px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.sf-slider-wrapper mat-slider,
+.sf-slider-wrapper .sf-mat-slider {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: block;
 }
 
 .sf-slider-labels {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
   font-size: 10.5px;
   color: #9ca3af;
-  margin-top: 2px;
+  margin-top: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.sf-slider-labels span {
+  white-space: nowrap;
+  max-width: 48%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Slider theme */
@@ -320,6 +406,8 @@
 .sf-radio-group {
   display: flex;
   flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .sf-radio-row {
@@ -328,11 +416,14 @@
   gap: 10px;
   padding: 6px 0;
   cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .sf-custom-radio {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
   border: 1.5px solid #d1d5db;
   border-radius: 50%;
   display: flex;
@@ -349,8 +440,8 @@
 }
 
 .sf-radio-dot {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background-color: transparent;
   transition: background-color 0.15s ease;
@@ -364,6 +455,9 @@
   font-size: 13px;
   color: #4b5563;
   transition: color 0.15s ease;
+  word-break: break-word;
+  min-width: 0;
+  flex: 1;
 }
 
 .sf-radio-row:hover .sf-radio-text {
@@ -379,6 +473,8 @@
 .sf-rating-list {
   display: flex;
   flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .sf-rating-row {
@@ -387,6 +483,9 @@
   gap: 10px;
   padding: 6px 0;
   cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .sf-stars-group {
@@ -395,6 +494,7 @@
   gap: 2px;
   font-size: 13px;
   line-height: 1;
+  flex-shrink: 0;
 }
 
 .sf-star--filled {
@@ -409,6 +509,7 @@
   font-size: 13px;
   color: #4b5563;
   transition: color 0.15s ease;
+  white-space: nowrap;
 }
 
 .sf-rating-row:hover .sf-rating-text,
@@ -419,12 +520,16 @@
 
 /* ── 6. Apply Button ── */
 .sf-footer {
-  margin-top: 22px;
+  margin-top: 20px;
   padding-top: 4px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .sf-apply-btn {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   background-color: var(--cheri-primary);
   color: #ffffff;
   border: none;
@@ -436,6 +541,12 @@
   transition: background-color 0.15s ease, transform 0.1s ease;
   font-family: inherit;
   box-shadow: 0 2px 6px rgba(116, 7, 14, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .sf-apply-btn:hover {
@@ -444,4 +555,281 @@
 
 .sf-apply-btn:active {
   transform: scale(0.99);
+}
+
+/* ══════════════════════════════════════════════════════
+   RESPONSIVE BREAKPOINTS (1200px, 992px, 768px, 576px, 375px)
+══════════════════════════════════════════════════════ */
+
+/* ── Breakpoint 1: Desktop Large (>= 1200px) ── */
+@media screen and (min-width: 1200px) {
+  .sf-container {
+    padding: 14px 16px 22px;
+  }
+}
+
+/* ── Breakpoint 2: Desktop Medium / Compact Sidebar (992px - 1199px) ── */
+@media screen and (max-width: 1199px) and (min-width: 992px) {
+  .sf-container {
+    padding: 10px 10px 18px;
+  }
+
+  .sf-main-title {
+    font-size: 17px;
+  }
+
+  .sf-price-boxes {
+    gap: 4px;
+  }
+
+  .sf-price-box {
+    padding: 5px 6px;
+  }
+
+  .sf-box-value {
+    font-size: 11.5px;
+  }
+
+  .sf-slider-labels {
+    font-size: 10px;
+  }
+
+  .sf-checkbox-label,
+  .sf-radio-text,
+  .sf-rating-text {
+    font-size: 12.5px;
+  }
+}
+
+/* ── Breakpoint 3: Tablet (768px - 991px) ── */
+@media screen and (max-width: 991px) and (min-width: 768px) {
+  .sf-container {
+    padding: 14px 16px 20px;
+  }
+
+  .sf-section-header {
+    padding: 6px 0 10px 0;
+  }
+
+  .sf-checkbox-row,
+  .sf-radio-row,
+  .sf-rating-row {
+    padding: 7px 0;
+  }
+
+  .sf-price-box {
+    padding: 7px 10px;
+  }
+
+  .sf-box-value {
+    font-size: 12.5px;
+  }
+}
+
+/* ── Breakpoint 4: Mobile Landscape & Large Phones (576px - 767px) ── */
+@media screen and (max-width: 767px) and (min-width: 576px) {
+  .sf-container {
+    padding: 12px 14px 18px;
+  }
+
+  .sf-main-title {
+    font-size: 17px;
+  }
+
+  .sf-section-title {
+    font-size: 13px;
+  }
+
+  .sf-checkbox-row,
+  .sf-radio-row,
+  .sf-rating-row {
+    padding: 7px 0;
+  }
+
+  .sf-apply-btn {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+}
+
+/* ── Breakpoint 5: Mobile Portrait (< 576px) ── */
+@media screen and (max-width: 575px) {
+  .sf-container {
+    padding: 10px 12px 16px;
+  }
+
+  .sf-header-top {
+    gap: 6px;
+  }
+
+  .sf-main-title {
+    font-size: 16.5px;
+  }
+
+  .sf-count-bubble {
+    width: 20px;
+    height: 20px;
+    font-size: 10.5px;
+  }
+
+  .sf-header-sub {
+    margin-top: 4px;
+    gap: 4px 10px;
+  }
+
+  .sf-sub-text {
+    font-size: 11.5px;
+  }
+
+  .sf-clear-link {
+    font-size: 11.5px;
+  }
+
+  .sf-divider {
+    margin: 10px 0;
+  }
+
+  .sf-section-header {
+    padding: 4px 0 6px 0;
+  }
+
+  .sf-section-title {
+    font-size: 13px;
+  }
+
+  .sf-select {
+    padding: 8px 30px 8px 10px;
+    font-size: 12.5px;
+  }
+
+  .sf-checkbox-row,
+  .sf-radio-row,
+  .sf-rating-row {
+    padding: 6px 0;
+  }
+
+  .sf-checkbox-label,
+  .sf-radio-text,
+  .sf-rating-text {
+    font-size: 12.5px;
+  }
+
+  .sf-price-boxes {
+    gap: 4px;
+  }
+
+  .sf-price-box {
+    padding: 5px 6px;
+  }
+
+  .sf-box-value {
+    font-size: 11px;
+  }
+
+  .sf-slider-labels {
+    font-size: 10px;
+  }
+
+  .sf-footer {
+    margin-top: 16px;
+  }
+
+  .sf-apply-btn {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+}
+
+/* ── Breakpoint 6: Extra Narrow Mobile (<= 375px) ── */
+@media screen and (max-width: 375px) {
+  .sf-container {
+    padding: 8px 8px 14px;
+  }
+
+  .sf-main-title {
+    font-size: 15.5px;
+  }
+
+  .sf-count-bubble {
+    width: 19px;
+    height: 19px;
+    font-size: 10px;
+  }
+
+  .sf-header-sub {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+  }
+
+  .sf-sub-text,
+  .sf-clear-link {
+    font-size: 11px;
+  }
+
+  .sf-price-box {
+    padding: 4px 5px;
+  }
+
+  .sf-box-label {
+    font-size: 8.5px;
+  }
+
+  .sf-box-value {
+    font-size: 10.5px;
+  }
+
+  .sf-slider-labels {
+    font-size: 9.5px;
+    gap: 2px;
+  }
+
+  .sf-checkbox-left {
+    gap: 8px;
+  }
+
+  .sf-custom-checkbox,
+  .sf-custom-radio {
+    width: 15px;
+    height: 15px;
+  }
+
+  .sf-checkbox-label,
+  .sf-radio-text,
+  .sf-rating-text {
+    font-size: 12px;
+  }
+
+  .sf-stars-group {
+    font-size: 12px;
+    gap: 1px;
+  }
+
+  .sf-apply-btn {
+    padding: 9px 10px;
+    font-size: 12px;
+  }
+}
+
+/* ── Extra Narrow / Extreme Constraint (<= 330px) ── */
+@media screen and (max-width: 330px) {
+  .sf-price-boxes {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 5px;
+  }
+
+  .sf-box-dash {
+    display: none;
+  }
+
+  .sf-slider-labels {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .sf-slider-labels span {
+    max-width: 100%;
+  }
 }

@@ -45,6 +45,11 @@ export class SidebarComponent implements OnInit, OnChanges {
   @Output() changeRating = new EventEmitter<any>();
   @Output() changeRatings = new EventEmitter<number[]>();
   @Output() clearFilters = new EventEmitter<void>();
+  @Output() applyFilters = new EventEmitter<void>();
+
+  onApplyFilters(): void {
+    this.applyFilters.emit();
+  }
 
   // Local slider state
   localMin: number = 0;

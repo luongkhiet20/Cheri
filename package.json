@@ -17,6 +17,7 @@
     "ng": "ng ",
     "start:client": "ng serve --port 3000",
     "start:client:https": "ng serve --port 3000 --ssl=true --ssl-key=localhost.key --ssl-cert=localhost.crt",
+    "build": "ng build",
     "build:client": "ng build",
     "watch": "ng build --watch --configuration development",
     "dev:ssr": "ng run cheri:serve-ssr",

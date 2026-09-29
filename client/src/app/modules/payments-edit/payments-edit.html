@@ -1,1 +1,380 @@
-<p>payments-edit works!</p>
+<div class="payment-container">
+
+  <!-- ── PAGE HEADER ─────────────────────────────────── -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="header-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+          <line x1="1" y1="10" x2="23" y2="10"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="page-title">Quản lý Thanh toán</h1>
+        <p class="page-subtitle">{{ methods().length }} phương thức · {{ inactiveCount() }} đang tắt</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <!-- Nút Xóa đã chọn (hiện khi có selection) -->
+      @if (hasSelection()) {
+        <button class="btn-bulk-delete" (click)="promptBulkDelete()" [disabled]="isDeleting()" id="btn-bulk-delete-payments">
+          @if (isDeleting()) {
+            <span class="spinner-sm"></span>
+          } @else {
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          }
+          Xóa {{ selectionCount() }} đã chọn
+        </button>
+      }
+      <button class="btn-add" (click)="openAddForm()" id="btn-add-payment">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Thêm phương thức
+      </button>
+    </div>
+  </div>
+
+  <!-- ── TOOLBAR ─────────────────────────────────────── -->
+  <div class="toolbar">
+    <div class="search-box">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="search-payment" class="search-input" type="text" placeholder="Tìm theo tên, mã..."
+        [value]="searchQuery" (input)="onSearchChange($any($event.target).value)">
+    </div>
+
+    <!-- Filter: Trạng thái -->
+    <div class="filter-tabs">
+      <button class="filter-tab" [class.active]="filterStatus === 'all'" (click)="onFilterChange('all')">Tất cả</button>
+      <button class="filter-tab" [class.active]="filterStatus === 'active'" (click)="onFilterChange('active')">
+        <span class="dot dot-green"></span> Đang bật
+      </button>
+      <button class="filter-tab" [class.active]="filterStatus === 'inactive'" (click)="onFilterChange('inactive')">
+        <span class="dot dot-gray"></span> Đang tắt
+      </button>
+    </div>
+
+    <!-- Filter: Loại -->
+    <div class="filter-tabs">
+      <button class="filter-tab" [class.active]="filterType === 'all'" (click)="onTypeFilterChange('all')">Mọi loại</button>
+      <button class="filter-tab" [class.active]="filterType === 'CASH'" (click)="onTypeFilterChange('CASH')">💵 Tiền mặt</button>
+      <button class="filter-tab" [class.active]="filterType === 'E_WALLET'" (click)="onTypeFilterChange('E_WALLET')">📱 Ví điện tử</button>
+      <button class="filter-tab" [class.active]="filterType === 'GATEWAY'" (click)="onTypeFilterChange('GATEWAY')">🏦 Cổng</button>
+    </div>
+  </div>
+
+  <!-- ── LOADING ─────────────────────────────────────── -->
+  @if (loading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <span>Đang tải dữ liệu...</span>
+    </div>
+  } @else if (filteredMethods().length === 0) {
+    <div class="empty-state">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+      <h3>Chưa có phương thức thanh toán</h3>
+      <p>{{ searchQuery || filterStatus !== 'all' || filterType !== 'all' ? 'Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm' : 'Bấm "+ Thêm phương thức" để thêm mới' }}</p>
+    </div>
+  } @else {
+
+  <!-- ── TABLE ─────────────────────────────────────────── -->
+  <div class="table-wrapper">
+    <table class="payment-table">
+      <thead>
+        <tr>
+          <th style="width:44px">
+            <input type="checkbox" class="chk"
+              [checked]="isAllSelected()"
+              [indeterminate]="isPartiallySelected()"
+              (change)="toggleSelectAll($event)"
+              id="chk-select-all-payment">
+          </th>
+          <th>PHƯƠNG THỨC</th>
+          <th>MÃ</th>
+          <th>LOẠI</th>
+          <th>PHÍ GIAO DỊCH</th>
+          <th>TRẠNG THÁI</th>
+          <th>THAO TÁC</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (m of filteredMethods(); track trackById($index, m)) {
+          <tr class="table-row" [class.row-inactive]="!m.isActive">
+            <!-- Checkbox -->
+            <td>
+              <input type="checkbox" class="chk" [checked]="isSelected(m)" (change)="toggleSelect(m, $event)" [id]="'chk-pm-' + m._id">
+            </td>
+
+            <!-- Tên -->
+            <td class="cell-name">
+              <div class="method-info">
+                @if (m.logo) {
+                  <img [src]="m.logo" [alt]="m.name" class="method-logo" (error)="$any($event.target).style.display='none'">
+                } @else {
+                  <div class="method-avatar">{{ getTypeEmoji(m.paymentType) }}</div>
+                }
+                <div>
+                  <span class="method-name">{{ m.name }}</span>
+                  @if (m.description) {
+                    <span class="method-desc">{{ m.description | slice:0:50 }}{{ m.description.length > 50 ? '…' : '' }}</span>
+                  }
+                </div>
+              </div>
+            </td>
+
+            <!-- Mã -->
+            <td><span class="code-badge">{{ m.code }}</span></td>
+
+            <!-- Loại -->
+            <td>
+              <span class="type-badge type-{{ m.paymentType }}">
+                {{ getTypeLabel(m.paymentType) }}
+              </span>
+            </td>
+
+            <!-- Phí -->
+            <td class="cell-fee">
+              @if (m.transactionFee?.enabled) {
+                <span class="fee-value">
+                  {{ m.transactionFee.type === 'PERCENT'
+                    ? m.transactionFee.value + '%'
+                    : formatCurrency(m.transactionFee.value) }}
+                </span>
+              } @else {
+                <span class="no-fee">Miễn phí</span>
+              }
+            </td>
+
+            <!-- Bật/Tắt -->
+            <td>
+              <div class="toggle-wrapper" (click)="toggleStatus(m)" [attr.title]="m.isActive ? 'Nhấn để tắt' : 'Nhấn để bật'" [id]="'toggle-pm-' + m._id">
+                <div class="toggle-track" [class.active]="m.isActive">
+                  <div class="toggle-thumb"></div>
+                </div>
+                <span class="toggle-label" [class.text-green]="m.isActive" [class.text-gray]="!m.isActive">
+                  {{ m.isActive ? 'Đang bật' : 'Đã tắt' }}
+                </span>
+              </div>
+            </td>
+
+            <!-- Thao tác -->
+            <td>
+              <div class="cell-actions">
+                <button class="btn-icon btn-view" title="Xem chi tiết" (click)="openViewMode(m)" [attr.id]="'btn-view-' + m._id">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+                <button class="btn-icon btn-edit" title="Chỉnh sửa" (click)="openEditForm(m)" [attr.id]="'btn-edit-' + m._id">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button class="btn-icon btn-delete" title="Xóa" (click)="confirmDelete(m._id)" [attr.id]="'btn-delete-' + m._id">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  } <!-- end @else -->
+
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     OVERLAY: Form thêm / sửa / xem
+══════════════════════════════════════════════════ -->
+@if (showForm()) {
+  <div class="overlay" (click)="closeForm()">
+    <div class="form-panel" (click)="$event.stopPropagation()">
+
+      <!-- Header -->
+      <div class="form-header">
+        <div>
+          <h2 class="form-title">
+            {{ isViewMode() ? '👁 Chi tiết phương thức' : isEditing() ? '✏️ Chỉnh sửa phương thức' : '➕ Thêm phương thức mới' }}
+          </h2>
+          <p class="form-subtitle">
+            {{ isViewMode() ? 'Xem thông tin chi tiết phương thức thanh toán' : 'Điền đầy đủ thông tin bên dưới' }}
+          </p>
+        </div>
+        <button class="btn-close" (click)="closeForm()" id="btn-close-payment-form" title="Đóng (ESC)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <form class="form-body" [formGroup]="form" (ngSubmit)="save()">
+
+        <!-- [1] Tên phương thức -->
+        <div class="form-field">
+          <label class="field-label"><span class="field-num">1</span> Tên phương thức thanh toán <span class="required">*</span></label>
+          <input id="pm-name" class="field-input" formControlName="name" placeholder="VD: Thanh toán khi nhận hàng (COD), VNPay"
+            [class.has-error]="form.get('name')?.touched && form.get('name')?.invalid">
+          @if (getFieldError('name')) { <span class="field-error">{{ getFieldError('name') }}</span> }
+          <span class="field-hint">Tên hiển thị cho khách hàng</span>
+        </div>
+
+        <!-- [2] Mã -->
+        <div class="form-field">
+          <label class="field-label"><span class="field-num">2</span> Mã phương thức <span class="required">*</span></label>
+          <input id="pm-code" class="field-input code-input" formControlName="code" placeholder="VD: COD, VNPAY, MOMO"
+            [class.has-error]="form.get('code')?.touched && form.get('code')?.invalid"
+            style="text-transform:uppercase">
+          @if (getFieldError('code')) { <span class="field-error">{{ getFieldError('code') }}</span> }
+          <span class="field-hint">Mã định danh duy nhất, chỉ dùng CHỮ HOA, số, dấu _</span>
+        </div>
+
+        <!-- [3] Loại thanh toán -->
+        <div class="form-field">
+          <label class="field-label"><span class="field-num">3</span> Loại thanh toán <span class="required">*</span></label>
+          <div class="radio-group">
+            @for (opt of paymentTypeOptions; track opt.value) {
+              <label class="radio-option" [class.selected]="form.get('paymentType')?.value === opt.value">
+                <input type="radio" formControlName="paymentType" [value]="opt.value">
+                <span class="radio-dot"></span>
+                {{ opt.label }}
+              </label>
+            }
+          </div>
+        </div>
+
+        <!-- [4] Mô tả -->
+        <div class="form-field">
+          <label class="field-label"><span class="field-num">4</span> Mô tả / Hướng dẫn thanh toán</label>
+          <textarea id="pm-desc" class="field-textarea" formControlName="description" rows="3"
+            placeholder="VD: Thanh toán bằng tiền mặt khi nhận hàng, không cần thẻ..."></textarea>
+        </div>
+
+        <!-- [5] Phí giao dịch -->
+        <div class="form-field">
+          <label class="field-label"><span class="field-num">5</span> Phí giao dịch</label>
+          <div class="fee-section">
+            <label class="toggle-form-row">
+              <div class="toggle-track" [class.active]="form.get('feeEnabled')?.value"
+                (click)="!isViewMode() && form.get('feeEnabled')?.setValue(!form.get('feeEnabled')?.value)">
+                <div class="toggle-thumb"></div>
+              </div>
+              <span class="toggle-label" [class.text-green]="form.get('feeEnabled')?.value" [class.text-gray]="!form.get('feeEnabled')?.value">
+                {{ form.get('feeEnabled')?.value ? 'Có phí' : 'Miễn phí' }}
+              </span>
+            </label>
+
+            @if (form.get('feeEnabled')?.value) {
+              <div class="fee-inputs">
+                <div class="radio-group">
+                  @for (opt of feeTypeOptions; track opt.value) {
+                    <label class="radio-option" [class.selected]="form.get('feeType')?.value === opt.value">
+                      <input type="radio" formControlName="feeType" [value]="opt.value">
+                      <span class="radio-dot"></span>
+                      {{ opt.label }}
+                    </label>
+                  }
+                </div>
+                <div class="input-group" style="margin-top:10px">
+                  <input id="pm-fee-value" class="field-input" type="number" formControlName="feeValue"
+                    placeholder="0" min="0" [class.has-error]="form.get('feeValue')?.touched && form.get('feeValue')?.invalid">
+                  <span class="input-suffix">{{ form.get('feeType')?.value === 'PERCENT' ? '%' : 'VNĐ' }}</span>
+                </div>
+                @if (getFieldError('feeValue')) { <span class="field-error">{{ getFieldError('feeValue') }}</span> }
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- [6] Logo URL -->
+        <div class="form-field">
+          <label class="field-label"><span class="field-num">6</span> Logo / URL hình ảnh</label>
+          <input id="pm-logo" class="field-input" formControlName="logo" placeholder="https://example.com/logo.png">
+          <span class="field-hint">Đường dẫn URL ảnh logo (PNG, SVG). Để trống nếu dùng icon mặc định.</span>
+          @if (form.get('logo')?.value) {
+            <img [src]="form.get('logo')?.value" alt="Preview logo" class="logo-preview"
+              (error)="$any($event.target).style.display='none'">
+          }
+        </div>
+
+        <!-- [7] Trạng thái -->
+        <div class="form-field">
+          <label class="field-label"><span class="field-num">7</span> Trạng thái</label>
+          <label class="toggle-form-row">
+            <div class="toggle-track" [class.active]="form.get('isActive')?.value"
+              (click)="!isViewMode() && form.get('isActive')?.setValue(!form.get('isActive')?.value)">
+              <div class="toggle-thumb"></div>
+            </div>
+            <span class="toggle-label" [class.text-green]="form.get('isActive')?.value" [class.text-gray]="!form.get('isActive')?.value">
+              {{ form.get('isActive')?.value ? 'Đang hoạt động' : 'Đã tắt' }}
+            </span>
+          </label>
+        </div>
+
+        <!-- Actions -->
+        @if (!isViewMode()) {
+          <div class="form-actions">
+            <button type="button" class="btn-cancel" (click)="closeForm()" id="btn-cancel-pm">Hủy</button>
+            <button type="button" class="btn-reset" (click)="resetForm()" id="btn-reset-pm" title="Khôi phục giá trị ban đầu">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/>
+              </svg>
+              Đặt lại
+            </button>
+            <button type="submit" class="btn-save" [disabled]="saving()" id="btn-save-payment">
+              @if (saving()) { <span class="spinner-sm"></span> }
+              {{ isEditing() ? 'Cập nhật' : 'Thêm mới' }}
+            </button>
+          </div>
+        } @else {
+          <div class="form-actions">
+            <button type="button" class="btn-cancel" (click)="closeForm()" id="btn-close-view-pm">Đóng</button>
+            <button type="button" class="btn-save" (click)="switchToEdit()" id="btn-switch-edit-pm">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              Chỉnh sửa
+            </button>
+          </div>
+        }
+
+      </form>
+    </div>
+  </div>
+}
+
+<!-- ══════════════════════════════════════════════════
+     OVERLAY: Confirm xóa (Single)
+══════════════════════════════════════════════════ -->
+@if (confirmDeleteId()) {
+  <div class="overlay" (click)="cancelDelete()">
+    <div class="dialog" (click)="$event.stopPropagation()">
+      <div class="dialog-icon danger">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      </div>
+      <h3 class="dialog-title">Xóa phương thức thanh toán?</h3>
+      <p class="dialog-text">Thao tác này không thể hoàn tác. Phương thức sẽ bị xóa vĩnh viễn khỏi hệ thống.</p>
+      <div class="dialog-actions">
+        <button class="btn-cancel" (click)="cancelDelete()">Hủy</button>
+        <button class="btn-danger" (click)="deleteMethod()" id="btn-confirm-delete-payment">Xác nhận xóa</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ══════════════════════════════════════════════════
+     OVERLAY: Confirm xóa hàng loạt (Bulk)
+══════════════════════════════════════════════════ -->
+@if (confirmBulkDelete()) {
+  <div class="overlay" (click)="cancelBulkDelete()">
+    <div class="dialog" (click)="$event.stopPropagation()">
+      <div class="dialog-icon danger">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      </div>
+      <h3 class="dialog-title">Xác nhận xóa hàng loạt</h3>
+      <p class="dialog-text">Bạn có chắc muốn xóa {{ selectionCount() }} phương thức thanh toán đã chọn? Thao tác không thể hoàn tác.</p>
+      <div class="dialog-actions">
+        <button class="btn-cancel" (click)="cancelBulkDelete()">Hủy</button>
+        <button class="btn-danger" (click)="deleteSelectedMethods()" [disabled]="isDeleting()" id="btn-confirm-bulk-delete-payment">
+          @if (isDeleting()) { <span class="spinner-sm"></span> }
+          {{ isDeleting() ? 'Đang xóa...' : 'Xác nhận xóa tất cả' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

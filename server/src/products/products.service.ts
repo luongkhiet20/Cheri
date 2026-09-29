@@ -166,7 +166,7 @@ export class ProductsService {
       productReq.titleUrl = toSlug(titleName) || `san-pham-${Date.now()}`;
     }
 
-    let found = await this.productModel.findOne({
+    const found = await this.productModel.findOne({
       titleUrl: productReq.titleUrl,
     });
     if (found) {
@@ -258,7 +258,7 @@ export class ProductsService {
           productReq.titleUrl = toSlug(titleName) || `san-pham-${Date.now()}`;
         }
 
-        let found = await this.productModel.findOne({
+        const found = await this.productModel.findOne({
           titleUrl: productReq.titleUrl,
         });
         if (found) {

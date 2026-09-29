@@ -1,4 +1,4 @@
-﻿import { Component, ViewChild, ElementRef, AfterViewInit, OnDestroy, PLATFORM_ID, Inject, Input, signal } from '@angular/core';
+﻿import { Component, ViewChild, ElementRef, AfterViewInit, OnDestroy, PLATFORM_ID, Input, signal, inject } from '@angular/core';
 import { Subscription, timer } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { isPlatformBrowser } from '@angular/common';
@@ -11,6 +11,8 @@ import { MatButtonModule } from '@angular/material/button';
     imports: [MatButtonModule]
 })
 export class CarouselComponent implements AfterViewInit, OnDestroy {
+  private platformId = inject<Object>(PLATFORM_ID);
+
   @ViewChild('slides') slides: ElementRef<HTMLDivElement>;
   @ViewChild('slideContainer') slideContainer: ElementRef<HTMLDivElement>;
 
@@ -22,10 +24,6 @@ export class CarouselComponent implements AfterViewInit, OnDestroy {
   showArrowsSig = signal(false);
   autoSlideSub: Subscription;
   dragging = false;
-
-  constructor(
-    @Inject(PLATFORM_ID)
-    private platformId : Object) { }
 
   onClickLeft() {
     const slidesElement = this.slides.nativeElement;

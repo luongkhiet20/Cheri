@@ -23,38 +23,33 @@ import { PaginationComponent } from '../../shared/components/pagination/paginati
 import { SidebarComponent } from '../../shared/components/sidebar/sidebar.component';
 
 @NgModule({
-  declarations: [
-    ProductComponent,
-    ProductsComponent
-  ],
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    MatCardModule,
-    MatButtonModule,
-    MatTabsModule,
-    MatChipsModule,
-    MatProgressBarModule,
-    MatProgressSpinnerModule,
-    MatDialogModule,
-    MatSidenavModule,
-
-    TranslatePipe,
-    PriceFormatPipe,
-
-    CategoriesListComponent,
-    ProductContentComponent,
-    ProductsListComponent,
-    PaginationComponent,
-    SidebarComponent,
-
-    RouterModule.forChild([
-      { path: '', redirectTo: 'all', pathMatch: 'full' },
-      { path: 'all', component: ProductsComponent },
-      { path: 'category/:category', component: ProductsComponent },
-      { path: ':id', component: ProductComponent },
-    ]),
-  ],
-  providers: []
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        MatCardModule,
+        MatButtonModule,
+        MatTabsModule,
+        MatChipsModule,
+        MatProgressBarModule,
+        MatProgressSpinnerModule,
+        MatDialogModule,
+        MatSidenavModule,
+        TranslatePipe,
+        PriceFormatPipe,
+        CategoriesListComponent,
+        ProductContentComponent,
+        ProductsListComponent,
+        PaginationComponent,
+        SidebarComponent,
+        RouterModule.forChild([
+            { path: '', redirectTo: 'all', pathMatch: 'full' },
+            { path: 'all', component: ProductsComponent },
+            { path: 'category/:category', component: ProductsComponent },
+            { path: ':id', component: ProductComponent },
+        ]),
+        ProductComponent,
+        ProductsComponent,
+    ],
+    providers: []
 })
 export class ProductModule { }

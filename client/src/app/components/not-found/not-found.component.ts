@@ -1,15 +1,13 @@
-import { Component} from '@angular/core';
+import { Component } from '@angular/core';
 
 @Component({
     selector: 'app-not-found',
     templateUrl: './not-found.component.html',
     styleUrls: ['./not-found.component.css'],
-    standalone: false
+    standalone: true
 })
 export class NotFoundComponent {
-  constructor(
-
-  ) {
+  constructor() {
      console.log('NOT FOUND 404')
   }
 }

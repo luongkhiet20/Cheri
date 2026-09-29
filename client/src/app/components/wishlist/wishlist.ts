@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, PLATFORM_ID, Inject, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, PLATFORM_ID, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -16,20 +16,18 @@ import { Product } from '../../shared/models';
   styleUrl: './wishlist.css'
 })
 export class Wishlist implements OnInit, OnDestroy {
+  private platformId = inject<Object>(PLATFORM_ID);
+  private apiService = inject(ApiService);
+  private translateService = inject(TranslateService);
+  private store = inject(SignalStore);
+  private router = inject(Router);
+  private snackBar = inject(MatSnackBar);
+  private cdr = inject(ChangeDetectorRef);
+
   wishlist: string[] = [];
   products: any[] = [];
   currentLang = 'vi';
   private _storageListener?: (e: StorageEvent) => void;
-
-  constructor(
-    @Inject(PLATFORM_ID) private platformId: Object,
-    private apiService: ApiService,
-    private translateService: TranslateService,
-    private store: SignalStore,
-    private router: Router,
-    private snackBar: MatSnackBar,
-    private cdr: ChangeDetectorRef
-  ) {}
 
   ngOnInit(): void {
     this.translateService.getLang$().subscribe((lang) => {

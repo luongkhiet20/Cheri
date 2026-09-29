@@ -1,5 +1,5 @@
 import { AnalyticsService } from './analytics.service';
-import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
+import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { Observable } from 'rxjs';
 import { shareReplay, map, filter, take } from 'rxjs/operators';
@@ -19,16 +19,13 @@ export interface Config {
   providedIn: 'root',
 })
 export class EnvConfigurationService {
+  private apiService = inject(ApiService);
+  private themeService = inject(ThemeService);
+  private analyticsService = inject(AnalyticsService);
+  private platformId = inject<Object>(PLATFORM_ID);
+
   public configuration$: Observable<Config>;
   public config: Config;
-
-  constructor(
-    private apiService: ApiService,
-    private themeService: ThemeService,
-    private analyticsService: AnalyticsService,
-    @Inject(PLATFORM_ID)
-    private platformId: Object
-  ) {}
 
   getConfigType$(type: string): Observable<string> {
     return this.configuration$.pipe(map((configuration: Config) => configuration[type]));

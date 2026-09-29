@@ -1,6 +1,6 @@
 import { filter, first, take, delay, startWith, map } from 'rxjs/operators';
-import { Component, OnInit, Input, OnDestroy, Output, EventEmitter, OnChanges, SimpleChanges, Optional, ChangeDetectorRef } from '@angular/core';
-import { FormBuilder, FormGroup, FormArray, FormControl, Validators, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
+import { Component, OnInit, Input, OnDestroy, Output, EventEmitter, OnChanges, SimpleChanges, ChangeDetectorRef, inject } from '@angular/core';
+import { FormBuilder, FormGroup, FormArray, FormControl, Validators, AbstractControl, ValidationErrors, ValidatorFn, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { Observable, Subscription, BehaviorSubject, from, combineLatest } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -12,14 +12,27 @@ import { SignalStore } from '../../store/signal.store';
 import { SignalStoreSelectors } from '../../store/signal.store.selectors';
 import { TranslateService } from '../../services/translate.service';
 import { toObservable } from '@angular/core/rxjs-interop';
+import { MatAutocompleteTrigger, MatAutocomplete } from '@angular/material/autocomplete';
+import { MatOption } from '@angular/material/select';
+import { NgIf, AsyncPipe, DecimalPipe } from '@angular/common';
 
 @Component({
-  selector: 'app-products-edit',
-  templateUrl: './products-edit.component.html',
-  styleUrls: ['./products-edit.component.css'],
-  standalone: false
+    selector: 'app-products-edit',
+    templateUrl: './products-edit.component.html',
+    styleUrls: ['./products-edit.component.css'],
+    imports: [ReactiveFormsModule, MatAutocompleteTrigger, MatAutocomplete, MatOption, FormsModule, NgIf, AsyncPipe, DecimalPipe]
 })
 export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
+  private fb = inject(FormBuilder);
+  private store = inject(SignalStore);
+  private selectors = inject(SignalStoreSelectors);
+  private apiService = inject(ApiService);
+  private snackBar = inject(MatSnackBar, { optional: true });
+  private cdr = inject(ChangeDetectorRef, { optional: true });
+  private route = inject(ActivatedRoute, { optional: true });
+  private router = inject(Router, { optional: true });
+  private translate = inject(TranslateService, { optional: true });
+
   @Input() action: string;
   @Input() titles: string[];
   @Input() productToEditTitleUrl: string;
@@ -94,17 +107,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, OnChanges {
   isAddingImageUrl = false;
   removingImage: string | null = null;
 
-  constructor(
-    private fb: FormBuilder,
-    private store: SignalStore,
-    private selectors: SignalStoreSelectors,
-    private apiService: ApiService,
-    @Optional() private snackBar?: MatSnackBar,
-    @Optional() private cdr?: ChangeDetectorRef,
-    @Optional() private route?: ActivatedRoute,
-    @Optional() private router?: Router,
-    @Optional() private translate?: TranslateService
-  ) {
+  constructor() {
     this.createForm();
     this.product$ = toObservable(this.selectors.product)
       .pipe(filter((product) => !!product && (!!product.titleUrl || !!product._id || !!product.id)));

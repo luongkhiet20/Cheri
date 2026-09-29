@@ -1,10 +1,10 @@
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { map, distinctUntilChanged, filter, take, skip } from 'rxjs/operators';
-import { Component, ChangeDetectionStrategy, OnDestroy, Signal, computed, effect, signal, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, ChangeDetectionStrategy, OnDestroy, Signal, computed, effect, signal, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { combineLatest, Subscription } from 'rxjs';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
 
 import { TranslateService } from '../../../services/translate.service';
@@ -12,15 +12,31 @@ import { sortOptions } from '../../../shared/constants';
 import { Product, Category, Pagination, Cart } from '../../../shared/models';
 import { SignalStore } from '../../../store/signal.store';
 import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
+import { MatDrawerContainer, MatDrawer, MatDrawerContent } from '@angular/material/sidenav';
+import { SidebarComponent } from '../../../shared/components/sidebar/sidebar.component';
+import { MatProgressBar } from '@angular/material/progress-bar';
+import { CategoriesListComponent } from '../../../shared/components/categories-list/categories-list.component';
+import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
+import { PriceFormatPipe } from '../../../pipes/price.pipe';
 
 @Component({
     selector: 'app-products',
     templateUrl: './products.component.html',
     styleUrls: ['./products.component.css'],
     changeDetection: ChangeDetectionStrategy.OnPush,
-    standalone: false
+    imports: [MatDrawerContainer, MatDrawer, SidebarComponent, MatDrawerContent, MatProgressBar, CategoriesListComponent, RouterLink, PaginationComponent, PriceFormatPipe]
 })
 export class ProductsComponent implements OnDestroy {
+  private platformId = inject<Object>(PLATFORM_ID);
+  private store = inject(SignalStore);
+  private selectors = inject(SignalStoreSelectors);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private snackBar = inject(MatSnackBar);
+  private meta = inject(Meta);
+  private title = inject(Title);
+  private translate = inject(TranslateService);
+
   products: Signal<Product[]>;
   cartIds: Signal<{ [productID: string]: number }>;
   loadingProducts: Signal<boolean>;
@@ -194,17 +210,7 @@ export class ProductsComponent implements OnDestroy {
 
   readonly component = 'productsComponent';
 
-  constructor(
-    @Inject(PLATFORM_ID) private platformId: Object,
-    private store: SignalStore,
-    private selectors: SignalStoreSelectors,
-    private route: ActivatedRoute,
-    private router: Router,
-    private snackBar: MatSnackBar,
-    private meta: Meta,
-    private title: Title,
-    private translate: TranslateService
-  ) {
+  constructor() {
     this.category = toSignal(this.route.params.pipe(
       map((params) => params['category'])
     ));

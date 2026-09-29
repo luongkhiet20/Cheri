@@ -1,12 +1,15 @@
 import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { NavItem, DEFAULT_NAV_ITEMS } from './admin.models';
+import { AdminSidebarComponent } from './admin-sidebar.component';
+import { AdminHeaderComponent } from './admin-header.component';
+import { RouterOutlet } from '@angular/router';
 
 @Component({
-  selector: 'app-admin-layout',
-  templateUrl: './admin-layout.component.html',
-  styleUrls: ['./admin-layout.component.css'],
-  standalone: false,
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-admin-layout',
+    templateUrl: './admin-layout.component.html',
+    styleUrls: ['./admin-layout.component.css'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [AdminSidebarComponent, AdminHeaderComponent, RouterOutlet]
 })
 export class AdminLayoutComponent {
   @Input() activeSection = 'overview';

@@ -1,11 +1,13 @@
 import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
+import { ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { NgIf } from '@angular/common';
 
 @Component({
-  selector: 'app-admin-header',
-  templateUrl: './admin-header.component.html',
-  styleUrls: ['./admin-header.component.css'],
-  standalone: false,
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-admin-header',
+    templateUrl: './admin-header.component.html',
+    styleUrls: ['./admin-header.component.css'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [ReactiveFormsModule, FormsModule, NgIf]
 })
 export class AdminHeaderComponent {
   @Input() pageTitle = 'Dashboard';

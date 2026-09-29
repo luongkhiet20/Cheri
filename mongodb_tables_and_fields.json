@@ -1,0 +1,4573 @@
+{
+  "databaseName": "cheri",
+  "exportedAt": "2026-09-25T08:06:48.117Z",
+  "totalCollections": 14,
+  "collections": [
+    {
+      "collectionName": "product_variants",
+      "type": "collection",
+      "totalDocuments": 0,
+      "scannedDocuments": 0,
+      "topLevelFieldCount": 0,
+      "totalFieldPathsCount": 0,
+      "topLevelFields": [],
+      "fields": []
+    },
+    {
+      "collectionName": "settings",
+      "type": "collection",
+      "totalDocuments": 1,
+      "scannedDocuments": 1,
+      "topLevelFieldCount": 9,
+      "totalFieldPathsCount": 24,
+      "topLevelFields": [
+        "_id",
+        "checkout",
+        "contact",
+        "maintenance",
+        "shipping",
+        "site",
+        "store",
+        "system",
+        "updatedAt"
+      ],
+      "fields": [
+        {
+          "field": "_id",
+          "types": [
+            "ObjectId"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "6ab540d507cf62c52411b395"
+        },
+        {
+          "field": "checkout",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "checkout.allowOrder",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": true
+        },
+        {
+          "field": "contact",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "contact.address",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "123 Đồng Khởi, Bến Nghé, Quận 1, TP. Hồ Chí Minh"
+        },
+        {
+          "field": "contact.email",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "contact@cheri.vn"
+        },
+        {
+          "field": "contact.phone",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "0987654321"
+        },
+        {
+          "field": "maintenance",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "maintenance.enabled",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": false
+        },
+        {
+          "field": "maintenance.message",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Hệ thống đang bảo trì"
+        },
+        {
+          "field": "shipping",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "shipping.enabled",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": true
+        },
+        {
+          "field": "site",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "site.description",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Cửa hàng thời trang"
+        },
+        {
+          "field": "site.favicon",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "site.logo",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "site.name",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Chéri"
+        },
+        {
+          "field": "store",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "store.isOpen",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": true
+        },
+        {
+          "field": "system",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "system.currency",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "đ"
+        },
+        {
+          "field": "system.language",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "vi"
+        },
+        {
+          "field": "system.timezone",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Asia/Ho_Chi_Minh"
+        },
+        {
+          "field": "updatedAt",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "2026-09-25T07:56:37.179Z"
+        }
+      ]
+    },
+    {
+      "collectionName": "translations",
+      "type": "collection",
+      "totalDocuments": 1,
+      "scannedDocuments": 1,
+      "topLevelFieldCount": 3,
+      "totalFieldPathsCount": 102,
+      "topLevelFields": [
+        "_id",
+        "keys",
+        "lang"
+      ],
+      "fields": [
+        {
+          "field": "_id",
+          "types": [
+            "ObjectId"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "6aae9b566936a3a3e93cc28b"
+        },
+        {
+          "field": "keys",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "keys.About_customer",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Thông tin khách hàng"
+        },
+        {
+          "field": "keys.Add",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Thêm mới"
+        },
+        {
+          "field": "keys.Add_page",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Thêm trang"
+        },
+        {
+          "field": "keys.Added",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Đã thêm"
+        },
+        {
+          "field": "keys.ADDED_TO_CART",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Đã thêm vào giỏ hàng"
+        },
+        {
+          "field": "keys.Address",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Địa chỉ"
+        },
+        {
+          "field": "keys.Again",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Thử lại"
+        },
+        {
+          "field": "keys.All",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Tất cả"
+        },
+        {
+          "field": "keys.Amount",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Thành tiền"
+        },
+        {
+          "field": "keys.Available_in_few_weeks",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Hàng sắp về"
+        },
+        {
+          "field": "keys.Back",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Quay lại"
+        },
+        {
+          "field": "keys.Cart",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Giỏ hàng"
+        },
+        {
+          "field": "keys.Categories",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Danh mục"
+        },
+        {
+          "field": "keys.Category",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Danh mục"
+        },
+        {
+          "field": "keys.Checkout",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Đặt hàng ngay"
+        },
+        {
+          "field": "keys.City",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Tỉnh / Thành phố"
+        },
+        {
+          "field": "keys.Config",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Cấu hình hệ thống"
+        },
+        {
+          "field": "keys.Contact",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Liên hệ"
+        },
+        {
+          "field": "keys.CONTACT",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Liên hệ chúng tôi"
+        },
+        {
+          "field": "keys.Country",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Quốc gia"
+        },
+        {
+          "field": "keys.Created",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Ngày tạo"
+        },
+        {
+          "field": "keys.Customer",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Khách hàng"
+        },
+        {
+          "field": "keys.Dashboard",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Bảng điều khiển"
+        },
+        {
+          "field": "keys.Description",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Mô tả"
+        },
+        {
+          "field": "keys.Detail",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Chi tiết"
+        },
+        {
+          "field": "keys.Edit",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Chỉnh sửa"
+        },
+        {
+          "field": "keys.Email",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Email"
+        },
+        {
+          "field": "keys.ESHOP_DESCRIPTION",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Chuyên cung cấp các sản phẩm thời trang, giày dép chất lượng cao."
+        },
+        {
+          "field": "keys.Eshop_subtitle",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Cửa hàng trực tuyến chính hãng, giao hàng nhanh"
+        },
+        {
+          "field": "keys.ESHOP_TITLE",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Cửa Hàng Trực Tuyến"
+        },
+        {
+          "field": "keys.Filter",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Bộ lọc"
+        },
+        {
+          "field": "keys.Find",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Tìm kiếm"
+        },
+        {
+          "field": "keys.Free_shipping_limit",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "cho đơn hàng từ"
+        },
+        {
+          "field": "keys.From_existing_pages",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Từ các trang có sẵn"
+        },
+        {
+          "field": "keys.Hidden",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Ẩn"
+        },
+        {
+          "field": "keys.Home",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Trang chủ"
+        },
+        {
+          "field": "keys.Home_promo",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Miễn phí vận chuyển toàn quốc"
+        },
+        {
+          "field": "keys.Images",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Hình ảnh"
+        },
+        {
+          "field": "keys.Language_for_page",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Ngôn ngữ trang"
+        },
+        {
+          "field": "keys.Language_for_product_detail",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Ngôn ngữ sản phẩm"
+        },
+        {
+          "field": "keys.LINKS",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Liên kết hữu ích"
+        },
+        {
+          "field": "keys.Login",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Đăng nhập"
+        },
+        {
+          "field": "keys.Logout",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Đăng xuất"
+        },
+        {
+          "field": "keys.More",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Xem thêm"
+        },
+        {
+          "field": "keys.Name",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Họ và tên"
+        },
+        {
+          "field": "keys.Newest",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Mới nhất"
+        },
+        {
+          "field": "keys.Next",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Sau"
+        },
+        {
+          "field": "keys.Oldest",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Cũ nhất"
+        },
+        {
+          "field": "keys.On_sale",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Đang giảm giá"
+        },
+        {
+          "field": "keys.On_stock",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Tình trạng hàng"
+        },
+        {
+          "field": "keys.Order",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Đơn hàng"
+        },
+        {
+          "field": "keys.Orders",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Đơn hàng"
+        },
+        {
+          "field": "keys.Pages",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Quản lý trang"
+        },
+        {
+          "field": "keys.Paid",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Trạng thái thanh toán"
+        },
+        {
+          "field": "keys.Password",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Mật khẩu"
+        },
+        {
+          "field": "keys.Pay",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Thanh toán"
+        },
+        {
+          "field": "keys.Prev",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Trước"
+        },
+        {
+          "field": "keys.Price",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Giá"
+        },
+        {
+          "field": "keys.Price_from",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Giá từ"
+        },
+        {
+          "field": "keys.Price_to",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Đến giá"
+        },
+        {
+          "field": "keys.Price-asc",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Giá tăng dần"
+        },
+        {
+          "field": "keys.Price-decs",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Giá giảm dần"
+        },
+        {
+          "field": "keys.PriceRange",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Khoảng giá"
+        },
+        {
+          "field": "keys.Product",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Sản phẩm"
+        },
+        {
+          "field": "keys.products",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "sản phẩm"
+        },
+        {
+          "field": "keys.Products",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Sản phẩm"
+        },
+        {
+          "field": "keys.Regular_price",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Giá gốc"
+        },
+        {
+          "field": "keys.Remove",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Xóa"
+        },
+        {
+          "field": "keys.Request_sended",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Yêu cầu đã được gửi"
+        },
+        {
+          "field": "keys.Sale_price",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Giá khuyến mãi"
+        },
+        {
+          "field": "keys.Save",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Lưu thay đổi"
+        },
+        {
+          "field": "keys.Search",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Tìm kiếm"
+        },
+        {
+          "field": "keys.Send",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Gửi tin nhắn"
+        },
+        {
+          "field": "keys.Shipping",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Vận chuyển"
+        },
+        {
+          "field": "keys.Shipping_cost",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Phí vận chuyển"
+        },
+        {
+          "field": "keys.Short_description",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Mô tả ngắn"
+        },
+        {
+          "field": "keys.SignIn",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Đăng nhập"
+        },
+        {
+          "field": "keys.SIGNIN_SUCCESS",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Đăng nhập thành công!"
+        },
+        {
+          "field": "keys.SignUp",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Đăng ký"
+        },
+        {
+          "field": "keys.SIGNUP_SUCCESS",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Đăng ký thành công!"
+        },
+        {
+          "field": "keys.Sort_by",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Sắp xếp theo"
+        },
+        {
+          "field": "keys.Sorting",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Sắp xếp"
+        },
+        {
+          "field": "keys.Status",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Trạng thái"
+        },
+        {
+          "field": "keys.Stock",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Số lượng trong kho"
+        },
+        {
+          "field": "keys.SuccessOrder",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Đặt hàng thành công!"
+        },
+        {
+          "field": "keys.Tags",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Thẻ tag"
+        },
+        {
+          "field": "keys.Theme",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Tùy chỉnh giao diện"
+        },
+        {
+          "field": "keys.Title",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Tên sản phẩm"
+        },
+        {
+          "field": "keys.to",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "đến"
+        },
+        {
+          "field": "keys.TO_CART",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Xem giỏ hàng"
+        },
+        {
+          "field": "keys.Total_price",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Tổng tiền"
+        },
+        {
+          "field": "keys.Total_quantity",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Tổng số lượng"
+        },
+        {
+          "field": "keys.Translations",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Quản lý bản dịch"
+        },
+        {
+          "field": "keys.Type",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Phương thức"
+        },
+        {
+          "field": "keys.Unavailable",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Hết hàng"
+        },
+        {
+          "field": "keys.Visibility",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Trạng thái hiển thị"
+        },
+        {
+          "field": "keys.Visible",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Hiển thị"
+        },
+        {
+          "field": "keys.with",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "với"
+        },
+        {
+          "field": "keys.Zip",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Mã bưu chính"
+        },
+        {
+          "field": "lang",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "vi"
+        }
+      ]
+    },
+    {
+      "collectionName": "products",
+      "type": "collection",
+      "totalDocuments": 100,
+      "scannedDocuments": 100,
+      "topLevelFieldCount": 15,
+      "totalFieldPathsCount": 130,
+      "topLevelFields": [
+        "__v",
+        "_id",
+        "_user",
+        "cs",
+        "dateAdded",
+        "en",
+        "images",
+        "mainImage",
+        "sk",
+        "tags",
+        "titleUrl",
+        "updatedAt",
+        "variants",
+        "vi",
+        "visibility"
+      ],
+      "fields": [
+        {
+          "field": "__v",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "100/100 (100%)",
+          "sampleValue": 0
+        },
+        {
+          "field": "_id",
+          "types": [
+            "ObjectId"
+          ],
+          "presenceInSample": "100/100 (100%)",
+          "sampleValue": "6ab1575964a05476aaf9333d"
+        },
+        {
+          "field": "_user",
+          "types": [
+            "ObjectId"
+          ],
+          "presenceInSample": "98/100 (98%)",
+          "sampleValue": "6ab0da85a17b71225922440b"
+        },
+        {
+          "field": "cs",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "100/100 (100%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "cs.categoryLevel1",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "cs.categoryLevel2",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "cs.colors",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": "[Array (0 items)]"
+        },
+        {
+          "field": "cs.description",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": "<p>ĐẦM CORSET CHỮ A CÚP NGỰC KẺ SỌC DỌC DÁNG CHUÔNG SANG CHẢNH KIRSI DRESS..."
+        },
+        {
+          "field": "cs.descriptionFull",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": "[Array (0 items)]"
+        },
+        {
+          "field": "cs.hasClassification",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": false
+        },
+        {
+          "field": "cs.hasColors",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": false
+        },
+        {
+          "field": "cs.hasSizes",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": false
+        },
+        {
+          "field": "cs.onSale",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": false
+        },
+        {
+          "field": "cs.productType",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": "clothing"
+        },
+        {
+          "field": "cs.quantity",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": 40
+        },
+        {
+          "field": "cs.regularPrice",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": 3469400
+        },
+        {
+          "field": "cs.salePrice",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": 3469400
+        },
+        {
+          "field": "cs.shipping",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": "basic"
+        },
+        {
+          "field": "cs.shippingBasic",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": false
+        },
+        {
+          "field": "cs.shippingBasicCost",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": 0
+        },
+        {
+          "field": "cs.shippingCost",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": 0
+        },
+        {
+          "field": "cs.shippingExtended",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": false
+        },
+        {
+          "field": "cs.shippingExtendedCost",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": 0
+        },
+        {
+          "field": "cs.sizes",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": "[Array (0 items)]"
+        },
+        {
+          "field": "cs.stock",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": "onStock"
+        },
+        {
+          "field": "cs.stockDate",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "cs.title",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": "Đầm Corset Chữ A Cúp Ngực Kẻ Sọc Dọc Dáng Chuông Sang Chảnh Kirsi Dress V2507"
+        },
+        {
+          "field": "cs.visibility",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "100/100 (100%)",
+          "sampleValue": false
+        },
+        {
+          "field": "dateAdded",
+          "types": [
+            "Date",
+            "string"
+          ],
+          "presenceInSample": "100/100 (100%)",
+          "sampleValue": "2026-09-21T16:12:09.918Z"
+        },
+        {
+          "field": "en",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "100/100 (100%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "en.categoryLevel1",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "en.categoryLevel2",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "en.colors",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": "[Array (0 items)]"
+        },
+        {
+          "field": "en.description",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": "<p>ĐẦM CORSET CHỮ A CÚP NGỰC KẺ SỌC DỌC DÁNG CHUÔNG SANG CHẢNH KIRSI DRESS..."
+        },
+        {
+          "field": "en.descriptionFull",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": "[Array (0 items)]"
+        },
+        {
+          "field": "en.hasClassification",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": false
+        },
+        {
+          "field": "en.hasColors",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": false
+        },
+        {
+          "field": "en.hasSizes",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": false
+        },
+        {
+          "field": "en.onSale",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": false
+        },
+        {
+          "field": "en.productType",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": "clothing"
+        },
+        {
+          "field": "en.quantity",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": 40
+        },
+        {
+          "field": "en.regularPrice",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": 3469400
+        },
+        {
+          "field": "en.salePrice",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": 3469400
+        },
+        {
+          "field": "en.shipping",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": "basic"
+        },
+        {
+          "field": "en.shippingBasic",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": false
+        },
+        {
+          "field": "en.shippingBasicCost",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": 0
+        },
+        {
+          "field": "en.shippingCost",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": 0
+        },
+        {
+          "field": "en.shippingExtended",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": false
+        },
+        {
+          "field": "en.shippingExtendedCost",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": 0
+        },
+        {
+          "field": "en.sizes",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": "[Array (0 items)]"
+        },
+        {
+          "field": "en.stock",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": "onStock"
+        },
+        {
+          "field": "en.stockDate",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "en.title",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": "Đầm Corset Chữ A Cúp Ngực Kẻ Sọc Dọc Dáng Chuông Sang Chảnh Kirsi Dress V2507"
+        },
+        {
+          "field": "en.visibility",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "100/100 (100%)",
+          "sampleValue": false
+        },
+        {
+          "field": "images",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "100/100 (100%)",
+          "sampleValue": "[Array (3 items)]"
+        },
+        {
+          "field": "images[]",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "238/100 (238%)",
+          "sampleValue": null
+        },
+        {
+          "field": "mainImage",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "100/100 (100%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "mainImage.name",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "100/100 (100%)",
+          "sampleValue": "ao-2-day-corset-cham-bi-cup-nguc-phoi-ren-jeana-chan-vay-den-xep-tang-quyen-ru"
+        },
+        {
+          "field": "mainImage.url",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "100/100 (100%)",
+          "sampleValue": "https://static.wixstatic.com/media/983f45_ac5096fe883943629c2b06c7ac9ca6f8~mv..."
+        },
+        {
+          "field": "sk",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "100/100 (100%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "sk.categoryLevel1",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "sk.categoryLevel2",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "sk.colors",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": "[Array (0 items)]"
+        },
+        {
+          "field": "sk.description",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": "<p>ĐẦM CORSET CHỮ A CÚP NGỰC KẺ SỌC DỌC DÁNG CHUÔNG SANG CHẢNH KIRSI DRESS..."
+        },
+        {
+          "field": "sk.descriptionFull",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": "[Array (0 items)]"
+        },
+        {
+          "field": "sk.hasClassification",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": false
+        },
+        {
+          "field": "sk.hasColors",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": false
+        },
+        {
+          "field": "sk.hasSizes",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": false
+        },
+        {
+          "field": "sk.onSale",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": false
+        },
+        {
+          "field": "sk.productType",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": "clothing"
+        },
+        {
+          "field": "sk.quantity",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": 40
+        },
+        {
+          "field": "sk.regularPrice",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": 3469400
+        },
+        {
+          "field": "sk.salePrice",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": 3469400
+        },
+        {
+          "field": "sk.shipping",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": "basic"
+        },
+        {
+          "field": "sk.shippingBasic",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": false
+        },
+        {
+          "field": "sk.shippingBasicCost",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": 0
+        },
+        {
+          "field": "sk.shippingCost",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": 0
+        },
+        {
+          "field": "sk.shippingExtended",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": false
+        },
+        {
+          "field": "sk.shippingExtendedCost",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": 0
+        },
+        {
+          "field": "sk.sizes",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": "[Array (0 items)]"
+        },
+        {
+          "field": "sk.stock",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": "onStock"
+        },
+        {
+          "field": "sk.stockDate",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "sk.title",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": "Đầm Corset Chữ A Cúp Ngực Kẻ Sọc Dọc Dáng Chuông Sang Chảnh Kirsi Dress V2507"
+        },
+        {
+          "field": "sk.visibility",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "100/100 (100%)",
+          "sampleValue": false
+        },
+        {
+          "field": "tags",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "100/100 (100%)",
+          "sampleValue": "[Array (1 items)]"
+        },
+        {
+          "field": "tags[]",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "40/100 (40%)",
+          "sampleValue": null
+        },
+        {
+          "field": "titleUrl",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "100/100 (100%)",
+          "sampleValue": "ao-2-day-corset-cham-bi-cup-nguc-phoi-ren-jeana-chan-vay-den-xep-tang-quyen-ru"
+        },
+        {
+          "field": "updatedAt",
+          "types": [
+            "Date",
+            "string"
+          ],
+          "presenceInSample": "5/100 (5%)",
+          "sampleValue": "2026-09-24T06:26:57.445Z"
+        },
+        {
+          "field": "variants",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "2/100 (2%)",
+          "sampleValue": "[Array (0 items)]"
+        },
+        {
+          "field": "variants[]",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "5/100 (5%)",
+          "sampleValue": null
+        },
+        {
+          "field": "variants[].classification",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "5/100 (5%)",
+          "sampleValue": "Áo"
+        },
+        {
+          "field": "variants[].color",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "5/100 (5%)",
+          "sampleValue": "Đen"
+        },
+        {
+          "field": "variants[].discountPrice",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "5/100 (5%)",
+          "sampleValue": 11
+        },
+        {
+          "field": "variants[].price",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "5/100 (5%)",
+          "sampleValue": 13
+        },
+        {
+          "field": "variants[].size",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "5/100 (5%)",
+          "sampleValue": "XS"
+        },
+        {
+          "field": "variants[].sku",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "5/100 (5%)",
+          "sampleValue": "TINHY-AO-DEN-XS"
+        },
+        {
+          "field": "variants[].stock",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "5/100 (5%)",
+          "sampleValue": 12
+        },
+        {
+          "field": "vi",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "100/100 (100%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "vi.categoryLevel1",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "93/100 (93%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "vi.categoryLevel2",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "93/100 (93%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "vi.classifications",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "2/100 (2%)",
+          "sampleValue": "[Array (0 items)]"
+        },
+        {
+          "field": "vi.classifications[]",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "2/100 (2%)",
+          "sampleValue": null
+        },
+        {
+          "field": "vi.colors",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "93/100 (93%)",
+          "sampleValue": "[Array (0 items)]"
+        },
+        {
+          "field": "vi.colors[]",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "2/100 (2%)",
+          "sampleValue": null
+        },
+        {
+          "field": "vi.colors[].hex",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "2/100 (2%)",
+          "sampleValue": "#000000"
+        },
+        {
+          "field": "vi.colors[].name",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "2/100 (2%)",
+          "sampleValue": "Đen"
+        },
+        {
+          "field": "vi.description",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "93/100 (93%)",
+          "sampleValue": "<p>ĐẦM TRỄ VAI TAY DÀI BO GÂN COTTON CO GIÃN IN 3D LING DRESS V25101688 V25..."
+        },
+        {
+          "field": "vi.descriptionFull",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "93/100 (93%)",
+          "sampleValue": "[Array (0 items)]"
+        },
+        {
+          "field": "vi.descriptionFull[]",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/100 (1%)",
+          "sampleValue": null
+        },
+        {
+          "field": "vi.hasClassification",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "93/100 (93%)",
+          "sampleValue": false
+        },
+        {
+          "field": "vi.hasColors",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "93/100 (93%)",
+          "sampleValue": false
+        },
+        {
+          "field": "vi.hasSizes",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "93/100 (93%)",
+          "sampleValue": false
+        },
+        {
+          "field": "vi.onSale",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "93/100 (93%)",
+          "sampleValue": false
+        },
+        {
+          "field": "vi.productType",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "93/100 (93%)",
+          "sampleValue": "clothing"
+        },
+        {
+          "field": "vi.quantity",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "93/100 (93%)",
+          "sampleValue": 45
+        },
+        {
+          "field": "vi.regularPrice",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "93/100 (93%)",
+          "sampleValue": 1994300
+        },
+        {
+          "field": "vi.salePrice",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "93/100 (93%)",
+          "sampleValue": 1994300
+        },
+        {
+          "field": "vi.shipping",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": "basic"
+        },
+        {
+          "field": "vi.shippingBasic",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": false
+        },
+        {
+          "field": "vi.shippingBasicCost",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": 0
+        },
+        {
+          "field": "vi.shippingCost",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": 0
+        },
+        {
+          "field": "vi.shippingExtended",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": false
+        },
+        {
+          "field": "vi.shippingExtendedCost",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "92/100 (92%)",
+          "sampleValue": 0
+        },
+        {
+          "field": "vi.sizes",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "93/100 (93%)",
+          "sampleValue": "[Array (0 items)]"
+        },
+        {
+          "field": "vi.sizes[]",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "2/100 (2%)",
+          "sampleValue": null
+        },
+        {
+          "field": "vi.stock",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "93/100 (93%)",
+          "sampleValue": "onStock"
+        },
+        {
+          "field": "vi.stockDate",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "93/100 (93%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "vi.title",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "93/100 (93%)",
+          "sampleValue": "Đầm Trễ Vai Tay Dài Bo Gân Cotton Co Giãn In 3D Ling Dress V25101688 V25101689"
+        },
+        {
+          "field": "vi.visibility",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "100/100 (100%)",
+          "sampleValue": true
+        },
+        {
+          "field": "visibility",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "9/100 (9%)",
+          "sampleValue": true
+        }
+      ]
+    },
+    {
+      "collectionName": "shippingmethods",
+      "type": "collection",
+      "totalDocuments": 4,
+      "scannedDocuments": 4,
+      "topLevelFieldCount": 12,
+      "totalFieldPathsCount": 12,
+      "topLevelFields": [
+        "__v",
+        "_id",
+        "baseCost",
+        "code",
+        "coverageArea",
+        "createdAt",
+        "description",
+        "estimatedDays",
+        "freeShippingThreshold",
+        "isActive",
+        "name",
+        "updatedAt"
+      ],
+      "fields": [
+        {
+          "field": "__v",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "4/4 (100%)",
+          "sampleValue": 0
+        },
+        {
+          "field": "_id",
+          "types": [
+            "ObjectId"
+          ],
+          "presenceInSample": "4/4 (100%)",
+          "sampleValue": "6ab2a403c6e07d216b047051"
+        },
+        {
+          "field": "baseCost",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "4/4 (100%)",
+          "sampleValue": 25000
+        },
+        {
+          "field": "code",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "4/4 (100%)",
+          "sampleValue": "SPX_EXPRESS"
+        },
+        {
+          "field": "coverageArea",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "4/4 (100%)",
+          "sampleValue": "national"
+        },
+        {
+          "field": "createdAt",
+          "types": [
+            "Date"
+          ],
+          "presenceInSample": "4/4 (100%)",
+          "sampleValue": "2026-09-22T15:51:31.258Z"
+        },
+        {
+          "field": "description",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "4/4 (100%)",
+          "sampleValue": "Dịch vụ vận chuyển của Shopee, tốc độ nhanh, theo dõi đơn hàng theo thời gian..."
+        },
+        {
+          "field": "estimatedDays",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "4/4 (100%)",
+          "sampleValue": "1–3 ngày làm việc"
+        },
+        {
+          "field": "freeShippingThreshold",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "4/4 (100%)",
+          "sampleValue": 300000
+        },
+        {
+          "field": "isActive",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "4/4 (100%)",
+          "sampleValue": true
+        },
+        {
+          "field": "name",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "4/4 (100%)",
+          "sampleValue": "SPX Express (Shopee)"
+        },
+        {
+          "field": "updatedAt",
+          "types": [
+            "Date"
+          ],
+          "presenceInSample": "4/4 (100%)",
+          "sampleValue": "2026-09-22T15:51:31.258Z"
+        }
+      ]
+    },
+    {
+      "collectionName": "orders",
+      "type": "collection",
+      "totalDocuments": 1,
+      "scannedDocuments": 1,
+      "topLevelFieldCount": 15,
+      "totalFieldPathsCount": 78,
+      "topLevelFields": [
+        "__v",
+        "_id",
+        "addresses",
+        "amount",
+        "cart",
+        "currency",
+        "customerEmail",
+        "dateAdded",
+        "notes",
+        "orderId",
+        "outcome",
+        "status",
+        "statusHistory",
+        "type",
+        "updatedAt"
+      ],
+      "fields": [
+        {
+          "field": "__v",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": 0
+        },
+        {
+          "field": "_id",
+          "types": [
+            "ObjectId"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "6ab24ff9d5b097c62335c02c"
+        },
+        {
+          "field": "addresses",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "[Array (1 items)]"
+        },
+        {
+          "field": "addresses[]",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": null
+        },
+        {
+          "field": "addresses[].city",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "nb"
+        },
+        {
+          "field": "addresses[].country",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Việt Nam"
+        },
+        {
+          "field": "addresses[].line1",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "k"
+        },
+        {
+          "field": "addresses[].line2",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "addresses[].name",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Tình Võ Thị Thu"
+        },
+        {
+          "field": "addresses[].zip",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "nb"
+        },
+        {
+          "field": "amount",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": 31558975
+        },
+        {
+          "field": "cart",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "cart.items",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "[Array (4 items)]"
+        },
+        {
+          "field": "cart.items[]",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": null
+        },
+        {
+          "field": "cart.items[].id",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": "6ab1577364a05476aaf93484"
+        },
+        {
+          "field": "cart.items[].item",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "cart.items[].item._id",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": "6ab1577364a05476aaf93484"
+        },
+        {
+          "field": "cart.items[].item._user",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": "6ab0da85a17b71225922440b"
+        },
+        {
+          "field": "cart.items[].item.categoryLevel1",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "cart.items[].item.categoryLevel2",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "cart.items[].item.colors",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": "[Array (0 items)]"
+        },
+        {
+          "field": "cart.items[].item.dateAdded",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": "2026-09-21T16:12:35.187Z"
+        },
+        {
+          "field": "cart.items[].item.description",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": "<p>SET ÁO CORSET CÚP NGỰC ĐÍNH HOA + CHÂN VÁY XẾP TẦNG TIỂU THƯ FAIRY SET A25..."
+        },
+        {
+          "field": "cart.items[].item.descriptionFull",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": "[Array (0 items)]"
+        },
+        {
+          "field": "cart.items[].item.hasClassification",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": false
+        },
+        {
+          "field": "cart.items[].item.hasColors",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": false
+        },
+        {
+          "field": "cart.items[].item.hasSizes",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": false
+        },
+        {
+          "field": "cart.items[].item.id",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": "6ab1577364a05476aaf93484"
+        },
+        {
+          "field": "cart.items[].item.images",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": "[Array (2 items)]"
+        },
+        {
+          "field": "cart.items[].item.images[]",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "7/1 (700%)",
+          "sampleValue": null
+        },
+        {
+          "field": "cart.items[].item.mainImage",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "cart.items[].item.mainImage.name",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": "set-ao-corset-cup-nguc-dinh-hoa-chan-vay-xep-tang-tieu-thu-fairy-set-a25022801"
+        },
+        {
+          "field": "cart.items[].item.mainImage.url",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": "https://static.wixstatic.com/media/983f45_1ac7776486154afda2d41d569f53321a~mv..."
+        },
+        {
+          "field": "cart.items[].item.onSale",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": false
+        },
+        {
+          "field": "cart.items[].item.productType",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": "clothing"
+        },
+        {
+          "field": "cart.items[].item.quantity",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": 1
+        },
+        {
+          "field": "cart.items[].item.rating",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": 5
+        },
+        {
+          "field": "cart.items[].item.regularPrice",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": 978902
+        },
+        {
+          "field": "cart.items[].item.salePrice",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": 978902
+        },
+        {
+          "field": "cart.items[].item.shipping",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": "basic"
+        },
+        {
+          "field": "cart.items[].item.shippingBasic",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": false
+        },
+        {
+          "field": "cart.items[].item.shippingBasicCost",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": 0
+        },
+        {
+          "field": "cart.items[].item.shippingCost",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": 0
+        },
+        {
+          "field": "cart.items[].item.shippingExtended",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": false
+        },
+        {
+          "field": "cart.items[].item.shippingExtendedCost",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": 0
+        },
+        {
+          "field": "cart.items[].item.sizes",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": "[Array (0 items)]"
+        },
+        {
+          "field": "cart.items[].item.sizes[]",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "3/1 (300%)",
+          "sampleValue": null
+        },
+        {
+          "field": "cart.items[].item.stock",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": "onStock"
+        },
+        {
+          "field": "cart.items[].item.stockDate",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "cart.items[].item.tags",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": "[Array (0 items)]"
+        },
+        {
+          "field": "cart.items[].item.title",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": "Set Áo Corset Cúp Ngực Đính Hoa + Chân Váy Xếp Tầng Tiểu Thư Fairy Set A25022801"
+        },
+        {
+          "field": "cart.items[].item.titleUrl",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": "set-ao-corset-cup-nguc-dinh-hoa-chan-vay-xep-tang-tieu-thu-fairy-set-a25022801"
+        },
+        {
+          "field": "cart.items[].item.variants",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": "[Array (0 items)]"
+        },
+        {
+          "field": "cart.items[].item.visibility",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": true
+        },
+        {
+          "field": "cart.items[].price",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": 978902
+        },
+        {
+          "field": "cart.items[].qty",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": 3
+        },
+        {
+          "field": "cart.items[].shipingCostType",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "4/1 (400%)",
+          "sampleValue": "basic"
+        },
+        {
+          "field": "cart.shippingCost",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": 0
+        },
+        {
+          "field": "cart.shippingLimit",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": 500000
+        },
+        {
+          "field": "cart.shippingType",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "free"
+        },
+        {
+          "field": "cart.totalPrice",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": 31558975
+        },
+        {
+          "field": "cart.totalQty",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": 10
+        },
+        {
+          "field": "currency",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "đ"
+        },
+        {
+          "field": "customerEmail",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "tinhvttk24411@st.uel.edu.vn"
+        },
+        {
+          "field": "dateAdded",
+          "types": [
+            "Date"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "2026-09-22T09:52:57.611Z"
+        },
+        {
+          "field": "notes",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "orderId",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "order1790070777611t159"
+        },
+        {
+          "field": "outcome",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "outcome.seller_message",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "PAYMENT_ON_DELIVERY"
+        },
+        {
+          "field": "status",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "PENDING"
+        },
+        {
+          "field": "statusHistory",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "[Array (2 items)]"
+        },
+        {
+          "field": "statusHistory[]",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "2/1 (200%)",
+          "sampleValue": null
+        },
+        {
+          "field": "statusHistory[].note",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "2/1 (200%)",
+          "sampleValue": "Đã hoàn tất đơn hàng kiểm thử"
+        },
+        {
+          "field": "statusHistory[].status",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "2/1 (200%)",
+          "sampleValue": "DELIVERED"
+        },
+        {
+          "field": "statusHistory[].updatedAt",
+          "types": [
+            "Date"
+          ],
+          "presenceInSample": "2/1 (200%)",
+          "sampleValue": "2026-09-23T19:41:12.107Z"
+        },
+        {
+          "field": "statusHistory[].updatedBy",
+          "types": [
+            "ObjectId"
+          ],
+          "presenceInSample": "2/1 (200%)",
+          "sampleValue": "6ab0da85a17b71225922440b"
+        },
+        {
+          "field": "type",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "PAYMENT_ON_DELIVERY"
+        },
+        {
+          "field": "updatedAt",
+          "types": [
+            "Date"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "2026-09-23T19:41:12.321Z"
+        }
+      ]
+    },
+    {
+      "collectionName": "shipping_methods",
+      "type": "collection",
+      "totalDocuments": 2,
+      "scannedDocuments": 2,
+      "topLevelFieldCount": 13,
+      "totalFieldPathsCount": 16,
+      "topLevelFields": [
+        "__v",
+        "_id",
+        "baseFee",
+        "code",
+        "createdAt",
+        "deliveryAreas",
+        "deliveryScope",
+        "description",
+        "estimatedDeliveryTime",
+        "freeShippingCondition",
+        "name",
+        "status",
+        "updatedAt"
+      ],
+      "fields": [
+        {
+          "field": "__v",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "2/2 (100%)",
+          "sampleValue": 0
+        },
+        {
+          "field": "_id",
+          "types": [
+            "ObjectId"
+          ],
+          "presenceInSample": "2/2 (100%)",
+          "sampleValue": "6ab426551634f0c3c45541ae"
+        },
+        {
+          "field": "baseFee",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "2/2 (100%)",
+          "sampleValue": 90
+        },
+        {
+          "field": "code",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "2/2 (100%)",
+          "sampleValue": "n"
+        },
+        {
+          "field": "createdAt",
+          "types": [
+            "Date"
+          ],
+          "presenceInSample": "2/2 (100%)",
+          "sampleValue": "2026-09-23T19:19:49.310Z"
+        },
+        {
+          "field": "deliveryAreas",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "2/2 (100%)",
+          "sampleValue": "[Array (0 items)]"
+        },
+        {
+          "field": "deliveryScope",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "2/2 (100%)",
+          "sampleValue": "NATIONWIDE"
+        },
+        {
+          "field": "description",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "2/2 (100%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "estimatedDeliveryTime",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "2/2 (100%)",
+          "sampleValue": "hg"
+        },
+        {
+          "field": "freeShippingCondition",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "2/2 (100%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "freeShippingCondition.description",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "2/2 (100%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "freeShippingCondition.enabled",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "2/2 (100%)",
+          "sampleValue": false
+        },
+        {
+          "field": "freeShippingCondition.minimumOrderValue",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "2/2 (100%)",
+          "sampleValue": 0
+        },
+        {
+          "field": "name",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "2/2 (100%)",
+          "sampleValue": "n"
+        },
+        {
+          "field": "status",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "2/2 (100%)",
+          "sampleValue": "ACTIVE"
+        },
+        {
+          "field": "updatedAt",
+          "types": [
+            "Date"
+          ],
+          "presenceInSample": "2/2 (100%)",
+          "sampleValue": "2026-09-23T19:19:49.310Z"
+        }
+      ]
+    },
+    {
+      "collectionName": "configs",
+      "type": "collection",
+      "totalDocuments": 0,
+      "scannedDocuments": 0,
+      "topLevelFieldCount": 0,
+      "totalFieldPathsCount": 0,
+      "topLevelFields": [],
+      "fields": []
+    },
+    {
+      "collectionName": "payment_methods",
+      "type": "collection",
+      "totalDocuments": 3,
+      "scannedDocuments": 3,
+      "topLevelFieldCount": 14,
+      "totalFieldPathsCount": 17,
+      "topLevelFields": [
+        "__v",
+        "_id",
+        "code",
+        "createdAt",
+        "description",
+        "isActive",
+        "logo",
+        "name",
+        "paymentInfo",
+        "paymentType",
+        "status",
+        "transactionFee",
+        "type",
+        "updatedAt"
+      ],
+      "fields": [
+        {
+          "field": "__v",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "2/3 (67%)",
+          "sampleValue": 0
+        },
+        {
+          "field": "_id",
+          "types": [
+            "ObjectId"
+          ],
+          "presenceInSample": "3/3 (100%)",
+          "sampleValue": "6ab421261634f0c3c4554003"
+        },
+        {
+          "field": "code",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "3/3 (100%)",
+          "sampleValue": "89"
+        },
+        {
+          "field": "createdAt",
+          "types": [
+            "Date",
+            "string"
+          ],
+          "presenceInSample": "3/3 (100%)",
+          "sampleValue": "2026-09-23T18:57:42.123Z"
+        },
+        {
+          "field": "description",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "3/3 (100%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "isActive",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "2/3 (67%)",
+          "sampleValue": true
+        },
+        {
+          "field": "logo",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "2/3 (67%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "name",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "3/3 (100%)",
+          "sampleValue": "TT"
+        },
+        {
+          "field": "paymentInfo",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/3 (33%)",
+          "sampleValue": "1234"
+        },
+        {
+          "field": "paymentType",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "3/3 (100%)",
+          "sampleValue": "CASH"
+        },
+        {
+          "field": "status",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "3/3 (100%)",
+          "sampleValue": "ACTIVE"
+        },
+        {
+          "field": "transactionFee",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "2/3 (67%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "transactionFee.enabled",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "2/3 (67%)",
+          "sampleValue": true
+        },
+        {
+          "field": "transactionFee.type",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "2/3 (67%)",
+          "sampleValue": "FIXED"
+        },
+        {
+          "field": "transactionFee.value",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "2/3 (67%)",
+          "sampleValue": 0
+        },
+        {
+          "field": "type",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/3 (33%)",
+          "sampleValue": "Online"
+        },
+        {
+          "field": "updatedAt",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "3/3 (100%)",
+          "sampleValue": "2026-09-24T13:11:49.576Z"
+        }
+      ]
+    },
+    {
+      "collectionName": "themes",
+      "type": "collection",
+      "totalDocuments": 0,
+      "scannedDocuments": 0,
+      "topLevelFieldCount": 0,
+      "totalFieldPathsCount": 0,
+      "topLevelFields": [],
+      "fields": []
+    },
+    {
+      "collectionName": "users",
+      "type": "collection",
+      "totalDocuments": 11,
+      "scannedDocuments": 11,
+      "topLevelFieldCount": 20,
+      "totalFieldPathsCount": 22,
+      "topLevelFields": [
+        "__v",
+        "_id",
+        "address",
+        "avatar",
+        "cart",
+        "createdAt",
+        "dateAdded",
+        "dateOfBirth",
+        "description",
+        "email",
+        "fullName",
+        "gender",
+        "images",
+        "name",
+        "password",
+        "phoneNumber",
+        "roles",
+        "salt",
+        "status",
+        "updatedAt"
+      ],
+      "fields": [
+        {
+          "field": "__v",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "7/11 (64%)",
+          "sampleValue": 0
+        },
+        {
+          "field": "_id",
+          "types": [
+            "ObjectId"
+          ],
+          "presenceInSample": "11/11 (100%)",
+          "sampleValue": "6aae973eb3b9af088bf88cbc"
+        },
+        {
+          "field": "address",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "10/11 (91%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "avatar",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "10/11 (91%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "cart",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "10/11 (91%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "cart.items",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "10/11 (91%)",
+          "sampleValue": "[Array (0 items)]"
+        },
+        {
+          "field": "createdAt",
+          "types": [
+            "Date",
+            "string"
+          ],
+          "presenceInSample": "9/11 (82%)",
+          "sampleValue": "2026-09-22T07:43:01.900Z"
+        },
+        {
+          "field": "dateAdded",
+          "types": [
+            "Date",
+            "string"
+          ],
+          "presenceInSample": "10/11 (91%)",
+          "sampleValue": "2026-09-21T07:19:32.249Z"
+        },
+        {
+          "field": "dateOfBirth",
+          "types": [
+            "string",
+            "null"
+          ],
+          "presenceInSample": "10/11 (91%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "description",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "11/11 (100%)",
+          "sampleValue": "Người dùng hệ thống"
+        },
+        {
+          "field": "email",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "11/11 (100%)",
+          "sampleValue": "testuser1@gmail.com"
+        },
+        {
+          "field": "fullName",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "10/11 (91%)",
+          "sampleValue": "admin"
+        },
+        {
+          "field": "gender",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "10/11 (91%)",
+          "sampleValue": "Khác"
+        },
+        {
+          "field": "images",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "11/11 (100%)",
+          "sampleValue": "[Array (0 items)]"
+        },
+        {
+          "field": "name",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "11/11 (100%)",
+          "sampleValue": "admin@example.com"
+        },
+        {
+          "field": "password",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "11/11 (100%)",
+          "sampleValue": "$2b$10$KoGM1XxLFOw1HaghJa5i3eoURqTUVx7019AdQ1.coWyLmHqDyPQ/a"
+        },
+        {
+          "field": "phoneNumber",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "10/11 (91%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "roles",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "11/11 (100%)",
+          "sampleValue": "[Array (1 items)]"
+        },
+        {
+          "field": "roles[]",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "15/11 (136%)",
+          "sampleValue": null
+        },
+        {
+          "field": "salt",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "11/11 (100%)",
+          "sampleValue": "$2b$10$KoGM1XxLFOw1HaghJa5i3e"
+        },
+        {
+          "field": "status",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "11/11 (100%)",
+          "sampleValue": true
+        },
+        {
+          "field": "updatedAt",
+          "types": [
+            "string",
+            "Date"
+          ],
+          "presenceInSample": "11/11 (100%)",
+          "sampleValue": "2026-09-24T12:52:33.111Z"
+        }
+      ]
+    },
+    {
+      "collectionName": "session",
+      "type": "collection",
+      "totalDocuments": 1,
+      "scannedDocuments": 1,
+      "topLevelFieldCount": 3,
+      "totalFieldPathsCount": 3,
+      "topLevelFields": [
+        "_id",
+        "expires",
+        "session"
+      ],
+      "fields": [
+        {
+          "field": "_id",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Il9ca6tp_-ESsS2A5lLrRI5POZtAI4Pq"
+        },
+        {
+          "field": "expires",
+          "types": [
+            "Date"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "2026-10-25T03:48:00.093Z"
+        },
+        {
+          "field": "session",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "{\"cookie\":{\"originalMaxAge\":2592000000,\"expires\":\"2026-10-25T03:40:39.442Z\",\"..."
+        }
+      ]
+    },
+    {
+      "collectionName": "categories",
+      "type": "collection",
+      "totalDocuments": 7,
+      "scannedDocuments": 7,
+      "topLevelFieldCount": 12,
+      "totalFieldPathsCount": 29,
+      "topLevelFields": [
+        "__v",
+        "_id",
+        "cs",
+        "dateAdded",
+        "en",
+        "mainImage",
+        "parentId",
+        "sk",
+        "subCategories",
+        "titleUrl",
+        "updatedAt",
+        "vi"
+      ],
+      "fields": [
+        {
+          "field": "__v",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "6/7 (86%)",
+          "sampleValue": 0
+        },
+        {
+          "field": "_id",
+          "types": [
+            "ObjectId"
+          ],
+          "presenceInSample": "7/7 (100%)",
+          "sampleValue": "6aae9928ce0171d46294e529"
+        },
+        {
+          "field": "cs",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "6/7 (86%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "cs.description",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "5/7 (71%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "cs.title",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "5/7 (71%)",
+          "sampleValue": "lipstick"
+        },
+        {
+          "field": "cs.visibility",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "6/7 (86%)",
+          "sampleValue": true
+        },
+        {
+          "field": "dateAdded",
+          "types": [
+            "Date",
+            "string"
+          ],
+          "presenceInSample": "7/7 (100%)",
+          "sampleValue": "2026-09-19T14:16:08.974Z"
+        },
+        {
+          "field": "en",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "6/7 (86%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "en.description",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "6/7 (86%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "en.title",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "6/7 (86%)",
+          "sampleValue": "lipstick"
+        },
+        {
+          "field": "en.visibility",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "6/7 (86%)",
+          "sampleValue": true
+        },
+        {
+          "field": "mainImage",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "7/7 (100%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "mainImage.name",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "7/7 (100%)",
+          "sampleValue": "Quần Áo"
+        },
+        {
+          "field": "mainImage.type",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "1/7 (14%)",
+          "sampleValue": true
+        },
+        {
+          "field": "mainImage.url",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "7/7 (100%)",
+          "sampleValue": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAlgAAAG1CAYAAAAlVIodAAAAAXNSR0I..."
+        },
+        {
+          "field": "parentId",
+          "types": [
+            "null"
+          ],
+          "presenceInSample": "2/7 (29%)",
+          "sampleValue": null
+        },
+        {
+          "field": "sk",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "6/7 (86%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "sk.description",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "5/7 (71%)",
+          "sampleValue": ""
+        },
+        {
+          "field": "sk.title",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "5/7 (71%)",
+          "sampleValue": "lipstick"
+        },
+        {
+          "field": "sk.visibility",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "6/7 (86%)",
+          "sampleValue": true
+        },
+        {
+          "field": "subCategories",
+          "types": [
+            "Array"
+          ],
+          "presenceInSample": "7/7 (100%)",
+          "sampleValue": "[Array (0 items)]"
+        },
+        {
+          "field": "titleUrl",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "7/7 (100%)",
+          "sampleValue": "clothes"
+        },
+        {
+          "field": "updatedAt",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "2/7 (29%)",
+          "sampleValue": "2026-09-25T08:01:23.364Z"
+        },
+        {
+          "field": "vi",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "5/7 (71%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "vi.description",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "5/7 (71%)",
+          "sampleValue": "Thời trang nam nữ phong cách hiện đại"
+        },
+        {
+          "field": "vi.menuHidden",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "2/7 (29%)",
+          "sampleValue": false
+        },
+        {
+          "field": "vi.position",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "2/7 (29%)",
+          "sampleValue": 2
+        },
+        {
+          "field": "vi.title",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "5/7 (71%)",
+          "sampleValue": "Quần Áo"
+        },
+        {
+          "field": "vi.visibility",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "5/7 (71%)",
+          "sampleValue": true
+        }
+      ]
+    },
+    {
+      "collectionName": "pages",
+      "type": "collection",
+      "totalDocuments": 1,
+      "scannedDocuments": 1,
+      "topLevelFieldCount": 10,
+      "totalFieldPathsCount": 17,
+      "topLevelFields": [
+        "__v",
+        "_id",
+        "cs",
+        "dateAdded",
+        "en",
+        "sk",
+        "status",
+        "titleUrl",
+        "updatedAt",
+        "vi"
+      ],
+      "fields": [
+        {
+          "field": "__v",
+          "types": [
+            "integer"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": 0
+        },
+        {
+          "field": "_id",
+          "types": [
+            "ObjectId"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "6aafb4063e48e9bf03826308"
+        },
+        {
+          "field": "cs",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "cs.contentHTML",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "<p>Ahoj</p>"
+        },
+        {
+          "field": "cs.title",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Test Page API CS"
+        },
+        {
+          "field": "dateAdded",
+          "types": [
+            "Date"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "2026-09-20T10:23:02.312Z"
+        },
+        {
+          "field": "en",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "en.contentHTML",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "<p>Testing connection to database</p>"
+        },
+        {
+          "field": "en.title",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Test Page API"
+        },
+        {
+          "field": "sk",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "sk.contentHTML",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "<p>Ahoj</p>"
+        },
+        {
+          "field": "sk.title",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "Test Page API SK"
+        },
+        {
+          "field": "status",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "draft"
+        },
+        {
+          "field": "titleUrl",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "test-page-api"
+        },
+        {
+          "field": "updatedAt",
+          "types": [
+            "string"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "2026-09-24T15:58:36.039Z"
+        },
+        {
+          "field": "vi",
+          "types": [
+            "object"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": "[Object]"
+        },
+        {
+          "field": "vi.visibility",
+          "types": [
+            "boolean"
+          ],
+          "presenceInSample": "1/1 (100%)",
+          "sampleValue": false
+        }
+      ]
+    }
+  ],
+  "conciseSummary": {
+    "product_variants": {
+      "totalDocuments": 0,
+      "topLevelFields": [],
+      "allFieldsWithTypes": {}
+    },
+    "settings": {
+      "totalDocuments": 1,
+      "topLevelFields": [
+        "_id",
+        "checkout",
+        "contact",
+        "maintenance",
+        "shipping",
+        "site",
+        "store",
+        "system",
+        "updatedAt"
+      ],
+      "allFieldsWithTypes": {
+        "_id": "ObjectId",
+        "checkout": "object",
+        "checkout.allowOrder": "boolean",
+        "contact": "object",
+        "contact.address": "string",
+        "contact.email": "string",
+        "contact.phone": "string",
+        "maintenance": "object",
+        "maintenance.enabled": "boolean",
+        "maintenance.message": "string",
+        "shipping": "object",
+        "shipping.enabled": "boolean",
+        "site": "object",
+        "site.description": "string",
+        "site.favicon": "string",
+        "site.logo": "string",
+        "site.name": "string",
+        "store": "object",
+        "store.isOpen": "boolean",
+        "system": "object",
+        "system.currency": "string",
+        "system.language": "string",
+        "system.timezone": "string",
+        "updatedAt": "string"
+      }
+    },
+    "translations": {
+      "totalDocuments": 1,
+      "topLevelFields": [
+        "_id",
+        "keys",
+        "lang"
+      ],
+      "allFieldsWithTypes": {
+        "_id": "ObjectId",
+        "keys": "object",
+        "keys.About_customer": "string",
+        "keys.Add": "string",
+        "keys.Add_page": "string",
+        "keys.Added": "string",
+        "keys.ADDED_TO_CART": "string",
+        "keys.Address": "string",
+        "keys.Again": "string",
+        "keys.All": "string",
+        "keys.Amount": "string",
+        "keys.Available_in_few_weeks": "string",
+        "keys.Back": "string",
+        "keys.Cart": "string",
+        "keys.Categories": "string",
+        "keys.Category": "string",
+        "keys.Checkout": "string",
+        "keys.City": "string",
+        "keys.Config": "string",
+        "keys.Contact": "string",
+        "keys.CONTACT": "string",
+        "keys.Country": "string",
+        "keys.Created": "string",
+        "keys.Customer": "string",
+        "keys.Dashboard": "string",
+        "keys.Description": "string",
+        "keys.Detail": "string",
+        "keys.Edit": "string",
+        "keys.Email": "string",
+        "keys.ESHOP_DESCRIPTION": "string",
+        "keys.Eshop_subtitle": "string",
+        "keys.ESHOP_TITLE": "string",
+        "keys.Filter": "string",
+        "keys.Find": "string",
+        "keys.Free_shipping_limit": "string",
+        "keys.From_existing_pages": "string",
+        "keys.Hidden": "string",
+        "keys.Home": "string",
+        "keys.Home_promo": "string",
+        "keys.Images": "string",
+        "keys.Language_for_page": "string",
+        "keys.Language_for_product_detail": "string",
+        "keys.LINKS": "string",
+        "keys.Login": "string",
+        "keys.Logout": "string",
+        "keys.More": "string",
+        "keys.Name": "string",
+        "keys.Newest": "string",
+        "keys.Next": "string",
+        "keys.Oldest": "string",
+        "keys.On_sale": "string",
+        "keys.On_stock": "string",
+        "keys.Order": "string",
+        "keys.Orders": "string",
+        "keys.Pages": "string",
+        "keys.Paid": "string",
+        "keys.Password": "string",
+        "keys.Pay": "string",
+        "keys.Prev": "string",
+        "keys.Price": "string",
+        "keys.Price_from": "string",
+        "keys.Price_to": "string",
+        "keys.Price-asc": "string",
+        "keys.Price-decs": "string",
+        "keys.PriceRange": "string",
+        "keys.Product": "string",
+        "keys.products": "string",
+        "keys.Products": "string",
+        "keys.Regular_price": "string",
+        "keys.Remove": "string",
+        "keys.Request_sended": "string",
+        "keys.Sale_price": "string",
+        "keys.Save": "string",
+        "keys.Search": "string",
+        "keys.Send": "string",
+        "keys.Shipping": "string",
+        "keys.Shipping_cost": "string",
+        "keys.Short_description": "string",
+        "keys.SignIn": "string",
+        "keys.SIGNIN_SUCCESS": "string",
+        "keys.SignUp": "string",
+        "keys.SIGNUP_SUCCESS": "string",
+        "keys.Sort_by": "string",
+        "keys.Sorting": "string",
+        "keys.Status": "string",
+        "keys.Stock": "string",
+        "keys.SuccessOrder": "string",
+        "keys.Tags": "string",
+        "keys.Theme": "string",
+        "keys.Title": "string",
+        "keys.to": "string",
+        "keys.TO_CART": "string",
+        "keys.Total_price": "string",
+        "keys.Total_quantity": "string",
+        "keys.Translations": "string",
+        "keys.Type": "string",
+        "keys.Unavailable": "string",
+        "keys.Visibility": "string",
+        "keys.Visible": "string",
+        "keys.with": "string",
+        "keys.Zip": "string",
+        "lang": "string"
+      }
+    },
+    "products": {
+      "totalDocuments": 100,
+      "topLevelFields": [
+        "__v",
+        "_id",
+        "_user",
+        "cs",
+        "dateAdded",
+        "en",
+        "images",
+        "mainImage",
+        "sk",
+        "tags",
+        "titleUrl",
+        "updatedAt",
+        "variants",
+        "vi",
+        "visibility"
+      ],
+      "allFieldsWithTypes": {
+        "__v": "integer",
+        "_id": "ObjectId",
+        "_user": "ObjectId",
+        "cs": "object",
+        "cs.categoryLevel1": "string",
+        "cs.categoryLevel2": "string",
+        "cs.colors": "Array",
+        "cs.description": "string",
+        "cs.descriptionFull": "Array",
+        "cs.hasClassification": "boolean",
+        "cs.hasColors": "boolean",
+        "cs.hasSizes": "boolean",
+        "cs.onSale": "boolean",
+        "cs.productType": "string",
+        "cs.quantity": "integer",
+        "cs.regularPrice": "integer",
+        "cs.salePrice": "integer",
+        "cs.shipping": "string",
+        "cs.shippingBasic": "boolean",
+        "cs.shippingBasicCost": "integer",
+        "cs.shippingCost": "integer",
+        "cs.shippingExtended": "boolean",
+        "cs.shippingExtendedCost": "integer",
+        "cs.sizes": "Array",
+        "cs.stock": "string",
+        "cs.stockDate": "string",
+        "cs.title": "string",
+        "cs.visibility": "boolean",
+        "dateAdded": "Date | string",
+        "en": "object",
+        "en.categoryLevel1": "string",
+        "en.categoryLevel2": "string",
+        "en.colors": "Array",
+        "en.description": "string",
+        "en.descriptionFull": "Array",
+        "en.hasClassification": "boolean",
+        "en.hasColors": "boolean",
+        "en.hasSizes": "boolean",
+        "en.onSale": "boolean",
+        "en.productType": "string",
+        "en.quantity": "integer",
+        "en.regularPrice": "integer",
+        "en.salePrice": "integer",
+        "en.shipping": "string",
+        "en.shippingBasic": "boolean",
+        "en.shippingBasicCost": "integer",
+        "en.shippingCost": "integer",
+        "en.shippingExtended": "boolean",
+        "en.shippingExtendedCost": "integer",
+        "en.sizes": "Array",
+        "en.stock": "string",
+        "en.stockDate": "string",
+        "en.title": "string",
+        "en.visibility": "boolean",
+        "images": "Array",
+        "images[]": "string",
+        "mainImage": "object",
+        "mainImage.name": "string",
+        "mainImage.url": "string",
+        "sk": "object",
+        "sk.categoryLevel1": "string",
+        "sk.categoryLevel2": "string",
+        "sk.colors": "Array",
+        "sk.description": "string",
+        "sk.descriptionFull": "Array",
+        "sk.hasClassification": "boolean",
+        "sk.hasColors": "boolean",
+        "sk.hasSizes": "boolean",
+        "sk.onSale": "boolean",
+        "sk.productType": "string",
+        "sk.quantity": "integer",
+        "sk.regularPrice": "integer",
+        "sk.salePrice": "integer",
+        "sk.shipping": "string",
+        "sk.shippingBasic": "boolean",
+        "sk.shippingBasicCost": "integer",
+        "sk.shippingCost": "integer",
+        "sk.shippingExtended": "boolean",
+        "sk.shippingExtendedCost": "integer",
+        "sk.sizes": "Array",
+        "sk.stock": "string",
+        "sk.stockDate": "string",
+        "sk.title": "string",
+        "sk.visibility": "boolean",
+        "tags": "Array",
+        "tags[]": "string",
+        "titleUrl": "string",
+        "updatedAt": "Date | string",
+        "variants": "Array",
+        "variants[]": "object",
+        "variants[].classification": "string",
+        "variants[].color": "string",
+        "variants[].discountPrice": "integer",
+        "variants[].price": "integer",
+        "variants[].size": "string",
+        "variants[].sku": "string",
+        "variants[].stock": "integer",
+        "vi": "object",
+        "vi.categoryLevel1": "string",
+        "vi.categoryLevel2": "string",
+        "vi.classifications": "Array",
+        "vi.classifications[]": "string",
+        "vi.colors": "Array",
+        "vi.colors[]": "object",
+        "vi.colors[].hex": "string",
+        "vi.colors[].name": "string",
+        "vi.description": "string",
+        "vi.descriptionFull": "Array",
+        "vi.descriptionFull[]": "string",
+        "vi.hasClassification": "boolean",
+        "vi.hasColors": "boolean",
+        "vi.hasSizes": "boolean",
+        "vi.onSale": "boolean",
+        "vi.productType": "string",
+        "vi.quantity": "integer",
+        "vi.regularPrice": "integer",
+        "vi.salePrice": "integer",
+        "vi.shipping": "string",
+        "vi.shippingBasic": "boolean",
+        "vi.shippingBasicCost": "integer",
+        "vi.shippingCost": "integer",
+        "vi.shippingExtended": "boolean",
+        "vi.shippingExtendedCost": "integer",
+        "vi.sizes": "Array",
+        "vi.sizes[]": "string",
+        "vi.stock": "string",
+        "vi.stockDate": "string",
+        "vi.title": "string",
+        "vi.visibility": "boolean",
+        "visibility": "boolean"
+      }
+    },
+    "shippingmethods": {
+      "totalDocuments": 4,
+      "topLevelFields": [
+        "__v",
+        "_id",
+        "baseCost",
+        "code",
+        "coverageArea",
+        "createdAt",
+        "description",
+        "estimatedDays",
+        "freeShippingThreshold",
+        "isActive",
+        "name",
+        "updatedAt"
+      ],
+      "allFieldsWithTypes": {
+        "__v": "integer",
+        "_id": "ObjectId",
+        "baseCost": "integer",
+        "code": "string",
+        "coverageArea": "string",
+        "createdAt": "Date",
+        "description": "string",
+        "estimatedDays": "string",
+        "freeShippingThreshold": "integer",
+        "isActive": "boolean",
+        "name": "string",
+        "updatedAt": "Date"
+      }
+    },
+    "orders": {
+      "totalDocuments": 1,
+      "topLevelFields": [
+        "__v",
+        "_id",
+        "addresses",
+        "amount",
+        "cart",
+        "currency",
+        "customerEmail",
+        "dateAdded",
+        "notes",
+        "orderId",
+        "outcome",
+        "status",
+        "statusHistory",
+        "type",
+        "updatedAt"
+      ],
+      "allFieldsWithTypes": {
+        "__v": "integer",
+        "_id": "ObjectId",
+        "addresses": "Array",
+        "addresses[]": "object",
+        "addresses[].city": "string",
+        "addresses[].country": "string",
+        "addresses[].line1": "string",
+        "addresses[].line2": "string",
+        "addresses[].name": "string",
+        "addresses[].zip": "string",
+        "amount": "integer",
+        "cart": "object",
+        "cart.items": "Array",
+        "cart.items[]": "object",
+        "cart.items[].id": "string",
+        "cart.items[].item": "object",
+        "cart.items[].item._id": "string",
+        "cart.items[].item._user": "string",
+        "cart.items[].item.categoryLevel1": "string",
+        "cart.items[].item.categoryLevel2": "string",
+        "cart.items[].item.colors": "Array",
+        "cart.items[].item.dateAdded": "string",
+        "cart.items[].item.description": "string",
+        "cart.items[].item.descriptionFull": "Array",
+        "cart.items[].item.hasClassification": "boolean",
+        "cart.items[].item.hasColors": "boolean",
+        "cart.items[].item.hasSizes": "boolean",
+        "cart.items[].item.id": "string",
+        "cart.items[].item.images": "Array",
+        "cart.items[].item.images[]": "string",
+        "cart.items[].item.mainImage": "object",
+        "cart.items[].item.mainImage.name": "string",
+        "cart.items[].item.mainImage.url": "string",
+        "cart.items[].item.onSale": "boolean",
+        "cart.items[].item.productType": "string",
+        "cart.items[].item.quantity": "integer",
+        "cart.items[].item.rating": "integer",
+        "cart.items[].item.regularPrice": "integer",
+        "cart.items[].item.salePrice": "integer",
+        "cart.items[].item.shipping": "string",
+        "cart.items[].item.shippingBasic": "boolean",
+        "cart.items[].item.shippingBasicCost": "integer",
+        "cart.items[].item.shippingCost": "integer",
+        "cart.items[].item.shippingExtended": "boolean",
+        "cart.items[].item.shippingExtendedCost": "integer",
+        "cart.items[].item.sizes": "Array",
+        "cart.items[].item.sizes[]": "string",
+        "cart.items[].item.stock": "string",
+        "cart.items[].item.stockDate": "string",
+        "cart.items[].item.tags": "Array",
+        "cart.items[].item.title": "string",
+        "cart.items[].item.titleUrl": "string",
+        "cart.items[].item.variants": "Array",
+        "cart.items[].item.visibility": "boolean",
+        "cart.items[].price": "integer",
+        "cart.items[].qty": "integer",
+        "cart.items[].shipingCostType": "string",
+        "cart.shippingCost": "integer",
+        "cart.shippingLimit": "integer",
+        "cart.shippingType": "string",
+        "cart.totalPrice": "integer",
+        "cart.totalQty": "integer",
+        "currency": "string",
+        "customerEmail": "string",
+        "dateAdded": "Date",
+        "notes": "string",
+        "orderId": "string",
+        "outcome": "object",
+        "outcome.seller_message": "string",
+        "status": "string",
+        "statusHistory": "Array",
+        "statusHistory[]": "object",
+        "statusHistory[].note": "string",
+        "statusHistory[].status": "string",
+        "statusHistory[].updatedAt": "Date",
+        "statusHistory[].updatedBy": "ObjectId",
+        "type": "string",
+        "updatedAt": "Date"
+      }
+    },
+    "shipping_methods": {
+      "totalDocuments": 2,
+      "topLevelFields": [
+        "__v",
+        "_id",
+        "baseFee",
+        "code",
+        "createdAt",
+        "deliveryAreas",
+        "deliveryScope",
+        "description",
+        "estimatedDeliveryTime",
+        "freeShippingCondition",
+        "name",
+        "status",
+        "updatedAt"
+      ],
+      "allFieldsWithTypes": {
+        "__v": "integer",
+        "_id": "ObjectId",
+        "baseFee": "integer",
+        "code": "string",
+        "createdAt": "Date",
+        "deliveryAreas": "Array",
+        "deliveryScope": "string",
+        "description": "string",
+        "estimatedDeliveryTime": "string",
+        "freeShippingCondition": "object",
+        "freeShippingCondition.description": "string",
+        "freeShippingCondition.enabled": "boolean",
+        "freeShippingCondition.minimumOrderValue": "integer",
+        "name": "string",
+        "status": "string",
+        "updatedAt": "Date"
+      }
+    },
+    "configs": {
+      "totalDocuments": 0,
+      "topLevelFields": [],
+      "allFieldsWithTypes": {}
+    },
+    "payment_methods": {
+      "totalDocuments": 3,
+      "topLevelFields": [
+        "__v",
+        "_id",
+        "code",
+        "createdAt",
+        "description",
+        "isActive",
+        "logo",
+        "name",
+        "paymentInfo",
+        "paymentType",
+        "status",
+        "transactionFee",
+        "type",
+        "updatedAt"
+      ],
+      "allFieldsWithTypes": {
+        "__v": "integer",
+        "_id": "ObjectId",
+        "code": "string",
+        "createdAt": "Date | string",
+        "description": "string",
+        "isActive": "boolean",
+        "logo": "string",
+        "name": "string",
+        "paymentInfo": "string",
+        "paymentType": "string",
+        "status": "string",
+        "transactionFee": "object",
+        "transactionFee.enabled": "boolean",
+        "transactionFee.type": "string",
+        "transactionFee.value": "integer",
+        "type": "string",
+        "updatedAt": "string"
+      }
+    },
+    "themes": {
+      "totalDocuments": 0,
+      "topLevelFields": [],
+      "allFieldsWithTypes": {}
+    },
+    "users": {
+      "totalDocuments": 11,
+      "topLevelFields": [
+        "__v",
+        "_id",
+        "address",
+        "avatar",
+        "cart",
+        "createdAt",
+        "dateAdded",
+        "dateOfBirth",
+        "description",
+        "email",
+        "fullName",
+        "gender",
+        "images",
+        "name",
+        "password",
+        "phoneNumber",
+        "roles",
+        "salt",
+        "status",
+        "updatedAt"
+      ],
+      "allFieldsWithTypes": {
+        "__v": "integer",
+        "_id": "ObjectId",
+        "address": "string",
+        "avatar": "string",
+        "cart": "object",
+        "cart.items": "Array",
+        "createdAt": "Date | string",
+        "dateAdded": "Date | string",
+        "dateOfBirth": "string | null",
+        "description": "string",
+        "email": "string",
+        "fullName": "string",
+        "gender": "string",
+        "images": "Array",
+        "name": "string",
+        "password": "string",
+        "phoneNumber": "string",
+        "roles": "Array",
+        "roles[]": "string",
+        "salt": "string",
+        "status": "boolean",
+        "updatedAt": "string | Date"
+      }
+    },
+    "session": {
+      "totalDocuments": 1,
+      "topLevelFields": [
+        "_id",
+        "expires",
+        "session"
+      ],
+      "allFieldsWithTypes": {
+        "_id": "string",
+        "expires": "Date",
+        "session": "string"
+      }
+    },
+    "categories": {
+      "totalDocuments": 7,
+      "topLevelFields": [
+        "__v",
+        "_id",
+        "cs",
+        "dateAdded",
+        "en",
+        "mainImage",
+        "parentId",
+        "sk",
+        "subCategories",
+        "titleUrl",
+        "updatedAt",
+        "vi"
+      ],
+      "allFieldsWithTypes": {
+        "__v": "integer",
+        "_id": "ObjectId",
+        "cs": "object",
+        "cs.description": "string",
+        "cs.title": "string",
+        "cs.visibility": "boolean",
+        "dateAdded": "Date | string",
+        "en": "object",
+        "en.description": "string",
+        "en.title": "string",
+        "en.visibility": "boolean",
+        "mainImage": "object",
+        "mainImage.name": "string",
+        "mainImage.type": "boolean",
+        "mainImage.url": "string",
+        "parentId": "null",
+        "sk": "object",
+        "sk.description": "string",
+        "sk.title": "string",
+        "sk.visibility": "boolean",
+        "subCategories": "Array",
+        "titleUrl": "string",
+        "updatedAt": "string",
+        "vi": "object",
+        "vi.description": "string",
+        "vi.menuHidden": "boolean",
+        "vi.position": "integer",
+        "vi.title": "string",
+        "vi.visibility": "boolean"
+      }
+    },
+    "pages": {
+      "totalDocuments": 1,
+      "topLevelFields": [
+        "__v",
+        "_id",
+        "cs",
+        "dateAdded",
+        "en",
+        "sk",
+        "status",
+        "titleUrl",
+        "updatedAt",
+        "vi"
+      ],
+      "allFieldsWithTypes": {
+        "__v": "integer",
+        "_id": "ObjectId",
+        "cs": "object",
+        "cs.contentHTML": "string",
+        "cs.title": "string",
+        "dateAdded": "Date",
+        "en": "object",
+        "en.contentHTML": "string",
+        "en.title": "string",
+        "sk": "object",
+        "sk.contentHTML": "string",
+        "sk.title": "string",
+        "status": "string",
+        "titleUrl": "string",
+        "updatedAt": "string",
+        "vi": "object",
+        "vi.visibility": "boolean"
+      }
+    }
+  }
+}

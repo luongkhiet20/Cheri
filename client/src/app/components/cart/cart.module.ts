@@ -18,29 +18,27 @@ import { PriceFormatPipe } from '../../pipes/price.pipe';
 import { OrderInfoComponent } from '../../shared/components/order-info/order-info.component';
 
 @NgModule({
-  declarations: [
-    CartComponent,
-    CardComponent,
-    SummaryComponent
-  ],
-  imports: [
-    CommonModule,
-    FormsModule,
-    TranslatePipe,
-    PriceFormatPipe,
-    ReactiveFormsModule,
-    MatButtonModule,
-    MatInputModule,
-    MatProgressBarModule,
-    MatIconModule,
-    MatRadioModule,
-    MatStepperModule,
-    OrderInfoComponent,
-    RouterModule.forChild([
-      { path: '', component: CartComponent },
-      { path: 'summary', component: SummaryComponent }
-    ]),
-  ],
-  providers: []
+    imports: [
+        CommonModule,
+        FormsModule,
+        TranslatePipe,
+        PriceFormatPipe,
+        ReactiveFormsModule,
+        MatButtonModule,
+        MatInputModule,
+        MatProgressBarModule,
+        MatIconModule,
+        MatRadioModule,
+        MatStepperModule,
+        OrderInfoComponent,
+        RouterModule.forChild([
+            { path: '', component: CartComponent },
+            { path: 'summary', component: SummaryComponent }
+        ]),
+        CartComponent,
+        CardComponent,
+        SummaryComponent,
+    ],
+    providers: []
 })
 export class CartModule { }

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, Signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, Signal, inject } from '@angular/core';
 import { Observable, Subscription, forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { toObservable } from '@angular/core/rxjs-interop';
@@ -8,14 +8,22 @@ import { Order, Cart, Product } from '../../shared/models';
 import { SignalStore } from '../../store/signal.store';
 import { SignalStoreSelectors } from '../../store/signal.store.selectors';
 import { ApiService } from '../../services/api.service';
+import { ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { NgIf, NgFor, UpperCasePipe, DatePipe } from '@angular/common';
+import { PriceFormatPipe } from '../../pipes/price.pipe';
 
 @Component({
-  selector: 'app-orders-edit',
-  templateUrl: './orders-edit.component.html',
-  styleUrls: ['./orders-edit.component.css'],
-  standalone: false
+    selector: 'app-orders-edit',
+    templateUrl: './orders-edit.component.html',
+    styleUrls: ['./orders-edit.component.css'],
+    imports: [ReactiveFormsModule, FormsModule, NgIf, NgFor, UpperCasePipe, DatePipe, PriceFormatPipe]
 })
 export class OrdersEditComponent implements OnInit, OnDestroy {
+  private store = inject(SignalStore);
+  private selectors = inject(SignalStoreSelectors);
+  translate = inject(TranslateService);
+  private apiService = inject(ApiService);
+
   readonly component = 'ordersEdit';
 
   orders$: Signal<Order[]>;
@@ -44,12 +52,7 @@ export class OrdersEditComponent implements OnInit, OnDestroy {
   editStatus: string = '';
   isSavingStatus: boolean = false;
 
-  constructor(
-    private store: SignalStore,
-    private selectors: SignalStoreSelectors,
-    public translate: TranslateService,
-    private apiService: ApiService
-  ) {
+  constructor() {
     this.lang$ = this.translate.getLang$();
     this.orders$ = this.selectors.orders;
   }

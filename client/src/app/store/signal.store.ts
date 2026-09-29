@@ -1,5 +1,5 @@
 import { SignalStoreSelectors } from './signal.store.selectors';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { ApiService } from '../services/api.service';
 import { User } from '../shared/models';
 import { catchError, map, of } from 'rxjs';
@@ -10,11 +10,9 @@ import { catchError, map, of } from 'rxjs';
   providedIn: 'root',
 })
 export class SignalStore {
+  private apiService = inject(ApiService);
+  private selectors = inject(SignalStoreSelectors);
 
-
-  constructor(private apiService: ApiService,
-     private selectors: SignalStoreSelectors
-  ) {}
 
 signIn = (payload) => {
   this.selectors.userState.update((state) => ({ ...state, loading: true }));

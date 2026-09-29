@@ -1,4 +1,4 @@
-﻿import { ChangeDetectionStrategy, Component, OnDestroy } from '@angular/core';
+﻿import { ChangeDetectionStrategy, Component, OnDestroy, inject } from '@angular/core';
 import { Subscription } from 'rxjs';
 
 import { TranslateService } from '../../../services/translate.service';
@@ -18,7 +18,9 @@ export class FooterComponent implements OnDestroy {
 
   private langSub: Subscription;
 
-  constructor(translate: TranslateService) {
+  constructor() {
+    const translate = inject(TranslateService);
+
     this.langSub = translate.getLang$().subscribe(lang => {
       this.lang = lang;
     });

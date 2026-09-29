@@ -1,7 +1,9 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
 import { forkJoin, of, Subscription } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ApiService } from '../../services/api.service';
+import { ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { NgIf, NgFor, JsonPipe } from '@angular/common';
 
 export interface AccountUser {
   _id?: string;
@@ -29,12 +31,15 @@ export interface AccountUser {
 }
 
 @Component({
-  selector: 'app-accounts-edit',
-  templateUrl: './accounts-edit.component.html',
-  styleUrls: ['./accounts-edit.component.css'],
-  standalone: false
+    selector: 'app-accounts-edit',
+    templateUrl: './accounts-edit.component.html',
+    styleUrls: ['./accounts-edit.component.css'],
+    imports: [ReactiveFormsModule, FormsModule, NgIf, NgFor, JsonPipe]
 })
 export class AccountsEditComponent implements OnInit, OnDestroy {
+  private apiService = inject(ApiService);
+  private cdr = inject(ChangeDetectorRef);
+
   allAccounts: AccountUser[] = [];
   filteredAccounts: AccountUser[] = [];
   isLoading: boolean = false;
@@ -78,11 +83,6 @@ export class AccountsEditComponent implements OnInit, OnDestroy {
   copySuccess: boolean = false;
 
   private sub: Subscription | null = null;
-
-  constructor(
-    private apiService: ApiService,
-    private cdr: ChangeDetectorRef
-  ) {}
 
   ngOnInit(): void {
     this.viewMode = 'table';

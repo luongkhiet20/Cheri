@@ -1,5 +1,5 @@
 import { debounceTime, take, delay } from 'rxjs/operators';
-import { Component, OnInit, PLATFORM_ID, Inject, Signal } from '@angular/core';
+import { Component, OnInit, PLATFORM_ID, Signal, inject } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Observable, BehaviorSubject, of } from 'rxjs';
@@ -27,6 +27,11 @@ import { MatButtonModule } from '@angular/material/button';
   imports: [CommonModule, TranslatePipe, RouterLink, RouterLinkActive, ReactiveFormsModule, MatIconModule, MatButtonModule, MatAutocompleteModule, MatInputModule, MatToolbarModule, MatMenuModule]
 })
 export class HeaderComponent implements OnInit {
+  private _platformId = inject<Object>(PLATFORM_ID);
+  private store = inject(SignalStore);
+  private selectors = inject(SignalStoreSelectors);
+  translate = inject(TranslateService);
+
   user$: Signal<User>;
   cart$: Signal<Cart>;
   productTitles$: Signal<string[]>;
@@ -68,12 +73,7 @@ export class HeaderComponent implements OnInit {
     this.query.setValue('');
   }
 
-  constructor(
-    @Inject(PLATFORM_ID)
-    private _platformId: Object,
-    private store: SignalStore,
-    private selectors: SignalStoreSelectors,
-    public translate: TranslateService) {
+  constructor() {
 
     this.lang$ = this.translate.getLang$();
   }

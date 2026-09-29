@@ -1,4 +1,4 @@
-import { Component, OnInit, Inject, PLATFORM_ID, Signal } from '@angular/core';
+import { Component, OnInit, PLATFORM_ID, Signal, inject } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
@@ -16,17 +16,17 @@ import { accessTokenKey } from '../../shared/constants';
   styleUrl: './profile.css'
 })
 export class Profile implements OnInit {
+  private platformId = inject<Object>(PLATFORM_ID);
+  private store = inject(SignalStore);
+  private selectors = inject(SignalStoreSelectors);
+  private translate = inject(TranslateService);
+  private router = inject(Router);
+
   user$: Signal<User>;
   userOrders$: Signal<Order[]>;
   lang$: Observable<string>;
 
-  constructor(
-    @Inject(PLATFORM_ID) private platformId: Object,
-    private store: SignalStore,
-    private selectors: SignalStoreSelectors,
-    private translate: TranslateService,
-    private router: Router
-  ) {
+  constructor() {
     this.lang$ = this.translate.getLang$();
   }
 

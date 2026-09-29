@@ -1,4 +1,4 @@
-import { Component, Inject, PLATFORM_ID, OnInit, Signal } from '@angular/core';
+import { Component, PLATFORM_ID, OnInit, Signal, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { isPlatformBrowser } from '@angular/common';
 import { map, take, filter } from 'rxjs/operators';
@@ -13,13 +13,11 @@ import { SignalStore } from '../../../store/signal.store';
   styleUrls: ['./jwtToken.component.css'],
 })
 export class JwtTokenComponent implements OnInit {
-  constructor(
-    private route: ActivatedRoute,
-    private store:SignalStore,
-    private router: Router,
-    @Inject(PLATFORM_ID)
-    private platformId: Object
-  ) {}
+  private route = inject(ActivatedRoute);
+  private store = inject(SignalStore);
+  private router = inject(Router);
+  private platformId = inject<Object>(PLATFORM_ID);
+
 
   ngOnInit(): void {
     this.route.params

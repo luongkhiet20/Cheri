@@ -1,20 +1,30 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, ChangeDetectorRef, Optional } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, ChangeDetectorRef, inject } from '@angular/core';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Product } from '../../shared/models';
 import { ApiService } from '../../services/api.service';
 import { TranslateService } from '../../services/translate.service';
 import { SignalStoreSelectors } from '../../store/signal.store.selectors';
+import { ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { NgIf, NgFor, JsonPipe } from '@angular/common';
+import { PriceFormatPipe } from '../../pipes/price.pipe';
 
 @Component({
-  selector: 'app-all-products',
-  templateUrl: './all-products.component.html',
-  styleUrls: ['./all-products.component.css'],
-  standalone: false
+    selector: 'app-all-products',
+    templateUrl: './all-products.component.html',
+    styleUrls: ['./all-products.component.css'],
+    imports: [ReactiveFormsModule, FormsModule, NgIf, RouterLink, NgFor, JsonPipe, PriceFormatPipe]
 })
 export class AllProductsComponent implements OnInit, OnChanges {
+  private apiService = inject(ApiService);
+  private snackBar = inject(MatSnackBar, { optional: true });
+  private translate = inject(TranslateService, { optional: true });
+  private router = inject(Router, { optional: true });
+  private selectors = inject(SignalStoreSelectors, { optional: true });
+  private cdr = inject(ChangeDetectorRef, { optional: true });
+
   @Input() allProducts: Product[] = [];
   @Input() lang: string = 'vi';
   @Input() currency: string = 'đ';
@@ -60,15 +70,6 @@ export class AllProductsComponent implements OnInit, OnChanges {
   viewingProduct: Product | null = null;
   viewRawJson: boolean = false;
   copySuccess: boolean = false;
-
-  constructor(
-    private apiService: ApiService,
-    @Optional() private snackBar?: MatSnackBar,
-    @Optional() private translate?: TranslateService,
-    @Optional() private router?: Router,
-    @Optional() private selectors?: SignalStoreSelectors,
-    @Optional() private cdr?: ChangeDetectorRef
-  ) {}
 
   showToast(message: string, isError: boolean = false): void {
     if (this.snackBar) {

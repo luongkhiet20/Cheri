@@ -15,6 +15,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 
 // ── Shell & Overview ──
 import { DashboardShellComponent } from './dashboard/dashboard-shell.component';
@@ -58,8 +59,10 @@ const DASHBOARD_ROUTER: Routes = [
       { path: 'orders/:id', component: OrderEditComponent },
       { path: 'accounts', component: AccountsEditComponent },
       { path: 'payments', component: PaymentsEditComponent },
+      { path: 'payment-management', component: PaymentsEditComponent },
       { path: 'shipping', component: ShipmentsEditComponent },
       { path: 'shipments', component: ShipmentsEditComponent },
+      { path: 'shipping-management', component: ShipmentsEditComponent },
       { path: 'pages', component: PagesEditComponent },
       { path: 'config', component: ConfigEditComponent },
       { path: 'inventory', component: AllProductsComponent },
@@ -69,58 +72,54 @@ const DASHBOARD_ROUTER: Routes = [
 ];
 
 @NgModule({
-  imports: [
-    CommonModule,
-    OrderComponentsModule,
-    FormsModule,
-    ReactiveFormsModule,
-    TranslatePipe,
-    PriceFormatPipe,
-    RouterModule.forChild(DASHBOARD_ROUTER),
-    EditorModule,
-    MatButtonModule,
-    MatInputModule,
-    MatCardModule,
-    MatProgressBarModule,
-    MatTabsModule,
-    MatRadioModule,
-    MatSelectModule,
-    MatAutocompleteModule,
-    MatChipsModule,
-    MatCheckboxModule,
-    MatSnackBarModule,
-    ProductsListComponent
-  ],
-  declarations: [
-    // Layout components
-    AdminCardComponent,
-    AdminSidebarComponent,
-    AdminHeaderComponent,
-    AdminLayoutComponent,
-
-    // Shell & overview
-    DashboardShellComponent,
-    DashboardComponent,
-
-
-    // Feature components (used inside sections)
-    ProductsEditComponent,
-    OrdersEditComponent,
-    OrderEditComponent,
-    AllProductsComponent,
-    TinyEditorComponent,
-    PagesEditComponent,
-    CategoriesEditComponent,
-    ConfigEditComponent,
-    AccountsEditComponent,
-    PaymentsEditComponent,
-    ShipmentsEditComponent
-  ],
-  exports: [
-    AdminCardComponent,
-    AdminSidebarComponent,
-    AdminHeaderComponent,
-    AdminLayoutComponent
-  ]
+    imports: [
+        CommonModule,
+        OrderComponentsModule,
+        FormsModule,
+        ReactiveFormsModule,
+        TranslatePipe,
+        PriceFormatPipe,
+        RouterModule.forChild(DASHBOARD_ROUTER),
+        EditorModule,
+        MatButtonModule,
+        MatInputModule,
+        MatCardModule,
+        MatProgressBarModule,
+        MatTabsModule,
+        MatRadioModule,
+        MatSelectModule,
+        MatAutocompleteModule,
+        MatChipsModule,
+        MatCheckboxModule,
+        MatSnackBarModule,
+        MatSlideToggleModule,
+        ProductsListComponent,
+        // Layout components
+        AdminCardComponent,
+        AdminSidebarComponent,
+        AdminHeaderComponent,
+        AdminLayoutComponent,
+        // Shell & overview
+        DashboardShellComponent,
+        DashboardComponent,
+        // Feature components (used inside sections)
+        ProductsEditComponent,
+        OrdersEditComponent,
+        OrderEditComponent,
+        AllProductsComponent,
+        TinyEditorComponent,
+        PagesEditComponent,
+        CategoriesEditComponent,
+        ConfigEditComponent,
+        AccountsEditComponent,
+        PaymentsEditComponent,
+        ShipmentsEditComponent
+    ],
+    exports: [
+        AdminCardComponent,
+        AdminSidebarComponent,
+        AdminHeaderComponent,
+        AdminLayoutComponent
+    ]
 })
 export class DashboardModule { }

@@ -16,26 +16,24 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
 import { PriceFormatPipe } from '../../pipes/price.pipe';
 
 @NgModule({
-  declarations: [
-    OrdersComponent,
-    OrderComponent
-  ],
-  imports: [
-    CommonModule,
-    OrderComponentsModule,
-    ReactiveFormsModule,
-    TranslatePipe,
-    PriceFormatPipe,
-    MatCardModule,
-    MatButtonModule,
-    MatChipsModule,
-    MatProgressBarModule,
-    MatSelectModule,
-    RouterModule.forChild([
-      { path: ':id', component: OrderComponent },
-      { path: '', component: OrdersComponent }
-    ]),
-  ],
-  providers: []
+    imports: [
+        CommonModule,
+        OrderComponentsModule,
+        ReactiveFormsModule,
+        TranslatePipe,
+        PriceFormatPipe,
+        MatCardModule,
+        MatButtonModule,
+        MatChipsModule,
+        MatProgressBarModule,
+        MatSelectModule,
+        RouterModule.forChild([
+            { path: ':id', component: OrderComponent },
+            { path: '', component: OrdersComponent }
+        ]),
+        OrdersComponent,
+        OrderComponent,
+    ],
+    providers: []
 })
 export class OrderModule { }

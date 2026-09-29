@@ -10,19 +10,23 @@
   ],
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
-    "project": "./tsconfig.json",
-    "tsconfigRootDir": "./server"
+    "ecmaVersion": 2022,
+    "sourceType": "module"
   },
   "plugins": [
     "@typescript-eslint"
   ],
   "rules": {
-    "no-irregular-whitespace": 0,
+    "no-irregular-whitespace": "off",
     "camelcase": "off",
+    "no-prototype-builtins": "off",
     "@typescript-eslint/no-explicit-any": "off",
-    "@typescript-eslint/no-unused-vars": "off",
+    "@typescript-eslint/no-unused-vars": "warn",
     "@typescript-eslint/ban-types": "off",
-    "@typescript-eslint/no-empty-function": "off"
+    "@typescript-eslint/no-empty-function": "off",
+    "@typescript-eslint/no-require-imports": "off",
+    "@typescript-eslint/no-unsafe-function-type": "off",
+    "@typescript-eslint/no-empty-object-type": "off"
   },
-  "ignorePatterns": ["dist/*", "app-ssr.module.ts", "main-ssr.ts", "app-universal.module.ts"]
+  "ignorePatterns": ["dist/*", "**/*.d.ts", "app-ssr.module.ts", "main-ssr.ts", "app-universal.module.ts"]
 }

@@ -1,5 +1,5 @@
 
-import { Injectable, Inject } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import tinycolor from "tinycolor2";
 
@@ -14,13 +14,10 @@ export interface Color {
   providedIn: 'root'
 })
 export class ThemeService {
+  private document = inject<Document>(DOCUMENT);
+
 
   video: string;
-
-  constructor(
-    @Inject(DOCUMENT)
-    private document: Document
-    ) {}
 
 
   setCSSVariable(color, type: string): void {

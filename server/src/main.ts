@@ -10,7 +10,7 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   setAppDB(app);
 
-  const port = process.env.PORT;
+  const port = process.env.PORT || 4000;
   await app.listen(port);
   logger.log('App listening on port ' + port);
 }

@@ -104,34 +104,98 @@
             </mat-step>
             <mat-step [stepControl]="toggleCard">
               <ng-template matStepLabel>{{ 'Payment_method' | translate | async }}</ng-template>
-              @if (orderForm.valid) {
-              <mat-radio-group class="delivery-button" [(ngModel)]="toggleCard">
-                <mat-radio-button class="payment-choice" [class.payment-choice--active]="toggleCard" [value]="true">
-                  <span class="flex">
-                    <mat-icon>credit_card</mat-icon>
-                    <span class="margin-left-small">
-                      {{ 'Pay' | translate | async }}
-                      <b>
-                        {{ cart?.totalPrice | priceFormat }}
-                        {{ currency$ | async }}
-                      </b>
-                      {{ 'with' | translate | async }}
-                      {{ 'card' | translate | async }}
-                    </span>
-                  </span>
-                </mat-radio-button>
-                <mat-radio-button class="payment-choice" [class.payment-choice--active]="!toggleCard" [value]="false">
-                  <span class="flex">
-                    <mat-icon>local_atm</mat-icon>
-                    <span class="margin-left-small">
-                      {{ 'Payment' | translate | async }}
-                      {{ 'on' | translate | async }}
-                      {{ 'delivery' | translate | async }}
-                    </span>
-                  </span>
-                </mat-radio-button>
-              </mat-radio-group>
-              }
+
+              <!-- ── Phương thức vận chuyển (từ DB) ── -->
+              <div class="checkout-section">
+                <h3 class="checkout-section-title">
+                  <mat-icon>local_shipping</mat-icon> Phương thức vận chuyển
+                </h3>
+                @if (activeShippingMethods().length === 0) {
+                  <p class="no-methods-msg">Không có phương thức vận chuyển nào đang hoạt động.</p>
+                } @else {
+                  <mat-radio-group class="methods-list" [value]="selectedShippingId()"
+                    (change)="selectedShippingId.set($event.value)">
+                    @for (method of activeShippingMethods(); track method._id) {
+                      <mat-radio-button class="method-card" [value]="method._id">
+                        <div class="method-card-inner">
+                          @if (method.logo) {
+                            <img [src]="method.logo" [alt]="method.name" class="method-logo-sm">
+                          } @else {
+                            <mat-icon class="method-icon">local_shipping</mat-icon>
+                          }
+                          <div class="method-info-row">
+                            <span class="method-name-label">{{ method.name }}</span>
+                            <span class="method-detail">{{ method.estimatedDays }}</span>
+                          </div>
+                          <span class="method-cost">
+                            @if (method.freeShippingThreshold > 0) {
+                              Miễn phí từ {{ method.freeShippingThreshold | number }} VNĐ
+                            } @else {
+                              {{ method.baseCost | number }} VNĐ
+                            }
+                          </span>
+                        </div>
+                      </mat-radio-button>
+                    }
+                  </mat-radio-group>
+                }
+              </div>
+
+              <!-- ── Phương thức thanh toán (từ DB) ── -->
+              <div class="checkout-section">
+                <h3 class="checkout-section-title">
+                  <mat-icon>payment</mat-icon> Phương thức thanh toán
+                </h3>
+                @if (loadingMethods()) {
+                  <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+                } @else if (activePaymentMethods().length === 0) {
+                  <p class="no-methods-msg">Không có phương thức thanh toán nào đang hoạt động.</p>
+                } @else if (orderForm.valid) {
+                  <mat-radio-group class="methods-list" [value]="selectedPaymentId()"
+                    (change)="selectedPaymentId.set($event.value)">
+                    @for (method of activePaymentMethods(); track method._id) {
+                      <mat-radio-button class="method-card" [value]="method._id"
+                        [class.method-card--active]="selectedPaymentId() === method._id">
+                        <div class="method-card-inner">
+                          @if (method.logo) {
+                            <img [src]="method.logo" [alt]="method.name" class="method-logo-sm"
+                              (error)="$any($event.target).style.display='none'">
+                          } @else {
+                            <mat-icon class="method-icon">{{ getPaymentTypeIcon(method.paymentType) }}</mat-icon>
+                          }
+                          <div class="method-info-row">
+                            <span class="method-name-label">{{ method.name }}</span>
+                            @if (method.description) {
+                              <span class="method-detail">{{ method.description }}</span>
+                            }
+                          </div>
+                          @if (method.transactionFee?.enabled) {
+                            <span class="method-fee">
+                              +{{ method.transactionFee.type === 'PERCENT'
+                                  ? method.transactionFee.value + '%'
+                                  : (method.transactionFee.value | number) + ' VNĐ' }}
+                            </span>
+                          }
+                        </div>
+                      </mat-radio-button>
+                    }
+                  </mat-radio-group>
+
+                  <!-- Toggle Stripe card nếu chọn GATEWAY -->
+                  @if (getSelectedPayment()?.paymentType === 'GATEWAY') {
+                    <div style="margin-top:12px">
+                      <app-card
+                        [price]="(cart$ | async)?.totalPrice | priceFormat"
+                        [currency]="currency$ | async"
+                        [loading]="loading$ | async"
+                        (scrollToTop)="scrollToTop()"
+                        (payWithCardEmit)="payWithCard($event)">
+                      </app-card>
+                    </div>
+                  }
+                }
+              </div>
+
               <div>
                 <button class="cart-navigation-button" mat-stroked-button matStepperNext>
                   {{ 'Next' | translate | async }}
@@ -141,6 +205,7 @@
                 </button>
               </div>
             </mat-step>
+
             <mat-step>
               <ng-template matStepLabel>{{ 'Summary_and_payment' | translate | async }}</ng-template>
               <div class="flex items-start margin-top-basic">

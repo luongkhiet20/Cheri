@@ -1,1 +1,432 @@
-<p>shipments-edit works!</p>
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- QUẢN LÝ PHƯƠNG THỨC VẬN CHUYỂN                      -->
+<!-- ══════════════════════════════════════════════════════ -->
+
+<div class="shipping-container">
+
+  <!-- ─── HEADER ─────────────────────────────────────── -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="header-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="1" y="3" width="15" height="13"/>
+          <polygon points="16 8 20 8 23 11 23 16 16 16 8"/>
+          <circle cx="5.5" cy="18.5" r="2.5"/>
+          <circle cx="18.5" cy="18.5" r="2.5"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="page-title">Quản lý Vận chuyển</h1>
+        <p class="page-subtitle">{{ methods().length }} phương thức · {{ inactiveCount() }} đang tắt</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <!-- Nút Xóa đã chọn (hiện khi có checkbox chọn) -->
+      <button
+        *ngIf="hasSelection()"
+        class="btn-bulk-delete"
+        (click)="promptBulkDelete()"
+        [disabled]="isDeleting()"
+        id="btn-bulk-delete-shipping">
+        <span *ngIf="isDeleting()" class="spinner-sm"></span>
+        <svg *ngIf="!isDeleting()" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+        </svg>
+        Xóa {{ selectionCount() }} đã chọn
+      </button>
+
+      <button class="btn-add" (click)="openAddForm()" id="btn-add-shipping">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Thêm phương thức
+      </button>
+    </div>
+  </div>
+
+  <!-- ─── SEARCH & FILTER ─────────────────────────────── -->
+  <div class="toolbar">
+    <div class="search-box">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input
+        type="text"
+        class="search-input"
+        placeholder="Tìm theo tên hoặc mã..."
+        [value]="searchQuery"
+        (input)="onSearchChange($any($event.target).value)"
+        id="search-shipping"
+      />
+    </div>
+    <div class="filter-tabs">
+      <button class="filter-tab" [class.active]="filterStatus === 'all'" (click)="onFilterChange('all')">Tất cả</button>
+      <button class="filter-tab" [class.active]="filterStatus === 'active'" (click)="onFilterChange('active')">
+        <span class="dot dot-green"></span> Đang hoạt động
+      </button>
+      <button class="filter-tab" [class.active]="filterStatus === 'inactive'" (click)="onFilterChange('inactive')">
+        <span class="dot dot-gray"></span> Đang tắt
+      </button>
+    </div>
+  </div>
+
+  <!-- ─── LOADING ─────────────────────────────────────── -->
+  <div *ngIf="loading()" class="loading-state">
+    <div class="spinner"></div>
+    <p>Đang tải dữ liệu...</p>
+  </div>
+
+  <!-- ─── EMPTY STATE ──────────────────────────────────── -->
+  <div *ngIf="!loading() && filteredMethods().length === 0" class="empty-state">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="64" height="64">
+      <rect x="1" y="3" width="15" height="13"/>
+      <polygon points="16 8 20 8 23 11 23 16 16 16 8"/>
+      <circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+    </svg>
+    <h3>Không tìm thấy phương thức vận chuyển</h3>
+    <p>{{ searchQuery || filterStatus !== 'all' ? 'Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm' : 'Bắt đầu thêm phương thức vận chuyển đầu tiên' }}</p>
+  </div>
+
+  <!-- ─── TABLE ────────────────────────────────────────── -->
+  <div *ngIf="!loading() && filteredMethods().length > 0" class="table-wrapper">
+    <table class="shipping-table">
+      <thead>
+        <tr>
+          <th style="width: 44px;">
+            <input
+              type="checkbox"
+              class="chk"
+              [checked]="isAllSelected()"
+              [indeterminate]="isPartiallySelected()"
+              (change)="toggleSelectAll($event)"
+              id="chk-select-all-shipping"
+            />
+          </th>
+          <th>Phương thức</th>
+          <th>Mã</th>
+          <th>Phí cơ bản</th>
+          <th>Thời gian giao</th>
+          <th>Phạm vi</th>
+          <th>Miễn phí từ</th>
+          <th>Trạng thái</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let method of filteredMethods(); trackBy: trackByMethod"
+            class="table-row"
+            [class.row-inactive]="!method.isActive">
+          <!-- Checkbox -->
+          <td>
+            <input
+              type="checkbox"
+              class="chk"
+              [checked]="isSelected(method)"
+              (change)="toggleSelect(method, $event)"
+              [id]="'chk-ship-' + method._id"
+            />
+          </td>
+          <!-- Tên -->
+          <td class="cell-name">
+            <div class="method-info">
+              <div class="method-avatar">{{ method.name.charAt(0) }}</div>
+              <div>
+                <span class="method-name">{{ method.name }}</span>
+                <span class="method-desc" *ngIf="method.description">{{ method.description | slice:0:50 }}{{ method.description.length > 50 ? '...' : '' }}</span>
+              </div>
+            </div>
+          </td>
+          <!-- Mã -->
+          <td><code class="code-badge">{{ method.code }}</code></td>
+          <!-- Phí -->
+          <td class="cell-cost">{{ formatCurrency(method.baseCost) }}</td>
+          <!-- Thời gian -->
+          <td class="cell-days">{{ method.estimatedDays }}</td>
+          <!-- Phạm vi -->
+          <td>
+            <span class="badge" [class.badge-blue]="method.coverageArea === 'national'" [class.badge-orange]="method.coverageArea === 'regional'">
+              {{ getCoverageLabel(method.coverageArea) }}
+            </span>
+          </td>
+          <!-- Miễn phí từ -->
+          <td class="cell-free">
+            <span *ngIf="method.freeShippingThreshold > 0" class="free-badge">
+              Từ {{ formatCurrency(method.freeShippingThreshold) }}
+            </span>
+            <span *ngIf="!method.freeShippingThreshold" class="no-free">Không áp dụng</span>
+          </td>
+          <!-- Toggle trạng thái -->
+          <td>
+            <div class="toggle-wrapper" (click)="toggleStatus(method)" [id]="'toggle-' + method._id" [title]="method.isActive ? 'Nhấn để tắt' : 'Nhấn để bật'">
+              <div class="toggle-track" [class.active]="method.isActive">
+                <div class="toggle-thumb"></div>
+              </div>
+              <span class="toggle-label" [class.text-green]="method.isActive" [class.text-gray]="!method.isActive">
+                {{ method.isActive ? 'Bật' : 'Tắt' }}
+              </span>
+            </div>
+          </td>
+          <!-- Actions -->
+          <td class="cell-actions">
+            <button class="btn-icon btn-view" title="Xem chi tiết" (click)="openViewMode(method)" [id]="'view-' + method._id">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+            <button class="btn-icon btn-edit" title="Chỉnh sửa" (click)="openEditForm(method)" [id]="'edit-' + method._id">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </button>
+            <button class="btn-icon btn-delete" title="Xóa" (click)="confirmDelete(method._id)" [id]="'delete-' + method._id">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+              </svg>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ─── CONFIRM DELETE DIALOG (Single) ───────────────── -->
+  <div *ngIf="confirmDeleteId()" class="overlay" (click)="cancelDelete()">
+    <div class="dialog" (click)="$event.stopPropagation()">
+      <div class="dialog-icon danger">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="32" height="32">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+        </svg>
+      </div>
+      <h3 class="dialog-title">Xác nhận xóa</h3>
+      <p class="dialog-text">Bạn có chắc muốn xóa phương thức vận chuyển này? Hành động này không thể hoàn tác.</p>
+      <div class="dialog-actions">
+        <button class="btn-cancel" (click)="cancelDelete()" id="cancel-delete">Hủy</button>
+        <button class="btn-danger" (click)="deleteMethod()" id="confirm-delete">Xóa ngay</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── CONFIRM BULK DELETE DIALOG ──────────────────── -->
+  <div *ngIf="confirmBulkDelete()" class="overlay" (click)="cancelBulkDelete()">
+    <div class="dialog" (click)="$event.stopPropagation()">
+      <div class="dialog-icon danger">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="32" height="32">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+        </svg>
+      </div>
+      <h3 class="dialog-title">Xác nhận xóa hàng loạt</h3>
+      <p class="dialog-text">Bạn có chắc muốn xóa {{ selectionCount() }} phương thức vận chuyển đã chọn? Hành động này không thể hoàn tác.</p>
+      <div class="dialog-actions">
+        <button class="btn-cancel" (click)="cancelBulkDelete()" id="cancel-bulk-delete">Hủy</button>
+        <button class="btn-danger" (click)="deleteSelectedMethods()" [disabled]="isDeleting()" id="confirm-bulk-delete">
+          <span *ngIf="isDeleting()" class="spinner-sm"></span>
+          {{ isDeleting() ? 'Đang xóa...' : 'Xóa tất cả đã chọn' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── FORM PANEL (Add / Edit / View) ──────────────── -->
+  <div *ngIf="showForm()" class="overlay" (click)="closeForm()">
+    <div class="form-panel" (click)="$event.stopPropagation()">
+
+      <!-- Form Header -->
+      <div class="form-header">
+        <div>
+          <h2 class="form-title">
+            <ng-container *ngIf="isViewMode()">📋 Chi tiết phương thức</ng-container>
+            <ng-container *ngIf="isEditing() && !isViewMode()">✏️ Chỉnh sửa phương thức</ng-container>
+            <ng-container *ngIf="!isEditing() && !isViewMode()">➕ Thêm phương thức mới</ng-container>
+          </h2>
+          <p class="form-subtitle">
+            {{ isViewMode() ? 'Xem thông tin phương thức vận chuyển' : 'Điền đầy đủ thông tin theo biểu mẫu bên dưới' }}
+          </p>
+        </div>
+        <button class="btn-close" (click)="closeForm()" id="close-form" title="Đóng (ESC)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Form Body -->
+      <form [formGroup]="form" class="form-body" (ngSubmit)="save()">
+
+        <!-- [1] Tên phương thức -->
+        <div class="form-field">
+          <label class="field-label">
+            <span class="field-num">1</span>
+            Tên phương thức vận chuyển <span class="required">*</span>
+          </label>
+          <input
+            class="field-input"
+            [class.has-error]="form.get('name')?.touched && form.get('name')?.invalid"
+            formControlName="name"
+            placeholder="Ví dụ: Viettel Post, SPX Express"
+            id="field-name"
+          />
+          <span class="field-error" *ngIf="getFieldError('name')">{{ getFieldError('name') }}</span>
+        </div>
+
+        <!-- [2] Mã phương thức -->
+        <div class="form-field">
+          <label class="field-label">
+            <span class="field-num">2</span>
+            Mã phương thức <span class="required">*</span>
+          </label>
+          <input
+            class="field-input code-input"
+            [class.has-error]="form.get('code')?.touched && form.get('code')?.invalid"
+            formControlName="code"
+            placeholder="Ví dụ: VIETTEL_POST"
+            id="field-code"
+          />
+          <span class="field-hint">Chỉ dùng chữ in hoa, số, dấu gạch dưới (_)</span>
+          <span class="field-error" *ngIf="getFieldError('code')">{{ getFieldError('code') }}</span>
+        </div>
+
+        <!-- [3] Phí vận chuyển cơ bản -->
+        <div class="form-field">
+          <label class="field-label">
+            <span class="field-num">3</span>
+            Phí vận chuyển cơ bản <span class="required">*</span>
+          </label>
+          <div class="input-group">
+            <input
+              type="number"
+              class="field-input"
+              [class.has-error]="form.get('baseCost')?.touched && form.get('baseCost')?.invalid"
+              formControlName="baseCost"
+              placeholder="30000"
+              min="0"
+              id="field-base-cost"
+            />
+            <span class="input-suffix">VNĐ</span>
+          </div>
+          <span class="field-error" *ngIf="getFieldError('baseCost')">{{ getFieldError('baseCost') }}</span>
+        </div>
+
+        <!-- [4] Thời gian giao hàng -->
+        <div class="form-field">
+          <label class="field-label">
+            <span class="field-num">4</span>
+            Thời gian giao hàng dự kiến <span class="required">*</span>
+          </label>
+          <input
+            class="field-input"
+            [class.has-error]="form.get('estimatedDays')?.touched && form.get('estimatedDays')?.invalid"
+            formControlName="estimatedDays"
+            placeholder="Ví dụ: 2–5 ngày làm việc"
+            id="field-estimated-days"
+          />
+          <span class="field-error" *ngIf="getFieldError('estimatedDays')">{{ getFieldError('estimatedDays') }}</span>
+        </div>
+
+        <!-- [5] Phạm vi giao hàng -->
+        <div class="form-field">
+          <label class="field-label">
+            <span class="field-num">5</span>
+            Phạm vi giao hàng
+          </label>
+          <div class="radio-group">
+            <label class="radio-option" [class.selected]="form.get('coverageArea')?.value === 'national'">
+              <input type="radio" formControlName="coverageArea" value="national" id="coverage-national"/>
+              <span class="radio-dot"></span>
+              🌏 Toàn quốc
+            </label>
+            <label class="radio-option" [class.selected]="form.get('coverageArea')?.value === 'regional'">
+              <input type="radio" formControlName="coverageArea" value="regional" id="coverage-regional"/>
+              <span class="radio-dot"></span>
+              📍 Khu vực cụ thể
+            </label>
+          </div>
+        </div>
+
+        <!-- [6] Điều kiện miễn phí -->
+        <div class="form-field">
+          <label class="field-label">
+            <span class="field-num">6</span>
+            Điều kiện miễn phí vận chuyển
+          </label>
+          <div class="input-group">
+            <input
+              type="number"
+              class="field-input"
+              formControlName="freeShippingThreshold"
+              placeholder="Ví dụ: 500000 (0 = không áp dụng)"
+              min="0"
+              id="field-free-threshold"
+            />
+            <span class="input-suffix">VNĐ</span>
+          </div>
+          <span class="field-error" *ngIf="getFieldError('freeShippingThreshold')">{{ getFieldError('freeShippingThreshold') }}</span>
+          <span class="field-hint">Đơn hàng từ giá trị này trở lên sẽ được miễn phí vận chuyển. Đặt 0 nếu không áp dụng.</span>
+        </div>
+
+        <!-- [7] Trạng thái -->
+        <div class="form-field">
+          <label class="field-label">
+            <span class="field-num">7</span>
+            Trạng thái
+          </label>
+          <div class="toggle-form-row">
+            <div class="toggle-wrapper" (click)="!isViewMode() && form.get('isActive')?.setValue(!form.get('isActive')?.value)">
+              <div class="toggle-track" [class.active]="form.get('isActive')?.value">
+                <div class="toggle-thumb"></div>
+              </div>
+            </div>
+            <span [class.text-green]="form.get('isActive')?.value" [class.text-gray]="!form.get('isActive')?.value">
+              {{ form.get('isActive')?.value ? '▶ Đang hoạt động' : '⏸ Đang tắt' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- [8] Mô tả -->
+        <div class="form-field">
+          <label class="field-label">
+            <span class="field-num">8</span>
+            Mô tả
+          </label>
+          <textarea
+            class="field-textarea"
+            formControlName="description"
+            rows="3"
+            placeholder="Thông tin bổ sung về phương thức vận chuyển..."
+            id="field-description"
+          ></textarea>
+        </div>
+
+        <!-- Form Actions (Create & Edit Mode) -->
+        <div class="form-actions" *ngIf="!isViewMode()">
+          <button type="button" class="btn-cancel" (click)="closeForm()" id="btn-cancel-form">Hủy</button>
+          <button type="button" class="btn-reset" (click)="resetForm()" id="btn-reset-form" title="Khôi phục giá trị ban đầu">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <path d="M3 3v5h5"/>
+            </svg>
+            Đặt lại
+          </button>
+          <button type="submit" class="btn-save" [disabled]="saving()" id="btn-save-form">
+            <span *ngIf="saving()" class="spinner-sm"></span>
+            {{ saving() ? 'Đang lưu...' : (isEditing() ? 'Cập nhật' : 'Thêm mới') }}
+          </button>
+        </div>
+
+        <!-- Form Actions (View Mode) -->
+        <div class="form-actions" *ngIf="isViewMode()">
+          <button type="button" class="btn-cancel" (click)="closeForm()" id="btn-close-view">Đóng</button>
+          <button type="button" class="btn-save" (click)="switchToEdit()" id="btn-switch-edit">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+            Chỉnh sửa
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>

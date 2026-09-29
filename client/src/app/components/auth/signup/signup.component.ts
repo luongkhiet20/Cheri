@@ -1,5 +1,5 @@
 import { take, switchMap, map } from 'rxjs/operators';
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import { AbstractControl, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
@@ -21,20 +21,20 @@ import { ApiService } from '../../../services/api.service';
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SignUpComponent {
+  private translate = inject(TranslateService);
+  private _fb = inject(FormBuilder);
+  private store = inject(SignalStore);
+  private apiService = inject(ApiService);
+  private snackBar = inject(MatSnackBar);
+  private router = inject(Router);
+
 
   signUpForm: FormGroup;
   lang$: Observable<string>;
 
   showRegPassword = false;
 
-  constructor(
-    private translate: TranslateService,
-    private _fb: FormBuilder,
-    private store: SignalStore,
-    private apiService: ApiService,
-    private snackBar: MatSnackBar,
-    private router: Router
-  ) {
+  constructor() {
     this.lang$ = this.translate.getLang$();
 
     this.signUpForm = this._fb.group({

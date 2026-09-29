@@ -1,5 +1,5 @@
-import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, Inject, PLATFORM_ID, Optional } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, PLATFORM_ID, inject } from '@angular/core';
+import { isPlatformBrowser, NgIf, NgFor } from '@angular/common';
 import { Router } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { NavItem, DEFAULT_NAV_ITEMS } from './admin.models';
@@ -9,13 +9,19 @@ import { TranslateService } from '../../services/translate.service';
 import { filter } from 'rxjs/operators';
 
 @Component({
-  selector: 'app-admin-sidebar',
-  templateUrl: './admin-sidebar.component.html',
-  styleUrls: ['./admin-sidebar.component.css'],
-  standalone: false,
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-admin-sidebar',
+    templateUrl: './admin-sidebar.component.html',
+    styleUrls: ['./admin-sidebar.component.css'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [NgIf, NgFor]
 })
 export class AdminSidebarComponent {
+  private platformId = inject<Object>(PLATFORM_ID);
+  private router = inject(Router);
+  private sanitizer = inject(DomSanitizer);
+  private store = inject(SignalStore, { optional: true });
+  private translate = inject(TranslateService, { optional: true });
+
   @Input() activeSection = 'overview';
   @Input() sidebarCollapsed = false;
   @Input() navItems: NavItem[] = DEFAULT_NAV_ITEMS;
@@ -26,14 +32,6 @@ export class AdminSidebarComponent {
   @Output() toggleSidebar = new EventEmitter<void>();
   @Output() goToDashboard = new EventEmitter<Event>();
   @Output() logout = new EventEmitter<void>();
-
-  constructor(
-    @Inject(PLATFORM_ID) private platformId: Object,
-    private router: Router,
-    private sanitizer: DomSanitizer,
-    @Optional() private store?: SignalStore,
-    @Optional() private translate?: TranslateService
-  ) {}
 
   getSafeIcon(icon: string): SafeHtml {
     return this.sanitizer.bypassSecurityTrustHtml(icon || '');

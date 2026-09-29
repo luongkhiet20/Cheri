@@ -1,4 +1,4 @@
-import { Component, Signal } from '@angular/core';
+import { Component, Signal, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Router } from '@angular/router';
 
@@ -6,6 +6,7 @@ import { TranslateService } from '../../services/translate.service';
 import { Product, Order } from '../../shared/models';
 import { SignalStore } from '../../store/signal.store';
 import { SignalStoreSelectors } from '../../store/signal.store.selectors';
+import { NgFor, NgIf, DecimalPipe } from '@angular/common';
 
 export interface ChartBar {
   label: string;
@@ -14,12 +15,17 @@ export interface ChartBar {
 }
 
 @Component({
-  selector: 'app-dashboard',
-  templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.css'],
-  standalone: false
+    selector: 'app-dashboard',
+    templateUrl: './dashboard.component.html',
+    styleUrls: ['./dashboard.component.css'],
+    imports: [NgFor, NgIf, DecimalPipe]
 })
 export class DashboardComponent {
+  private translate = inject(TranslateService);
+  private store = inject(SignalStore);
+  private selectors = inject(SignalStoreSelectors);
+  private router = inject(Router);
+
 
   chartPeriod = 'week';
 
@@ -28,12 +34,7 @@ export class DashboardComponent {
   allProducts$: Signal<Product[]>;
   orders$: Signal<Order[]>;
 
-  constructor(
-    private translate: TranslateService,
-    private store: SignalStore,
-    private selectors: SignalStoreSelectors,
-    private router: Router
-  ) {
+  constructor() {
     this.lang$ = this.translate.getLang$();
     this.currency$ = this.selectors.currency;
     this.allProducts$ = this.selectors.allProducts;

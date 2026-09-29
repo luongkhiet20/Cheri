@@ -1,5 +1,5 @@
 ﻿import { CommonModule } from '@angular/common';
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 
@@ -10,12 +10,13 @@ import { TranslatePipe } from '../../../pipes/translate.pipe';
     imports: [CommonModule, TranslatePipe]
 })
 export class ImagesDialogComponent implements OnInit {
-  openImages = {};
+  dialogRef = inject<MatDialogRef<ImagesDialogComponent>>(MatDialogRef);
+  data = inject<{
+    index: number;
+    images: string[];
+}>(MAT_DIALOG_DATA);
 
-  constructor(
-    public dialogRef: MatDialogRef<ImagesDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: { index: number; images: string[] }
-  ) {}
+  openImages = {};
 
   ngOnInit(): void {
     this.openImages[this.data.index] = true;

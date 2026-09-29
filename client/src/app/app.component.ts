@@ -1,10 +1,4 @@
-import {
-  Component,
-  ElementRef,
-  Renderer2,
-  PLATFORM_ID,
-  Inject,
-} from '@angular/core';
+import { Component, ElementRef, Renderer2, PLATFORM_ID, inject } from '@angular/core';
 import {
   CommonModule,
   isPlatformBrowser,
@@ -31,22 +25,23 @@ import { HeaderComponent } from './shared/components/header/header.component';
     styleUrls: ['./app.component.css']
 })
 export class AppComponent {
+  private elRef = inject(ElementRef);
+  private renderer = inject(Renderer2);
+  private router = inject(Router);
+  private translate = inject(TranslateService);
+  private jsonLDService = inject(JsonLDService);
+  private platformId = inject<Object>(PLATFORM_ID);
+  private signalStore = inject(SignalStore);
+  private selectors = inject(SignalStoreSelectors);
+
 
   rememberScroll  : {[component: string]: number} = {};
   position = 0;
   isDashboard = false;
 
-  constructor(
-    private elRef: ElementRef,
-    private renderer: Renderer2,
-    private router: Router,
-    private translate: TranslateService,
-    private jsonLDService: JsonLDService,
-    @Inject(PLATFORM_ID)
-    private platformId: Object,
-    private signalStore: SignalStore,
-    private selectors: SignalStoreSelectors
-  ) {
+  constructor() {
+    const translate = this.translate;
+
     this.translate.getLang$()
       .pipe(filter(Boolean), take(1))
       .subscribe((lang: string) => {

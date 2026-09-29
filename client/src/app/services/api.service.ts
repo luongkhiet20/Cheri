@@ -1,7 +1,7 @@
 import { toObservable } from '@angular/core/rxjs-interop';
 import { WindowService } from './window.service';
 import { catchError, map } from 'rxjs/operators';
-import { Inject, Injectable, Optional, PLATFORM_ID, inject } from '@angular/core';
+import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { isPlatformBrowser, isPlatformServer } from '@angular/common';
 
@@ -15,17 +15,16 @@ import { combineLatest, of } from 'rxjs';
   providedIn: 'root',
 })
 export class ApiService {
+  private readonly http = inject(HttpClient);
+  private readonly _window = inject(WindowService);
+  protected serverUrl = inject<string>('serverUrl' as any, { optional: true });
+  private platformId = inject<Object>(PLATFORM_ID);
+
   apiUrl = environment.apiUrl;
   ranNumber = 0;
   private currentLang = 'vi';
 
-  constructor(
-    private readonly http: HttpClient,
-    private readonly _window: WindowService,
-    @Optional() @Inject('serverUrl') protected serverUrl: string,
-    @Inject(PLATFORM_ID)
-    private platformId: Object,
-  ) {
+  constructor() {
     this.initAuthTracking();
 
     if (environment.production) {
@@ -506,7 +505,120 @@ export class ApiService {
     );
   }
 
+  // ══════════════════════════════════════════
+  // SHIPPING METHODS
+  // ══════════════════════════════════════════
+
+  getShippingMethods() {
+    return this.http.get(this.apiUrl + '/api/shipping', this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  getActiveShippingMethods() {
+    return this.http.get(this.apiUrl + '/api/shipping/active', this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  createShippingMethod(data: any) {
+    return this.http.post(this.apiUrl + '/api/shipping', data, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  updateShippingMethod(id: string, data: any) {
+    return this.http.put(this.apiUrl + '/api/shipping/' + id, data, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  toggleShippingMethod(id: string) {
+    return this.http.patch(this.apiUrl + '/api/shipping/' + id + '/toggle', {}, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  deleteShippingMethod(id: string) {
+    return this.http.delete(this.apiUrl + '/api/shipping/' + id, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  deleteShippingMethodsBulk(ids: string[]) {
+    return this.http.delete(this.apiUrl + '/api/shipping/bulk', {
+      ...this.getRequestOptions(),
+      body: { ids },
+    }).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  // ══════════════════════════════════════════
+  // PAYMENT METHODS
+  // ══════════════════════════════════════════
+
+  getPaymentMethods() {
+    return this.http.get(this.apiUrl + '/api/payment', this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  getActivePaymentMethods() {
+    return this.http.get(this.apiUrl + '/api/payment/active', this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  createPaymentMethod(data: any) {
+    return this.http.post(this.apiUrl + '/api/payment', data, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  updatePaymentMethod(id: string, data: any) {
+    return this.http.put(this.apiUrl + '/api/payment/' + id, data, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  togglePaymentMethod(id: string) {
+    return this.http.patch(this.apiUrl + '/api/payment/' + id + '/toggle', {}, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  deletePaymentMethod(id: string) {
+    return this.http.delete(this.apiUrl + '/api/payment/' + id, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  deletePaymentMethodsBulk(ids: string[]) {
+    return this.http.delete(this.apiUrl + '/api/payment/bulk', {
+      ...this.getRequestOptions(),
+      body: { ids },
+    }).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
   private initAuthTracking() {
+
     const selectors = inject(SignalStoreSelectors);
     combineLatest([toObservable(selectors.appLang), toObservable(selectors.user)]).subscribe(([lang, user]) => {
       if (lang) {

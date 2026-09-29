@@ -1,21 +1,29 @@
 ﻿declare const Stripe: any;
 
-import { Component, Input, EventEmitter, Inject, PLATFORM_ID, ViewChild, ElementRef, OnInit, Output } from '@angular/core';
-import { isPlatformServer, DOCUMENT } from '@angular/common';
+import { Component, Input, EventEmitter, PLATFORM_ID, ViewChild, ElementRef, OnInit, Output, inject } from '@angular/core';
+import { isPlatformServer, DOCUMENT, AsyncPipe } from '@angular/common';
 import { take } from 'rxjs/operators';
 import { BehaviorSubject } from 'rxjs';
 
 import { EnvConfigurationService } from '../../../services/env-configuration.service';
+import { ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { MatButton } from '@angular/material/button';
+import { MatProgressBar } from '@angular/material/progress-bar';
+import { TranslatePipe } from '../../../pipes/translate.pipe';
 
 
 @Component({
     selector: 'app-card',
     templateUrl: './card.component.html',
     styleUrls: ['./card.component.css'],
-    standalone: false
+    imports: [ReactiveFormsModule, FormsModule, MatButton, MatProgressBar, AsyncPipe, TranslatePipe]
 })
 
 export class CardComponent implements OnInit {
+  private envConfigurationService = inject(EnvConfigurationService);
+  private _document = inject<Document>(DOCUMENT);
+  private _platformId = inject<Object>(PLATFORM_ID);
+
 
   @Input() price: number;
   @Input() currency: string;
@@ -29,14 +37,6 @@ export class CardComponent implements OnInit {
   card;
   cardErrorSub$ = new BehaviorSubject('INVALID');
   loadingPayment = false;
-
-  constructor(
-    private envConfigurationService: EnvConfigurationService,
-    @Inject(DOCUMENT)
-    private _document: Document,
-    @Inject(PLATFORM_ID)
-    private _platformId: Object) {
-  }
 
   ngOnInit() {
     if (!isPlatformServer(this._platformId) && typeof Stripe !== 'object') {

@@ -128,3 +128,108 @@
   flex: 1;
   margin: 0 5px;
 }
+
+/* ── Checkout: phương thức vận chuyển & thanh toán ── */
+:host .checkout-section {
+  margin: 16px 0;
+  border: 1px solid #eeeeee;
+  border-radius: 10px;
+  padding: 16px;
+  background: #fafafa;
+}
+
+:host .checkout-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #8b1a1a;
+  margin: 0 0 14px;
+}
+
+:host .methods-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+:host .method-card {
+  border: 1.5px solid #e8e8e8;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: #fff;
+  transition: border-color 0.18s, background 0.18s;
+  width: 100%;
+}
+
+:host .method-card.method-card--active,
+:host .method-card:has(input:checked) {
+  border-color: #c0392b;
+  background: #fdf0f0;
+}
+
+:host .method-card-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+:host .method-logo-sm {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  border-radius: 6px;
+  border: 1px solid #e8e8e8;
+  background: #fff;
+  padding: 2px;
+  flex-shrink: 0;
+}
+
+:host .method-icon {
+  color: #8b1a1a;
+  font-size: 24px;
+  width: 32px;
+  flex-shrink: 0;
+}
+
+:host .method-info-row {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+:host .method-name-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+:host .method-detail {
+  font-size: 0.78rem;
+  color: #888;
+  margin-top: 2px;
+}
+
+:host .method-cost {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #c0392b;
+  white-space: nowrap;
+}
+
+:host .method-fee {
+  font-size: 0.78rem;
+  color: #d97706;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+:host .no-methods-msg {
+  color: #aaa;
+  font-size: 0.88rem;
+  font-style: italic;
+  margin: 8px 0;
+}

@@ -20,31 +20,42 @@ export class OrdersComponent implements OnInit {
   ];
   actions: RowAction[] = [
     { key: 'view', label: 'Xem' },
+    { key: 'delete', label: 'Xóa', variant: 'danger' },
   ];
   filterFields: FilterField[] = [
     {
-      key: 'status', label: 'Trạng thái', type: 'select', options: [
-        { value: 'Đã giao', label: 'Đã giao' },
-        { value: 'Đang giao', label: 'Đang giao' },
-        { value: 'Đang xử lý', label: 'Đang xử lý' },
-        { value: 'Chờ xác nhận', label: 'Chờ xác nhận' },
-        { value: 'Đã xác nhận', label: 'Đã xác nhận' },
-        { value: 'Đã hủy', label: 'Đã hủy' },
-        { value: 'Đã hoàn trả', label: 'Đã hoàn trả' },
+      key: 'status', label: 'Trạng thái', type: 'select', value: '', options: [
+        { value: 'DELIVERED', label: 'Đã giao' },
+        { value: 'SHIPPING', label: 'Đang giao' },
+        { value: 'PROCESSING', label: 'Đang xử lý' },
+        { value: 'PENDING', label: 'Chờ xác nhận' },
+        { value: 'CONFIRMED', label: 'Đã xác nhận' },
+        { value: 'CANCELLED', label: 'Đã hủy' },
+        { value: 'RETURNED', label: 'Đã hoàn trả' },
       ]
     },
     {
-      key: 'payment', label: 'Thanh toán', type: 'select', options: []
+      key: 'payment', label: 'Thanh toán', type: 'select', value: '', options: []
     },
   ];
 
   data: any[] = [];
-  allOrders: any[] = [];
   paymentMethods: any[] = [];
   pagination: PaginationConfig = { page: 1, pageSize: 20, total: 0 };
   isLoading = false;
   isLoadingPaymentMethods = false;
-  initialStatusFilter = '';
+  isDeleting = false;
+  successMessage = '';
+  errorMessage = '';
+  searchTerm = '';
+  selectedStatus = '';
+  selectedPaymentMethod = '';
+  private hasInitializedQueryState = false;
+  private skipNextResetFilterLoad = false;
+  private ordersRequestId = 0;
+  private readonly orderStatusCodes = new Set([
+    'PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPING', 'DELIVERED', 'CANCELLED', 'RETURNED'
+  ]);
 
   selectedIds: Set<any> = new Set();
   get selectedCount(): number { return this.selectedIds.size; }
@@ -57,6 +68,14 @@ export class OrdersComponent implements OnInit {
   confirmOpen = false;
   confirmMessage = '';
   pendingDeleteId: any = null;
+  pendingBulkDeleteIds: any[] = [];
+  pendingBulkQueryState: {
+    searchTerm: string;
+    selectedStatus: string;
+    selectedPaymentMethod: string;
+    page: number;
+    pageSize: number;
+  } | null = null;
   isBulkDelete = false;
 
   constructor(
@@ -69,21 +88,22 @@ export class OrdersComponent implements OnInit {
   ngOnInit(): void {
     this.loadPaymentMethods();
     this.route.queryParams.subscribe(params => {
-      const st = params['status'];
-      if (st) {
-        // Map common codes to labels
-        const map: Record<string, string> = {
-          'delivered': 'Đã giao',
-          'pending': 'Chờ xác nhận',
-          'confirmed': 'Đã xác nhận',
-          'processing': 'Đang xử lý',
-          'shipping': 'Đang giao',
-          'cancelled': 'Đã hủy',
-          'returned': 'Đã hoàn trả'
-        };
-        this.initialStatusFilter = map[st.toLowerCase()] || st;
+      const rawRouteStatus = this.normalizePaymentValue(params['status']);
+      const routeStatus = this.getCanonicalOrderStatus(params['status']);
+      const hasStatusParam = Object.prototype.hasOwnProperty.call(params, 'status');
+      const shouldLoad = !this.hasInitializedQueryState || routeStatus !== this.selectedStatus;
+      this.selectedStatus = routeStatus;
+      this.syncFilterFieldValues();
+      this.hasInitializedQueryState = true;
+      if (shouldLoad) {
+        this.pagination = { ...this.pagination, page: 1 };
+        this.loadOrders();
       }
-      this.loadOrders();
+      if (hasStatusParam && !routeStatus) {
+        this.updateStatusQueryParam('');
+      } else if (routeStatus && rawRouteStatus !== routeStatus) {
+        this.updateStatusQueryParam(routeStatus);
+      }
     });
   }
 
@@ -142,30 +162,52 @@ export class OrdersComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
-  loadOrders(): void {
+  loadOrders(options: { preserveError?: boolean; preserveSelection?: boolean } = {}): void {
+    const requestId = ++this.ordersRequestId;
     this.isLoading = true;
-    this.apiService.getOrders().subscribe({
+    if (!options.preserveError) {
+      this.errorMessage = '';
+    }
+    this.apiService.getOrders({
+      page: this.pagination.page,
+      limit: this.pagination.pageSize,
+      search: this.searchTerm || undefined,
+      status: this.selectedStatus || undefined,
+      paymentMethod: this.selectedPaymentMethod || undefined
+    }).subscribe({
       next: (res) => {
+        if (requestId !== this.ordersRequestId) return;
         this.isLoading = false;
         if (res.success) {
-          this.allOrders = (res.data || []).map((o: any) => ({
+          this.data = (res.data || []).map((o: any) => ({
             ...o,
             id: o._id || o.id,
             status: o.statusText || o.status,
             statusVariant: o.statusVariant || 'neutral'
           }));
-          if (this.initialStatusFilter) {
-            this.data = this.allOrders.filter(o => o.status === this.initialStatusFilter);
-          } else {
-            this.data = [...this.allOrders];
+          const responsePagination = res.pagination || {};
+          const responsePage = Number(responsePagination.page);
+          const responsePageSize = Number(responsePagination.pageSize);
+          const responseTotal = Number(responsePagination.total);
+          this.pagination = {
+            page: Number.isFinite(responsePage) && responsePage > 0 ? responsePage : this.pagination.page,
+            pageSize: Number.isFinite(responsePageSize) && responsePageSize > 0
+              ? responsePageSize
+              : this.pagination.pageSize,
+            total: Number.isFinite(responseTotal) && responseTotal >= 0 ? responseTotal : this.data.length
+          };
+          if (!options.preserveSelection) {
+            this.selectedIds.clear();
           }
-          this.pagination = { ...this.pagination, total: this.data.length };
-          this.selectedIds.clear();
+        } else {
+          this.errorMessage = 'Không thể tải danh sách đơn hàng. Vui lòng thử lại.';
         }
         this.cdr.markForCheck();
       },
       error: (err) => {
+        if (requestId !== this.ordersRequestId) return;
         this.isLoading = false;
+        this.errorMessage = 'Không thể tải danh sách đơn hàng. Vui lòng thử lại.';
         console.error('Lỗi khi tải đơn hàng từ MongoDB:', err);
         this.cdr.markForCheck();
       }
@@ -180,42 +222,103 @@ export class OrdersComponent implements OnInit {
   }
 
   onDeleteSelected(): void {
+    if (this.isDeleting || this.isLoading) return;
     const count = this.selectedCount;
     if (count === 0) return;
     this.isBulkDelete = true;
     this.pendingDeleteId = null;
+    this.pendingBulkDeleteIds = Array.from(this.selectedIds);
+    this.pendingBulkQueryState = {
+      searchTerm: this.searchTerm,
+      selectedStatus: this.selectedStatus,
+      selectedPaymentMethod: this.selectedPaymentMethod,
+      page: this.pagination.page,
+      pageSize: this.pagination.pageSize
+    };
+    this.successMessage = '';
+    this.errorMessage = '';
     this.confirmMessage = `Bạn có chắc chắn muốn xóa ${count} đơn hàng đã chọn không?`;
     this.confirmOpen = true;
   }
 
   onConfirmDelete(): void {
+    if (this.isDeleting) return;
+
     if (this.pendingDeleteId) {
-      this.apiService.deleteOrder(this.pendingDeleteId).subscribe({
-        next: () => {
+      const deleteId = this.pendingDeleteId;
+      this.isDeleting = true;
+      this.ordersRequestId += 1;
+      this.isLoading = false;
+      this.successMessage = '';
+      this.errorMessage = '';
+      this.apiService.deleteOrder(deleteId).subscribe({
+        next: (res) => {
+          this.isDeleting = false;
           this.confirmOpen = false;
           this.pendingDeleteId = null;
+          this.isBulkDelete = false;
+          if (!res?.success) {
+            this.errorMessage = 'Không thể xóa đơn hàng. Vui lòng thử lại.';
+            this.loadOrders({ preserveError: true });
+            this.cdr.markForCheck();
+            return;
+          }
+          this.selectedIds.delete(deleteId);
+          this.selectedIds = new Set(this.selectedIds);
+          this.successMessage = 'Xóa đơn hàng thành công.';
           this.loadOrders();
           this.cdr.markForCheck();
         },
         error: (err) => {
+          this.isDeleting = false;
           this.confirmOpen = false;
           this.pendingDeleteId = null;
-          console.error(err);
+          this.isBulkDelete = false;
+          this.errorMessage = 'Không thể xóa đơn hàng. Vui lòng thử lại.';
+          this.loadOrders({ preserveError: true });
+          console.error('Lỗi xóa đơn hàng:', err);
           this.cdr.markForCheck();
         }
       });
-    } else if (this.isBulkDelete && this.selectedIds.size > 0) {
-      this.apiService.bulkDeleteOrders(Array.from(this.selectedIds)).subscribe({
-        next: () => {
-          this.selectedIds.clear();
+    } else if (this.isBulkDelete && this.pendingBulkDeleteIds.length > 0) {
+      const deleteIds = [...this.pendingBulkDeleteIds];
+      this.isDeleting = true;
+      this.ordersRequestId += 1;
+      this.isLoading = false;
+      this.successMessage = '';
+      this.errorMessage = '';
+      this.apiService.bulkDeleteOrders(deleteIds).subscribe({
+        next: (res) => {
+          this.isDeleting = false;
           this.confirmOpen = false;
           this.isBulkDelete = false;
+          if (!res?.success) {
+            this.restorePendingBulkQueryState();
+            this.pendingBulkDeleteIds = [];
+            this.pendingBulkQueryState = null;
+            this.selectedIds = new Set(deleteIds);
+            this.errorMessage = 'Không thể xóa các đơn hàng đã chọn. Vui lòng thử lại.';
+            this.loadOrders({ preserveError: true, preserveSelection: true });
+            this.cdr.markForCheck();
+            return;
+          }
+          this.pendingBulkDeleteIds = [];
+          this.pendingBulkQueryState = null;
+          this.selectedIds.clear();
+          this.successMessage = 'Xóa các đơn hàng đã chọn thành công.';
           this.loadOrders();
           this.cdr.markForCheck();
         },
         error: (err) => {
+          this.isDeleting = false;
           this.confirmOpen = false;
           this.isBulkDelete = false;
+          this.restorePendingBulkQueryState();
+          this.pendingBulkDeleteIds = [];
+          this.pendingBulkQueryState = null;
+          this.selectedIds = new Set(deleteIds);
+          this.errorMessage = 'Không thể xóa các đơn hàng đã chọn. Vui lòng thử lại.';
+          this.loadOrders({ preserveError: true, preserveSelection: true });
           console.error('Lỗi xóa hàng loạt đơn hàng:', err);
           this.cdr.markForCheck();
         }
@@ -227,8 +330,15 @@ export class OrdersComponent implements OnInit {
   }
 
   onCancelDelete(): void {
+    if (this.isDeleting) return;
+    if (this.isBulkDelete && this.pendingBulkDeleteIds.length > 0) {
+      this.selectedIds = new Set(this.pendingBulkDeleteIds);
+    }
     this.confirmOpen = false;
     this.pendingDeleteId = null;
+    this.pendingBulkDeleteIds = [];
+    this.pendingBulkQueryState = null;
+    this.isBulkDelete = false;
     this.cdr.markForCheck();
   }
 
@@ -236,48 +346,132 @@ export class OrdersComponent implements OnInit {
     if (e.action === 'view') {
       const orderDocId = e.row._id || e.row.id;
       this.router.navigate(['/admin/orders', orderDocId]);
+    } else if (e.action === 'delete') {
+      const orderDocId = e.row._id || e.row.id;
+      if (!orderDocId) {
+        this.errorMessage = 'Không thể xác định đơn hàng cần xóa.';
+        this.cdr.markForCheck();
+        return;
+      }
+      this.pendingDeleteId = orderDocId;
+      this.pendingBulkDeleteIds = [];
+      this.pendingBulkQueryState = null;
+      this.isBulkDelete = false;
+      this.confirmMessage = 'Bạn có chắc muốn xóa đơn hàng này?';
+      this.confirmOpen = true;
+      this.successMessage = '';
+      this.errorMessage = '';
+      this.cdr.markForCheck();
     }
   }
 
   onSearch(v: string): void {
-    if (!v) {
-      this.data = [...this.allOrders];
-      this.pagination = { ...this.pagination, total: this.data.length };
-      this.cdr.markForCheck();
+    const searchTerm = (v || '').trim();
+    if (this.isDeleting) {
+      this.searchTerm = searchTerm;
+      this.pagination = { ...this.pagination, page: 1 };
       return;
     }
-    const q = v.toLowerCase();
-    this.data = this.allOrders.filter(o =>
-      (o.code || '').toLowerCase().includes(q) ||
-      (o.customer || '').toLowerCase().includes(q) ||
-      (o.payment || '').toLowerCase().includes(q)
-    );
-    this.pagination = { ...this.pagination, total: this.data.length };
-    this.cdr.markForCheck();
+    if (!this.prepareForQueryChange()) return;
+    if (searchTerm === this.searchTerm && this.pagination.page === 1) return;
+    this.searchTerm = searchTerm;
+    this.pagination = { ...this.pagination, page: 1 };
+    this.loadOrders();
   }
 
   onFilter(v: Record<string, any>): void {
-    let filtered = [...this.allOrders];
-    if (v['status']) {
-      filtered = filtered.filter(o => o.status === v['status']);
+    if (!this.prepareForQueryChange()) return;
+    const status = this.normalizePaymentValue(v['status']);
+    this.selectedStatus = this.orderStatusCodes.has(status) ? status : '';
+    this.selectedPaymentMethod = this.normalizePaymentValue(v['payment']);
+    this.pagination = { ...this.pagination, page: 1 };
+    this.syncFilterFieldValues();
+    const skipLoad = this.skipNextResetFilterLoad
+      && !this.selectedStatus
+      && !this.selectedPaymentMethod;
+    this.skipNextResetFilterLoad = false;
+    if (!skipLoad) {
+      this.loadOrders();
+      this.updateStatusQueryParam(this.selectedStatus);
     }
-    if (v['payment']) {
-      const paymentFilter = this.normalizePaymentValue(v['payment']);
-      filtered = filtered.filter(o => this.getOrderPaymentFilterValue(o) === paymentFilter);
-    }
-    this.data = filtered;
-    this.pagination = { ...this.pagination, total: this.data.length };
-    this.cdr.markForCheck();
   }
 
-  onRefresh(): void { this.loadPaymentMethods(); this.loadOrders(); }
-  onPageChange(p: number): void { this.pagination = { ...this.pagination, page: p }; this.cdr.markForCheck(); }
-  onPageSizeChange(s: number): void { this.pagination = { ...this.pagination, pageSize: s, page: 1 }; this.cdr.markForCheck(); }
+  onFilterReset(): void {
+    if (!this.prepareForQueryChange()) return;
+    this.selectedStatus = '';
+    this.selectedPaymentMethod = '';
+    this.pagination = { ...this.pagination, page: 1 };
+    this.skipNextResetFilterLoad = true;
+    this.syncFilterFieldValues();
+    this.loadOrders();
+    this.updateStatusQueryParam('');
+  }
+
+  onRefresh(): void {
+    if (!this.prepareForQueryChange()) return;
+    this.loadPaymentMethods();
+    this.loadOrders();
+  }
+  onPageChange(p: number): void {
+    if (!this.prepareForQueryChange()) return;
+    if (!Number.isFinite(p) || p < 1 || p === this.pagination.page) return;
+    this.pagination = { ...this.pagination, page: p };
+    this.loadOrders();
+  }
+  onPageSizeChange(s: number): void {
+    if (!this.prepareForQueryChange()) return;
+    if (!Number.isFinite(s) || s < 1) return;
+    this.pagination = { ...this.pagination, pageSize: s, page: 1 };
+    this.loadOrders();
+  }
+
+  private prepareForQueryChange(): boolean {
+    if (this.isDeleting) return false;
+    if (this.confirmOpen) {
+      this.onCancelDelete();
+    }
+    return true;
+  }
+
+  private restorePendingBulkQueryState(): void {
+    if (!this.pendingBulkQueryState) return;
+    const state = this.pendingBulkQueryState;
+    this.searchTerm = state.searchTerm;
+    this.selectedStatus = state.selectedStatus;
+    this.selectedPaymentMethod = state.selectedPaymentMethod;
+    this.pagination = {
+      ...this.pagination,
+      page: state.page,
+      pageSize: state.pageSize
+    };
+    this.syncFilterFieldValues();
+  }
 
   private setPaymentFilterOptions(options: Array<{ value: string; label: string }>): void {
     this.filterFields = this.filterFields.map(field =>
-      field.key === 'payment' ? { ...field, options } : field
+      field.key === 'payment'
+        ? { ...field, value: this.selectedPaymentMethod, options }
+        : field.key === 'status'
+          ? { ...field, value: this.selectedStatus }
+          : field
     );
+  }
+
+  private syncFilterFieldValues(): void {
+    this.filterFields = this.filterFields.map(field => {
+      if (field.key === 'status') return { ...field, value: this.selectedStatus };
+      if (field.key === 'payment') return { ...field, value: this.selectedPaymentMethod };
+      return field;
+    });
+  }
+
+  private updateStatusQueryParam(status: string): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { status: status ? status.toLowerCase() : null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
   }
 
   private getPaymentMethodFilterValue(method: any): string {
@@ -287,28 +481,21 @@ export class OrdersComponent implements OnInit {
       || '';
   }
 
-  private getOrderPaymentFilterValue(order: any): string {
-    const snapshotCode = this.normalizePaymentValue(order?.paymentMethodSnapshot?.code);
-    if (snapshotCode) return snapshotCode;
-
-    const explicitCode = this.normalizePaymentValue(order?.paymentMethodCode);
-    if (explicitCode) return explicitCode;
-
-    const paymentMethodId = this.getDisplayString(order?.paymentMethodId);
-    if (paymentMethodId) {
-      const method = this.paymentMethods.find((candidate: any) =>
-        this.getDisplayString(candidate?._id) === paymentMethodId
-        || this.getDisplayString(candidate?.id) === paymentMethodId
-      );
-      if (method?.filterValue) return method.filterValue;
-    }
-
-    return '';
-  }
-
   private normalizePaymentValue(value: any): string {
     const text = this.getDisplayString(value);
     return text ? text.toUpperCase() : '';
+  }
+
+  private getCanonicalOrderStatus(value: any): string {
+    const normalizedValue = this.normalizePaymentValue(value);
+    if (this.orderStatusCodes.has(normalizedValue)) return normalizedValue;
+
+    const statusField = this.filterFields.find(field => field.key === 'status');
+    const matchingOption = statusField?.options?.find(option =>
+      this.normalizePaymentValue(option.label) === normalizedValue
+    );
+    const optionCode = this.normalizePaymentValue(matchingOption?.value);
+    return this.orderStatusCodes.has(optionCode) ? optionCode : '';
   }
 
   private getDisplayString(value: any): string | null {

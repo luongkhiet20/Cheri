@@ -2248,13 +2248,20 @@ function formatOrder(o) {
     ? o.shippingAddress
     : null;
   const legacyAddress = Array.isArray(o.addresses) ? (o.addresses[0] || {}) : {};
-  const customerName = shippingAddress?.fullName || legacyAddress.name || null;
-  const customerEmail = o.customerEmail || legacyAddress.email || null;
-  const customerPhone = o.customerPhone || shippingAddress?.phone || legacyAddress.phone || null;
+  const customerName = getNonEmptyString(shippingAddress?.fullName)
+    || getNonEmptyString(legacyAddress.fullName)
+    || getNonEmptyString(legacyAddress.name);
+  const customerEmail = getNonEmptyString(o.customerEmail)
+    || getNonEmptyString(legacyAddress.email);
+  const customerPhone = getNonEmptyString(o.customerPhone)
+    || getNonEmptyString(shippingAddress?.phone)
+    || getNonEmptyString(legacyAddress.phone);
 
   const statusHistory = Array.isArray(o.statusHistory) ? o.statusHistory : [];
-  const rawStatusValue = o.status ?? statusHistory[0]?.status ?? '';
-  const statusCode = typeof rawStatusValue === 'string' ? rawStatusValue.toUpperCase() : String(rawStatusValue);
+  const rawStatusValue = getNonEmptyString(o.status)
+    || getNonEmptyString(statusHistory[0]?.status)
+    || '';
+  const statusCode = rawStatusValue.toUpperCase();
   const statusMeta = ORDER_STATUS_MAP[statusCode];
   const statusText = statusMeta?.label || statusCode || '';
 
@@ -2338,22 +2345,108 @@ function formatOrder(o) {
   };
 }
 
-// 4.1 GET /api/orders (List all orders)
+function normalizeOrderQueryValue(value) {
+  return typeof value === 'string' && value.trim() ? value.trim().toUpperCase() : '';
+}
+
+function getFormattedOrderPaymentValues(order, paymentMethodCodeById = new Map()) {
+  const values = new Set();
+  const paymentCode = normalizeOrderQueryValue(order?.paymentMethodCode);
+  if (paymentCode) values.add(paymentCode);
+
+  const paymentMethodId = order?.paymentMethodId?.toString?.() || '';
+  if (paymentMethodId) {
+    values.add(normalizeOrderQueryValue(paymentMethodId));
+    const mappedCode = paymentMethodCodeById.get(paymentMethodId);
+    if (mappedCode) values.add(normalizeOrderQueryValue(mappedCode));
+  }
+
+  return values;
+}
+
+function getFormattedOrderStatusCode(order) {
+  const value = normalizeOrderQueryValue(order?.statusCode);
+  if (Object.hasOwn(ORDER_STATUS_MAP, value)) return value;
+
+  return ORDER_STATUS_CONFIG.find(status =>
+    normalizeOrderQueryValue(status.label) === value
+    || normalizeOrderQueryValue(status.queryParam) === value
+  )?.code || '';
+}
+
+function queryFormattedOrders(formattedOrders, query = {}, paymentMethodCodeById = new Map()) {
+  const parsedPage = Number.parseInt(String(query.page ?? ''), 10);
+  const parsedLimit = Number.parseInt(String(query.limit ?? ''), 10);
+  const requestedPage = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+  const pageSize = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 100) : 20;
+  const search = typeof query.search === 'string' ? query.search.trim().toLowerCase() : '';
+  const requestedStatus = normalizeOrderQueryValue(query.status);
+  const status = Object.hasOwn(ORDER_STATUS_MAP, requestedStatus) ? requestedStatus : '';
+  const paymentMethod = normalizeOrderQueryValue(query.paymentMethod);
+
+  let filtered = Array.isArray(formattedOrders) ? formattedOrders : [];
+
+  if (search) {
+    filtered = filtered.filter(order => [order?.code, order?.customer, order?.payment]
+      .some(value => String(value ?? '').toLowerCase().includes(search)));
+  }
+  if (status) {
+    filtered = filtered.filter(order => getFormattedOrderStatusCode(order) === status);
+  }
+  if (paymentMethod) {
+    filtered = filtered.filter(order =>
+      getFormattedOrderPaymentValues(order, paymentMethodCodeById).has(paymentMethod)
+    );
+  }
+
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const page = Math.min(requestedPage, totalPages);
+  const start = (page - 1) * pageSize;
+
+  return {
+    data: filtered.slice(start, start + pageSize),
+    pagination: { page, pageSize, total, totalPages }
+  };
+}
+
+// 4.1 GET /api/orders (List with composed search, filters and pagination)
 app.get('/api/orders', async (req, res) => {
   try {
     const ordersRaw = await db.collection('orders').find({}).sort({ _id: -1 }).toArray();
-    const data = ordersRaw.map(formatOrder);
+    const formattedOrders = ordersRaw.map(formatOrder);
+    const paymentMethodCodeById = new Map();
+
+    if (normalizeOrderQueryValue(req.query.paymentMethod)) {
+      const paymentMethods = await db.collection('payment_methods')
+        .find({}, { projection: { code: 1 } })
+        .toArray();
+      paymentMethods.forEach(method => {
+        const id = method?._id?.toString?.();
+        const code = normalizeOrderQueryValue(method?.code);
+        if (id) paymentMethodCodeById.set(id, code || normalizeOrderQueryValue(id));
+      });
+    }
+
+    const result = queryFormattedOrders(formattedOrders, {
+      page: req.query.page,
+      limit: req.query.limit ?? req.query.pageSize,
+      search: req.query.search,
+      status: req.query.status,
+      paymentMethod: req.query.paymentMethod
+    }, paymentMethodCodeById);
+
     res.json({
       success: true,
-      data,
-      pagination: {
-        page: 1,
-        pageSize: data.length || 20,
-        total: data.length
-      }
+      data: result.data,
+      pagination: result.pagination
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error in GET /api/orders:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Không thể tải danh sách đơn hàng. Vui lòng thử lại.'
+    });
   }
 });
 
@@ -2376,7 +2469,10 @@ app.get('/api/orders/:id', async (req, res) => {
     });
   } catch (error) {
     console.error('Error in GET /api/orders/:id:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: 'Không thể tải thông tin đơn hàng. Vui lòng thử lại.'
+    });
   }
 });
 
@@ -2457,7 +2553,10 @@ const handleUpdateOrderStatus = async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating order status:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: 'Không thể cập nhật trạng thái đơn hàng. Vui lòng thử lại.'
+    });
   }
 };
 
@@ -2467,10 +2566,24 @@ app.put('/api/orders/:id/status', handleUpdateOrderStatus);
 // Delete order
 app.delete('/api/orders/:id', async (req, res) => {
   try {
-    const result = await db.collection('orders').deleteOne({ _id: new ObjectId(req.params.id) });
-    res.json({ success: true, deletedCount: result.deletedCount });
+    const { id } = req.params;
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'ID đơn hàng không hợp lệ' });
+    }
+
+    const result = await db.collection('orders').deleteOne({ _id: new ObjectId(id) });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng để xóa' });
+    }
+
+    res.json({
+      success: true,
+      deletedCount: result.deletedCount,
+      message: 'Xóa đơn hàng thành công'
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error deleting order:', error);
+    res.status(500).json({ success: false, message: 'Không thể xóa đơn hàng. Vui lòng thử lại.' });
   }
 });
 
@@ -2481,11 +2594,18 @@ app.post('/api/orders/bulk-delete', async (req, res) => {
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ success: false, message: 'Danh sách ID không hợp lệ' });
     }
-    const validIds = ids.filter(id => ObjectId.isValid(id)).map(id => new ObjectId(id));
-    const result = await db.collection('orders').deleteMany({ _id: { $in: validIds } });
+    if (!ids.every(id => ObjectId.isValid(id))) {
+      return res.status(400).json({ success: false, message: 'Danh sách ID không hợp lệ' });
+    }
+    const objectIds = ids.map(id => new ObjectId(id));
+    const result = await db.collection('orders').deleteMany({ _id: { $in: objectIds } });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng để xóa' });
+    }
     res.json({ success: true, deletedCount: result.deletedCount, message: `Đã xóa thành công ${result.deletedCount} đơn hàng` });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error bulk deleting orders:', error);
+    res.status(500).json({ success: false, message: 'Không thể xóa các đơn hàng đã chọn. Vui lòng thử lại.' });
   }
 });
 

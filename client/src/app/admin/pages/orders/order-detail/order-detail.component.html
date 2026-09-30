@@ -13,7 +13,7 @@
       </div>
       <h1 class="detail-title">Chi tiết đơn hàng {{ order.orderId || order.code || '—' }}</h1>
       <p class="detail-subtitle">
-        Mã hệ thống: <code>{{ order._id || '—' }}</code> • Ngày đặt:
+        Ngày đặt:
         <span>{{ order.dateAdded ? (order.dateAdded | date:'dd/MM/yyyy HH:mm') : '—' }}</span>
       </p>
     </div>
@@ -325,7 +325,9 @@
                 <span class="timeline-time">{{ h.updatedAt | date:'dd/MM/yyyy HH:mm:ss' }}</span>
               </div>
               <div class="timeline-note" *ngIf="h.note">{{ h.note }}</div>
-              <div class="timeline-user" *ngIf="h.updatedBy">Người cập nhật: <code>{{ h.updatedBy }}</code></div>
+              <div class="timeline-user" *ngIf="getHistoryUpdatedBy(h.updatedBy) as updatedBy">
+                Người cập nhật: <span>{{ updatedBy }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -352,7 +354,7 @@
         <div class="summary-rows">
           <div class="summary-row">
             <span class="summary-label">Tổng số lượng:</span>
-            <span class="summary-val font-semibold">{{ getTotalQuantity() }} sản phẩm</span>
+            <span class="summary-val font-semibold">{{ getTotalQuantityLabel() }} sản phẩm</span>
           </div>
 
           <div class="summary-row" *ngIf="order.subtotal !== null && order.subtotal !== undefined">
@@ -530,10 +532,6 @@
         </div>
 
         <div class="info-list">
-          <div class="info-row">
-            <span class="info-label">Mã hệ thống:</span>
-            <code class="info-code">{{ order._id || '—' }}</code>
-          </div>
           <div class="info-row">
             <span class="info-label">Mã đơn hàng:</span>
             <span class="info-value font-semibold">{{ order.orderId || order.code || '—' }}</span>

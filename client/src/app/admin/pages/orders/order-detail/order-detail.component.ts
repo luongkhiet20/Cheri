@@ -93,7 +93,7 @@ export class OrderDetailComponent implements OnInit {
         if (err.status === 404 || err.status === 400) {
           this.isNotFound = true;
         } else {
-          this.errorMessage = err.error?.message || 'Không thể tải thông tin đơn hàng. Vui lòng thử lại.';
+          this.errorMessage = 'Không thể tải thông tin đơn hàng. Vui lòng thử lại.';
         }
         console.error('Error fetching order detail:', err);
         this.cdr.markForCheck();
@@ -203,7 +203,7 @@ export class OrderDetailComponent implements OnInit {
       error: (err) => {
         this.isUpdatingStatus = false;
         this.confirmOpen = false;
-        this.errorMessage = err.error?.message || 'Không thể cập nhật trạng thái đơn hàng. Vui lòng kiểm tra lại.';
+        this.errorMessage = 'Không thể cập nhật trạng thái đơn hàng. Vui lòng kiểm tra lại.';
         console.error('Update order status error:', err);
         this.cdr.markForCheck();
       }
@@ -300,6 +300,11 @@ export class OrderDetailComponent implements OnInit {
     return quantities.reduce((total: number, quantity) => total + (quantity as number), 0);
   }
 
+  getTotalQuantityLabel(): number | string {
+    const quantity = this.getTotalQuantity();
+    return quantity === null ? '—' : quantity;
+  }
+
   getShippingAddresses(): any[] {
     const legacyAddresses = Array.isArray(this.order?.addresses)
       ? this.order.addresses.filter((address: any) => address && typeof address === 'object')
@@ -342,6 +347,12 @@ export class OrderDetailComponent implements OnInit {
     if (typeof value === 'string') return value.trim() || null;
     if (typeof value === 'number' && Number.isFinite(value)) return value;
     return null;
+  }
+
+  getHistoryUpdatedBy(value: unknown): string | null {
+    const name = this.getDisplayString(value);
+    if (!name || /^[a-f\d]{24}$/i.test(name)) return null;
+    return name;
   }
 
   private isUsableNormalizedItem(item: any): boolean {

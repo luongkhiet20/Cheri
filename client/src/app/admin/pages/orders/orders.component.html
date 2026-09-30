@@ -15,10 +15,18 @@
     </div>
   </div>
 
-  <app-admin-toolbar searchPlaceholder="Tìm kiếm..." [filterFields]="filterFields" [selectable]="true"
+  <div *ngIf="successMessage" class="alert-box alert-success mb-3" role="alert">
+    <div class="alert-content">{{ successMessage }}</div>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert-box alert-error mb-3" role="alert">
+    <div class="alert-content">{{ errorMessage }}</div>
+  </div>
+
+  <app-admin-toolbar searchPlaceholder="Tìm kiếm..." [searchValue]="searchTerm" [filterFields]="filterFields" [selectable]="true"
     [allSelected]="allSelected" [indeterminate]="isIndeterminate" [selectedCount]="selectedCount"
     [showDeleteSelected]="true" [total]="displayTotal" [isLoading]="isLoading" (searchChange)="onSearch($event)"
-    (filterChange)="onFilter($event)" (refresh)="onRefresh()" (selectAllChange)="onToolbarSelectAll()"
+    (filterChange)="onFilter($event)" (filterReset)="onFilterReset()" (refresh)="onRefresh()" (selectAllChange)="onToolbarSelectAll()"
     (deleteSelected)="onDeleteSelected()"></app-admin-toolbar>
 
   <app-admin-table [columns]="columns" [data]="data" [loading]="isLoading" [actions]="actions" [pagination]="pagination"

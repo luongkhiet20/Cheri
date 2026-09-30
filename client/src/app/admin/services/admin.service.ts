@@ -95,8 +95,16 @@ export class AdminService {
   }
 
   // ── Orders ─────────────────────────────────
-  getOrders(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/orders`);
+  getOrders(params?: { page?: number; limit?: number; search?: string; status?: string; paymentMethod?: string }): Observable<any> {
+    let httpParams = new HttpParams();
+    if (params) {
+      if (params.page) httpParams = httpParams.set('page', params.page.toString());
+      if (params.limit) httpParams = httpParams.set('limit', params.limit.toString());
+      if (params.search) httpParams = httpParams.set('search', params.search);
+      if (params.status) httpParams = httpParams.set('status', params.status);
+      if (params.paymentMethod) httpParams = httpParams.set('paymentMethod', params.paymentMethod);
+    }
+    return this.http.get(`${this.baseUrl}/orders`, { params: httpParams });
   }
 
   getOrderById(id: string): Observable<any> {

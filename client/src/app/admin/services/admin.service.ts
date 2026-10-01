@@ -38,6 +38,10 @@ export class AdminService {
     return this.http.get(`${this.baseUrl}/products/${id}`);
   }
 
+  getProductVariants(productId: string): Observable<any> {
+    return this.http.get(`${this.baseUrl}/products/${productId}/variants`);
+  }
+
   createProduct(data: any): Observable<any> {
     return this.http.post(`${this.baseUrl}/products`, data);
   }
@@ -109,6 +113,14 @@ export class AdminService {
 
   getOrderById(id: string): Observable<any> {
     return this.http.get(`${this.baseUrl}/orders/${id}`);
+  }
+
+  createOrder(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}/admin/orders`, data);
+  }
+
+  updateOrder(id: string, data: any): Observable<any> {
+    return this.http.patch(`${this.baseUrl}/admin/orders/${id}`, data);
   }
 
   updateOrderStatus(id: string, status: string, note?: string): Observable<any> {

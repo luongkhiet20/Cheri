@@ -20,6 +20,7 @@ export class OrdersComponent implements OnInit {
   ];
   actions: RowAction[] = [
     { key: 'view', label: 'Xem' },
+    { key: 'edit', label: 'Sửa' },
     { key: 'delete', label: 'Xóa', variant: 'danger' },
   ];
   filterFields: FilterField[] = [
@@ -216,6 +217,10 @@ export class OrdersComponent implements OnInit {
 
   onSelectionChange(ids: Set<any>): void { this.selectedIds = new Set(ids); }
 
+  onAddOrder(): void {
+    this.router.navigate(['/admin/orders/add']);
+  }
+
   onToolbarSelectAll(): void {
     if (this.allSelected) { this.selectedIds = new Set(); }
     else { this.selectedIds = new Set(this.data.map((r: any) => r.id)); }
@@ -346,6 +351,9 @@ export class OrdersComponent implements OnInit {
     if (e.action === 'view') {
       const orderDocId = e.row._id || e.row.id;
       this.router.navigate(['/admin/orders', orderDocId]);
+    } else if (e.action === 'edit') {
+      const orderDocId = e.row._id || e.row.id;
+      if (orderDocId) this.router.navigate(['/admin/orders', orderDocId, 'edit']);
     } else if (e.action === 'delete') {
       const orderDocId = e.row._id || e.row.id;
       if (!orderDocId) {

@@ -62,6 +62,9 @@ export class OrderDetailComponent implements OnInit {
 
   ngOnInit(): void {
     this.orderId = this.route.snapshot.paramMap.get('id');
+    if (this.route.snapshot.queryParamMap.get('updated') === '1') {
+      this.successMessage = 'Cập nhật đơn hàng thành công.';
+    }
     if (!this.orderId || this.orderId.trim() === '') {
       this.isNotFound = true;
       this.isLoading = false;
@@ -103,6 +106,10 @@ export class OrderDetailComponent implements OnInit {
 
   onBack(): void {
     this.router.navigate(['/admin/orders']);
+  }
+
+  onEdit(): void {
+    if (this.orderId) this.router.navigate(['/admin/orders', this.orderId, 'edit']);
   }
 
   getStatusMeta(code: string): StatusOption | undefined {

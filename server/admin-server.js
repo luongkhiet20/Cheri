@@ -2410,6 +2410,481 @@ function queryFormattedOrders(formattedOrders, query = {}, paymentMethodCodeById
   };
 }
 
+// 4.0 POST /api/admin/orders (Create normalized guest order from Admin)
+const ADMIN_ORDER_ID_MAX_ATTEMPTS = 5;
+
+class AdminOrderValidationError extends Error {}
+
+function requireAdminOrderString(value, message) {
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new AdminOrderValidationError(message);
+  }
+  return value.trim();
+}
+
+function optionalAdminOrderString(value, message) {
+  if (value === undefined || value === null) return '';
+  if (typeof value !== 'string') {
+    throw new AdminOrderValidationError(message);
+  }
+  return value.trim();
+}
+
+function isAdminPaymentMethodActive(method) {
+  if (typeof method?.isActive === 'boolean') return method.isActive;
+  return String(method?.status || '').trim().toUpperCase() === 'ACTIVE';
+}
+
+function getAdminOrderPaymentFee(method, subtotal) {
+  const fee = method?.transactionFee;
+  if (!fee?.enabled) return 0;
+
+  const type = String(fee.type || '').trim().toUpperCase();
+  if (!['FIXED', 'PERCENTAGE'].includes(type)) {
+    throw new AdminOrderValidationError('Cấu hình phí thanh toán không hợp lệ');
+  }
+  const value = parseAdminOrderNumber(fee.value, 'Cấu hình phí thanh toán không hợp lệ');
+
+  return type === 'PERCENTAGE'
+    ? Math.round((subtotal * value) / 100)
+    : value;
+}
+
+function getFirstAdminOrderString(...values) {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return '';
+}
+
+function parseAdminOrderNumber(value, message) {
+  let number;
+  if (typeof value === 'number') {
+    number = value;
+  } else if (typeof value === 'string' && value.trim()) {
+    const normalized = value.trim();
+    if (!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(normalized)) {
+      throw new AdminOrderValidationError(message);
+    }
+    number = Number(normalized);
+  } else {
+    throw new AdminOrderValidationError(message);
+  }
+  if (!Number.isFinite(number) || number < 0) {
+    throw new AdminOrderValidationError(message);
+  }
+  return number;
+}
+
+function getAdminOrderNumber(candidates, message) {
+  for (const candidate of candidates) {
+    const value = candidate.value;
+    if (value === undefined || value === null || value === '') continue;
+    const number = parseAdminOrderNumber(value, message);
+    return { value: number, path: candidate.path };
+  }
+  return null;
+}
+
+function resolveAdminOrderProduct(product) {
+  const title = getFirstAdminOrderString(product?.vi?.title, product?.en?.title, product?.title);
+  if (!title) {
+    throw new AdminOrderValidationError('Tên sản phẩm không hợp lệ');
+  }
+
+  const salePrice = getAdminOrderNumber([
+    { value: product?.vi?.salePrice, path: 'vi.salePrice' },
+    { value: product?.en?.salePrice, path: 'en.salePrice' },
+    { value: product?.salePrice, path: 'salePrice' }
+  ], 'Giá sản phẩm không hợp lệ');
+  const regularPrice = salePrice || getAdminOrderNumber([
+    { value: product?.vi?.regularPrice, path: 'vi.regularPrice' },
+    { value: product?.en?.regularPrice, path: 'en.regularPrice' },
+    { value: product?.regularPrice, path: 'regularPrice' }
+  ], 'Giá sản phẩm không hợp lệ');
+  if (!regularPrice) {
+    throw new AdminOrderValidationError('Không tìm thấy giá hợp lệ cho sản phẩm');
+  }
+
+  const stock = getAdminOrderNumber([
+    { value: product?.vi?.quantity, path: 'vi.quantity' },
+    { value: product?.en?.quantity, path: 'en.quantity' },
+    { value: product?.quantity, path: 'quantity' }
+  ], 'Tồn kho sản phẩm không hợp lệ');
+  if (!stock) {
+    throw new AdminOrderValidationError('Không tìm thấy tồn kho hợp lệ cho sản phẩm');
+  }
+
+  const productId = product?._id?.toString?.() || '';
+  return {
+    title,
+    price: regularPrice.value,
+    stock: stock.value,
+    stockPath: stock.path,
+    sku: getFirstAdminOrderString(product?.sku, product?.vi?.sku, product?.en?.sku)
+      || (productId ? `SP-${productId.slice(-6).toUpperCase()}` : ''),
+    image: getFirstAdminOrderString(product?.mainImage?.url, product?.images?.[0])
+  };
+}
+
+function getAdminOrderVariantIdentifier(variant) {
+  const id = variant?._id?.toHexString?.();
+  if (id) return { field: '_id', value: id, rawValue: variant._id };
+  const legacyId = getFirstAdminOrderString(variant?.id);
+  if (legacyId) return { field: 'id', value: legacyId, rawValue: variant.id };
+  const sku = getFirstAdminOrderString(variant?.sku);
+  if (sku) return { field: 'sku', value: sku, rawValue: variant.sku };
+  return null;
+}
+
+function resolveAdminOrderVariantPrice(variant, productPrice) {
+  const discountPrice = getAdminOrderNumber([
+    { value: variant?.discountPrice, path: 'discountPrice' }
+  ], 'Giá khuyến mãi của biến thể không hợp lệ');
+  if (discountPrice && discountPrice.value > 0) return discountPrice.value;
+
+  const price = getAdminOrderNumber([
+    { value: variant?.price, path: 'price' }
+  ], 'Giá biến thể không hợp lệ');
+  return price ? price.value : productPrice;
+}
+
+app.post('/api/admin/orders', async (req, res) => {
+  try {
+    const body = req.body;
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      throw new AdminOrderValidationError('Dữ liệu đơn hàng không hợp lệ');
+    }
+
+    const customerEmail = requireAdminOrderString(body.customerEmail, 'Email khách hàng là bắt buộc');
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(customerEmail)) {
+      throw new AdminOrderValidationError('Email khách hàng không hợp lệ');
+    }
+    const customerPhone = optionalAdminOrderString(body.customerPhone, 'Số điện thoại khách hàng không hợp lệ');
+    const notes = optionalAdminOrderString(body.notes, 'Ghi chú không hợp lệ');
+
+    const addressInput = body.shippingAddress;
+    if (!addressInput || typeof addressInput !== 'object' || Array.isArray(addressInput)) {
+      throw new AdminOrderValidationError('Địa chỉ giao hàng không hợp lệ');
+    }
+    const shippingAddress = {
+      fullName: requireAdminOrderString(addressInput.fullName, 'Họ tên người nhận là bắt buộc'),
+      phone: requireAdminOrderString(addressInput.phone, 'Số điện thoại người nhận là bắt buộc'),
+      address: requireAdminOrderString(addressInput.address, 'Địa chỉ giao hàng là bắt buộc'),
+      ward: optionalAdminOrderString(addressInput.ward, 'Phường/xã không hợp lệ'),
+      district: optionalAdminOrderString(addressInput.district, 'Quận/huyện không hợp lệ'),
+      province: optionalAdminOrderString(addressInput.province, 'Tỉnh/thành phố không hợp lệ')
+    };
+
+    if (!Array.isArray(body.items) || body.items.length === 0) {
+      throw new AdminOrderValidationError('Đơn hàng phải có ít nhất một sản phẩm');
+    }
+
+    const requestedItems = body.items.map((item, index) => {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) {
+        throw new AdminOrderValidationError(`Sản phẩm #${index + 1} không hợp lệ`);
+      }
+      if (!ObjectId.isValid(item.productId)) {
+        throw new AdminOrderValidationError(`Mã sản phẩm #${index + 1} không hợp lệ`);
+      }
+      if (!Number.isInteger(item.quantity) || item.quantity < 1) {
+        throw new AdminOrderValidationError(`Số lượng sản phẩm #${index + 1} phải là số nguyên lớn hơn 0`);
+      }
+      if (item.variantId !== undefined && item.variantId !== null
+        && (typeof item.variantId !== 'string' || !item.variantId.trim())) {
+        throw new AdminOrderValidationError(`Mã biến thể sản phẩm #${index + 1} không hợp lệ`);
+      }
+      const productObjectId = new ObjectId(item.productId);
+      return {
+        productId: productObjectId.toHexString(),
+        variantId: item.variantId === undefined || item.variantId === null ? null : item.variantId.trim(),
+        quantity: item.quantity
+      };
+    });
+
+    if (body.paymentMethodId !== undefined && body.paymentMethodId !== null && !ObjectId.isValid(body.paymentMethodId)) {
+      throw new AdminOrderValidationError('Mã phương thức thanh toán không hợp lệ');
+    }
+
+    const productCache = new Map();
+    const variantsCache = new Map();
+    const resolvedItems = [];
+    const inventoryRequests = new Map();
+
+    for (const requestedItem of requestedItems) {
+      let product = productCache.get(requestedItem.productId);
+      if (!product) {
+        product = await db.collection('products').findOne({ _id: new ObjectId(requestedItem.productId) });
+        if (!product) {
+          throw new AdminOrderValidationError('Không tìm thấy sản phẩm đã chọn');
+        }
+        if (product.visibility === false || product.vi?.visibility === false) {
+          throw new AdminOrderValidationError(`Sản phẩm "${product.title || product.vi?.title || 'Sản phẩm'}" hiện không thể bán`);
+        }
+        productCache.set(requestedItem.productId, product);
+      }
+
+      const productData = resolveAdminOrderProduct(product);
+
+      let variantSource = variantsCache.get(requestedItem.productId);
+      if (!variantSource) {
+        const collectionVariants = await db.collection('product_variants')
+          .find({ productId: new ObjectId(requestedItem.productId) })
+          .toArray();
+        variantSource = collectionVariants.length > 0
+          ? { type: 'collection', variants: collectionVariants }
+          : { type: 'embedded', variants: Array.isArray(product.variants) ? product.variants : [] };
+        variantsCache.set(requestedItem.productId, variantSource);
+      }
+      const activeVariants = variantSource.variants.filter(variant => variant?.isActive !== false);
+      const hasVariants = variantSource.variants.length > 0;
+
+      let variant = null;
+      let variantIdentifier = null;
+      let requestedVariantId = requestedItem.variantId;
+      if (hasVariants) {
+        if (activeVariants.length === 0) {
+          throw new AdminOrderValidationError('Sản phẩm không có biến thể đang hoạt động');
+        }
+        if (!requestedItem.variantId) {
+          throw new AdminOrderValidationError('Vui lòng chọn biến thể cho sản phẩm');
+        }
+        if (variantSource.type === 'collection' && !ObjectId.isValid(requestedItem.variantId)) {
+          throw new AdminOrderValidationError('Mã biến thể sản phẩm không hợp lệ');
+        }
+        if (variantSource.type === 'collection') {
+          requestedVariantId = new ObjectId(requestedItem.variantId).toHexString();
+        }
+        const variantsWithIdentifiers = variantSource.variants.map(item => ({
+          variant: item,
+          identifier: getAdminOrderVariantIdentifier(item)
+        }));
+        if (variantsWithIdentifiers.some(item => !item.identifier)) {
+          throw new AdminOrderValidationError('Dữ liệu biến thể sản phẩm không hợp lệ');
+        }
+        const uniqueVariantIdentifiers = new Set(variantsWithIdentifiers.map(item => item.identifier.value));
+        if (uniqueVariantIdentifiers.size !== variantsWithIdentifiers.length) {
+          throw new AdminOrderValidationError('Mã định danh biến thể sản phẩm bị trùng');
+        }
+        variant = variantsWithIdentifiers.find(item => item.identifier.value === requestedVariantId)?.variant || null;
+        if (!variant) {
+          throw new AdminOrderValidationError('Không tìm thấy biến thể đã chọn');
+        }
+        variantIdentifier = getAdminOrderVariantIdentifier(variant);
+        if (variant.isActive === false) {
+          throw new AdminOrderValidationError('Biến thể đã chọn hiện không hoạt động');
+        }
+        if (variantSource.type === 'collection'
+          && variant.productId?.toHexString?.() !== requestedItem.productId) {
+          throw new AdminOrderValidationError('Biến thể không thuộc sản phẩm đã chọn');
+        }
+      } else if (requestedItem.variantId) {
+        throw new AdminOrderValidationError('Sản phẩm đã chọn không sử dụng biến thể này');
+      }
+
+      const unitPrice = variant
+        ? resolveAdminOrderVariantPrice(variant, productData.price)
+        : productData.price;
+      if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+        throw new AdminOrderValidationError('Giá sản phẩm không hợp lệ');
+      }
+
+      const variantStock = variant
+        ? getAdminOrderNumber([{ value: variant.stock, path: 'stock' }], 'Tồn kho sản phẩm không hợp lệ')
+        : null;
+      if (variant && !variantStock) {
+        throw new AdminOrderValidationError('Không tìm thấy tồn kho hợp lệ cho biến thể');
+      }
+      const availableStock = variant ? variantStock.value : productData.stock;
+
+      const inventoryKey = variant
+        ? `variant:${variantSource.type}:${requestedItem.productId}:${variantIdentifier.value}`
+        : `product:${requestedItem.productId}:${productData.stockPath}`;
+      const currentRequest = inventoryRequests.get(inventoryKey) || {
+        type: variant ? variantSource.type : 'product',
+        productId: requestedItem.productId,
+        variantId: variantSource.type === 'collection' && variant ? requestedVariantId : null,
+        variantIdentifier,
+        stockPath: variant ? 'stock' : productData.stockPath,
+        availableStock,
+        quantity: 0
+      };
+      currentRequest.quantity += requestedItem.quantity;
+      inventoryRequests.set(inventoryKey, currentRequest);
+
+      const snapshot = {
+        title: productData.title,
+        sku: getFirstAdminOrderString(variant?.sku, productData.sku),
+        image: productData.image
+      };
+      if (variant) {
+        snapshot.variant = {
+          color: variant.color || '',
+          size: variant.size || '',
+          classification: variant.classification || ''
+        };
+      }
+
+      resolvedItems.push({
+        productId: new ObjectId(requestedItem.productId),
+        variantId: variantSource.type === 'collection' && variant ? new ObjectId(requestedVariantId) : null,
+        productSnapshot: snapshot,
+        quantity: requestedItem.quantity,
+        unitPrice,
+        subtotal: unitPrice * requestedItem.quantity
+      });
+    }
+
+    for (const request of inventoryRequests.values()) {
+      if (request.quantity > request.availableStock) {
+        throw new AdminOrderValidationError('Số lượng yêu cầu vượt quá tồn kho hiện có');
+      }
+    }
+
+    const subtotal = resolvedItems.reduce((sum, item) => sum + item.subtotal, 0);
+    if (!Number.isFinite(subtotal) || subtotal < 0) {
+      throw new AdminOrderValidationError('Tạm tính đơn hàng không hợp lệ');
+    }
+
+    let paymentMethodId = null;
+    let paymentMethodSnapshot = null;
+    let paymentFee = 0;
+    if (body.paymentMethodId !== undefined && body.paymentMethodId !== null) {
+      const paymentMethod = await db.collection('payment_methods')
+        .findOne({ _id: new ObjectId(String(body.paymentMethodId)) });
+      if (!paymentMethod) {
+        throw new AdminOrderValidationError('Không tìm thấy phương thức thanh toán');
+      }
+      if (!isAdminPaymentMethodActive(paymentMethod)) {
+        throw new AdminOrderValidationError('Phương thức thanh toán hiện không hoạt động');
+      }
+      const paymentName = requireAdminOrderString(paymentMethod.name, 'Tên phương thức thanh toán không hợp lệ');
+      const paymentCode = requireAdminOrderString(paymentMethod.code, 'Mã phương thức thanh toán không hợp lệ').toUpperCase();
+      const paymentType = requireAdminOrderString(
+        paymentMethod.paymentType || paymentMethod.type,
+        'Loại phương thức thanh toán không hợp lệ'
+      );
+      paymentFee = getAdminOrderPaymentFee(paymentMethod, subtotal);
+      paymentMethodId = new ObjectId(String(body.paymentMethodId));
+      paymentMethodSnapshot = {
+        name: paymentName,
+        code: paymentCode,
+        paymentType,
+        paymentFee
+      };
+    }
+
+    const totalAmount = subtotal + paymentFee;
+    const now = new Date();
+    const baseOrder = {
+      _user: null,
+      customerEmail,
+      customerPhone,
+      status: 'PENDING',
+      notes,
+      items: resolvedItems,
+      shippingAddress,
+      shippingMethodId: null,
+      shippingMethodSnapshot: null,
+      shippingFee: 0,
+      shippingProvider: '',
+      trackingNumber: '',
+      estimatedDeliveryDate: null,
+      shippedAt: null,
+      deliveredAt: null,
+      paymentMethodId,
+      paymentMethodSnapshot,
+      paymentStatus: 'PENDING',
+      transactionId: '',
+      paymentProvider: '',
+      paymentFee,
+      paidAt: null,
+      refundedAmount: 0,
+      refundedAt: null,
+      subtotal,
+      discountAmount: 0,
+      taxAmount: 0,
+      couponCode: '',
+      couponDiscount: 0,
+      totalAmount,
+      currency: 'VND',
+      statusHistory: [{
+        status: 'PENDING',
+        updatedAt: now,
+        updatedBy: null,
+        note: 'Đơn hàng vừa được tạo'
+      }],
+      createdAt: now,
+      updatedAt: now
+    };
+
+    let createdOrder = null;
+    let insertedId = null;
+    for (let attempt = 0; attempt < ADMIN_ORDER_ID_MAX_ATTEMPTS; attempt += 1) {
+      const suffix = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+      const orderId = `CHE${Date.now()}${suffix}`;
+      const collision = await db.collection('orders').findOne({ orderId });
+      if (collision) continue;
+
+      const candidate = { orderId, ...baseOrder };
+      try {
+        const insertResult = await db.collection('orders').insertOne(candidate);
+        insertedId = insertResult.insertedId;
+        createdOrder = candidate;
+        break;
+      } catch (error) {
+        if (error?.code === 11000) continue;
+        throw error;
+      }
+    }
+
+    if (!createdOrder || !insertedId) {
+      throw new Error('ADMIN_ORDER_ID_GENERATION_EXHAUSTED');
+    }
+
+    for (const request of inventoryRequests.values()) {
+      let updateResult;
+      if (request.type === 'collection') {
+        updateResult = await db.collection('product_variants').updateOne(
+          { _id: new ObjectId(request.variantId) },
+          { $inc: { stock: -request.quantity } }
+        );
+      } else if (request.type === 'embedded') {
+        const identifier = request.variantIdentifier;
+        updateResult = await db.collection('products').updateOne(
+          { _id: new ObjectId(request.productId) },
+          { $inc: { 'variants.$[variant].stock': -request.quantity } },
+          { arrayFilters: [{ [`variant.${identifier.field}`]: identifier.rawValue }] }
+        );
+      } else {
+        updateResult = await db.collection('products').updateOne(
+          { _id: new ObjectId(request.productId) },
+          { $inc: { [request.stockPath]: -request.quantity } }
+        );
+      }
+      if (!updateResult?.matchedCount || !updateResult?.modifiedCount) {
+        throw new Error('ADMIN_ORDER_STOCK_UPDATE_FAILED');
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Thêm đơn hàng thành công',
+      data: formatOrder({ _id: insertedId, ...createdOrder })
+    });
+  } catch (error) {
+    if (error instanceof AdminOrderValidationError) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    console.error('Error creating admin order:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Không thể tạo đơn hàng. Vui lòng thử lại.'
+    });
+  }
+});
+
 // 4.1 GET /api/orders (List with composed search, filters and pagination)
 app.get('/api/orders', async (req, res) => {
   try {
@@ -2472,6 +2947,179 @@ app.get('/api/orders/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Không thể tải thông tin đơn hàng. Vui lòng thử lại.'
+    });
+  }
+});
+
+// 4.2.1 PATCH /api/admin/orders/:id (Limited safe edit; no items, money, payment or status changes)
+const ADMIN_ORDER_EDIT_ALLOWED_KEYS = new Set([
+  'notes',
+  'customerEmail',
+  'customerPhone',
+  'shippingAddress',
+  'shippingProvider',
+  'trackingNumber',
+  'estimatedDeliveryDate'
+]);
+const ADMIN_ORDER_ADDRESS_ALLOWED_KEYS = new Set([
+  'fullName', 'phone', 'address', 'ward', 'district', 'province'
+]);
+const ADMIN_ORDER_CUSTOMER_EDIT_KEYS = new Set([
+  'customerEmail', 'customerPhone', 'shippingAddress'
+]);
+const ADMIN_ORDER_FULFILLMENT_EDIT_KEYS = new Set([
+  'shippingProvider', 'trackingNumber', 'estimatedDeliveryDate'
+]);
+const ADMIN_ORDER_FULFILLMENT_EDIT_STATUSES = new Set([
+  'PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPING'
+]);
+
+function getAdminOrderEditStatus(order) {
+  const statusCode = normalizeOrderQueryValue(order?.status);
+  return Object.prototype.hasOwnProperty.call(ORDER_STATUS_MAP, statusCode) ? statusCode : '';
+}
+
+function hasOwn(object, key) {
+  return Object.prototype.hasOwnProperty.call(object, key);
+}
+
+function validateAdminOrderString(body, key) {
+  if (!hasOwn(body, key)) return null;
+  if (typeof body[key] !== 'string') return `${key} must be a string.`;
+  return null;
+}
+
+app.patch('/api/admin/orders/:id', async (req, res) => {
+  try {
+    if (!ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Order ID is invalid.' });
+    }
+
+    const body = req.body;
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return res.status(400).json({ success: false, message: 'Update payload must be an object.' });
+    }
+    const bodyKeys = Object.keys(body);
+    if (bodyKeys.length === 0) {
+      return res.status(400).json({ success: false, message: 'Update payload cannot be empty.' });
+    }
+    const unsupportedKeys = bodyKeys.filter(key => !ADMIN_ORDER_EDIT_ALLOWED_KEYS.has(key));
+    if (unsupportedKeys.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Unsupported order fields: ${unsupportedKeys.join(', ')}`
+      });
+    }
+
+    const orderObjectId = new ObjectId(req.params.id);
+    const ordersCollection = db.collection('orders');
+    const order = await ordersCollection.findOne({ _id: orderObjectId });
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found.' });
+    }
+
+    const statusCode = getAdminOrderEditStatus(order);
+    const forbiddenCustomerKeys = bodyKeys.filter(key => ADMIN_ORDER_CUSTOMER_EDIT_KEYS.has(key));
+    if (statusCode !== 'PENDING' && forbiddenCustomerKeys.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Customer and shipping address fields can only be edited for PENDING orders.'
+      });
+    }
+    const forbiddenFulfillmentKeys = bodyKeys.filter(key => ADMIN_ORDER_FULFILLMENT_EDIT_KEYS.has(key));
+    if (!ADMIN_ORDER_FULFILLMENT_EDIT_STATUSES.has(statusCode) && forbiddenFulfillmentKeys.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Fulfillment fields cannot be edited in the current order status.'
+      });
+    }
+
+    for (const key of ['notes', 'customerPhone', 'shippingProvider', 'trackingNumber']) {
+      const validationError = validateAdminOrderString(body, key);
+      if (validationError) {
+        return res.status(400).json({ success: false, message: validationError });
+      }
+    }
+    if (hasOwn(body, 'customerEmail')) {
+      if (typeof body.customerEmail !== 'string'
+        || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.customerEmail.trim())) {
+        return res.status(400).json({ success: false, message: 'Customer email is invalid.' });
+      }
+    }
+
+    if (hasOwn(body, 'shippingAddress')) {
+      const address = body.shippingAddress;
+      if (!address || typeof address !== 'object' || Array.isArray(address)) {
+        return res.status(400).json({ success: false, message: 'Shipping address is invalid.' });
+      }
+      const unsupportedAddressKeys = Object.keys(address)
+        .filter(key => !ADMIN_ORDER_ADDRESS_ALLOWED_KEYS.has(key));
+      if (unsupportedAddressKeys.length > 0) {
+        return res.status(400).json({ success: false, message: 'Shipping address contains unsupported fields.' });
+      }
+      if (typeof address.fullName !== 'string' || !address.fullName.trim()
+        || typeof address.phone !== 'string' || !address.phone.trim()
+        || typeof address.address !== 'string' || !address.address.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Shipping address requires fullName, phone and address.'
+        });
+      }
+      for (const key of ['ward', 'district', 'province']) {
+        if (hasOwn(address, key) && typeof address[key] !== 'string') {
+          return res.status(400).json({ success: false, message: `shippingAddress.${key} must be a string.` });
+        }
+      }
+    }
+
+    let parsedEstimatedDeliveryDate;
+    if (hasOwn(body, 'estimatedDeliveryDate')) {
+      if (body.estimatedDeliveryDate === null || body.estimatedDeliveryDate === '') {
+        parsedEstimatedDeliveryDate = null;
+      } else if (typeof body.estimatedDeliveryDate === 'string') {
+        const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(body.estimatedDeliveryDate);
+        if (!dateMatch) {
+          return res.status(400).json({ success: false, message: 'Estimated delivery date is invalid.' });
+        }
+        const year = Number(dateMatch[1]);
+        const month = Number(dateMatch[2]);
+        const day = Number(dateMatch[3]);
+        parsedEstimatedDeliveryDate = new Date(Date.UTC(year, month - 1, day));
+        if (parsedEstimatedDeliveryDate.getUTCFullYear() !== year
+          || parsedEstimatedDeliveryDate.getUTCMonth() !== month - 1
+          || parsedEstimatedDeliveryDate.getUTCDate() !== day) {
+          return res.status(400).json({ success: false, message: 'Estimated delivery date is invalid.' });
+        }
+      } else {
+        return res.status(400).json({ success: false, message: 'Estimated delivery date is invalid.' });
+      }
+    }
+
+    const updateFields = { updatedAt: new Date() };
+    for (const key of ['notes', 'customerEmail', 'customerPhone', 'shippingProvider', 'trackingNumber']) {
+      if (hasOwn(body, key)) updateFields[key] = body[key].trim();
+    }
+    if (hasOwn(body, 'shippingAddress')) {
+      updateFields.shippingAddress = Object.fromEntries(
+        Object.entries(body.shippingAddress).map(([key, value]) => [key, value.trim()])
+      );
+    }
+    if (hasOwn(body, 'estimatedDeliveryDate')) {
+      updateFields.estimatedDeliveryDate = parsedEstimatedDeliveryDate;
+    }
+
+    await ordersCollection.updateOne({ _id: orderObjectId }, { $set: updateFields });
+    const updatedOrder = await ordersCollection.findOne({ _id: orderObjectId });
+    return res.json({
+      success: true,
+      message: 'Order updated successfully.',
+      data: formatOrder(updatedOrder)
+    });
+  } catch (error) {
+    console.error('Error in PATCH /api/admin/orders/:id:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Unable to update order. Please try again.'
     });
   }
 });

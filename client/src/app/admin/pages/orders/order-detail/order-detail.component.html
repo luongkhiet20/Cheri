@@ -4,20 +4,24 @@
   <div class="detail-header" *ngIf="!isLoading && !isNotFound && order">
     <div class="detail-header-info">
       <div class="header-badges">
-        <span class="order-code-badge">{{ order.orderId || order.code }}</span>
+        <span class="order-code-badge">{{ order.orderId || order.code || '—' }}</span>
         <app-admin-status-badge
-          [label]="order.statusText || order.status"
+          [label]="order.statusText || order.status || '—'"
           [variant]="order.statusVariant || 'neutral'"
         ></app-admin-status-badge>
         <span *ngIf="order.type" class="type-badge">{{ order.type }}</span>
       </div>
-      <h1 class="detail-title">Chi tiết đơn hàng {{ order.orderId || order.code }}</h1>
+      <h1 class="detail-title">Chi tiết đơn hàng {{ order.orderId || order.code || '—' }}</h1>
       <p class="detail-subtitle">
-        Mã MongoDB (<code>_id</code>): <code>{{ order._id }}</code> • Ngày đặt: <span>{{ order.dateAdded | date:'dd/MM/yyyy HH:mm' }}</span>
+        Ngày đặt:
+        <span>{{ order.dateAdded ? (order.dateAdded | date:'dd/MM/yyyy HH:mm') : '—' }}</span>
       </p>
     </div>
 
     <div class="detail-header-actions">
+      <button type="button" class="btn btn-primary" (click)="onEdit()" id="btn-edit-order">
+        Chỉnh sửa
+      </button>
       <button type="button" class="btn btn-outline" (click)="onBack()" id="btn-back-orders">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
@@ -60,7 +64,7 @@
   <div *ngIf="isLoading" class="state-card loading-state">
     <div class="spinner"></div>
     <p class="state-title">Đang tải thông tin đơn hàng...</p>
-    <p class="state-desc">Đang truy vấn document từ MongoDB Atlas theo _id: {{ orderId }}</p>
+    <p class="state-desc">Vui lòng chờ trong giây lát.</p>
   </div>
 
   <!-- Not Found State -->
@@ -74,7 +78,7 @@
       </svg>
     </div>
     <h2 class="state-title">Không tìm thấy đơn hàng</h2>
-    <p class="state-desc">Đơn hàng có mã <code>{{ orderId }}</code> không tồn tại trong collection <code>orders</code> của MongoDB Atlas.</p>
+    <p class="state-desc">Không tìm thấy đơn hàng có mã <code>{{ orderId }}</code>.</p>
     <button type="button" class="btn btn-outline" (click)="onBack()">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
         stroke-linecap="round" stroke-linejoin="round" class="btn-icon" aria-hidden="true">
@@ -103,11 +107,12 @@
               Quy trình & Cập nhật trạng thái đơn hàng
             </h2>
             <p class="card-head-desc">
-              Trạng thái hiện tại: <strong>{{ order.statusText || order.status }}</strong> (<code>{{ order.statusCode }}</code>)
+              Trạng thái hiện tại: <strong>{{ order.statusText || order.status || '—' }}</strong>
+              (<code>{{ order.statusCode || '—' }}</code>)
             </p>
           </div>
           <app-admin-status-badge
-            [label]="order.statusText || order.status"
+            [label]="order.statusText || order.status || '—'"
             [variant]="order.statusVariant || 'neutral'"
           ></app-admin-status-badge>
         </div>
@@ -167,13 +172,13 @@
               id="btn-submit-status"
             >
               <span *ngIf="isUpdatingStatus" class="spinner-inline"></span>
-              <span>{{ isUpdatingStatus ? 'Đang lưu vào MongoDB...' : 'Xác nhận đổi trạng thái' }}</span>
+              <span>{{ isUpdatingStatus ? 'Đang cập nhật...' : 'Xác nhận đổi trạng thái' }}</span>
             </button>
           </div>
         </div>
       </div>
 
-      <!-- SECTION 2: SẢN PHẨM TRONG ĐƠN HÀNG (cart.items) -->
+      <!-- SECTION 2: SẢN PHẨM TRONG ĐƠN HÀNG -->
       <div class="card items-card">
         <div class="card-head">
           <h2 class="card-head-title">
@@ -185,7 +190,9 @@
             </svg>
             Danh sách sản phẩm trong đơn hàng
           </h2>
-          <span class="badge badge-neutral">{{ order.cart?.items?.length || 0 }} loại sản phẩm • Tổng {{ order.cart?.totalQty || 0 }} món</span>
+          <span class="badge badge-neutral">
+            {{ getOrderItems().length }} loại sản phẩm • Tổng {{ getTotalQuantity() === null ? '—' : getTotalQuantity() }} món
+          </span>
         </div>
 
         <div class="table-responsive">
@@ -199,7 +206,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let it of order.cart?.items">
+              <tr *ngFor="let it of getOrderItems()">
                 <td class="td-product">
                   <div class="item-info-wrap">
                     <div class="item-thumb-box">
@@ -219,8 +226,8 @@
                     </div>
                     <div class="item-details">
                       <div class="item-title">{{ getItemTitle(it) }}</div>
-                      <div class="item-sku" *ngIf="it.id || it.item?._id">
-                        Mã SP: <code>{{ it.id || it.item?._id }}</code>
+                      <div class="item-sku" *ngIf="getItemSku(it)">
+                        SKU: <code>{{ getItemSku(it) }}</code>
                       </div>
                       <div class="item-variants" *ngIf="getItemVariants(it).length > 0">
                         <span *ngFor="let v of getItemVariants(it)" class="variant-tag">{{ v }}</span>
@@ -229,16 +236,25 @@
                   </div>
                 </td>
                 <td class="td-price text-right font-medium">
-                  {{ it.price | number:'1.0-0' }} {{ order.currency || 'đ' }}
+                  <ng-container *ngIf="getItemUnitPrice(it) !== null; else missingUnitPrice">
+                    {{ getItemUnitPrice(it) | number:'1.0-0' }} {{ order.currency || '' }}
+                  </ng-container>
+                  <ng-template #missingUnitPrice>—</ng-template>
                 </td>
                 <td class="td-qty text-center">
-                  <span class="qty-bubble">x{{ it.qty }}</span>
+                  <span class="qty-bubble">
+                    <ng-container *ngIf="getItemQuantity(it) !== null; else missingQuantity">x{{ getItemQuantity(it) }}</ng-container>
+                    <ng-template #missingQuantity>—</ng-template>
+                  </span>
                 </td>
                 <td class="td-total text-right font-bold color-primary">
-                  {{ (it.price * it.qty) | number:'1.0-0' }} {{ order.currency || 'đ' }}
+                  <ng-container *ngIf="getItemSubtotal(it) !== null; else missingSubtotal">
+                    {{ getItemSubtotal(it) | number:'1.0-0' }} {{ order.currency || '' }}
+                  </ng-container>
+                  <ng-template #missingSubtotal>—</ng-template>
                 </td>
               </tr>
-              <tr *ngIf="!order.cart?.items || order.cart?.items.length === 0">
+              <tr *ngIf="getOrderItems().length === 0">
                 <td colspan="4" class="text-center text-muted py-4">Đơn hàng không có sản phẩm nào</td>
               </tr>
             </tbody>
@@ -246,7 +262,7 @@
         </div>
       </div>
 
-      <!-- SECTION 3: ĐỊA CHỈ GIAO HÀNG & THANH TOÁN (addresses) -->
+      <!-- SECTION 3: ĐỊA CHỈ GIAO HÀNG -->
       <div class="card info-card">
         <div class="card-head">
           <h2 class="card-head-title">
@@ -255,14 +271,14 @@
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
               <circle cx="12" cy="10" r="3"></circle>
             </svg>
-            Địa chỉ nhận hàng (addresses)
+            Địa chỉ nhận hàng
           </h2>
         </div>
 
-        <div *ngIf="order.addresses && order.addresses.length > 0" class="addresses-grid">
-          <div *ngFor="let addr of order.addresses; let idx = index" class="address-box">
-            <div class="address-type-tag">Địa chỉ #{{ idx + 1 }}</div>
-            <div class="address-name font-semibold">{{ addr.name || order.customer || 'Người nhận' }}</div>
+        <div *ngIf="getShippingAddresses().length > 0; else noShippingAddress" class="addresses-grid">
+          <div *ngFor="let addr of getShippingAddresses(); let idx = index" class="address-box">
+            <div class="address-type-tag">{{ idx === 0 ? 'Địa chỉ giao hàng' : 'Địa chỉ #' + (idx + 1) }}</div>
+            <div class="address-name font-semibold">{{ addr.fullName || addr.name || order.customer || '—' }}</div>
             <div class="address-phone" *ngIf="addr.phone || order.phone">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
@@ -270,6 +286,10 @@
               <span>{{ addr.phone || order.phone }}</span>
             </div>
             <div class="address-lines">
+              <p *ngIf="addr.address">{{ addr.address }}</p>
+              <p *ngIf="addr.ward">{{ addr.ward }}</p>
+              <p *ngIf="addr.district">{{ addr.district }}</p>
+              <p *ngIf="addr.province">{{ addr.province }}</p>
               <p *ngIf="addr.line1">{{ addr.line1 }}</p>
               <p *ngIf="addr.line2">{{ addr.line2 }}</p>
               <p *ngIf="addr.city || addr.country">
@@ -279,12 +299,14 @@
             </div>
           </div>
         </div>
-        <div *ngIf="!order.addresses || order.addresses.length === 0" class="text-muted p-3">
+        <ng-template #noShippingAddress>
+        <div class="text-muted p-3">
           Không có thông tin địa chỉ trong đơn hàng.
         </div>
+        </ng-template>
       </div>
 
-      <!-- SECTION 4: LỊCH SỬ TRẠNG THÁI (statusHistory) -->
+      <!-- SECTION 4: LỊCH SỬ TRẠNG THÁI -->
       <div class="card info-card" *ngIf="order.statusHistory && order.statusHistory.length > 0">
         <div class="card-head">
           <h2 class="card-head-title">
@@ -293,7 +315,7 @@
               <circle cx="12" cy="12" r="10"></circle>
               <polyline points="12 6 12 12 16 14"></polyline>
             </svg>
-            Lịch sử cập nhật trạng thái (statusHistory)
+            Lịch sử cập nhật trạng thái
           </h2>
         </div>
 
@@ -302,11 +324,13 @@
             <div class="timeline-dot"></div>
             <div class="timeline-body">
               <div class="timeline-header">
-                <span class="timeline-status font-bold">{{ h.status }}</span>
+                <span class="timeline-status font-bold">{{ getStatusLabel(h.status) }}</span>
                 <span class="timeline-time">{{ h.updatedAt | date:'dd/MM/yyyy HH:mm:ss' }}</span>
               </div>
               <div class="timeline-note" *ngIf="h.note">{{ h.note }}</div>
-              <div class="timeline-user" *ngIf="h.updatedBy">Mã người thực hiện: <code>{{ h.updatedBy }}</code></div>
+              <div class="timeline-user" *ngIf="getHistoryUpdatedBy(h.updatedBy) as updatedBy">
+                Người cập nhật: <span>{{ updatedBy }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -332,42 +356,137 @@
 
         <div class="summary-rows">
           <div class="summary-row">
-            <span class="summary-label">Tổng số lượng (totalQty):</span>
-            <span class="summary-val font-semibold">{{ order.cart?.totalQty || 0 }} sản phẩm</span>
+            <span class="summary-label">Tổng số lượng:</span>
+            <span class="summary-val font-semibold">{{ getTotalQuantityLabel() }} sản phẩm</span>
           </div>
 
-          <div class="summary-row">
-            <span class="summary-label">Phí vận chuyển (shippingCost):</span>
-            <span class="summary-val">
-              {{ (order.cart?.shippingCost || 0) > 0 ? ((order.cart?.shippingCost | number:'1.0-0') + ' ' + (order.currency || 'đ')) : 'Miễn phí' }}
+          <div class="summary-row" *ngIf="order.subtotal !== null && order.subtotal !== undefined">
+            <span class="summary-label">Tiền hàng:</span>
+            <span class="summary-val">{{ order.subtotal | number:'1.0-0' }} {{ order.currency || '' }}</span>
+          </div>
+
+          <div class="summary-row" *ngIf="order.discountAmount !== null && order.discountAmount !== undefined">
+            <span class="summary-label">Giảm giá:</span>
+            <span class="summary-val">{{ order.discountAmount | number:'1.0-0' }} {{ order.currency || '' }}</span>
+          </div>
+
+          <div class="summary-row" *ngIf="order.couponDiscount !== null && order.couponDiscount !== undefined">
+            <span class="summary-label">Giảm giá mã ưu đãi<span *ngIf="order.couponCode"> ({{ order.couponCode }})</span>:</span>
+            <span class="summary-val">{{ order.couponDiscount | number:'1.0-0' }} {{ order.currency || '' }}</span>
+          </div>
+
+          <div class="summary-row" *ngIf="order.taxAmount !== null && order.taxAmount !== undefined">
+            <span class="summary-label">Thuế:</span>
+            <span class="summary-val">{{ order.taxAmount | number:'1.0-0' }} {{ order.currency || '' }}</span>
+          </div>
+
+          <div class="summary-row" *ngIf="order.shippingFee !== null && order.shippingFee !== undefined">
+            <span class="summary-label">Phí vận chuyển:</span>
+            <span class="summary-val">{{ order.shippingFee | number:'1.0-0' }} {{ order.currency || '' }}</span>
+          </div>
+
+          <div class="summary-row" *ngIf="order.paymentFee !== null && order.paymentFee !== undefined">
+            <span class="summary-label">Phí thanh toán:</span>
+            <span class="summary-val">{{ order.paymentFee | number:'1.0-0' }} {{ order.currency || '' }}</span>
+          </div>
+
+          <div class="summary-row" *ngIf="order.shippingMethodSnapshot?.name || order.shippingMethodSnapshot?.code || order.cart?.shippingType">
+            <span class="summary-label">Phương thức vận chuyển:</span>
+            <span class="summary-val badge badge-neutral">
+              {{ order.shippingMethodSnapshot?.name || order.shippingMethodSnapshot?.code || order.cart?.shippingType }}
             </span>
           </div>
 
-          <div class="summary-row" *ngIf="order.cart?.shippingType">
-            <span class="summary-label">Loại vận chuyển (shippingType):</span>
-            <span class="summary-val badge badge-neutral">{{ order.cart?.shippingType }}</span>
+          <div class="summary-row" *ngIf="order.shippingMethodSnapshot?.estimatedDeliveryTime">
+            <span class="summary-label">Thời gian giao dự kiến:</span>
+            <span class="summary-val">{{ order.shippingMethodSnapshot.estimatedDeliveryTime }}</span>
           </div>
 
-          <div class="summary-row" *ngIf="order.cart?.shippingLimit !== undefined">
-            <span class="summary-label">Ngưỡng Freeship (shippingLimit):</span>
-            <span class="summary-val">{{ order.cart?.shippingLimit | number:'1.0-0' }} {{ order.currency || 'đ' }}</span>
+          <div class="summary-row" *ngIf="order.shippingProvider">
+            <span class="summary-label">Đơn vị vận chuyển:</span>
+            <span class="summary-val">{{ order.shippingProvider }}</span>
           </div>
 
-          <div class="summary-row" *ngIf="order.payment">
+          <div class="summary-row" *ngIf="order.trackingNumber">
+            <span class="summary-label">Mã vận đơn:</span>
+            <span class="summary-val font-medium">{{ order.trackingNumber }}</span>
+          </div>
+
+          <div class="summary-row" *ngIf="order.estimatedDeliveryDate">
+            <span class="summary-label">Ngày giao dự kiến:</span>
+            <span class="summary-val">{{ order.estimatedDeliveryDate | date:'dd/MM/yyyy HH:mm' }}</span>
+          </div>
+
+          <div class="summary-row" *ngIf="order.shippedAt">
+            <span class="summary-label">Ngày xuất kho:</span>
+            <span class="summary-val">{{ order.shippedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+          </div>
+
+          <div class="summary-row" *ngIf="order.deliveredAt">
+            <span class="summary-label">Ngày giao thành công:</span>
+            <span class="summary-val">{{ order.deliveredAt | date:'dd/MM/yyyy HH:mm' }}</span>
+          </div>
+
+          <div class="summary-row" *ngIf="order.cart?.shippingLimit !== undefined && order.cart?.shippingLimit !== null">
+            <span class="summary-label">Điều kiện miễn phí vận chuyển:</span>
+            <span class="summary-val">{{ order.cart.shippingLimit | number:'1.0-0' }} {{ order.currency || '' }}</span>
+          </div>
+
+          <div class="summary-row">
             <span class="summary-label">Hình thức thanh toán:</span>
-            <span class="summary-val font-medium">{{ order.payment }}</span>
+            <span class="summary-val font-medium">{{ order.payment || '—' }}</span>
+          </div>
+
+          <div class="summary-row" *ngIf="order.paymentStatus">
+            <span class="summary-label">Trạng thái thanh toán:</span>
+            <span class="summary-val">{{ order.paymentStatus }}</span>
+          </div>
+
+          <div class="summary-row" *ngIf="order.paymentProvider">
+            <span class="summary-label">Nhà cung cấp thanh toán:</span>
+            <span class="summary-val">{{ order.paymentProvider }}</span>
+          </div>
+
+          <div class="summary-row" *ngIf="order.transactionId">
+            <span class="summary-label">Mã giao dịch:</span>
+            <span class="summary-val">{{ order.transactionId }}</span>
+          </div>
+
+          <div class="summary-row" *ngIf="order.paidAt">
+            <span class="summary-label">Thời gian thanh toán:</span>
+            <span class="summary-val">{{ order.paidAt | date:'dd/MM/yyyy HH:mm' }}</span>
+          </div>
+
+          <div class="summary-row" *ngIf="order.refundedAmount !== null && order.refundedAmount !== undefined">
+            <span class="summary-label">Số tiền đã hoàn:</span>
+            <span class="summary-val">{{ order.refundedAmount | number:'1.0-0' }} {{ order.currency || '' }}</span>
+          </div>
+
+          <div class="summary-row" *ngIf="order.refundedAt">
+            <span class="summary-label">Thời gian hoàn tiền:</span>
+            <span class="summary-val">{{ order.refundedAt | date:'dd/MM/yyyy HH:mm' }}</span>
           </div>
 
           <div class="summary-divider"></div>
 
           <div class="summary-row total-row">
-            <span class="total-label">Tổng thanh toán (totalPrice):</span>
-            <span class="total-amount">{{ (order.total || order.amount || 0) | number:'1.0-0' }} {{ order.currency || 'đ' }}</span>
+            <span class="total-label">Tổng thanh toán:</span>
+            <span class="total-amount">
+              <ng-container *ngIf="order.totalAmount !== null && order.totalAmount !== undefined; else legacyTotal">
+                {{ order.totalAmount | number:'1.0-0' }} {{ order.currency || '' }}
+              </ng-container>
+              <ng-template #legacyTotal>
+                <ng-container *ngIf="order.total !== null && order.total !== undefined; else noTotal">
+                  {{ order.total | number:'1.0-0' }} {{ order.currency || '' }}
+                </ng-container>
+              </ng-template>
+              <ng-template #noTotal>—</ng-template>
+            </span>
           </div>
         </div>
       </div>
 
-      <!-- CARD 2: THÔNG TIN KHÁCH HÀNG (customerEmail) -->
+      <!-- CARD 2: THÔNG TIN KHÁCH HÀNG -->
       <div class="card info-card">
         <div class="card-head">
           <h3 class="card-head-title">
@@ -383,11 +502,11 @@
         <div class="info-list">
           <div class="info-row">
             <span class="info-label">Tên khách hàng:</span>
-            <span class="info-value font-medium">{{ order.customer || 'Khách vãng lai' }}</span>
+            <span class="info-value font-medium">{{ order.customer || '—' }}</span>
           </div>
           <div class="info-row">
-            <span class="info-label">Email khách hàng (customerEmail):</span>
-            <span class="info-value text-break">{{ order.customerEmail || 'Chưa cung cấp' }}</span>
+            <span class="info-label">Email khách hàng:</span>
+            <span class="info-value text-break">{{ order.customerEmail || '—' }}</span>
           </div>
           <div class="info-row" *ngIf="order.phone">
             <span class="info-label">Số điện thoại:</span>
@@ -396,7 +515,7 @@
         </div>
       </div>
 
-      <!-- CARD 3: THÔNG TIN HỆ THỐNG & OUTCOME -->
+      <!-- CARD 3: THÔNG TIN BỔ SUNG -->
       <div class="card info-card">
         <div class="card-head">
           <h3 class="card-head-title">
@@ -411,34 +530,30 @@
               <line x1="17" y1="17" x2="22" y2="17"></line>
               <line x1="17" y1="7" x2="22" y2="7"></line>
             </svg>
-            Dữ liệu hệ thống
+            Thông tin bổ sung
           </h3>
         </div>
 
         <div class="info-list">
           <div class="info-row">
-            <span class="info-label">Mã MongoDB (_id):</span>
-            <code class="info-code">{{ order._id }}</code>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Mã đơn hàng (orderId):</span>
-            <span class="info-value font-semibold">{{ order.orderId || order.code }}</span>
+            <span class="info-label">Mã đơn hàng:</span>
+            <span class="info-value font-semibold">{{ order.orderId || order.code || '—' }}</span>
           </div>
           <div class="info-row" *ngIf="order.type">
-            <span class="info-label">Loại đơn (type):</span>
+            <span class="info-label">Loại đơn:</span>
             <span class="info-value">{{ order.type }}</span>
           </div>
-          <div class="info-row">
-            <span class="info-label">Tiền tệ (currency):</span>
-            <span class="info-value">{{ order.currency || 'VND' }}</span>
+          <div class="info-row" *ngIf="order.currency">
+            <span class="info-label">Tiền tệ:</span>
+            <span class="info-value">{{ order.currency }}</span>
           </div>
           <div class="info-row" *ngIf="order.notes">
-            <span class="info-label">Ghi chú (notes):</span>
+            <span class="info-label">Ghi chú:</span>
             <span class="info-value">{{ order.notes }}</span>
           </div>
-          <div class="info-row" *ngIf="order.outcome && order.outcome.seller_message">
-            <span class="info-label">Outcome (seller_message):</span>
-            <code class="info-code">{{ order.outcome.seller_message }}</code>
+          <div class="info-row" *ngIf="getLegacySellerMessage() !== null">
+            <span class="info-label">Thông tin thanh toán từ hệ thống cũ:</span>
+            <code class="info-code">{{ getLegacySellerMessage() }}</code>
           </div>
         </div>
       </div>

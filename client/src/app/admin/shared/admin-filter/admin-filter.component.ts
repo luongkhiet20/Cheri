@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, OnInit, SimpleChanges } from '@angular/core';
 import { FilterField } from '../models/admin-table.models';
 
 export interface ActiveFilter {
@@ -14,7 +14,7 @@ export interface ActiveFilter {
   templateUrl: './admin-filter.component.html',
   styleUrls: ['./admin-filter.component.css']
 })
-export class AdminFilterComponent implements OnInit {
+export class AdminFilterComponent implements OnInit, OnChanges {
   @Input() fields: FilterField[] = [];
   @Output() filterChange = new EventEmitter<Record<string, any>>();
   @Output() filterReset = new EventEmitter<void>();
@@ -24,7 +24,11 @@ export class AdminFilterComponent implements OnInit {
   activeFilters: ActiveFilter[] = [];
 
   ngOnInit(): void {
-    this.fields.forEach(f => this.values[f.key] = '');
+    this.syncValuesFromFields();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['fields']) this.syncValuesFromFields();
   }
 
   get activeCount(): number { return this.activeFilters.length; }
@@ -65,5 +69,21 @@ export class AdminFilterComponent implements OnInit {
         const opt = f.options?.find(o => String(o.value) === String(val));
         return { key: f.key, label: f.label, value: val, displayValue: opt ? opt.label : String(val) };
       });
+  }
+
+  private syncValuesFromFields(): void {
+    const fieldKeys = new Set(this.fields.map(field => field.key));
+    Object.keys(this.values).forEach(key => {
+      if (!fieldKeys.has(key)) delete this.values[key];
+    });
+
+    this.fields.forEach(field => {
+      if (Object.prototype.hasOwnProperty.call(field, 'value')) {
+        this.values[field.key] = field.value ?? '';
+      } else if (!Object.prototype.hasOwnProperty.call(this.values, field.key)) {
+        this.values[field.key] = '';
+      }
+    });
+    this.buildActiveFilters();
   }
 }

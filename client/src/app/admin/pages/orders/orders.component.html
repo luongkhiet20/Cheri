@@ -4,7 +4,7 @@
       <h1 class="page-title">Quản lý đơn hàng</h1>
     </div>
     <div class="page-actions">
-      <button class="btn btn-primary" id="btn-add-orders">
+      <button class="btn btn-secondary" id="btn-export-orders">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
           <polyline points="7 10 12 15 17 10"></polyline>
@@ -12,13 +12,25 @@
         </svg>
         Xuất báo cáo
       </button>
+      <button class="btn btn-primary" id="btn-add-orders" type="button" (click)="onAddOrder()">
+        <span aria-hidden="true">+</span>
+        Thêm đơn hàng
+      </button>
     </div>
   </div>
 
-  <app-admin-toolbar searchPlaceholder="Tìm kiếm..." [filterFields]="filterFields" [selectable]="true"
+  <div *ngIf="successMessage" class="alert-box alert-success mb-3" role="alert">
+    <div class="alert-content">{{ successMessage }}</div>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert-box alert-error mb-3" role="alert">
+    <div class="alert-content">{{ errorMessage }}</div>
+  </div>
+
+  <app-admin-toolbar searchPlaceholder="Tìm kiếm..." [searchValue]="searchTerm" [filterFields]="filterFields" [selectable]="true"
     [allSelected]="allSelected" [indeterminate]="isIndeterminate" [selectedCount]="selectedCount"
     [showDeleteSelected]="true" [total]="displayTotal" [isLoading]="isLoading" (searchChange)="onSearch($event)"
-    (filterChange)="onFilter($event)" (refresh)="onRefresh()" (selectAllChange)="onToolbarSelectAll()"
+    (filterChange)="onFilter($event)" (filterReset)="onFilterReset()" (refresh)="onRefresh()" (selectAllChange)="onToolbarSelectAll()"
     (deleteSelected)="onDeleteSelected()"></app-admin-toolbar>
 
   <app-admin-table [columns]="columns" [data]="data" [loading]="isLoading" [actions]="actions" [pagination]="pagination"

@@ -30,6 +30,7 @@ import { ProductCsvModalComponent } from './pages/products/product-csv-modal/pro
 import { CategoriesComponent } from './pages/categories/categories.component';
 import { CategoryFormComponent } from './pages/categories/category-form/category-form.component';
 import { OrdersComponent } from './pages/orders/orders.component';
+import { OrderFormComponent } from './pages/orders/order-form/order-form.component';
 import { OrderDetailComponent } from './pages/orders/order-detail/order-detail.component';
 import { PaymentMethodsComponent } from './pages/payment-methods/payment-methods.component';
 import { PaymentMethodFormComponent } from './pages/payment-methods/payment-method-form/payment-method-form.component';
@@ -63,6 +64,8 @@ const routes: Routes = [
       { path: 'categories/add', component: CategoryFormComponent },
       { path: 'categories/:id/edit', component: CategoryFormComponent },
       { path: 'orders', component: OrdersComponent },
+      { path: 'orders/add', component: OrderFormComponent },
+      { path: 'orders/:id/edit', component: OrderFormComponent },
       { path: 'orders/:id', component: OrderDetailComponent },
       { path: 'payment-methods', component: PaymentMethodsComponent },
       { path: 'payment-methods/add', component: PaymentMethodFormComponent },
@@ -115,6 +118,7 @@ const routes: Routes = [
     CategoriesComponent,
     CategoryFormComponent,
     OrdersComponent,
+    OrderFormComponent,
     OrderDetailComponent,
     PaymentMethodsComponent,
     PaymentMethodFormComponent,

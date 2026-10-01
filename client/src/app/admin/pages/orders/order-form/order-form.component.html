@@ -1,0 +1,168 @@
+<div class="page-content">
+  <div class="page-top">
+    <div>
+      <h1 class="page-title">{{ isEditMode ? 'Chỉnh sửa đơn hàng' : 'Thêm đơn hàng' }}</h1>
+      <p class="page-subtitle">
+        {{ isEditMode ? 'Chỉ cập nhật các trường an toàn theo trạng thái hiện tại.' : 'Tạo đơn khách vãng lai từ dữ liệu sản phẩm hiện có.' }}
+      </p>
+    </div>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert-box alert-error mb-3" role="alert">
+    <div class="alert-content">{{ errorMessage }}</div>
+  </div>
+
+  <div *ngIf="isLoading" class="form-loading">Đang tải dữ liệu biểu mẫu...</div>
+
+  <form *ngIf="!isLoading && (!isEditMode || order)" class="order-form" (ngSubmit)="onSubmit()" #orderForm="ngForm" novalidate>
+    <section *ngIf="isEditMode" class="form-section edit-summary">
+      <h2>Thông tin chỉ đọc</h2>
+      <div class="summary-grid">
+        <div><span>Mã đơn</span><strong>{{ order.orderId || order.code || '—' }}</strong></div>
+        <div><span>Trạng thái</span><strong>{{ order.statusText || order.status || '—' }}</strong></div>
+        <div><span>Thanh toán</span><strong>{{ order.payment || order.paymentMethodName || '—' }}</strong></div>
+        <div><span>Tổng tiền</span><strong>{{ (order.total || order.totalAmount || 0) | currency:'VND':'symbol':'1.0-0' }}</strong></div>
+      </div>
+      <div class="readonly-items">
+        <strong>Sản phẩm</strong>
+        <div *ngFor="let item of order.items">
+          {{ item.productSnapshot?.title || item.item?.title || item.title || 'Sản phẩm' }}
+          × {{ item.quantity || 0 }}
+        </div>
+      </div>
+    </section>
+
+    <section class="form-section">
+      <h2>Thông tin khách hàng</h2>
+      <div class="form-grid">
+        <label>
+          Email <span class="required">*</span>
+          <input type="email" name="customerEmail" [(ngModel)]="customerEmail"
+            [required]="!isEditMode || canEditCustomerAddress" [disabled]="isEditMode && !canEditCustomerAddress" autocomplete="email">
+        </label>
+        <label>
+          Số điện thoại liên hệ
+          <input type="tel" name="customerPhone" [(ngModel)]="customerPhone"
+            [disabled]="isEditMode && !canEditCustomerAddress" autocomplete="tel">
+        </label>
+      </div>
+    </section>
+
+    <section class="form-section">
+      <h2>Địa chỉ giao hàng</h2>
+      <div class="form-grid">
+        <label>
+          Họ tên người nhận <span class="required">*</span>
+          <input type="text" id="fullName" name="fullName" [(ngModel)]="fullName"
+            [required]="!isEditMode || canEditCustomerAddress" [disabled]="isEditMode && !canEditCustomerAddress">
+        </label>
+        <label>
+          Số điện thoại người nhận <span class="required">*</span>
+          <input type="tel" id="shippingPhone" name="shippingPhone" [(ngModel)]="shippingPhone"
+            [required]="!isEditMode || canEditCustomerAddress" [disabled]="isEditMode && !canEditCustomerAddress">
+        </label>
+        <label class="full-width">
+          Địa chỉ <span class="required">*</span>
+          <input type="text" id="shippingAddress" name="shippingAddress" [(ngModel)]="shippingAddress"
+            [required]="!isEditMode || canEditCustomerAddress" [disabled]="isEditMode && !canEditCustomerAddress">
+        </label>
+        <label>
+          Phường/Xã
+          <input type="text" name="ward" [(ngModel)]="ward" [disabled]="isEditMode && !canEditCustomerAddress">
+        </label>
+        <label>
+          Quận/Huyện
+          <input type="text" name="district" [(ngModel)]="district" [disabled]="isEditMode && !canEditCustomerAddress">
+        </label>
+        <label>
+          Tỉnh/Thành phố
+          <input type="text" name="province" [(ngModel)]="province" [disabled]="isEditMode && !canEditCustomerAddress">
+        </label>
+      </div>
+    </section>
+
+    <section *ngIf="!isEditMode" class="form-section">
+      <div class="section-heading">
+        <h2>Sản phẩm</h2>
+        <button type="button" class="btn btn-secondary" (click)="addItem()">+ Thêm sản phẩm</button>
+      </div>
+
+      <div class="order-item" *ngFor="let item of items; let i = index; trackBy: trackByClientId">
+        <label>
+          Sản phẩm <span class="required">*</span>
+          <select [name]="'productId-' + item.clientId" [(ngModel)]="item.productId"
+            (ngModelChange)="onProductChange(item)" required>
+            <option value="">Chọn sản phẩm</option>
+            <option *ngFor="let product of products" [value]="product._id || product.id">
+              {{ productLabel(product) }}
+            </option>
+          </select>
+        </label>
+
+        <label *ngIf="item.variantRequired || item.isLoadingVariants">
+          Biến thể <span *ngIf="item.variantRequired" class="required">*</span>
+          <select [name]="'variantId-' + item.clientId" [(ngModel)]="item.variantId"
+            [required]="item.variantRequired" [disabled]="item.isLoadingVariants">
+            <option [ngValue]="null">{{ item.isLoadingVariants ? 'Đang tải...' : 'Chọn biến thể' }}</option>
+            <option *ngFor="let variant of item.variants" [value]="variant._id || variant.id || variant.sku">
+              {{ variantLabel(variant) }}
+            </option>
+          </select>
+        </label>
+
+        <label>
+          Số lượng <span class="required">*</span>
+          <input type="number" [name]="'quantity-' + item.clientId" [(ngModel)]="item.quantity" min="1" step="1" required>
+        </label>
+
+        <button type="button" class="btn btn-danger remove-item" (click)="removeItem(i)">Xóa dòng</button>
+      </div>
+
+      <p *ngIf="items.length === 0" class="empty-items">Chưa có sản phẩm. Hãy thêm ít nhất một sản phẩm.</p>
+    </section>
+
+    <section *ngIf="isEditMode" class="form-section">
+      <h2>Thông tin xử lý giao hàng</h2>
+      <div class="form-grid">
+        <label>
+          Đơn vị vận chuyển
+          <input type="text" name="shippingProvider" [(ngModel)]="shippingProvider" [disabled]="!canEditFulfillment">
+        </label>
+        <label>
+          Mã vận đơn
+          <input type="text" name="trackingNumber" [(ngModel)]="trackingNumber" [disabled]="!canEditFulfillment">
+        </label>
+        <label>
+          Ngày giao dự kiến
+          <input type="date" name="estimatedDeliveryDate" [(ngModel)]="estimatedDeliveryDate" [disabled]="!canEditFulfillment">
+        </label>
+      </div>
+    </section>
+
+    <section class="form-section">
+      <h2>{{ isEditMode ? 'Ghi chú' : 'Thanh toán và ghi chú' }}</h2>
+      <div class="form-grid">
+        <label *ngIf="!isEditMode">
+          Phương thức thanh toán
+          <select name="paymentMethodId" [(ngModel)]="paymentMethodId">
+            <option [ngValue]="null">Không chọn</option>
+            <option *ngFor="let method of paymentMethods" [value]="method._id || method.id">
+              {{ method.name || method.code }}
+            </option>
+          </select>
+        </label>
+        <label class="full-width">
+          Ghi chú
+          <textarea name="notes" [(ngModel)]="notes" rows="3"></textarea>
+        </label>
+      </div>
+    </section>
+
+    <div class="form-actions">
+      <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="isSubmitting">Hủy</button>
+      <button type="submit" class="btn btn-primary" [disabled]="isSubmitting || (!isEditMode && items.length === 0)">
+        {{ isSubmitting ? (isEditMode ? 'Đang cập nhật...' : 'Đang tạo...') : (isEditMode ? 'Cập nhật đơn hàng' : 'Tạo đơn hàng') }}
+      </button>
+    </div>
+  </form>
+</div>

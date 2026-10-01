@@ -46,6 +46,7 @@ export interface FilterField {
   key: string;
   label: string;
   type: 'select' | 'text' | 'date-range';
+  value?: string | number;
   options?: FilterOption[];
   placeholder?: string;
 }

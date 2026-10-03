@@ -4,16 +4,16 @@
 
 .admin-sidebar {
   position: fixed;
-  top: var(--header-height);
+  top: var(--header-height, 60px);
   left: 0;
   bottom: 0;
-  width: var(--sidebar-width);
-  background-color: var(--cheri-white);
-  border-right: 1px solid var(--cheri-divider);
+  width: var(--sidebar-width, 240px);
+  background-color: var(--cheri-white, #FFFFFF);
+  border-right: 1px solid var(--cheri-divider, #EEEAEA);
   z-index: 90;
   overflow-y: auto;
   overflow-x: hidden;
-  transition: transform var(--transition-base);
+  transition: transform var(--transition-base, 250ms ease);
   display: flex;
   flex-direction: column;
 }
@@ -142,11 +142,11 @@
   }
 
   .admin-sidebar__mobile-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--cheri-primary);
-    font-style: italic;
-    letter-spacing: 0.5px;
+    font-family: 'Corinthia', cursive, var(--font-logo);
+    font-size: 26px;
+    font-weight: 400;
+    color: var(--cheri-primary, #74070E);
+    line-height: 1;
   }
 
   .admin-sidebar__mobile-sub {

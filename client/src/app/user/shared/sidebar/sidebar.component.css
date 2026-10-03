@@ -21,7 +21,6 @@
   max-width: 100%;
   background: #ffffff;
   padding: 12px 14px 20px;
-  font-family: var(--font-sans, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
   color: var(--cheri-text);
   box-sizing: border-box;
   overflow: visible;

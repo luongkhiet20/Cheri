@@ -1,4 +1,4 @@
-<div class="main-scroll-wrap" [class.no-header]="isDashboard" id="main-content" (scroll)="onScrolling($event)">
+<div class="main-scroll-wrap" [class.no-header]="isDashboard" [class.user-shell]="!isDashboard" id="main-content" (scroll)="onScrolling($event)">
   <!-- Header & Footer chỉ bị ẩn khi ở trang admin dashboard (isDashboard=true) theo route,
        không ẩn khi Admin đang duyệt User site -->
   <app-header *ngIf="!isDashboard"></app-header>

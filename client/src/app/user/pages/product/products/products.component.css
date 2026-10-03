@@ -227,7 +227,6 @@
 .products-result-count {
   font-size: 12px;
   color: #6b7280;
-  font-family: var(--font-sans);
   white-space: nowrap;
 }
 
@@ -242,7 +241,6 @@
   padding: 8px 14px;
   border-radius: 6px;
   cursor: pointer;
-  font-family: var(--font-sans);
   font-size: 12.5px;
   font-weight: 600;
   text-transform: none;
@@ -341,7 +339,6 @@
   padding: 8px 12px;
   outline: none;
   color: #74070e;
-  font-family: var(--font-sans);
   cursor: pointer;
   border-radius: 4px;
   transition: border-color 0.2s ease;
@@ -369,7 +366,6 @@
   gap: 5px;
   padding: 3px 8px;
   font-size: 10px;
-  font-family: var(--font-sans);
   color: #74070e;
   border: 1px solid rgba(116, 7, 14, 0.25);
   background: rgba(116, 7, 14, 0.04);
@@ -398,7 +394,6 @@
 
 .products-clear-all-btn {
   font-size: 10px;
-  font-family: var(--font-sans);
   color: #9ca3af;
   background: none;
   border: none;
@@ -733,7 +728,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: normal;
-  font-family: var(--font-sans);
   transition: color 0.2s ease;
   min-height: 2.7em;
 }
@@ -807,7 +801,6 @@
   text-transform: uppercase;
   letter-spacing: 0.14em;
   font-weight: 300;
-  font-family: var(--font-sans);
   padding: 10px 24px;
   border-radius: 999px;
   text-decoration: none;

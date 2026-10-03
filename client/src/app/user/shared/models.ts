@@ -185,6 +185,13 @@ export interface ShippingAddress {
   province?: string;
 }
 
+export interface ShippingLog {
+  status: string;
+  location?: string;
+  description?: string;
+  timestamp: Date | string;
+}
+
 export interface Order {
   _id?: string;
   orderId: string;
@@ -212,6 +219,12 @@ export interface Order {
   shippingMethodSnapshot?: { name: string; code: string; fee: number; estimatedDeliveryTime?: string };
   shippingFee?: number;
   trackingNumber?: string;
+  trackingUrl?: string;
+  shippingProvider?: string;
+  estimatedDeliveryDate?: Date | string;
+  shippedAt?: Date | string;
+  deliveredAt?: Date | string;
+  shippingLogs?: ShippingLog[];
   paymentMethodId?: string;
   paymentMethodSnapshot?: { name: string; code: string; paymentType: string; paymentFee: number };
   transactionId?: string;
@@ -237,6 +250,48 @@ export interface Order {
   cart?: any;
   addresses?: any[];
   amount_refunded?: number;
+}
+
+export interface TrackingResult {
+  orderId: string;
+  status: string;
+  trackingNumber: string | null;
+  trackingUrl: string | null;
+  carrierName: string | null;
+  estimatedDelivery: Date | string | null;
+  shippedAt: Date | string | null;
+  deliveredAt: Date | string | null;
+  dateAdded?: Date | string | null;
+  shippingAddress: {
+    fullName?: string;
+    name?: string;
+    phone?: string;
+    line1?: string;
+    line2?: string;
+    ward?: string;
+    district?: string;
+    province?: string;
+    city?: string;
+    country?: string;
+    fullAddress?: string;
+  } | null;
+  shippingLogs: ShippingLog[];
+  statusHistory: { status: string; updatedAt: Date; note: string }[];
+  items?: {
+    title: string;
+    sku?: string;
+    image?: string;
+    variant?: any;
+    quantity: number;
+    unitPrice: number;
+    subtotal: number;
+  }[];
+  paymentMethod?: string;
+  subtotal?: number;
+  shippingFee?: number;
+  totalAmount?: number;
+  currency?: string;
+  error?: string;
 }
 
 export interface Page {

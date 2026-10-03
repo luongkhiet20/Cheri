@@ -1,0 +1,558 @@
+<section class="otp-page">
+
+  <!-- ── Header (đồng bộ bố cục và typography với wishlist) ── -->
+  <div class="otp-header">
+    <h2 class="otp-title">Theo dõi đơn hàng</h2>
+    @if (user() && userOrders()?.length) {
+      <span class="otp-count">({{ userOrders()!.length }} đơn hàng)</span>
+    }
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       PHẦN 1: KHỐI ĐIỀU HƯỚNG & NHẬP LIỆU
+       Tự động thích ứng theo trạng thái đăng nhập
+  ══════════════════════════════════════════════════════════════════ -->
+  <div class="otp-hero">
+    <div class="otp-hero-inner">
+
+      <!-- KHÁCH ĐÃ ĐĂNG NHẬP -->
+      @if (user()) {
+        <div class="otp-auth-panel">
+          <div class="otp-auth-header">
+            <svg class="otp-user-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            <p class="otp-auth-greeting">Xin chào, <strong>{{ user()?.name || user()?.email }}</strong></p>
+          </div>
+
+          <!-- Dropdown danh sách đơn hàng theo BPMN -->
+          @if (userOrders()?.length) {
+            <div class="otp-dropdown-wrap">
+              <label class="otp-dropdown-label" for="otp-order-dropdown">Chọn đơn hàng của bạn để tra cứu nhanh:</label>
+              <div class="otp-select-box">
+                <select
+                  id="otp-order-dropdown"
+                  class="otp-select-ctrl"
+                  [ngModel]="selectedOrderId"
+                  (ngModelChange)="onOrderSelectChange($event)">
+                  <option value="">-- Danh sách {{ userOrders()!.length }} đơn hàng của bạn --</option>
+                  @for (order of userOrders(); track order.orderId) {
+                    <option [value]="order.orderId">
+                      #{{ order.orderId }} - {{ statusLabel(order.status) }} ({{ (order.createdAt || order.dateAdded) | date: 'dd/MM/yyyy' }})
+                    </option>
+                  }
+                </select>
+                <svg class="otp-select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+            </div>
+          }
+
+          @if (!selectedOrder) {
+            <!-- Danh sách đơn gần đây dạng thẻ -->
+            @if (!userOrders()) {
+              <div class="otp-loading-row">
+                <span class="otp-spinner"></span>
+                <span>Đang tải danh sách đơn hàng...</span>
+              </div>
+            } @else if (userOrders()?.length === 0) {
+              <div class="otp-empty-state">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="9" cy="21" r="1"></circle>
+                  <circle cx="20" cy="21" r="1"></circle>
+                  <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                </svg>
+                <p class="otp-empty-msg">Bạn chưa có đơn hàng nào.</p>
+                <a class="otp-link-btn" routerLink="/vi/product/all">Mua sắm ngay</a>
+              </div>
+            } @else {
+              <div class="otp-orders-scroll">
+                @for (order of userOrders(); track order.orderId) {
+                  <button
+                    id="otp-order-btn-{{ order.orderId }}"
+                    class="otp-order-card"
+                    [class.otp-order-card--cancelled]="isCancelled(order.status)"
+                    (click)="selectOrder(order)">
+                    <div class="otp-order-card-icon">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                        <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                      </svg>
+                    </div>
+                    <div class="otp-order-card-info">
+                      <span class="otp-order-id">#{{ order.orderId }}</span>
+                      <span class="otp-order-date">{{ (order.createdAt || order.dateAdded) | date: 'dd/MM/yyyy' }}</span>
+                    </div>
+                    <span class="otp-order-status" [attr.data-status]="order.status">{{ statusLabel(order.status) }}</span>
+                  </button>
+                }
+              </div>
+            }
+          } @else {
+            <!-- Nút quay lại danh sách -->
+            <button class="otp-back-btn" (click)="clearSelection()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+              </svg>
+              <span>Xem toàn bộ danh sách đơn</span>
+            </button>
+          }
+        </div>
+      }
+
+      <!-- KHÁCH VÃNG LAI -->
+      @if (!user()) {
+        <div class="otp-guest-panel">
+          @if (!trackingResult) {
+            <form class="otp-guest-form" (ngSubmit)="trackGuest()" #guestForm="ngForm">
+              <div class="otp-form-grid">
+                <div class="otp-form-group">
+                  <label class="otp-label" for="otp-input-order">Mã đơn hàng hoặc mã vận đơn</label>
+                  <div class="otp-input-wrap">
+                    <svg class="otp-field-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                      <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                      <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                    </svg>
+                    <input
+                      id="otp-input-order"
+                      class="otp-input"
+                      type="text"
+                      name="guestInput"
+                      [(ngModel)]="guestInput"
+                      placeholder="Ví dụ: TEST-TRACKING-04 hoặc TEST-SPX-000004"
+                      autocomplete="off"
+                      required />
+                  </div>
+                </div>
+
+                <div class="otp-form-group">
+                  <label class="otp-label" for="otp-input-verify">Email hoặc số điện thoại người nhận</label>
+                  <div class="otp-input-wrap">
+                    <svg class="otp-field-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                      <polyline points="22,6 12,13 2,6"></polyline>
+                    </svg>
+                    <input
+                      id="otp-input-verify"
+                      class="otp-input"
+                      type="text"
+                      name="guestVerify"
+                      [(ngModel)]="guestVerify"
+                      placeholder="Ví dụ: ngguyen@gmail.com hoặc 0901234567"
+                      autocomplete="off"
+                      required />
+                  </div>
+                </div>
+              </div>
+
+              @if (guestError) {
+                <div class="otp-error-msg">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                  </svg>
+                  <span>{{ guestError }}</span>
+                </div>
+              }
+
+              <div class="otp-form-actions">
+                <button
+                  id="otp-submit-btn"
+                  class="otp-submit-btn"
+                  type="submit"
+                  [disabled]="guestLoading || !guestInput.trim() || !guestVerify.trim()">
+                  @if (guestLoading) {
+                    <span class="otp-spinner otp-spinner--white"></span>
+                    <span>Đang tra cứu...</span>
+                  } @else {
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <span>Tra cứu đơn hàng</span>
+                  }
+                </button>
+              </div>
+            </form>
+          } @else {
+            <button class="otp-back-btn" (click)="resetGuest()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+              </svg>
+              <span>Tra cứu đơn khác</span>
+            </button>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       PHẦN 2–4: KẾT QUẢ TRA CỨU
+       Chỉ hiển thị khi đã có trackingResult
+  ══════════════════════════════════════════════════════════════════ -->
+  @if (trackingResult) {
+    <div class="otp-result">
+      <div class="otp-result-inner">
+
+        <!-- ── PHẦN 2: Tổng quan vận đơn ── -->
+        <div class="otp-summary-header">
+          <div class="otp-summary-item">
+            <span class="otp-summary-label">Mã đơn hàng</span>
+            <span class="otp-summary-val otp-summary-val--id">#{{ trackingResult.orderId }}</span>
+          </div>
+
+          @if (trackingResult.trackingNumber) {
+            <div class="otp-summary-item">
+              <span class="otp-summary-label">Mã vận đơn</span>
+              @if (trackingResult.trackingUrl) {
+                <a class="otp-summary-val otp-summary-val--link"
+                   [href]="trackingResult.trackingUrl" target="_blank" rel="noopener">
+                  {{ trackingResult.trackingNumber }}
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 12-2h6"></path>
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                  </svg>
+                </a>
+              } @else {
+                <span class="otp-summary-val">{{ trackingResult.trackingNumber }}</span>
+              }
+            </div>
+          } @else {
+            <div class="otp-summary-item">
+              <span class="otp-summary-label">Mã vận đơn</span>
+              <span class="otp-summary-val otp-summary-val--muted">Chưa có mã vận đơn</span>
+            </div>
+          }
+
+          @if (trackingResult.carrierName) {
+            <div class="otp-summary-item">
+              <span class="otp-summary-label">Đơn vị vận chuyển</span>
+              <span class="otp-summary-val">{{ trackingResult.carrierName }}</span>
+            </div>
+          }
+
+          <div class="otp-summary-item">
+            <span class="otp-summary-label">Trạng thái</span>
+            <span class="otp-status-badge" [attr.data-status]="trackingResult.status">
+              {{ statusLabel(trackingResult.status) }}
+            </span>
+          </div>
+
+          @if (trackingResult.estimatedDelivery) {
+            <div class="otp-summary-item">
+              <span class="otp-summary-label">Dự kiến giao</span>
+              <span class="otp-summary-val otp-summary-val--date">
+                {{ trackingResult.estimatedDelivery | date: 'dd/MM/yyyy' }}
+              </span>
+            </div>
+          }
+        </div>
+
+        <!-- ── PHẦN 3: Stepper tiến trình (Chuẩn chỉnh theo BPMN) ── -->
+        @if (!isCancelled(trackingResult.status)) {
+          <div class="otp-stepper">
+            @for (step of OrderSteps; track step.key; let i = $index) {
+              <div class="otp-step"
+                   [class.otp-step--done]="isStepDone(step.key, trackingResult.status)"
+                   [class.otp-step--active]="isStepActive(step.key, trackingResult.status)">
+                <div class="otp-step-circle">
+                  @if (isStepDone(step.key, trackingResult.status) && !isStepActive(step.key, trackingResult.status)) {
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  } @else {
+                    @switch (step.key) {
+                      @case ('PENDING') {
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                          <polyline points="14 2 14 8 20 8"></polyline>
+                          <line x1="16" y1="13" x2="8" y2="13"></line>
+                          <line x1="16" y1="17" x2="8" y2="17"></line>
+                        </svg>
+                      }
+                      @case ('CONFIRMED') {
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                          <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                          <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                        </svg>
+                      }
+                      @case ('SHIPPING') {
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                          <rect x="1" y="3" width="15" height="13"></rect>
+                          <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                          <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                          <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                        </svg>
+                      }
+                      @case ('DELIVERED') {
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                      }
+                    }
+                  }
+                </div>
+                <span class="otp-step-label">{{ step.label }}</span>
+                @if (getStepTimestamp(step.key)) {
+                  <time class="otp-step-time">{{ getStepTimestamp(step.key) | date: 'dd/MM HH:mm' }}</time>
+                }
+                @if (i < OrderSteps.length - 1) {
+                  <div class="otp-step-line"
+                       [class.otp-step-line--done]="isStepDone(OrderSteps[i + 1].key, trackingResult.status)"></div>
+                }
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="otp-cancelled-notice">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <span>Đơn hàng đã <strong>{{ statusLabel(trackingResult.status) }}</strong></span>
+          </div>
+        }
+
+        <!-- ── PHẦN 4: Nội dung 2 cột (60% / 40%) ── -->
+        <div class="otp-detail-grid">
+
+          <!-- Cột trái (60%): Timeline hành trình vận chuyển -->
+          <div class="otp-col-left">
+            <h2 class="otp-col-title">Hành trình vận chuyển</h2>
+
+            @if (!trackingResult.trackingNumber) {
+              <div class="otp-no-tracking">
+                <div class="otp-no-tracking-icon">
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#74070e" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                  </svg>
+                </div>
+                <p class="otp-no-tracking-text">Đơn hàng đang được chuẩn bị.</p>
+                <p class="otp-no-tracking-sub">Mã vận đơn sẽ được cập nhật sau khi đơn hàng được bàn giao cho đơn vị vận chuyển.</p>
+              </div>
+            } @else if (trackingResult.shippingLogs.length === 0) {
+              <div class="otp-no-tracking">
+                <div class="otp-no-tracking-icon">
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#74070e" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="1" y="3" width="15" height="13"></rect>
+                    <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                    <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                    <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                  </svg>
+                </div>
+                <p class="otp-no-tracking-text">Mã vận đơn: <strong>{{ trackingResult.trackingNumber }}</strong></p>
+                <p class="otp-no-tracking-sub">Chưa có cập nhật từ đơn vị vận chuyển. Vui lòng kiểm tra lại sau.</p>
+                @if (trackingResult.trackingUrl) {
+                  <a class="otp-carrier-link" [href]="trackingResult.trackingUrl" target="_blank" rel="noopener">
+                    <span>Tra cứu trực tiếp trên website vận chuyển</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                      <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                  </a>
+                }
+              </div>
+            } @else {
+              <!-- Timeline logs hành trình từng trạm -->
+              @if (trackingResult.trackingUrl) {
+                <a class="otp-carrier-link" [href]="trackingResult.trackingUrl" target="_blank" rel="noopener">
+                  <span>Tra cứu trực tiếp trên website hãng vận chuyển</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                  </svg>
+                </a>
+              }
+              <div class="otp-timeline">
+                @for (log of sortedLogs(trackingResult.shippingLogs); track log.timestamp) {
+                  <div class="otp-timeline-item">
+                    <div class="otp-timeline-dot"></div>
+                    <div class="otp-timeline-line"></div>
+                    <div class="otp-timeline-content">
+                      <span class="otp-timeline-status">{{ log.status }}</span>
+                      @if (log.location) {
+                        <span class="otp-timeline-location">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                            <circle cx="12" cy="10" r="3"></circle>
+                          </svg>
+                          <span>{{ log.location }}</span>
+                        </span>
+                      }
+                      @if (log.description) {
+                        <p class="otp-timeline-desc">{{ log.description }}</p>
+                      }
+                      <time class="otp-timeline-time">{{ log.timestamp | date: 'dd/MM/yyyy HH:mm' }}</time>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- Lịch sử trạng thái đơn hàng (statusHistory) -->
+            @if (trackingResult.statusHistory.length > 0) {
+              <div class="otp-order-history">
+                <h3 class="otp-col-subtitle">Lịch sử xử lý đơn hàng</h3>
+                <div class="otp-timeline otp-timeline--secondary">
+                  @for (entry of sortedHistory(trackingResult.statusHistory); track entry.updatedAt) {
+                    <div class="otp-timeline-item">
+                      <div class="otp-timeline-dot otp-timeline-dot--sm"></div>
+                      <div class="otp-timeline-line"></div>
+                      <div class="otp-timeline-content">
+                        <span class="otp-timeline-status">{{ statusLabel(entry.status) }}</span>
+                        @if (entry.note) {
+                          <p class="otp-timeline-desc">{{ entry.note }}</p>
+                        }
+                        <time class="otp-timeline-time">{{ entry.updatedAt | date: 'dd/MM/yyyy HH:mm' }}</time>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- Cột phải (40%): Thông tin đơn hàng & kiện hàng -->
+          <div class="otp-col-right">
+            <h2 class="otp-col-title">Thông tin giao hàng</h2>
+
+            <!-- Địa chỉ người nhận & SĐT (bảo mật che 4 số đối với khách vãng lai) -->
+            @if (trackingResult.shippingAddress) {
+              <div class="otp-info-card">
+                <div class="otp-info-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#74070e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                  </svg>
+                </div>
+                <div class="otp-info-body">
+                  <div class="otp-info-person">
+                    <p class="otp-info-name">{{ trackingResult.shippingAddress.name || trackingResult.shippingAddress.fullName || 'Người nhận' }}</p>
+                    @if (trackingResult.shippingAddress.phone) {
+                      <span class="otp-info-phone">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                        </svg>
+                        {{ trackingResult.shippingAddress.phone }}
+                      </span>
+                    }
+                  </div>
+                  <p class="otp-info-addr">
+                    {{ trackingResult.shippingAddress.fullAddress || trackingResult.shippingAddress.line1 || 'Theo thông tin đăng ký' }}
+                  </p>
+                </div>
+              </div>
+            }
+
+            <!-- Danh sách sản phẩm (Ánh xạ đầy đủ theo bảng: ảnh, tên, SL, phân loại Size/Color) -->
+            @if (trackingResult.items?.length) {
+              <h3 class="otp-col-subtitle">Sản phẩm trong kiện ({{ trackingResult.items!.length }})</h3>
+              <div class="otp-items">
+                @for (item of trackingResult.items; track item.title + $index) {
+                  <div class="otp-item">
+                    @if (item.image) {
+                      <img class="otp-item-img" [src]="item.image" [alt]="item.title" />
+                    } @else {
+                      <div class="otp-item-img-placeholder">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5">
+                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                          <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                          <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                      </div>
+                    }
+                    <div class="otp-item-info">
+                      <p class="otp-item-title">{{ item.title }}</p>
+                      @if (item.variant) {
+                        <p class="otp-item-variant">{{ formatVariant(item.variant) }}</p>
+                      }
+                      <p class="otp-item-qty">SL: {{ item.quantity }} × {{ item.unitPrice | priceFormat }}</p>
+                    </div>
+                    <span class="otp-item-subtotal">{{ item.subtotal | priceFormat }}</span>
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- Chi tiết tài chính & Hình thức thanh toán -->
+            <div class="otp-order-meta">
+              <div class="otp-meta-row">
+                <span class="otp-meta-label">Hình thức thanh toán</span>
+                <span class="otp-meta-val otp-meta-val--badge">{{ trackingResult.paymentMethod || 'COD' }}</span>
+              </div>
+              @if (trackingResult.dateAdded) {
+                <div class="otp-meta-row">
+                  <span class="otp-meta-label">Thời gian tạo đơn</span>
+                  <span class="otp-meta-val">{{ trackingResult.dateAdded | date: 'dd/MM/yyyy HH:mm' }}</span>
+                </div>
+              }
+              @if (trackingResult.subtotal) {
+                <div class="otp-meta-row">
+                  <span class="otp-meta-label">Tiền hàng</span>
+                  <span class="otp-meta-val">{{ trackingResult.subtotal | priceFormat }} {{ trackingResult.currency || 'VND' }}</span>
+                </div>
+              }
+              @if (trackingResult.shippingFee !== undefined && trackingResult.shippingFee !== null) {
+                <div class="otp-meta-row">
+                  <span class="otp-meta-label">Phí vận chuyển</span>
+                  <span class="otp-meta-val">{{ trackingResult.shippingFee | priceFormat }} {{ trackingResult.currency || 'VND' }}</span>
+                </div>
+              }
+              <div class="otp-meta-row otp-meta-row--total">
+                <span class="otp-meta-label">Tổng thanh toán</span>
+                <span class="otp-meta-val otp-meta-val--total">
+                  {{ (trackingResult.totalAmount || 0) | priceFormat }} {{ trackingResult.currency || 'VND' }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Nếu là user đã đăng nhập: link sang chi tiết đơn hàng -->
+            @if (user() && selectedOrder) {
+              <a class="otp-detail-link" [routerLink]="getOrderUrl(selectedOrder.orderId)">
+                <span>Xem trang quản lý đơn hàng</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </a>
+            }
+
+            <!-- Thông tin ngày giao -->
+            @if (trackingResult.shippedAt || trackingResult.deliveredAt) {
+              <div class="otp-dates">
+                @if (trackingResult.shippedAt) {
+                  <div class="otp-date-row">
+                    <span class="otp-date-label">Ngày giao cho vận chuyển</span>
+                    <span class="otp-date-val">{{ trackingResult.shippedAt | date: 'dd/MM/yyyy' }}</span>
+                  </div>
+                }
+                @if (trackingResult.deliveredAt) {
+                  <div class="otp-date-row">
+                    <span class="otp-date-label">Ngày giao thành công</span>
+                    <span class="otp-date-val otp-date-val--delivered">{{ trackingResult.deliveredAt | date: 'dd/MM/yyyy HH:mm' }}</span>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
+        </div> <!-- /otp-detail-grid -->
+      </div><!-- /otp-result-inner -->
+    </div><!-- /otp-result -->
+  }
+
+</section>

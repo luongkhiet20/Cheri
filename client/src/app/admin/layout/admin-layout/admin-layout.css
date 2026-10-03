@@ -2,7 +2,17 @@
    ADMIN SHELL LAYOUT
    ============================================= */
 
+@import '../../styles.css';
+@import '../../shared/styles/admin-shared.css';
+
+:host {
+  display: block;
+  width: 100%;
+}
+
 .admin-shell {
+  --sidebar-width: 240px;
+  --header-height: 60px;
   display: flex;
   min-height: 100vh;
   background-color: #F7F7F8;
@@ -12,22 +22,23 @@
 }
 
 .admin-main {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
-  width: 100%;
+  width: calc(100% - var(--sidebar-width, 240px));
   max-width: 100%;
-  margin-top: var(--header-height);
-  margin-left: var(--sidebar-width);
-  min-height: calc(100vh - var(--header-height));
+  margin-top: var(--header-height, 60px);
+  margin-left: var(--sidebar-width, 240px);
+  min-height: calc(100vh - var(--header-height, 60px));
   padding: 24px;
   box-sizing: border-box;
-  transition: margin-left var(--transition-base);
+  transition: margin-left var(--transition-base, 250ms ease);
 }
 
 /* ----- Mobile & Tablet (<= 1024px) ----- */
 @media (max-width: 1024px) {
   .admin-main {
     margin-left: 0;
-    padding: var(--space-md);
+    width: 100%;
+    padding: var(--space-md, 16px);
   }
 }

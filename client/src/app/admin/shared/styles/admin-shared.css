@@ -1,9 +1,10 @@
 /* =============================================
-   ADMIN SHARED — PAGE LAYOUT & PLACEHOLDERS
+   ADMIN SHARED — PAGE LAYOUT & PLACEHOLDERS (SCOPED)
    ============================================= */
 
 /* ----- Page Content Wrapper ----- */
-.page-content {
+:host ::ng-deep .admin-shell .page-content,
+.admin-shell .page-content {
   display: flex;
   flex-direction: column;
   gap: var(--space-xl);
@@ -11,7 +12,8 @@
 }
 
 /* ----- Page Top (Title + Actions) ----- */
-.page-top {
+:host ::ng-deep .admin-shell .page-top,
+.admin-shell .page-top {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -19,7 +21,8 @@
   flex-wrap: wrap;
 }
 
-.page-actions {
+:host ::ng-deep .admin-shell .page-actions,
+.admin-shell .page-actions {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
@@ -27,13 +30,15 @@
 }
 
 /* ----- Placeholder Sections ----- */
-.placeholder-section {
+:host ::ng-deep .admin-shell .placeholder-section,
+.admin-shell .placeholder-section {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: var(--space-lg);
 }
 
-.placeholder-box {
+:host ::ng-deep .admin-shell .placeholder-box,
+.admin-shell .placeholder-box {
   background-color: var(--cheri-surface);
   border: 1.5px dashed var(--cheri-border);
   border-radius: var(--radius-xl);
@@ -44,11 +49,13 @@
   transition: border-color var(--transition-fast);
 }
 
-.placeholder-box:hover {
+:host ::ng-deep .admin-shell .placeholder-box:hover,
+.admin-shell .placeholder-box:hover {
   border-color: var(--cheri-text-light);
 }
 
-.placeholder-box--wide {
+:host ::ng-deep .admin-shell .placeholder-box--wide,
+.admin-shell .placeholder-box--wide {
   grid-column: 1 / -1;
   min-height: 280px;
   align-items: center;
@@ -56,13 +63,15 @@
   text-align: center;
 }
 
-.placeholder-box__label {
+:host ::ng-deep .admin-shell .placeholder-box__label,
+.admin-shell .placeholder-box__label {
   font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--cheri-text);
 }
 
-.placeholder-box__desc {
+:host ::ng-deep .admin-shell .placeholder-box__desc,
+.admin-shell .placeholder-box__desc {
   font-size: var(--font-size-base);
   color: var(--cheri-text-light);
   line-height: 1.6;
@@ -70,21 +79,25 @@
 
 /* ----- Responsive ----- */
 @media (max-width: 768px) {
-  .page-top {
+  :host ::ng-deep .admin-shell .page-top,
+  .admin-shell .page-top {
     flex-direction: column;
     align-items: flex-start;
   }
 
-  .page-actions {
+  :host ::ng-deep .admin-shell .page-actions,
+  .admin-shell .page-actions {
     width: 100%;
     justify-content: flex-end;
   }
 
-  .placeholder-section {
+  :host ::ng-deep .admin-shell .placeholder-section,
+  .admin-shell .placeholder-section {
     grid-template-columns: 1fr;
   }
 
-  .placeholder-box--wide {
+  :host ::ng-deep .admin-shell .placeholder-box--wide,
+  .admin-shell .placeholder-box--wide {
     min-height: 200px;
   }
 }

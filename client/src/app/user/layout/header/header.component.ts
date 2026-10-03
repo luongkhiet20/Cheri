@@ -53,7 +53,6 @@ export class HeaderComponent implements OnInit {
   leftNavItems = [
     { label: 'Giới thiệu', page: 'about' },
     { label: 'Cửa hàng', page: 'product/all' },
-    { label: 'Thử đồ ảo', page: 'virtual-try-on' },
     { label: 'Tra cứu đơn', page: 'tracking' }
   ];
 

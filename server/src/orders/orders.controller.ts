@@ -82,6 +82,14 @@ export class OrdersController {
     return this.ordersService.getOrders(user);
   }
 
+  // ─── Public: Tra cứu vận đơn (khách vãng lai) ─────────────────────────────
+  // Yêu cầu: orderId hoặc trackingNumber + customerEmail hoặc số điện thoại người nhận
+  // Không trả toàn bộ document — chỉ trả dữ liệu tracking cần thiết.
+  @Post('/track')
+  trackOrder(@Body() body: { orderId?: string; trackingNumber?: string; email?: string; phone?: string }) {
+    return this.ordersService.trackOrder(body);
+  }
+
   // ─── Đặt hàng COD — yêu cầu đăng nhập để lấy cart từ DB ─────────────────
   @UseGuards(AuthGuard('jwt'))
   @Post('/add')

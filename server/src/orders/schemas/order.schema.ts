@@ -91,6 +91,21 @@ const StatusHistorySchema = new Schema(
   { _id: false },
 );
 
+// ─── Shipping Log Schema (tracking timeline từ carrier) ───────────────────────
+// Phân biệt với statusHistory: statusHistory theo dõi trạng thái xử lý đơn của
+// hệ thống Chéri (PENDING → CONFIRMED → SHIPPING → DELIVERED), còn shippingLogs
+// theo dõi hành trình vật lý của kiện hàng từ carrier (PICKED_UP → IN_TRANSIT → DELIVERED).
+
+const ShippingLogSchema = new Schema(
+  {
+    status: { type: String, required: true },
+    location: { type: String, default: '' },
+    description: { type: String, default: '' },
+    timestamp: { type: Date, default: Date.now },
+  },
+  { _id: false },
+);
+
 // ─── Main Order Schema ────────────────────────────────────────────────────────
 
 const OrderSchema = new Schema(
@@ -120,6 +135,7 @@ const OrderSchema = new Schema(
     shippingFee: { type: Number, default: 0, min: 0 },
     shippingProvider: { type: String, default: '' },
     trackingNumber: { type: String, default: '' },
+    trackingUrl: { type: String, default: '' },
     estimatedDeliveryDate: { type: Date, default: null },
     shippedAt: { type: Date, default: null },
     deliveredAt: { type: Date, default: null },
@@ -149,8 +165,11 @@ const OrderSchema = new Schema(
     totalAmount: { type: Number, required: true, min: 0, default: 0 },
     currency: { type: String, default: 'VND' },
 
-    // Lịch sử trạng thái
+    // Lịch sử trạng thái đơn hàng (PENDING → CONFIRMED → SHIPPING → DELIVERED)
     statusHistory: { type: [StatusHistorySchema], default: [] },
+
+    // Lịch sử vận trình của carrier (PICKED_UP → IN_TRANSIT → OUT_FOR_DELIVERY → DELIVERED)
+    shippingLogs: { type: [ShippingLogSchema], default: [] },
   },
   {
     timestamps: true,

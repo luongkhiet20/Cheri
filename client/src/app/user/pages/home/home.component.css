@@ -257,7 +257,6 @@
   flex-direction: column;
   gap: 14px;
   max-width: 520px;
-  font-family: var(--font-sans);
   z-index: 1;
 }
 
@@ -270,7 +269,6 @@
   letter-spacing: 0.28em;
   text-transform: uppercase;
   font-weight: 600;
-  font-family: var(--font-sans);
 }
 .home-cta-badge .home-cta-badge-icon {
   animation: pulse 2s ease-in-out infinite;
@@ -315,7 +313,6 @@
   background: #8B0015;
   color: #fff;
   font-size: 11px;
-  font-family: var(--font-sans);
   text-transform: uppercase;
   letter-spacing: 0.2em;
   font-weight: 600;
@@ -366,7 +363,6 @@
 }
 
 .home-featured-title {
-  font-family: var(--font-sans);
   font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -385,7 +381,6 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-family: var(--font-sans);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -582,7 +577,7 @@
 }
 
 .home-product-category {
-  font-size: 10px;
+  font-size: 9px;
   color: #9ca3af;
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -590,14 +585,13 @@
 }
 
 .home-product-name {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 300;
   color: #1f2937;
   margin: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-family: var(--font-sans);
   transition: color 0.2s ease;
 }
 .home-product-card:hover .home-product-name {
@@ -611,13 +605,14 @@
 }
 
 .home-product-price {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: #74070e;
 }
 
 .home-product-original {
-  font-size: 10px;
+  font-size: 11px;
+  font-weight: 400;
   color: #9ca3af;
   text-decoration: line-through;
 }
@@ -797,7 +792,6 @@
 .home-muse-quote {
   font-size: 13px;
   color: #1f2937;
-  font-family: var(--font-sans);
   letter-spacing: 0.02em;
   line-height: 1.7;
   margin: 0;
@@ -824,7 +818,6 @@
   font-size: 9px;
   letter-spacing: 0.3em;
   color: rgba(116, 7, 14, 0.8);
-  font-family: var(--font-sans);
   text-transform: uppercase;
   padding-top: 16px;
   border-top: 1px solid rgba(116, 7, 14, 0.2);

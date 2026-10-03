@@ -317,7 +317,7 @@
   margin: 0;
   line-height: 1.35;
   letter-spacing: -0.2px;
-  font-family: "Playfair Display", "Times New Roman", Georgia, serif;
+  font-family: var(--font-lux-serif, "Playfair Display", serif);
 }
 
 /* SKU Badge */

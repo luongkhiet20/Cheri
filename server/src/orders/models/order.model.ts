@@ -55,6 +55,13 @@ export interface StatusHistoryEntry {
   note?: string;
 }
 
+export interface ShippingLogEntry {
+  status: string;
+  location?: string;
+  description?: string;
+  timestamp: Date;
+}
+
 export interface Order extends Document {
   // Cơ bản
   orderId: string;
@@ -76,9 +83,11 @@ export interface Order extends Document {
   shippingFee: number;
   shippingProvider?: string;
   trackingNumber?: string;
+  trackingUrl?: string;
   estimatedDeliveryDate?: Date;
   shippedAt?: Date;
   deliveredAt?: Date;
+  shippingLogs?: ShippingLogEntry[];
 
   // Thanh toán
   paymentMethodId?: Types.ObjectId;

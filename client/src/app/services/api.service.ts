@@ -375,6 +375,14 @@ export class ApiService {
     );
   }
 
+  trackOrder(payload: { orderId?: string; trackingNumber?: string; email?: string; phone?: string }) {
+    const trackUrl = this.apiUrl + '/api/orders/track';
+    return this.http.post(trackUrl, payload, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
   getStripeSession(req) {
     const stripeSessionUrl = this.apiUrl + '/api/orders/stripe/session';
     return this.http.post(stripeSessionUrl, req, this.getRequestOptions()).pipe(

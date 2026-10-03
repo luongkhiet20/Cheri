@@ -5,8 +5,15 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0);   }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-fade-in {
@@ -43,7 +50,7 @@
 }
 
 .wishlist-title {
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 700;
   color: #74070e;
   margin: 0;
@@ -108,8 +115,14 @@
   transform: translateY(-3px);
   box-shadow: 0 8px 24px rgba(116, 7, 14, 0.08);
 }
-.pcard:hover .pcard-overlay { opacity: 1; }
-.pcard:hover .pcard-img     { transform: scale(1.04); }
+
+.pcard:hover .pcard-overlay {
+  opacity: 1;
+}
+
+.pcard:hover .pcard-img {
+  transform: scale(1.04);
+}
 
 .pcard-img-wrap {
   position: relative;
@@ -120,6 +133,7 @@
   border-radius: 6px;
   border: 1px solid rgba(116, 7, 14, 0.06);
 }
+
 .pcard-img {
   width: 100%;
   height: 100%;
@@ -133,7 +147,7 @@
   position: absolute;
   top: 8px;
   left: 8px;
-  font-size: 8.5px;
+  font-size: 8px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.14em;
@@ -144,9 +158,18 @@
   pointer-events: none;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 }
-.pcard-badge--sold { background: rgba(43, 43, 43, 0.85); }
-.pcard-badge--new  { background: #74070e; }
-.pcard-badge--sale { background: #991b1b; }
+
+.pcard-badge--sold {
+  background: rgba(43, 43, 43, 0.85);
+}
+
+.pcard-badge--new {
+  background: #74070e;
+}
+
+.pcard-badge--sale {
+  background: #991b1b;
+}
 
 /* Hover overlay */
 .pcard-overlay {
@@ -162,6 +185,7 @@
   justify-content: center;
   gap: 10px;
 }
+
 .pcard-overlay-btn {
   width: 38px;
   height: 38px;
@@ -175,22 +199,32 @@
   transform: scale(0.9);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
-.pcard:hover .pcard-overlay-btn { transform: scale(1); }
-.pcard-overlay-btn svg { display: block; }
+
+.pcard:hover .pcard-overlay-btn {
+  transform: scale(1);
+}
+
+.pcard-overlay-btn svg {
+  display: block;
+}
+
 .pcard-overlay-btn--cart {
   background: #74070e;
   color: #fff;
   border-color: #74070e;
 }
+
 .pcard-overlay-btn--cart:hover {
   background: #56050a;
   border-color: #56050a;
   transform: scale(1.08);
 }
+
 .pcard-overlay-btn--view {
   background: #fff;
   color: #74070e;
 }
+
 .pcard-overlay-btn--view:hover {
   background: #74070e;
   color: #fff;
@@ -219,23 +253,32 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   padding: 0;
 }
+
 .pcard-wishlist-btn svg {
   fill: none;
   transition: fill 0.2s ease;
   display: block;
 }
+
 .pcard-wishlist-btn:hover {
   color: #74070e;
   background: #fff;
   transform: scale(1.1);
   box-shadow: 0 4px 12px rgba(116, 7, 14, 0.2);
 }
+
 .pcard-wishlist-btn--active {
   color: #74070e !important;
   background: #fff !important;
 }
-.pcard-wishlist-btn--active svg { fill: #74070e !important; }
-.pcard-wishlist-btn--active:hover { transform: scale(1.1); }
+
+.pcard-wishlist-btn--active svg {
+  fill: #74070e !important;
+}
+
+.pcard-wishlist-btn--active:hover {
+  transform: scale(1.1);
+}
 
 /* Card Info */
 .pcard-info {
@@ -247,19 +290,21 @@
   width: 100%;
   box-sizing: border-box;
 }
+
 .pcard-tag {
-  font-size: 9.5px;
+  font-size: 9px;
   color: #9ca3af;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  font-weight: 400;
+  font-weight: 300;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 .pcard-name {
-  font-size: 13px;
-  font-weight: 400;
+  font-size: 12px;
+  font-weight: 300;
   color: #1f2937;
   margin: 0;
   line-height: 1.45;
@@ -269,25 +314,31 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: normal;
-  font-family: var(--font-sans);
   transition: color 0.2s ease;
   min-height: 2.9em;
 }
-.pcard:hover .pcard-name { color: #74070e; }
+
+.pcard:hover .pcard-name {
+  color: #74070e;
+}
+
 .pcard-prices {
   display: flex;
   align-items: baseline;
   gap: 8px;
   margin-top: 2px;
 }
+
 .pcard-price {
   font-size: 13px;
   font-weight: 600;
   color: #74070e;
   letter-spacing: 0.02em;
 }
+
 .pcard-original {
   font-size: 11px;
+  font-weight: 400;
   color: #9ca3af;
   text-decoration: line-through;
 }
@@ -306,14 +357,19 @@
   max-width: 520px;
   margin: 40px auto;
 }
-.wishlist-empty-icon { color: #d1d5db; }
+
+.wishlist-empty-icon {
+  color: #d1d5db;
+}
+
 .wishlist-empty-title {
-  font-family: var(--font-lux-serif, "Playfair Display", serif);
+  font-family: var(--font-sans);
   font-size: 18px;
-  font-weight: 400;
+  font-weight: 600;
   color: #374151;
   margin: 0;
 }
+
 .wishlist-empty-desc {
   font-size: 12px;
   color: #9ca3af;
@@ -322,6 +378,7 @@
   max-width: 280px;
   font-weight: 300;
 }
+
 .wishlist-empty-btn {
   display: inline-block;
   background: #74070e;
@@ -330,11 +387,13 @@
   text-transform: uppercase;
   letter-spacing: 0.14em;
   font-weight: 300;
-  font-family: var(--font-sans);
   padding: 10px 24px;
   border-radius: 999px;
   border: none;
   cursor: pointer;
   transition: background 0.2s ease;
 }
-.wishlist-empty-btn:hover { background: #5a050a; }
+
+.wishlist-empty-btn:hover {
+  background: #5a050a;
+}

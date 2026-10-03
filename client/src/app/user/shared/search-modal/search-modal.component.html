@@ -3,7 +3,7 @@
   <div class="cheri-search-modal" (click)="$event.stopPropagation()">
     <!-- Header -->
     <div class="cheri-search-header">
-      <h2 class="cheri-search-title">TÌM KIẾM SẢN PHẨM</h2>
+      <h2 class="cheri-search-title">Tìm kiếm sản phẩm</h2>
       <button type="button" class="cheri-search-close" (click)="closeModal()" aria-label="Đóng tìm kiếm">
         &times;
       </button>
@@ -31,7 +31,7 @@
           @if (isLoading) {
           <span>Đang tìm...</span>
           } @else {
-          <span>TÌM KIẾM</span>
+          <span>Tìm kiếm</span>
           }
         </button>
       </div>
@@ -39,7 +39,7 @@
 
     <!-- 14. Suggestions chips -->
     <div class="cheri-suggestions-row">
-      <span class="cheri-suggestions-label">GỢI Ý TÌM KIẾM:</span>
+      <span class="cheri-suggestions-label">Gợi ý tìm kiếm:</span>
       <div class="cheri-suggestions-list">
         @for (s of suggestions; track s) {
         <button type="button" class="cheri-suggestion-chip" (click)="selectSuggestion(s)">
@@ -98,9 +98,9 @@
       <button type="button" class="cheri-main-search-btn" [disabled]="isLoading" (click)="submitSearch()">
         @if (isLoading) {
         <span class="btn-spinner"></span>
-        <span>ĐANG TÌM KIẾM...</span>
+        <span>Đang tìm kiếm...</span>
         } @else {
-        <span>TÌM KIẾM</span>
+        <span>Tìm kiếm</span>
         }
       </button>
     </div>

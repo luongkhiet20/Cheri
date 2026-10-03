@@ -43,6 +43,7 @@
   flex-direction: column;
   gap: 15px;
   animation: cheriSearchSlideUp 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: var(--font-sans);
 }
 
 @keyframes cheriSearchSlideUp {
@@ -65,11 +66,10 @@
 
 .cheri-search-title {
   margin: 0;
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 700;
-  letter-spacing: 1px;
-  color: #1A1A1A;
-  font-family: "Playfair Display", "Times New Roman", serif, sans-serif;
+  color: #74070e;
+  font-family: var(--font-sans);
 }
 
 .cheri-search-close {

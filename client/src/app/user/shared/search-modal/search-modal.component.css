@@ -1,0 +1,412 @@
+/* ==========================================================================
+   CHÉRI LUXURY FASHION — SEARCH MODAL COMPONENT
+   Brand Colors:
+   - Primary: #74070E
+   - Accent Tint: #FDF2F3
+   - Neutral Dark: #1A1A1A
+   - Neutral Gray: #6B7280, #9CA3AF
+   - Borders: #E5E7EB, #F0ECE9
+   ========================================================================== */
+
+/* 1. Backdrop Overlay */
+.cheri-search-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(18, 18, 18, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+  animation: cheriSearchFadeIn 0.22s ease-out;
+}
+
+@keyframes cheriSearchFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 2. Modal Card Container */
+.cheri-search-modal {
+  position: relative;
+  width: 100%;
+  max-width: 680px;
+  background: #FFFFFF;
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+  padding: 24px 32px 28px 32px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  animation: cheriSearchSlideUp 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes cheriSearchSlideUp {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* 3. Header */
+.cheri-search-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cheri-search-title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #1A1A1A;
+  font-family: "Playfair Display", "Times New Roman", serif, sans-serif;
+}
+
+.cheri-search-close {
+  border: none;
+  background: transparent;
+  font-size: 28px;
+  line-height: 1;
+  color: #6B7280;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.cheri-search-close:hover {
+  color: #74070E;
+  transform: rotate(90deg);
+}
+
+/* 4. Error Alert */
+.cheri-search-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #FEF2F2;
+  border: 1px solid #FCA5A5;
+  color: #B91C1C;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* 5. Keyword Input & Form */
+.cheri-keyword-form {
+  width: 100%;
+}
+
+.cheri-keyword-box {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid #E5E7EB;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #FFFFFF;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cheri-keyword-box:focus-within {
+  border-color: #74070E;
+  box-shadow: 0 0 0 3px rgba(116, 7, 14, 0.1);
+}
+
+.cheri-keyword-input {
+  flex: 1;
+  height: 44px;
+  padding: 0 16px;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  color: #1F2937;
+  background: transparent;
+}
+
+.cheri-keyword-input::placeholder {
+  color: #9CA3AF;
+}
+
+.cheri-keyword-submit-btn {
+  height: 44px;
+  padding: 0 20px;
+  border: none;
+  background: #74070E;
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  white-space: nowrap;
+}
+
+.cheri-keyword-submit-btn:hover:not([disabled]) {
+  background: #58050A;
+}
+
+.cheri-keyword-submit-btn[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 6. Suggestions Row */
+.cheri-suggestions-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 12.5px;
+}
+
+.cheri-suggestions-label {
+  font-weight: 600;
+  color: #4B5563;
+  letter-spacing: 0.5px;
+}
+
+.cheri-suggestions-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cheri-suggestion-chip {
+  padding: 4px 12px;
+  border-radius: 16px;
+  border: 1px solid #E5E7EB;
+  background: #F9FAFB;
+  font-size: 12.5px;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  outline: none;
+}
+
+.cheri-suggestion-chip:hover {
+  border-color: #74070E;
+  color: #74070E;
+  background: #FDF2F3;
+}
+
+/* 7. Divider */
+.cheri-search-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+}
+
+.divider-line {
+  flex: 1;
+  height: 1px;
+  background: #E5E7EB;
+}
+
+.divider-text {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  color: #9CA3AF;
+  text-transform: uppercase;
+}
+
+/* 8. Image Search Dropzone */
+.cheri-hidden-file-input {
+  display: none;
+}
+
+.cheri-upload-dropzone {
+  border: 2px dashed #D1D5DB;
+  border-radius: 12px;
+  padding: 16px 20px;
+  background: #FAFAFA;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.cheri-upload-dropzone:hover {
+  border-color: #74070E;
+  background: #FDF2F3;
+}
+
+.upload-icon-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #74070E;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.upload-title {
+  margin: 0 0 3px 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1F2937;
+}
+
+.upload-hint {
+  margin: 0;
+  font-size: 11.5px;
+  color: #9CA3AF;
+}
+
+/* 9. Image Preview Card */
+.cheri-image-preview-card {
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  padding: 12px 16px;
+  background: #FAFAFA;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.preview-image-wrap {
+  width: 100%;
+  max-width: 200px;
+  height: 130px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.cheri-preview-btn {
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  outline: none;
+}
+
+.cheri-preview-btn.change-btn {
+  background: #FFFFFF;
+  border: 1px solid #D1D5DB;
+  color: #374151;
+}
+
+.cheri-preview-btn.change-btn:hover {
+  border-color: #74070E;
+  color: #74070E;
+}
+
+.cheri-preview-btn.remove-btn {
+  background: #FEE2E2;
+  border: 1px solid #FCA5A5;
+  color: #B91C1C;
+}
+
+.cheri-preview-btn.remove-btn:hover {
+  background: #FCA5A5;
+}
+
+/* 10. Footer Action */
+.cheri-search-footer-action {
+  margin-top: 2px;
+}
+
+.cheri-main-search-btn {
+  width: 100%;
+  height: 44px;
+  border-radius: 8px;
+  border: none;
+  background: #74070E;
+  color: #FFFFFF;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.cheri-main-search-btn:hover:not([disabled]) {
+  background: #58050A;
+}
+
+.cheri-main-search-btn[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #FFFFFF;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Mobile responsive */
+@media screen and (max-width: 640px) {
+  .cheri-search-modal {
+    padding: 20px 16px 22px 16px;
+    border-radius: 12px;
+    gap: 12px;
+  }
+
+  .cheri-keyword-input {
+    height: 42px;
+  }
+
+  .cheri-keyword-submit-btn {
+    height: 42px;
+    padding: 0 16px;
+  }
+
+  .cheri-upload-dropzone {
+    padding: 14px 14px;
+  }
+}
+

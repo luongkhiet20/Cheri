@@ -132,11 +132,23 @@ export class ApiService {
     );
   }
 
+  searchByImage(file: File, keyword?: string): Observable<any> {
+    const formData = new FormData();
+    formData.append('image', file);
+    if (keyword) {
+      formData.append('keyword', keyword);
+    }
+    const searchImageUrl = this.apiUrl + '/api/products/search/image';
+    return this.http.post(searchImageUrl, formData, { withCredentials: true }).pipe(
+      catchError((error: any) => of({ error: error?.error?.message || error?.message || 'Lỗi tìm kiếm hình ảnh' }))
+    );
+  }
+
   getProducts(req: any = {}): Observable<any> {
     const lang = req.lang || 'vi';
     const page = req.page !== undefined ? req.page : 1;
     const sort = req.sort || 'newest';
-    const { category, maxPrice, minPrice, stock, rating, search, pageSize } = req;
+    const { category, maxPrice, minPrice, stock, rating, search, productIds, imageSearch, pageSize } = req;
     const catStr = Array.isArray(category) ? category.join(',') : (category || '');
     const addCategory = catStr ? { category: catStr } : {};
     const categoryQuery = catStr ? '&category=' + encodeURIComponent(catStr) : '';
@@ -146,8 +158,10 @@ export class ApiService {
     const ratStr = Array.isArray(rating) ? rating.join(',') : (rating !== undefined && rating !== null ? String(rating) : '');
     const ratingQuery = ratStr && ratStr !== '0' ? '&rating=' + encodeURIComponent(ratStr) : '';
     const searchQuery = search ? '&search=' + encodeURIComponent(search) : '';
+    const productIdsQuery = productIds ? '&productIds=' + encodeURIComponent(productIds) : '';
+    const imageSearchQuery = imageSearch ? '&imageSearch=' + encodeURIComponent(imageSearch) : '';
     const pageSizeQuery = pageSize ? '&pageSize=' + pageSize : '';
-    const productsUrl = this.apiUrl + '/api/products?lang=' + lang + '&page=' + page + '&sort=' + sort + categoryQuery + priceQuery + minPriceQuery + stockQuery + ratingQuery + searchQuery + pageSizeQuery + '&scope=user';
+    const productsUrl = this.apiUrl + '/api/products?lang=' + lang + '&page=' + page + '&sort=' + sort + categoryQuery + priceQuery + minPriceQuery + stockQuery + ratingQuery + searchQuery + productIdsQuery + imageSearchQuery + pageSizeQuery + '&scope=user';
     return this.http.get(productsUrl, this.getRequestOptions()).pipe(
       map((data: any) => {
         const productList = (data?.all || data?.data || (Array.isArray(data) ? data : [])).map((product: any) => ({
@@ -663,6 +677,7 @@ export class ApiService {
       if (user && user.accessToken && isPlatformBrowser(this.platformId)) {
         localStorage.setItem(accessTokenKey, user.accessToken);
       }
+      this.currentUser$.next(user);
     });
   }
 }

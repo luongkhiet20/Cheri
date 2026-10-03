@@ -54,15 +54,38 @@ export class AuthController {
     id: string;
     email: string;
     roles: string[];
+    name?: string;
+    fullName?: string;
+    phoneNumber?: string;
+    address?: string;
+    gender?: string;
+    avatar?: string;
   } {
     const roles = Array.isArray(user.roles) ? [...user.roles] : (user as any).role ? [(user as any).role] : ['user'];
-    return { id: user._id, email: user.email, roles };
+    return {
+      id: user._id,
+      email: user.email,
+      roles,
+      name: user.name || (user as any).fullName || user.email.split('@')[0],
+      fullName: (user as any).fullName || user.name || user.email.split('@')[0],
+      phoneNumber: (user as any).phoneNumber || '',
+      address: (user as any).address || '',
+      gender: (user as any).gender || '',
+      avatar: (user as any).avatar || '',
+    };
   }
 
   @Post('/signup')
   signUp(
     @Body(ValidationPipe) authCredentialsDto: AuthCredentialDto,
-  ): Promise<void> {
+  ): Promise<{
+    accessToken: string;
+    id: string;
+    email: string;
+    roles?: string[];
+    name?: string;
+    fullName?: string;
+  }> {
     return this.authService.signUp(authCredentialsDto);
   }
 

@@ -1,11 +1,11 @@
 import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 
-import { Product } from '../../models';
-import { TranslatePipe } from '../../../../pipes/translate.pipe';
+import { Product } from '../models';
+import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { CartShowComponent } from '../cart-show/cart-show.component';
-import { PriceFormatPipe } from '../../../../pipes/price.pipe';
+import { PriceFormatPipe } from '../../../pipes/price.pipe';
 
 @Component({
   selector: 'app-products-list',

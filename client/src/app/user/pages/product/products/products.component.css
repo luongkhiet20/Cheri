@@ -811,9 +811,65 @@
   padding: 10px 24px;
   border-radius: 999px;
   text-decoration: none;
+  border: none;
+  cursor: pointer;
   transition: background 0.2s ease;
 }
 
 .products-empty-btn:hover {
   background: #5a050a;
 }
+
+/* ==========================================================================
+   SEARCH CONTEXT BANNER
+   ========================================================================== */
+.products-search-context-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background: #FDF2F3;
+  border: 1px solid rgba(116, 7, 14, 0.18);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.search-context-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  color: #1F2937;
+}
+
+.search-context-icon {
+  color: #74070E;
+  flex-shrink: 0;
+}
+
+.search-context-info strong {
+  color: #74070E;
+}
+
+.search-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid #D1D5DB;
+  background: #FFFFFF;
+  color: #4B5563;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.search-clear-btn:hover {
+  border-color: #74070E;
+  color: #74070E;
+  background: #FFFFFF;
+}
+

@@ -16,30 +16,9 @@
   <div class="nav-part-right">
     <!-- 1. Tìm kiếm -->
     <div class="nav-search-wrap">
-      @if (!isSearchOpen) {
-      <button type="button" class="nav-label nav-search-trigger" (click)="toggleSearch()">
+      <button type="button" class="nav-label nav-search-trigger" (click)="openSearchModal()">
         Tìm kiếm
       </button>
-      } @else {
-      <div class="nav-search-form active">
-        <mat-form-field class="nav-search-form-content" [ngClass]="{ 'focus-active': (showAutocomplete$ | async) }">
-          <input type="text" placeholder="Tìm kiếm..." matInput [formControl]="query" (focus)="onFocus()"
-            (blur)="onBlur()" [matAutocomplete]="auto" />
-          <button matSuffix mat-icon-button type="button" (click)="closeSearch()" class="search-close-btn"
-            aria-label="Close search">
-            <mat-icon>close</mat-icon>
-          </button>
-          <mat-autocomplete #auto="matAutocomplete">
-            @for (title of productTitles$(); track title) {
-            <mat-option [value]="title" [routerLink]="['/' + (lang$ | async) + '/product/' + title]"
-              (click)="onTitleLink()">
-              <a class="nav-autocomplete-link">{{ title }}</a>
-            </mat-option>
-            }
-          </mat-autocomplete>
-        </mat-form-field>
-      </div>
-      }
     </div>
 
     <!-- 2. Yêu thích -->
@@ -171,3 +150,8 @@
   }
 
 </ng-template>
+
+<app-search-modal
+  [isOpen]="isSearchModalOpen"
+  (close)="closeSearchModal()"
+></app-search-modal>

@@ -21,7 +21,14 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async signUp(authCredentialsDto: AuthCredentialDto): Promise<void> {
+  async signUp(authCredentialsDto: AuthCredentialDto): Promise<{
+    accessToken: string;
+    id: string;
+    roles: string[];
+    email: string;
+    name: string;
+    fullName: string;
+  }> {
     const { email, password, name, fullName, phoneNumber, address, gender, dateOfBirth, avatar } = authCredentialsDto;
     const cleanEmail = (email || '').trim().toLowerCase();
     const cleanPhone = phoneNumber ? String(phoneNumber).replace(/\D/g, '') : '';
@@ -50,16 +57,27 @@ export class AuthService {
     });
     user.salt = await bcrypt.genSalt();
     user.password = await this.hashPassword(password, user.salt);
-
     try {
       await user.save();
     } catch (error) {
-      if (error.code === '23505') {
+      if (error.code === '23505' || error.code === 11000) {
         throw new ConflictException('Username already exist');
       } else {
         throw new InternalServerErrorException();
       }
     }
+
+    const payload: JwtPayload = { email: user.email, id: user._id.toString(), roles: user.roles };
+    const accessToken = await this.jwtService.sign(payload);
+
+    return {
+      accessToken,
+      id: user._id.toString(),
+      roles: user.roles,
+      email: user.email,
+      name: user.name,
+      fullName: user.fullName,
+    };
   }
 
   async signIn(

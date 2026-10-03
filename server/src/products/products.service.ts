@@ -19,6 +19,38 @@ import { User } from '../auth/models/user.model';
 import { prepareProduct, toSlug } from '../shared/utils/prepareUtils';
 import { languages, paginationLimit } from '../shared/constans';
 
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function buildVietnameseRegexPattern(text: string): string {
+  const map: { [key: string]: string } = {
+    a: '[aàáảãạăằắẳẵặâầấẩẫậ]',
+    e: '[eèéẻẽẹêềếểễệ]',
+    i: '[iìíỉĩị]',
+    o: '[oòóỏõọôồốổỗộơờớởỡợ]',
+    u: '[uùúủũụưừứửữự]',
+    y: '[yỳýỷỹỵ]',
+    d: '[dđ]',
+  };
+  const normalized = text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D');
+
+  let pattern = '';
+  for (const ch of normalized) {
+    const lower = ch.toLowerCase();
+    if (map[lower]) {
+      pattern += map[lower];
+    } else {
+      pattern += escapeRegex(ch);
+    }
+  }
+  return pattern;
+}
+
 @Injectable()
 export class ProductsService {
   constructor(
@@ -32,8 +64,97 @@ export class ProductsService {
     getProductsDto: GetProductsDto,
     lang: string,
   ): Promise<ProductsWithPagination> {
-    const { page, sort, category, search, maxPrice, minPrice, stock, rating, pageSize } = getProductsDto;
-    const searchQuery = search ? { titleUrl: new RegExp(search, 'i') } : {};
+    const {
+      page,
+      sort,
+      category,
+      search,
+      productIds,
+      maxPrice,
+      minPrice,
+      stock,
+      rating,
+      pageSize,
+    } = getProductsDto;
+
+    // Multi-field Vietnamese & Token-based Search Query
+    let searchQuery: any = {};
+    if (search && search.trim().length > 0) {
+      const cleanSearch = search.trim().replace(/\s+/g, ' ');
+      const tokens = cleanSearch.split(' ').map((t) => t.trim()).filter(Boolean);
+
+      const searchFields = [
+        'vi.title',
+        'title',
+        'variants.sku',
+        'sku',
+        'variants.classification',
+        'variants.color',
+        'variants.size',
+        'vi.categoryLevel1',
+        'categoryLevel1',
+        'vi.categoryLevel2',
+        'categoryLevel2',
+        'vi.productType',
+        'productType',
+        'vi.classifications',
+        'classifications',
+        'vi.colors.name',
+        'colors.name',
+        'vi.sizes',
+        'sizes',
+        'tags',
+        'vi.description',
+        'description',
+        'titleUrl',
+      ];
+
+      const fullPattern = buildVietnameseRegexPattern(cleanSearch);
+      const fullRegex = new RegExp(fullPattern, 'i');
+      const rawRegex = new RegExp(escapeRegex(cleanSearch), 'i');
+
+      const phraseConditions: any[] = [];
+      for (const field of searchFields) {
+        phraseConditions.push({ [field]: fullRegex });
+        phraseConditions.push({ [field]: rawRegex });
+      }
+
+      // Token conditions: all tokens must be present somewhere in the search fields
+      if (tokens.length > 1) {
+        const allTokensCondition = {
+          $and: tokens.map((token) => {
+            const tokenPattern = buildVietnameseRegexPattern(token);
+            const tokenRegex = new RegExp(tokenPattern, 'i');
+            const tokenRawRegex = new RegExp(escapeRegex(token), 'i');
+            return {
+              $or: searchFields.flatMap((f) => [
+                { [f]: tokenRegex },
+                { [f]: tokenRawRegex },
+              ]),
+            };
+          }),
+        };
+        searchQuery = {
+          $or: [...phraseConditions, allTokensCondition],
+        };
+      } else {
+        searchQuery = {
+          $or: phraseConditions,
+        };
+      }
+    }
+
+    // Image search product IDs filter (if provided by image similarity search)
+    let imageProductQuery: any = {};
+    if (productIds && productIds.trim().length > 0) {
+      const validIds = productIds
+        .split(',')
+        .map((id) => id.trim())
+        .filter((id) => isValidObjectId(id));
+      if (validIds.length > 0) {
+        imageProductQuery = { _id: { $in: validIds } };
+      }
+    }
     // Category filter: single or multiple (comma-separated or array)
     let categoryQuery: any = {};
     if (category) {
@@ -96,6 +217,7 @@ export class ProductsService {
 
     const query = {
       ...searchQuery,
+      ...imageProductQuery,
       ...categoryQuery,
       ...priceQuery,
       ...stockQuery,
@@ -115,9 +237,9 @@ export class ProductsService {
       options,
     );
 
-    const productIds = (productsWithPagination.all || []).map((product: any) => product._id);
+    const foundProductIds = (productsWithPagination.all || []).map((product: any) => product._id);
     const variantsList = await this.productVariantModel
-      .find({ productId: { $in: productIds }, isActive: true })
+      .find({ productId: { $in: foundProductIds }, isActive: true })
       .lean();
     const variantMap = new Map<string, any[]>();
     for (const v of variantsList) {

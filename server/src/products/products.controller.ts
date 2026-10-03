@@ -11,9 +11,14 @@ import {
   Body,
   Patch,
   Headers,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import * as multer from 'multer';
 
 import { ProductsService } from './products.service';
+import { ImageSearchService } from './image-search.service';
 import { GetProductsDto } from './dto/get-products';
 import { ProductsWithPagination, Product } from './models/product.model';
 import { GetProductDto } from './dto/get-product';
@@ -24,7 +29,24 @@ import { User } from '../auth/models/user.model';
 
 @Controller('api/products')
 export class ProductsController {
-  constructor(private productService: ProductsService) {}
+  constructor(
+    private productService: ProductsService,
+    private imageSearchService: ImageSearchService,
+  ) {}
+
+  @Post('/search/image')
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: multer.memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  searchByImage(
+    @UploadedFile() file: any,
+    @Body('keyword') keyword?: string,
+  ) {
+    return this.imageSearchService.searchByImage(file, keyword);
+  }
 
   @Get()
   getProducts(

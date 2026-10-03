@@ -8,7 +8,7 @@ import { TranslateService } from '../../../services/translate.service';
 import { SignalStore } from '../../../store/signal.store';
 import { Product } from '../../shared/models';
 import { WishlistService } from '../../../services/wishlist.service';
-import { WishlistButtonComponent } from '../../shared/components/wishlist-button/wishlist-button.component';
+import { WishlistButtonComponent } from '../../shared/wishlist-button/wishlist-button.component';
 
 @Component({
   selector: 'app-wishlist',

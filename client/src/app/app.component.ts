@@ -22,8 +22,8 @@ import { currencyLang } from './user/shared/constants';
 import { SignalStore } from './store/signal.store';
 import { SignalStoreSelectors } from './store/signal.store.selectors';
 import { SettingsService } from './admin/pages/settings/settings.service';
-import { FooterComponent } from './user/shared/components/footer/footer.component';
-import { HeaderComponent } from './user/shared/components/header/header.component';
+import { FooterComponent } from './user/layout/footer/footer.component';
+import { HeaderComponent } from './user/layout/header/header.component';
 
 @Component({
   selector: 'cheri-app',
@@ -51,8 +51,8 @@ export class AppComponent {
   ) {
     if (isPlatformBrowser(this.platformId)) {
       this.settingsService.getSettings().subscribe({
-        next: () => {},
-        error: () => {}
+        next: () => { },
+        error: () => { }
       });
     }
 

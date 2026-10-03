@@ -51,6 +51,11 @@ export class ProductsComponent implements OnDestroy {
   columnsView = signal<number>(4);
   wishlistIds = computed(() => this.wishlistService.wishlistIds());
 
+  // ── Search State Signals ──
+  searchQuery = signal<string>('');
+  isImageSearch = signal<boolean>(false);
+  productIdsFilter = signal<string>('');
+
   // ── Computed active filters count ──
   activeFiltersCount = computed(() => {
     let count = 0;
@@ -180,6 +185,15 @@ export class ProductsComponent implements OnDestroy {
 
     this._loadCategories();
     this._loadProducts();
+
+    effect(() => {
+      this.products();
+      this.loadingProducts();
+      this.searchQuery();
+      this.isImageSearch();
+      this.productIdsFilter();
+      this.cdr.markForCheck();
+    });
   }
 
   addToCart(id: string): void {
@@ -231,28 +245,70 @@ export class ProductsComponent implements OnDestroy {
   }
 
   changePage(page: number): void {
+    const currentParams = { ...this.route.snapshot.queryParams };
+    currentParams['page'] = page || 1;
+    currentParams['sort'] = this.sortBy() || currentParams['sort'] || 'newest';
     if (this.category()) {
       this.router.navigate(['/' + this.lang() + '/product/category/' + this.category()], {
-        queryParams: { sort: this.sortBy() || 'newest', page: page || 1 },
+        queryParams: currentParams,
       });
     } else {
       this.router.navigate(['/' + this.lang() + '/product/all'], {
-        queryParams: { sort: this.sortBy() || 'newest', page: page || 1 },
+        queryParams: currentParams,
       });
     }
     this.store.updatePosition({ productsComponent: 0 });
   }
 
   changeSort(sort: string): void {
+    const currentParams = { ...this.route.snapshot.queryParams };
+    currentParams['sort'] = sort;
+    currentParams['page'] = this.page() || 1;
     if (this.category()) {
       this.router.navigate(['/' + this.lang() + '/product/category/' + this.category()], {
-        queryParams: { sort, page: this.page() || 1 },
+        queryParams: currentParams,
       });
     } else {
-      this.router.navigate(['/' + this.lang() + '/product/all'], { queryParams: { sort, page: this.page() || 1 } });
+      this.router.navigate(['/' + this.lang() + '/product/all'], {
+        queryParams: currentParams,
+      });
     }
     this.store.updatePosition({ productsComponent: 0 });
   }
+
+  clearSearch(): void {
+    // 1. Reset all search states
+    this.searchQuery.set('');
+    this.isImageSearch.set(false);
+    this.productIdsFilter.set('');
+
+    // 2. Reset all filter signals to default
+    this.filterMinPrice.set(0);
+    this.filterStock.set('all');
+    this.filterRating.set(0);
+    this.selectedCategories.set([]);
+    this.selectedRatings.set([]);
+    this.store.filterPrice(0);
+
+    // 3. Clear search/filter query parameters on URL, navigate cleanly to /product/all
+    const lang = this.lang() || 'vi';
+    this.router.navigate(['/' + lang + '/product/all'], {
+      queryParams: {},
+    });
+
+    // 4. Call existing product load logic with default parameters to fetch all products
+    this.store.getProducts({
+      lang,
+      page: 1,
+      sort: 'newest',
+    });
+
+    this.store.updatePosition({ productsComponent: 0 });
+    this.sidebarOpened = false;
+    this.cdr.markForCheck();
+  }
+
+
 
   changeStock(stock: string): void {
     this.filterStock.set(stock);
@@ -296,16 +352,7 @@ export class ProductsComponent implements OnDestroy {
   }
 
   clearAllFilters(): void {
-    this.filterMinPrice.set(0);
-    this.filterStock.set('all');
-    this.filterRating.set(0);
-    this.selectedCategories.set([]);
-    this.selectedRatings.set([]);
-    this.store.filterPrice(0);
-    this.router.navigate(['/' + this.lang() + '/product/all'], {
-      queryParams: { sort: 'newest', page: 1 }
-    });
-    this.store.updatePosition({ productsComponent: 0 });
+    this.clearSearch();
   }
 
   toggleSidebar(): void {
@@ -356,27 +403,58 @@ export class ProductsComponent implements OnDestroy {
         distinctUntilChanged((a, b) => a.slice().sort().join(',') === b.slice().sort().join(','))
       ),
       this.route.queryParams.pipe(
-        map((params) => ({ page: params['page'], sort: params['sort'] })),
-        distinctUntilChanged((a, b) => a.page === b.page && a.sort === b.sort)
+        map((params) => ({
+          page: params['page'],
+          sort: params['sort'],
+          search: params['search'] || '',
+          imageSearch: params['imageSearch'] || '',
+          productIds: params['productIds'] || '',
+        })),
+        distinctUntilChanged(
+          (a, b) =>
+            a.page === b.page &&
+            a.sort === b.sort &&
+            a.search === b.search &&
+            a.imageSearch === b.imageSearch &&
+            a.productIds === b.productIds
+        )
       ),
-    ]).subscribe(([lang, selectedCategories, filterPrice, minPrice, stock, selectedRatings, { page, sort }]) => {
-      const catParam = selectedCategories.length > 0
-        ? selectedCategories.join(',')
-        : undefined;
-      const ratParam = selectedRatings.length > 0
-        ? selectedRatings.join(',')
-        : undefined;
-
-      this.store.getProducts({
+    ]).subscribe(
+      ([
         lang,
-        category: catParam,
-        maxPrice: filterPrice || undefined,
-        minPrice: minPrice || undefined,
-        stock: stock !== 'all' ? stock : undefined,
-        rating: ratParam,
-        page: page || 1,
-        sort: sort || 'newest',
-      });
-    });
+        selectedCategories,
+        filterPrice,
+        minPrice,
+        stock,
+        selectedRatings,
+        { page, sort, search, imageSearch, productIds },
+      ]) => {
+        this.searchQuery.set(search || '');
+        this.isImageSearch.set(Boolean(imageSearch));
+        this.productIdsFilter.set(productIds || '');
+
+        const catParam = selectedCategories.length > 0
+          ? selectedCategories.join(',')
+          : undefined;
+        const ratParam = selectedRatings.length > 0
+          ? selectedRatings.join(',')
+          : undefined;
+
+        this.store.getProducts({
+          lang,
+          category: catParam,
+          maxPrice: filterPrice || undefined,
+          minPrice: minPrice || undefined,
+          stock: stock !== 'all' ? stock : undefined,
+          rating: ratParam,
+          page: page || 1,
+          sort: sort || 'newest',
+          search: search || undefined,
+          imageSearch: imageSearch || undefined,
+          productIds: productIds || undefined,
+        });
+        this.cdr.markForCheck();
+      },
+    );
   }
 }

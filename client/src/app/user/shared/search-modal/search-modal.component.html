@@ -1,0 +1,109 @@
+@if (isOpen) {
+<div class="cheri-search-backdrop" (click)="onBackdropClick($event)">
+  <div class="cheri-search-modal" (click)="$event.stopPropagation()">
+    <!-- Header -->
+    <div class="cheri-search-header">
+      <h2 class="cheri-search-title">TÌM KIẾM SẢN PHẨM</h2>
+      <button type="button" class="cheri-search-close" (click)="closeModal()" aria-label="Đóng tìm kiếm">
+        &times;
+      </button>
+    </div>
+
+    <!-- Error alert -->
+    @if (errorMessage) {
+    <div class="cheri-search-error">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+      <span>{{ errorMessage }}</span>
+    </div>
+    }
+
+    <!-- Search Input Section -->
+    <form class="cheri-keyword-form" (ngSubmit)="submitSearch()">
+      <div class="cheri-keyword-box">
+        <input type="text" class="cheri-keyword-input" placeholder="Vui lòng nhập từ khóa..." [(ngModel)]="keyword"
+          name="searchKeyword" autocomplete="off" />
+        <button type="submit" class="cheri-keyword-submit-btn" [disabled]="isLoading">
+          @if (isLoading) {
+          <span>Đang tìm...</span>
+          } @else {
+          <span>TÌM KIẾM</span>
+          }
+        </button>
+      </div>
+    </form>
+
+    <!-- 14. Suggestions chips -->
+    <div class="cheri-suggestions-row">
+      <span class="cheri-suggestions-label">GỢI Ý TÌM KIẾM:</span>
+      <div class="cheri-suggestions-list">
+        @for (s of suggestions; track s) {
+        <button type="button" class="cheri-suggestion-chip" (click)="selectSuggestion(s)">
+          {{ s }}
+        </button>
+        }
+      </div>
+    </div>
+
+    <!-- Divider -->
+    <div class="cheri-search-divider">
+      <span class="divider-line"></span>
+      <span class="divider-text">HOẶC TÌM BẰNG HÌNH ẢNH</span>
+      <span class="divider-line"></span>
+    </div>
+
+    <!-- Image Upload Area -->
+    <div class="cheri-image-search-section">
+      <input #fileInput type="file" accept="image/jpeg,image/jpg,image/png,image/webp" class="cheri-hidden-file-input"
+        (change)="onFileSelected($event)" />
+
+      @if (!previewUrl) {
+      <!-- Vùng kéo/click upload khi chưa có ảnh -->
+      <div class="cheri-upload-dropzone" (click)="triggerFileInput(fileInput)">
+        <div class="upload-icon-circle">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+        </div>
+        <p class="upload-title">Tải ảnh</p>
+        <p class="upload-hint">Hỗ trợ JPG, PNG, WebP (Tối đa 5MB)</p>
+      </div>
+      } @else {
+      <!-- Vùng xem trước ảnh đã chọn -->
+      <div class="cheri-image-preview-card">
+        <div class="preview-image-wrap">
+          <img [src]="previewUrl" alt="Ảnh trang phục tìm kiếm" class="preview-img" />
+        </div>
+        <div class="preview-actions">
+          <button type="button" class="cheri-preview-btn change-btn" (click)="triggerFileInput(fileInput)">
+            Thay ảnh
+          </button>
+          <button type="button" class="cheri-preview-btn remove-btn" (click)="removeImage()">
+            Xóa ảnh
+          </button>
+        </div>
+      </div>
+      }
+    </div>
+
+    <!-- Nút hành động tìm kiếm tổng hợp -->
+    <div class="cheri-search-footer-action">
+      <button type="button" class="cheri-main-search-btn" [disabled]="isLoading" (click)="submitSearch()">
+        @if (isLoading) {
+        <span class="btn-spinner"></span>
+        <span>ĐANG TÌM KIẾM...</span>
+        } @else {
+        <span>TÌM KIẾM</span>
+        }
+      </button>
+    </div>
+  </div>
+</div>
+}

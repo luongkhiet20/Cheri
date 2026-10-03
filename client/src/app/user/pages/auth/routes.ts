@@ -12,7 +12,17 @@ export const AUTH_ROUTER: Routes = [
     component: SignInComponent
   },
   {
+    path: 'login',
+    redirectTo: 'signin',
+    pathMatch: 'full'
+  },
+  {
     path: 'signup',
     component: SignUpComponent
+  },
+  {
+    path: 'register',
+    redirectTo: 'signup',
+    pathMatch: 'full'
   }
-]
+];

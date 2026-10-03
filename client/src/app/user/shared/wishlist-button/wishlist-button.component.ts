@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, Input, computed, ChangeDetectorRef, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { WishlistService } from '../../../../services/wishlist.service';
+import { WishlistService } from '../../../services/wishlist.service';
 
 @Component({
   selector: 'app-wishlist-button',

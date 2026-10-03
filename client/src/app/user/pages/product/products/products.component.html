@@ -66,6 +66,32 @@
           <!-- ── Main content ── -->
           <div class="products-main-content">
 
+            <!-- ── Search Context Banner ── -->
+            @if (searchQuery() || isImageSearch() || productIdsFilter()) {
+            <div class="products-search-context-banner">
+              <div class="search-context-info">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="search-context-icon">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                @if (searchQuery() && (isImageSearch() || productIdsFilter())) {
+                  <span>Kết quả tìm kiếm cho: <strong>"{{ searchQuery() }}"</strong> + hình ảnh</span>
+                } @else if (searchQuery()) {
+                  <span>Kết quả tìm kiếm cho: <strong>"{{ searchQuery() }}"</strong></span>
+                } @else if (isImageSearch() || productIdsFilter()) {
+                  <span>Kết quả tìm kiếm bằng hình ảnh</span>
+                }
+              </div>
+              <button type="button" class="search-clear-btn" (click)="clearSearch()" title="Xóa tìm kiếm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                <span>Xóa tìm kiếm</span>
+              </button>
+            </div>
+            }
+
             <!-- ── Toolbar: result count + mobile filter + sort ── -->
             <div class="products-toolbar">
 
@@ -93,6 +119,39 @@
                 }
               </div>
 
+              <!-- Right: grid switcher + sort select -->
+              <div class="products-controls-right">
+                <div class="products-grid-switcher">
+                  <button type="button" class="grid-switch-btn" [class.active]="columnsView() === 3"
+                    (click)="setColumns(3)" title="Lưới 3 cột">
+                    <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+                      <rect x="1" y="2" width="3.6" height="12" rx="0.6"/>
+                      <rect x="6.2" y="2" width="3.6" height="12" rx="0.6"/>
+                      <rect x="11.4" y="2" width="3.6" height="12" rx="0.6"/>
+                    </svg>
+                  </button>
+                  <button type="button" class="grid-switch-btn" [class.active]="columnsView() === 4"
+                    (click)="setColumns(4)" title="Lưới 4 cột (Chuẩn)">
+                    <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+                      <rect x="1" y="2" width="2.6" height="12" rx="0.6"/>
+                      <rect x="4.9" y="2" width="2.6" height="12" rx="0.6"/>
+                      <rect x="8.7" y="2" width="2.6" height="12" rx="0.6"/>
+                      <rect x="12.5" y="2" width="2.6" height="12" rx="0.6"/>
+                    </svg>
+                  </button>
+                </div>
+
+                <div class="products-sort-wrap">
+                  <select class="products-sort-select" [value]="sortBy() || 'newest'"
+                    (change)="changeSort($any($event.target).value)">
+                    <option value="newest">Sắp xếp mặc định</option>
+                    <option value="price_asc">Giá tăng dần</option>
+                    <option value="price_desc">Giá giảm dần</option>
+                    <option value="rating">Được thích nhiều nhất</option>
+                  </select>
+                </div>
+              </div>
+
             </div>
 
 
@@ -102,33 +161,51 @@
               @for (cat of selectedCategories(); track cat) {
               <button type="button" class="products-filter-chip" (click)="removeCategoryFilter(cat)">
                 <span>Danh mục: {{ getCategoryTitle(cat) }}</span>
-
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
               </button>
               }
               @for (r of selectedRatings(); track r) {
               <button type="button" class="products-filter-chip" (click)="removeRatingFilter(r)">
                 <span>{{ r }}★</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
               </button>
               }
               @if (filterStock() !== 'all') {
               <button type="button" class="products-filter-chip" (click)="changeStock('all')">
                 <span>{{ filterStock() === 'onStock' ? 'Còn hàng' : 'Hết hàng' }}</span>
-
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
               </button>
               }
-              @if (filterPrice() > 0 && filterPrice() < (maxPrice() || 999999999)) { <button type="button"
-                class="products-filter-chip" (click)="priceRange(0)">
+              @if (filterPrice() > 0 && filterPrice() < (maxPrice() || 999999999)) {
+              <button type="button" class="products-filter-chip" (click)="priceRange(0)">
                 <span>Giá max: {{ filterPrice() | priceFormat }} {{ currency() }}</span>
-
-                </button>
-                }
-                @if (filterMinPrice() > 0) {
-                <button type="button" class="products-filter-chip" (click)="changeMinPrice(0)">
-                  <span>Giá min: {{ filterMinPrice() | priceFormat }} {{ currency() }}</span>
-
-                </button>
-                }
-
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+              }
+              @if (filterMinPrice() > 0) {
+              <button type="button" class="products-filter-chip" (click)="changeMinPrice(0)">
+                <span>Giá min: {{ filterMinPrice() | priceFormat }} {{ currency() }}</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+              }
+              <button type="button" class="products-clear-all-btn" (click)="clearAllFilters()">
+                Xóa tất cả
+              </button>
             </div>
             }
 
@@ -149,7 +226,7 @@
 
             <!-- ── Sub-categories ── -->
             @if (subCategories(); as subs) {
-            @if (subs.length && (pagination()).page === 1) {
+            @if (subs.length && pagination()?.page === 1) {
             <app-categories-list [categories]="subs" [lang]="lang()" [withSlider]="false"></app-categories-list>
             }
             }
@@ -234,21 +311,36 @@
             } @else {
             <!-- Empty state -->
             <div class="products-empty">
-              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+              <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
                 class="products-empty-icon">
-                <path
-                  d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
               </svg>
-              <h3 class="products-empty-title">Chưa Tìm Thấy Sản Phẩm</h3>
-              <p class="products-empty-desc">
-                Chéri chưa tìm thấy sản phẩm nào khớp với bộ lọc của bạn.
-                Hãy thử lại với danh mục khác nhé.
-              </p>
-              <a class="products-empty-btn" [routerLink]="['/' + lang() + '/product/all']"
-                [queryParams]="{ sort: 'newest', page: 1 }">
-                Xem Toàn Bộ Sản Phẩm
-              </a>
+              @if (searchQuery() || isImageSearch() || productIdsFilter()) {
+                <h3 class="products-empty-title">Không Tìm Thấy Sản Phẩm Phù Hợp</h3>
+                <p class="products-empty-desc">
+                  @if (searchQuery() && (isImageSearch() || productIdsFilter())) {
+                    Chéri không tìm thấy sản phẩm nào khớp với từ khóa "{{ searchQuery() }}" và hình ảnh đã chọn.
+                  } @else if (searchQuery()) {
+                    Chéri không tìm thấy sản phẩm nào khớp với từ khóa "{{ searchQuery() }}". Bạn hãy thử kiểm tra lại chính tả hoặc tìm theo từ khóa khác.
+                  } @else {
+                    Không tìm thấy sản phẩm có hình ảnh tương đồng. Bạn hãy thử tải lên hình ảnh khác hoặc tìm kiếm bằng từ khóa nhé.
+                  }
+                </p>
+                <button type="button" class="products-empty-btn" (click)="clearSearch()">
+                  Xem Toàn Bộ Sản Phẩm
+                </button>
+              } @else {
+                <h3 class="products-empty-title">Chưa Tìm Thấy Sản Phẩm</h3>
+                <p class="products-empty-desc">
+                  Chéri chưa tìm thấy sản phẩm nào khớp với bộ lọc của bạn.
+                  Hãy thử lại với danh mục khác nhé.
+                </p>
+                <button type="button" class="products-empty-btn" (click)="clearSearch()">
+                  Xem Toàn Bộ Sản Phẩm
+                </button>
+              }
             </div>
             }
             }

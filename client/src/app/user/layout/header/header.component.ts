@@ -4,12 +4,12 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Observable, BehaviorSubject, of } from 'rxjs';
 
-import { TranslateService } from '../../../../services/translate.service';
-import { accessTokenKey } from '../../constants';
-import { Cart, User, Order } from '../../models';
-import { TranslatePipe } from '../../../../pipes/translate.pipe';
-import { SignalStore } from '../../../../store/signal.store';
-import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
+import { TranslateService } from '../../../services/translate.service';
+import { accessTokenKey } from '../../shared/constants';
+import { Cart, User, Order } from '../../shared/models';
+import { TranslatePipe } from '../../../pipes/translate.pipe';
+import { SignalStore } from '../../../store/signal.store';
+import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
 
 import { MatIconModule } from '@angular/material/icon';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
@@ -19,14 +19,29 @@ import { MatMenuModule } from '@angular/material/menu';
 
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
+import { SearchModalComponent } from '../../shared/search-modal/search-modal.component';
 
 @Component({
   selector: 'app-header',
   templateUrl: './header.component.html',
   styleUrls: ['./header.component.css'],
-  imports: [CommonModule, TranslatePipe, RouterLink, RouterLinkActive, ReactiveFormsModule, MatIconModule, MatButtonModule, MatAutocompleteModule, MatInputModule, MatToolbarModule, MatMenuModule]
+  imports: [
+    CommonModule,
+    TranslatePipe,
+    RouterLink,
+    RouterLinkActive,
+    ReactiveFormsModule,
+    MatIconModule,
+    MatButtonModule,
+    MatAutocompleteModule,
+    MatInputModule,
+    MatToolbarModule,
+    MatMenuModule,
+    SearchModalComponent,
+  ]
 })
 export class HeaderComponent implements OnInit {
+  isSearchModalOpen = false;
   user$: Signal<User>;
   cart$: Signal<Cart>;
   productTitles$: Signal<string[]>;
@@ -56,10 +71,15 @@ export class HeaderComponent implements OnInit {
   }
 
   toggleSearch(): void {
-    this.isSearchOpen = !this.isSearchOpen;
-    if (this.isSearchOpen) {
-      this.showAutocomplete$.next(true);
-    }
+    this.openSearchModal();
+  }
+
+  openSearchModal(): void {
+    this.isSearchModalOpen = true;
+  }
+
+  closeSearchModal(): void {
+    this.isSearchModalOpen = false;
   }
 
   closeSearch(): void {

@@ -31,6 +31,12 @@ export class GetProductsDto {
   search?: string;
 
   @IsOptional()
+  productIds?: string;
+
+  @IsOptional()
+  imageSearch?: string;
+
+  @IsOptional()
   maxPrice?: number;
 
   @IsOptional()

@@ -1,10 +1,10 @@
 import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, input, computed } from '@angular/core';
 
-import { Product, Category } from '../../models';
+import { Product, Category } from '../models';
 import { CommonModule } from '@angular/common';
-import { TranslatePipe } from '../../../../pipes/translate.pipe';
+import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { RouterLink } from '@angular/router';
-import { PriceFormatPipe } from '../../../../pipes/price.pipe';
+import { PriceFormatPipe } from '../../../pipes/price.pipe';
 
 import { MatChipsModule } from '@angular/material/chips';
 import { CartShowComponent } from '../cart-show/cart-show.component';

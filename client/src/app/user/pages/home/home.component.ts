@@ -1,4 +1,4 @@
-import { SidebarComponent } from '../../shared/components/sidebar/sidebar.component';
+import { SidebarComponent } from '../../shared/sidebar/sidebar.component';
 import { CommonModule } from '@angular/common';
 import { map, distinctUntilChanged, filter, take, skip, withLatestFrom, delay } from 'rxjs/operators';
 import { Component, ChangeDetectionStrategy, OnDestroy, Signal, computed, AfterViewInit, ViewChild, ElementRef, Inject, DOCUMENT } from '@angular/core';
@@ -18,14 +18,14 @@ import { sortOptions } from '../../shared/constants';
 
 import { Product, Category, Pagination, Cart } from '../../shared/models';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
-import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
-import { CategoriesListComponent } from '../../shared/components/categories-list/categories-list.component';
-import { ProductContentComponent } from '../../shared/components/product-content/product-content.component';
-import { ProductsListComponent } from '../../shared/components/products-list/products-list.component';
+import { PaginationComponent } from '../../shared/pagination/pagination.component';
+import { CategoriesListComponent } from '../../shared/categories-list/categories-list.component';
+import { ProductContentComponent } from '../../shared/product-content/product-content.component';
+import { ProductsListComponent } from '../../shared/products-list/products-list.component';
 import { SignalStore } from '../../../store/signal.store';
 import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
 import { ThemeService } from '../../../services/theme.service';
-import { WishlistButtonComponent } from '../../shared/components/wishlist-button/wishlist-button.component';
+import { WishlistButtonComponent } from '../../shared/wishlist-button/wishlist-button.component';
 
 @Component({
   selector: 'app-home',

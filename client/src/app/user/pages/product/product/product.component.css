@@ -1,38 +1,822 @@
+/* ==========================================================================
+   CHÉRI LUXURY FASHION — PRODUCT DETAIL MODAL / POPUP
+   Color Palette:
+   - Primary Accent: #74070E (Wine Red)
+   - Secondary / Background tint: #FDF2F3, #FAF9F8, #F5F2F2
+   - Text Dark: #1A1A1A, #374151
+   - Text Muted: #6B7280, #8E8E93, #9CA3AF
+   - Borders: #E5E7EB, #F0ECE9
+   ========================================================================== */
+
 :host {
+  display: block;
+}
+
+/* 1. Backdrop Overlay */
+.cheri-popup-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(18, 18, 18, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 9999;
   display: flex;
-  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  animation: cheriBackdropFade 0.25s ease-out;
+}
+
+@keyframes cheriBackdropFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 2. Modal Card Container */
+.cheri-popup-card {
+  position: relative;
+  width: 100%;
+  max-width: 1100px;
+  max-height: 88vh;
+  background: #FFFFFF;
+  border-radius: 12px;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.35), 0 0 1px rgba(0, 0, 0, 0.1);
+  display: flex;
   flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+  animation: cheriCardScaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
-:host .product {
-  margin-top: 10px;
-  box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 3px 1px -2px rgba(0, 0, 0, 0.12), 0 1px 5px 0 rgba(0, 0, 0, 0.2);
+
+@keyframes cheriCardScaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
-:host .product-images {
+
+/* 3. Close Button (×) */
+.cheri-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  z-index: 30;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #E5E7EB;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  border-radius: 50%;
+  font-size: 24px;
+  line-height: 32px;
+  color: #4B5563;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.cheri-close-btn:hover {
+  background: #74070E;
+  color: #FFFFFF;
+  border-color: #74070E;
+  transform: rotate(90deg);
+}
+
+/* 4. Loading & Unavailable States */
+.cheri-popup-loading,
+.cheri-popup-unavailable {
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.cheri-popup-loading .loading-text {
+  margin-top: 16px;
+  font-size: 14px;
+  color: #6B7280;
+  letter-spacing: 0.3px;
+}
+
+.cheri-popup-unavailable .unavailable-symbol {
+  font-size: 32px;
+  color: #74070E;
+  margin-bottom: 12px;
+}
+
+.cheri-popup-unavailable .unavailable-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 10px 0;
+}
+
+.cheri-popup-unavailable .unavailable-desc {
+  font-size: 14px;
+  color: #6B7280;
+  max-width: 420px;
+  margin: 0 0 24px 0;
+  line-height: 1.5;
+}
+
+/* 5. Main 2-Column Body */
+.cheri-popup-body {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  max-height: 88vh;
+  overflow: hidden;
+}
+
+/* ==========================================================================
+   LEFT COLUMN — PRODUCT GALLERY
+   ========================================================================== */
+.cheri-gallery-col {
+  flex: 0 0 46%;
+  max-width: 46%;
+  padding: 28px;
+  background: #FAF9F8;
+  border-right: 1px solid #F0ECE9;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.cheri-main-image-container {
+  position: relative;
+  width: 100%;
+  height: 460px;
+  background: #FFFFFF;
+  border-radius: 8px;
+  border: 1px solid #EFEAE6;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-in;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.cheri-main-image {
+  max-width: 100%;
+  max-height: 100%;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: transform 0.35s ease;
+}
+
+.cheri-main-image-container:hover .cheri-main-image {
+  transform: scale(1.025);
+}
+
+.cheri-zoom-hint {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #E5E7EB;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4B5563;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.cheri-zoom-hint i {
+  font-size: 18px;
+}
+
+.cheri-main-image-container:hover .cheri-zoom-hint {
+  opacity: 1;
+}
+
+.cheri-no-image-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #9CA3AF;
+  gap: 8px;
+}
+
+.cheri-no-image-placeholder i {
+  font-size: 40px;
+  opacity: 0.6;
+}
+
+.cheri-no-image-placeholder p {
+  font-size: 13.5px;
+  margin: 0;
+}
+
+/* Thumbnail Strip */
+.cheri-thumbnails-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 4px 2px 8px 2px;
+  scrollbar-width: thin;
+  scrollbar-color: #D1D5DB transparent;
+}
+
+.cheri-thumbnails-row::-webkit-scrollbar {
+  height: 4px;
+}
+
+.cheri-thumbnails-row::-webkit-scrollbar-thumb {
+  background: #D1D5DB;
+  border-radius: 4px;
+}
+
+.cheri-thumb-item {
+  width: 64px;
+  height: 76px;
+  flex-shrink: 0;
+  border: 1.5px solid #E5E7EB;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #FFFFFF;
+  cursor: pointer;
+  padding: 2px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+}
+
+.cheri-thumb-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.cheri-thumb-item:hover {
+  border-color: #A33A41;
+}
+
+.cheri-thumb-item.is-selected {
+  border-color: #74070E;
+  box-shadow: 0 0 0 1.5px #74070E;
+}
+
+/* ==========================================================================
+   RIGHT COLUMN — PRODUCT INFORMATION & ACTIONS
+   ========================================================================== */
+.cheri-details-col {
+  flex: 1;
+  padding: 32px 36px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: #D1D5DB transparent;
+}
+
+.cheri-details-col::-webkit-scrollbar {
+  width: 5px;
+}
+
+.cheri-details-col::-webkit-scrollbar-thumb {
+  background: #D1D5DB;
+  border-radius: 4px;
+}
+
+/* Category Breadcrumb */
+.cheri-category-breadcrumb {
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.8px;
+  color: #8E8E93;
+}
+
+/* Product Title */
+.cheri-product-heading {
+  font-size: 24px;
+  font-weight: 600;
+  color: #74070E;
+  margin: 0;
+  line-height: 1.35;
+  letter-spacing: -0.2px;
+  font-family: "Playfair Display", "Times New Roman", Georgia, serif;
+}
+
+/* SKU Badge */
+.cheri-sku-badge {
+  font-size: 12px;
+  color: #888888;
+  letter-spacing: 0.3px;
+}
+
+.cheri-sku-badge span {
+  font-family: monospace;
+  font-weight: 600;
+  color: #555555;
+}
+
+/* Short Description */
+.cheri-description-text {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #4B5563;
+  margin: 2px 0 4px 0;
+}
+
+/* Price & Status */
+.cheri-price-status-container {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 4px 0;
+}
+
+.cheri-price-group {
+  display: flex;
+  align-items: baseline;
+}
+
+.cheri-price-sale {
+  font-size: 26px;
+  font-weight: 700;
+  color: #74070E;
+  letter-spacing: -0.4px;
+}
+
+.cheri-price-regular {
+  font-size: 15px;
+  color: #9CA3AF;
+  text-decoration: line-through;
+  margin-left: 12px;
+  font-weight: 400;
+}
+
+/* Stock Indicator */
+.cheri-stock-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #ECFDF5;
+  color: #047857;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.cheri-stock-indicator .stock-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #10B981;
+}
+
+.cheri-stock-indicator.is-out {
+  background: #FEF2F2;
+  color: #DC2626;
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.cheri-stock-indicator.is-out .stock-pulse {
+  background-color: #EF4444;
+}
+
+/* Divider */
+.cheri-section-divider {
+  border: none;
+  border-top: 1px solid #F0ECE9;
+  margin: 4px 0 8px 0;
+}
+
+/* Option Groups */
+.cheri-option-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cheri-option-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.cheri-option-current {
+  font-weight: 600;
+  color: #74070E;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* 8. Classification Chips */
+.cheri-options-chips {
   display: flex;
   flex-wrap: wrap;
-  padding: 0 4px;
+  gap: 8px;
 }
-:host .product-images-content {
-  flex: 25%;
-  max-width: 25%;
-  padding: 0 4px;
-  position: relative;
+
+.cheri-choice-pill {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid #D1D5DB;
+  background: #FFFFFF;
+  font-size: 13px;
+  color: #374151;
   cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
 }
-@media screen and (max-width: 800px) {
-  :host .product-images-content {
-    flex: 50%;
-    max-width: 50%;
+
+.cheri-choice-pill:hover {
+  border-color: #74070E;
+}
+
+.cheri-choice-pill.is-active {
+  border-color: #74070E;
+  background: #FDF2F3;
+  color: #74070E;
+  font-weight: 600;
+}
+
+/* 9. Colors Swatches */
+.cheri-colors-swatch-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cheri-color-swatch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid #D1D5DB;
+  background: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+}
+
+.cheri-color-swatch-btn .swatch-color-circle {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  box-sizing: border-box;
+}
+
+.cheri-color-swatch-btn .swatch-name-label {
+  font-size: 13px;
+  color: #374151;
+}
+
+.cheri-color-swatch-btn:hover {
+  border-color: #74070E;
+}
+
+.cheri-color-swatch-btn.is-active {
+  border-color: #74070E;
+  background: #FDF2F3;
+}
+
+.cheri-color-swatch-btn.is-active .swatch-name-label {
+  color: #74070E;
+  font-weight: 600;
+}
+
+/* 10. Sizes Grid */
+.cheri-sizes-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cheri-size-btn {
+  min-width: 42px;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid #D1D5DB;
+  background: #FFFFFF;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+}
+
+.cheri-size-btn:hover {
+  border-color: #74070E;
+}
+
+.cheri-size-btn.is-active {
+  border-color: #74070E;
+  background: #FDF2F3;
+  color: #74070E;
+  font-weight: 600;
+}
+
+/* 14. Quantity Stepper */
+.cheri-quantity-row {
+  margin-top: 4px;
+}
+
+.cheri-stepper-box {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #D1D5DB;
+  border-radius: 6px;
+  background: #FFFFFF;
+  overflow: hidden;
+  width: fit-content;
+}
+
+.cheri-stepper-box .stepper-btn {
+  width: 38px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 17px;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+  outline: none;
+}
+
+.cheri-stepper-box .stepper-btn:hover:not([disabled]) {
+  background: #F3F4F6;
+  color: #74070E;
+}
+
+.cheri-stepper-box .stepper-btn[disabled] {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.cheri-stepper-box .stepper-count {
+  min-width: 42px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  user-select: none;
+}
+
+/* 15. Action Buttons (Thêm vào giỏ hàng & Mua ngay) */
+.cheri-action-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.cheri-action-btn {
+  flex: 1;
+  height: 48px;
+  border-radius: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+}
+
+.cheri-action-btn.secondary-btn {
+  background: #FFFFFF;
+  border: 1.5px solid #74070E;
+  color: #74070E;
+}
+
+.cheri-action-btn.secondary-btn:hover:not([disabled]) {
+  background: #FDF2F3;
+}
+
+.cheri-action-btn.primary-btn {
+  background: #74070E;
+  border: 1.5px solid #74070E;
+  color: #FFFFFF;
+}
+
+.cheri-action-btn.primary-btn:hover:not([disabled]) {
+  background: #58050A;
+  border-color: #58050A;
+}
+
+.cheri-action-btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* 16. Shipping Information Panel */
+.cheri-shipping-panel {
+  padding: 12px 14px;
+  border-radius: 6px;
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.cheri-shipping-panel .shipping-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.cheri-shipping-panel .shipping-panel-header i {
+  font-size: 16px;
+  color: #74070E;
+}
+
+.cheri-shipping-panel .shipping-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+}
+
+.cheri-shipping-panel .shipping-fee-line {
+  display: flex;
+  justify-content: space-between;
+}
+
+.cheri-shipping-panel .fee-name {
+  color: #6B7280;
+}
+
+.cheri-shipping-panel .fee-val {
+  font-weight: 600;
+  color: #111827;
+}
+
+.cheri-shipping-panel .shipping-note-line {
+  color: #6B7280;
+  font-style: italic;
+  font-size: 12px;
+}
+
+/* Full Description */
+.cheri-full-desc-panel {
+  padding: 12px 14px;
+  border-radius: 6px;
+  background: #FAF9F8;
+  border-left: 3px solid #74070E;
+  margin-top: 4px;
+}
+
+.cheri-full-desc-panel .full-desc-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.cheri-full-desc-panel .full-desc-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: #4B5563;
+  line-height: 1.6;
+}
+
+/* 18. Tags Container */
+.cheri-tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.cheri-tag-item {
+  font-size: 11.5px;
+  color: #6B7280;
+  background: #F3F4F6;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+/* ==========================================================================
+   RESPONSIVE DESIGN (TABLET & MOBILE)
+   ========================================================================== */
+@media screen and (max-width: 900px) {
+  .cheri-popup-card {
+    max-width: 720px;
+    max-height: 92vh;
+  }
+
+  .cheri-gallery-col {
+    flex: 0 0 44%;
+    max-width: 44%;
+    padding: 20px;
+  }
+
+  .cheri-main-image-container {
+    height: 360px;
+  }
+
+  .cheri-details-col {
+    padding: 24px 20px;
+  }
+
+  .cheri-product-heading {
+    font-size: 20px;
   }
 }
-@media screen and (max-width: 600px) {
-  :host .product-images-content {
-    flex: 100%;
+
+@media screen and (max-width: 768px) {
+  .cheri-popup-backdrop {
+    padding: 0;
+    align-items: flex-start;
+  }
+
+  .cheri-popup-card {
     max-width: 100%;
+    min-height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .cheri-popup-body {
+    flex-direction: column;
+    max-height: 100vh;
+    overflow-y: auto;
+  }
+
+  .cheri-gallery-col {
+    flex: none;
+    max-width: 100%;
+    padding: 16px;
+    border-right: none;
+    border-bottom: 1px solid #F0ECE9;
+  }
+
+  .cheri-main-image-container {
+    height: 320px;
+  }
+
+  .cheri-details-col {
+    padding: 20px 16px 36px 16px;
+    overflow-y: visible;
+  }
+
+  .cheri-action-buttons {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .cheri-action-btn {
+    width: 100%;
+  }
+
+  .cheri-close-btn {
+    top: 12px;
+    right: 12px;
   }
 }
-:host .product-images-image {
-  margin-top: 8px;
-  display: block;
-  max-width: 100%;
-}
+

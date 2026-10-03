@@ -6,6 +6,8 @@ import ProductSchema from './schemas/product.schema';
 import CategorySchema from './schemas/category.schema';
 import ProductVariantSchema from './schemas/product-variant.schema';
 
+import { ImageSearchService } from './image-search.service';
+
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -19,7 +21,7 @@ import ProductVariantSchema from './schemas/product-variant.schema';
     ]),
   ],
   controllers: [ProductsController],
-  providers: [ProductsService],
-  exports: [MongooseModule, ProductsService],
+  providers: [ProductsService, ImageSearchService],
+  exports: [MongooseModule, ProductsService, ImageSearchService],
 })
 export class ProductsModule {}

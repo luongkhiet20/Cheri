@@ -1,8 +1,8 @@
 ﻿import { CommonModule } from '@angular/common';
-import { Order } from '../../models';
+import { Order } from '../models';
 
 import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
-import { TranslatePipe } from '../../../../pipes/translate.pipe';
+import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { MatProgressBar } from '@angular/material/progress-bar';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';

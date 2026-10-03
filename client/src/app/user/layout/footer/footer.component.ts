@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnDestroy } from '@angular/core';
 import { Subscription } from 'rxjs';
 
-import { TranslateService } from '../../../../services/translate.service';
+import { TranslateService } from '../../../services/translate.service';
 import { RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 

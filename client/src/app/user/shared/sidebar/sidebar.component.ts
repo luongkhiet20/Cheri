@@ -5,10 +5,10 @@ import { MatSliderModule } from '@angular/material/slider';
 import { MatSelectModule } from '@angular/material/select';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { TranslatePipe } from '../../../../pipes/translate.pipe';
+import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { FormsModule } from '@angular/forms';
-import { PriceFormatPipe } from '../../../../pipes/price.pipe';
-import { Category } from '../../models';
+import { PriceFormatPipe } from '../../../pipes/price.pipe';
+import { Category } from '../models';
 
 @Component({
   selector: 'app-sidebar',

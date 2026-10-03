@@ -15,7 +15,7 @@ import { CardComponent } from './card/card.component';
 import { SummaryComponent } from './summary/summary.component';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { PriceFormatPipe } from '../../../pipes/price.pipe';
-import { OrderInfoComponent } from '../../shared/components/order-info/order-info.component';
+import { OrderInfoComponent } from '../../shared/order-info/order-info.component';
 
 @NgModule({
   declarations: [

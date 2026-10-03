@@ -2,7 +2,7 @@ import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 
-import { Category } from '../../models';
+import { Category } from '../models';
 
 @Component({
   selector: 'app-categories-list',
@@ -16,5 +16,5 @@ export class CategoriesListComponent {
   @Input() lang: string;
   @Input() withSlider = true;
 
-  constructor() {}
+  constructor() { }
 }

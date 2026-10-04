@@ -97,46 +97,73 @@
 
       <!-- SECTION 1: CẬP NHẬT TRẠNG THÁI NGHIỆP VỤ -->
       <div class="card status-action-card">
-        <div class="card-head">
-          <div class="head-left">
-            <h2 class="card-head-title">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round" class="card-icon">
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-              </svg>
-              Quy trình & Cập nhật trạng thái đơn hàng
-            </h2>
-            <p class="card-head-desc">
-              Trạng thái hiện tại: <strong>{{ order.statusText || order.status || '—' }}</strong>
-              (<code>{{ order.statusCode || '—' }}</code>)
-            </p>
+        <!-- A. HEADER -->
+        <div class="workflow-header">
+          <h2 class="workflow-header-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" class="workflow-header-icon">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+            Quy trình & Cập nhật trạng thái đơn hàng
+          </h2>
+          <div class="workflow-current-row">
+            <span class="workflow-current-label">Trạng thái hiện tại:</span>
+            <span class="workflow-current-badge">
+              <span class="status-live-dot"></span>
+              <strong>{{ order.statusText || order.status || '—' }}</strong>
+            </span>
           </div>
-          <app-admin-status-badge
-            [label]="order.statusText || order.status || '—'"
-            [variant]="order.statusVariant || 'neutral'"
-          ></app-admin-status-badge>
         </div>
 
-        <div class="transition-container">
-          <p class="transition-title">Chọn trạng thái chuyển tiếp hợp lệ:</p>
+        <!-- B. WORKFLOW (TIMELINE) -->
+        <div class="workflow-body">
+          <p class="workflow-prompt-text">Chọn trạng thái chuyển tiếp hợp lệ</p>
 
-          <div class="status-options-grid">
+          <div class="timeline-workflow">
+            <!-- Background vertical track line -->
+            <div class="timeline-track-line" aria-hidden="true"></div>
+
             <button
-              *ngFor="let st of ALL_STATUSES"
+              *ngFor="let st of ALL_STATUSES; let last = last"
               type="button"
-              class="status-btn"
+              class="timeline-row-btn"
               [class.is-current]="order.statusCode === st.code"
               [class.is-selected]="selectedNextStatus === st.code"
+              [class.is-allowed]="order.statusCode !== st.code && isTransitionAllowed(st.code)"
               [class.is-disabled]="order.statusCode === st.code || !isTransitionAllowed(st.code)"
+              [class.is-last]="last"
               [disabled]="order.statusCode === st.code || !isTransitionAllowed(st.code)"
               (click)="onSelectStatus(st.code)"
               [id]="'btn-status-' + st.code.toLowerCase()"
             >
-              <span class="status-dot status-dot--{{ st.variant }}"></span>
-              <span class="status-name">{{ st.label }}</span>
-              <span *ngIf="order.statusCode === st.code" class="current-tag">Hiện tại</span>
-              <span *ngIf="order.statusCode !== st.code && isTransitionAllowed(st.code)" class="allowed-tag">Khả dụng</span>
-              <span *ngIf="order.statusCode !== st.code && !isTransitionAllowed(st.code)" class="forbidden-tag">Không thể chuyển</span>
+              <!-- Left: Timeline dot on track -->
+              <div class="timeline-dot-cell">
+                <span class="timeline-dot status-dot--{{ st.variant }}"></span>
+              </div>
+
+              <!-- Center: Status Title & Subtitle -->
+              <div class="timeline-content-cell">
+                <span class="timeline-status-name">{{ st.label }}</span>
+                <span *ngIf="order.statusCode === st.code" class="timeline-status-sub current-sub">
+                  Hiện tại
+                </span>
+                <span *ngIf="order.statusCode !== st.code && isTransitionAllowed(st.code)" class="timeline-status-sub allowed-sub">
+                  {{ selectedNextStatus === st.code ? 'Đang chọn để xác nhận' : 'Khả dụng' }}
+                </span>
+                <span *ngIf="order.statusCode !== st.code && !isTransitionAllowed(st.code)" class="timeline-status-sub forbidden-sub">
+                  Không thể chuyển
+                </span>
+              </div>
+
+              <!-- Right: Check indicator when selected -->
+              <div class="timeline-action-cell" *ngIf="selectedNextStatus === st.code">
+                <span class="selected-tag">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                  Đang chọn
+                </span>
+              </div>
             </button>
           </div>
 
@@ -161,20 +188,29 @@
               placeholder="VD: Khách yêu cầu giao lại vào buổi chiều, đã đóng gói xong..."
             />
           </div>
+        </div>
 
-          <!-- Submit status button -->
-          <div class="transition-actions">
-            <button
-              type="button"
-              class="btn btn-primary"
-              [disabled]="!selectedNextStatus || isUpdatingStatus"
-              (click)="onRequestChangeStatus()"
-              id="btn-submit-status"
-            >
-              <span *ngIf="isUpdatingStatus" class="spinner-inline"></span>
-              <span>{{ isUpdatingStatus ? 'Đang cập nhật...' : 'Xác nhận đổi trạng thái' }}</span>
-            </button>
+        <!-- C. FOOTER ACTION -->
+        <div class="workflow-footer">
+          <div class="workflow-target-display">
+            <span *ngIf="selectedNextStatus" class="target-selected-text">
+              Chuyển sang: <strong>{{ getStatusLabel(selectedNextStatus) }}</strong>
+            </span>
+            <span *ngIf="!selectedNextStatus" class="target-placeholder-text">
+              Chưa chọn trạng thái chuyển tiếp
+            </span>
           </div>
+
+          <button
+            type="button"
+            class="btn btn-confirm-status"
+            [disabled]="!selectedNextStatus || isUpdatingStatus"
+            (click)="onRequestChangeStatus()"
+            id="btn-submit-status"
+          >
+            <span *ngIf="isUpdatingStatus" class="spinner-inline"></span>
+            <span>{{ isUpdatingStatus ? 'Đang cập nhật...' : 'Xác nhận đổi trạng thái' }}</span>
+          </button>
         </div>
       </div>
 

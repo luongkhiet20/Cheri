@@ -5,20 +5,17 @@
     <div class="form-header-info">
       <h1 class="form-title">{{ isEditMode ? 'Chỉnh sửa phương thức thanh toán' : 'Thêm phương thức thanh toán' }}</h1>
       <p class="form-subtitle">
-        {{ isEditMode ? 'Cập nhật cấu hình phương thức thanh toán trong collection payment_methods' : 'Tạo mới phương thức thanh toán vào collection payment_methods trong MongoDB' }}
+        {{ isEditMode ? 'Cập nhật cấu hình phương thức thanh toán trong collection payment_methods' : 'Tạo mới phương
+        thức thanh toán vào collection payment_methods trong MongoDB' }}
       </p>
     </div>
     <div class="form-header-actions">
-      <button type="button" class="btn btn-outline" (click)="onCancel()" [disabled]="isSubmitting" id="btn-cancel-payment">
+      <button type="button" class="btn btn-outline" (click)="onCancel()" [disabled]="isSubmitting"
+        id="btn-cancel-payment">
         Hủy
       </button>
-      <button
-        type="button"
-        class="btn btn-primary"
-        (click)="onSubmit()"
-        [disabled]="isSubmitting || isLoading"
-        id="btn-submit-payment"
-      >
+      <button type="button" class="btn btn-primary" (click)="onSubmit()" [disabled]="isSubmitting || isLoading"
+        id="btn-submit-payment">
         <span *ngIf="isSubmitting" class="spinner-inline"></span>
         <span>{{ isSubmitting ? 'Đang lưu...' : (isEditMode ? 'Lưu thay đổi' : 'Lưu phương thức thanh toán') }}</span>
       </button>
@@ -51,7 +48,7 @@
   <!-- Loading State -->
   <div *ngIf="isLoading" class="form-loading">
     <div class="spinner"></div>
-    <p>Đang tải thông tin phương thức thanh toán từ MongoDB...</p>
+    <p>Đang tải thông tin phương thức thanh toán...</p>
   </div>
 
   <!-- Form Layout -->
@@ -68,17 +65,9 @@
         <!-- [1] Tên phương thức thanh toán * -->
         <div class="form-group col-span-2" id="field-name">
           <label class="form-label required" for="payment-name">Tên phương thức thanh toán</label>
-          <input
-            type="text"
-            id="payment-name"
-            name="name"
-            class="form-control"
-            [class.is-invalid]="errors['name']"
-            [(ngModel)]="formData.name"
-            (ngModelChange)="clearFieldError('name')"
-            placeholder="Ví dụ: VNPay, MoMo, ZaloPay, Thanh toán khi nhận hàng (COD)"
-            required
-          />
+          <input type="text" id="payment-name" name="name" class="form-control" [class.is-invalid]="errors['name']"
+            [(ngModel)]="formData.name" (ngModelChange)="clearFieldError('name')"
+            placeholder="Ví dụ: VNPay, MoMo, ZaloPay, Thanh toán khi nhận hàng (COD)" required />
           <div *ngIf="errors['name']" class="field-error">{{ errors['name'] }}</div>
           <small class="form-hint">Tên hiển thị cho khách hàng và nhân viên quản trị.</small>
         </div>
@@ -86,33 +75,18 @@
         <!-- [2] Mã phương thức thanh toán * -->
         <div class="form-group" id="field-code">
           <label class="form-label required" for="payment-code">Mã phương thức thanh toán</label>
-          <input
-            type="text"
-            id="payment-code"
-            name="code"
-            class="form-control"
-            [class.is-invalid]="errors['code']"
-            [(ngModel)]="formData.code"
-            (input)="onCodeInput()"
-            placeholder="Ví dụ: VNPAY, MOMO, COD"
-            required
-          />
+          <input type="text" id="payment-code" name="code" class="form-control" [class.is-invalid]="errors['code']"
+            [(ngModel)]="formData.code" (input)="onCodeInput()" placeholder="Ví dụ: VNPAY, MOMO, COD" required />
           <div *ngIf="errors['code']" class="field-error">{{ errors['code'] }}</div>
-          <small class="form-hint">Mã định danh nghiệp vụ viết hoa, không dấu, không khoảng trắng (VD: VNPAY, COD).</small>
+          <small class="form-hint">Mã định danh nghiệp vụ viết hoa, không dấu, không khoảng trắng (VD: VNPAY,
+            COD).</small>
         </div>
 
         <!-- [3] Loại thanh toán * -->
         <div class="form-group" id="field-type">
           <label class="form-label required" for="payment-type">Loại thanh toán</label>
-          <select
-            id="payment-type"
-            name="type"
-            class="form-control"
-            [class.is-invalid]="errors['type']"
-            [(ngModel)]="formData.type"
-            (ngModelChange)="clearFieldError('type')"
-            required
-          >
+          <select id="payment-type" name="type" class="form-control" [class.is-invalid]="errors['type']"
+            [(ngModel)]="formData.type" (ngModelChange)="clearFieldError('type')" required>
             <option *ngFor="let t of PAYMENT_TYPES" [value]="t">{{ t }}</option>
           </select>
           <div *ngIf="errors['type']" class="field-error">{{ errors['type'] }}</div>
@@ -122,15 +96,142 @@
         <!-- [4] Thông tin thanh toán (paymentInfo) -->
         <div class="form-group col-span-2">
           <label class="form-label" for="payment-info">Thông tin thanh toán (paymentInfo)</label>
-          <textarea
-            id="payment-info"
-            name="paymentInfo"
-            rows="3"
-            class="form-control"
+          <textarea id="payment-info" name="paymentInfo" rows="3" class="form-control"
             [(ngModel)]="formData.paymentInfo"
-            placeholder="Ví dụ: Số tài khoản: 1903... | Ngân hàng Techcombank | Chủ TK: CỬA HÀNG THỜI TRANG CHÉRI"
-          ></textarea>
-          <small class="form-hint">Thông tin hướng dẫn chuyển khoản hoặc tài khoản nhận tiền dành cho khách hàng.</small>
+            placeholder="Ví dụ: Số tài khoản: 1903... | Ngân hàng Techcombank | Chủ TK: CỬA HÀNG THỜI TRANG CHÉRI"></textarea>
+          <small class="form-hint">Thông tin hướng dẫn chuyển khoản hoặc tài khoản nhận tiền dành cho khách
+            hàng.</small>
+        </div>
+
+        <!-- [5] Nhập hình ảnh (paymentProofImage) -->
+        <div class="form-group col-span-2" id="field-proof-image">
+          <label class="form-label" for="payment-proof-image">
+            Nhập hình ảnh minh chứng / QR thanh toán (paymentProofImage)
+          </label>
+
+          <!-- Input file ẩn để trigger chọn file -->
+          <input
+            #proofFileInput
+            type="file"
+            id="payment-proof-file"
+            (change)="onImageFileSelected($event)"
+            accept="image/*,.png,.jpg,.jpeg,.webp,.svg"
+            style="display: none"
+          />
+
+          <!-- Trạng thái 1: Đã có ảnh preview (ảnh cũ hoặc vừa chọn) -->
+          <div *ngIf="imagePreviewUrl" class="proof-image-card">
+            <div class="proof-preview-container">
+              <img
+                [src]="imagePreviewUrl"
+                alt="Ảnh minh chứng thanh toán"
+                class="proof-preview-img"
+              />
+            </div>
+            <div class="proof-image-info">
+              <div class="proof-image-badge-row">
+                <span class="badge badge-success">Đã có hình ảnh</span>
+                <span *ngIf="selectedFileName" class="proof-filename">{{ selectedFileName }}</span>
+              </div>
+              <p class="proof-image-url" *ngIf="formData.paymentProofImage">
+                <code>{{ formData.paymentProofImage }}</code>
+              </p>
+              <div class="proof-actions">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline"
+                  (click)="proofFileInput.click()"
+                  [disabled]="isUploadingImage || isSubmitting"
+                  id="btn-change-proof-image"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
+                  <span>Thay ảnh</span>
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-danger-outline"
+                  (click)="onRemoveImage()"
+                  [disabled]="isUploadingImage || isSubmitting"
+                  id="btn-remove-proof-image"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                  <span>Xóa ảnh</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Trạng thái 2: Chưa có ảnh -->
+          <div *ngIf="!imagePreviewUrl" class="proof-empty-dropzone">
+            <div class="empty-icon-circle">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+              </svg>
+            </div>
+            <p class="empty-title">Chưa có hình ảnh</p>
+            <p class="empty-desc">Chưa thiết lập ảnh minh chứng hoặc mã QR chuyển khoản cho phương thức này</p>
+
+            <div class="dropzone-buttons">
+              <button
+                type="button"
+                class="btn btn-outline"
+                (click)="proofFileInput.click()"
+                [disabled]="isUploadingImage || isSubmitting"
+                id="btn-upload-proof-image"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <span>Chọn ảnh từ máy</span>
+              </button>
+            </div>
+
+            <!-- Tùy chọn nhập URL trực tiếp nếu có -->
+            <div class="url-input-row">
+              <input
+                type="url"
+                class="form-control url-control"
+                [(ngModel)]="imageUrlInput"
+                name="imageUrlInput"
+                placeholder="Hoặc dán liên kết URL ảnh (https://...)"
+                [disabled]="isUploadingImage || isSubmitting"
+              />
+              <button
+                type="button"
+                class="btn btn-outline"
+                (click)="onApplyImageUrl()"
+                [disabled]="isUploadingImage || isSubmitting || !imageUrlInput"
+              >
+                Áp dụng URL
+              </button>
+            </div>
+
+            <small class="upload-hint">Định dạng hỗ trợ: PNG, JPG, JPEG, WEBP, SVG (tối đa 5MB)</small>
+          </div>
+
+          <!-- Spinner khi đang upload -->
+          <div *ngIf="isUploadingImage" class="upload-loading-banner">
+            <span class="spinner-inline"></span>
+            <span>Đang tải ảnh lên máy chủ, vui lòng đợi...</span>
+          </div>
+
+          <!-- Lỗi nếu có -->
+          <div *ngIf="imageError" class="field-error mt-2">{{ imageError }}</div>
+
+          <small class="form-hint">
+            Ảnh minh chứng, mã QR chuyển khoản hoặc hóa đơn mẫu. Hệ thống lưu đường dẫn URL an toàn, không lưu nhị phân base64 vào MongoDB.
+          </small>
         </div>
 
         <!-- [5] Trạng thái (isActive) -->
@@ -138,12 +239,7 @@
           <label class="form-label">Trạng thái hoạt động</label>
           <div class="radio-status-group">
             <label class="radio-card" [class.is-active]="formData.isActive">
-              <input
-                type="radio"
-                name="isActive"
-                [value]="true"
-                [(ngModel)]="formData.isActive"
-              />
+              <input type="radio" name="isActive" [value]="true" [(ngModel)]="formData.isActive" />
               <div class="radio-content">
                 <span class="radio-title">Bật (Hoạt động)</span>
                 <span class="radio-desc">Cho phép khách hàng lựa chọn phương thức này khi đặt hàng</span>
@@ -151,12 +247,7 @@
             </label>
 
             <label class="radio-card" [class.is-active]="!formData.isActive">
-              <input
-                type="radio"
-                name="isActive"
-                [value]="false"
-                [(ngModel)]="formData.isActive"
-              />
+              <input type="radio" name="isActive" [value]="false" [(ngModel)]="formData.isActive" />
               <div class="radio-content">
                 <span class="radio-title">Tắt (Tạm khóa)</span>
                 <span class="radio-desc">Tạm thời ẩn phương thức này khỏi trang thanh toán</span>
@@ -168,14 +259,9 @@
         <!-- [6] Mô tả (description) -->
         <div class="form-group col-span-2">
           <label class="form-label" for="payment-description">Mô tả</label>
-          <textarea
-            id="payment-description"
-            name="description"
-            rows="3"
-            class="form-control"
+          <textarea id="payment-description" name="description" rows="3" class="form-control"
             [(ngModel)]="formData.description"
-            placeholder="Thông tin bổ sung về phương thức thanh toán này..."
-          ></textarea>
+            placeholder="Thông tin bổ sung về phương thức thanh toán này..."></textarea>
         </div>
 
       </div>
@@ -186,12 +272,7 @@
       <button type="button" class="btn btn-outline" (click)="onCancel()" [disabled]="isSubmitting">
         Hủy
       </button>
-      <button
-        type="button"
-        class="btn btn-primary"
-        (click)="onSubmit()"
-        [disabled]="isSubmitting || isLoading"
-      >
+      <button type="button" class="btn btn-primary" (click)="onSubmit()" [disabled]="isSubmitting || isLoading">
         <span *ngIf="isSubmitting" class="spinner-inline"></span>
         <span>{{ isSubmitting ? 'Đang lưu...' : (isEditMode ? 'Lưu thay đổi' : 'Lưu phương thức thanh toán') }}</span>
       </button>

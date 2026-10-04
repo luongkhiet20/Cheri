@@ -1,3 +1,12 @@
+:host {
+  display: block;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+}
+
+button, input, select, textarea, .btn, .form-control {
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+}
+
 .payment-detail-page {
   padding: 24px;
   display: flex;
@@ -24,7 +33,7 @@
 }
 
 .code-badge {
-  font-family: monospace;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
   font-size: 13px;
   font-weight: 700;
   padding: 2px 8px;
@@ -266,7 +275,7 @@
 }
 
 .info-code {
-  font-family: monospace;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
   font-size: 13px;
   background: #f1f5f9;
   padding: 2px 6px;
@@ -311,6 +320,58 @@
   color: #94a3b8;
   font-style: italic;
   margin: 0;
+}
+
+.detail-proof-box {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.detail-proof-img-wrap {
+  width: 140px;
+  height: 110px;
+  min-width: 140px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.detail-proof-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.detail-proof-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.detail-proof-url {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
+  word-break: break-all;
+}
+
+.detail-proof-url code {
+  background: #ffffff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+  color: #0f172a;
 }
 
 @media (max-width: 768px) {

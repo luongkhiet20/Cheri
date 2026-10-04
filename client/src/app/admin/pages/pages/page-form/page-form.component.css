@@ -1,3 +1,12 @@
+:host {
+  display: block;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+}
+
+button, input, select, textarea, .btn, .form-control {
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+}
+
 .breadcrumbs {
   display: flex;
   align-items: center;
@@ -201,7 +210,7 @@
 }
 
 .font-mono {
-  font-family: monospace;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
 }
 
 /* Slug wrapper */
@@ -218,7 +227,7 @@
   padding: 0 10px;
   font-size: 0.84375rem;
   color: #64748b;
-  font-family: monospace;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
   border-right: 1px solid #cbd5e1;
   user-select: none;
 }

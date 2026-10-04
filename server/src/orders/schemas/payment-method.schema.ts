@@ -39,6 +39,7 @@ const PaymentMethodSchema = new Schema(
       value: { type: Number, min: 0, default: 0 },
     },
     logo: { type: String, default: '' },
+    paymentProofImage: { type: String, default: '' },
     status: {
       type: String,
       required: true,

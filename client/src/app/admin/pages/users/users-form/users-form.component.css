@@ -1,3 +1,12 @@
+:host {
+  display: block;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+}
+
+button, input, select, textarea, .btn, .form-control {
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+}
+
 .account-form-page {
   padding: 24px;
   display: flex;
@@ -16,8 +25,9 @@
 }
 
 .form-title {
-  font-size: 22px;
-  font-weight: 700;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+  font-size: var(--font-size-page-title, 24px);
+  font-weight: var(--font-weight-bold, 700);
   color: var(--color-text-primary, #0f172a);
   margin: 0 0 4px 0;
   letter-spacing: -0.02em;
@@ -157,8 +167,9 @@
 }
 
 .card-title {
-  font-size: 16px;
-  font-weight: 700;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+  font-size: var(--font-size-card-title, 16px);
+  font-weight: var(--font-weight-semibold, 600);
   color: #0f172a;
   margin: 0 0 4px 0;
 }
@@ -186,8 +197,9 @@
 }
 
 .form-label {
-  font-size: 13px;
-  font-weight: 600;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+  font-size: var(--font-size-label, 13px);
+  font-weight: var(--font-weight-semibold, 600);
   color: #334155;
 }
 
@@ -199,7 +211,8 @@
 .form-control {
   width: 100%;
   padding: 9px 13px;
-  font-size: 14px;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+  font-size: var(--font-size-body, 14px);
   color: #0f172a;
   background: #ffffff;
   border: 1px solid #cbd5e1;

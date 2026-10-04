@@ -334,6 +334,12 @@ export class AdminService {
     );
   }
 
+  uploadPaymentProofImage(file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post(`${this.baseUrl}/upload/image`, formData);
+  }
+
   changeAccountPassword(data: { currentPassword: string; newPassword: string; confirmPassword: string }): Observable<any> {
     return this.http.patch(`${this.baseUrl}/account/me/password`, data);
   }

@@ -44,6 +44,7 @@ export class OrdersComponent implements OnInit {
   paymentMethods: any[] = [];
   pagination: PaginationConfig = { page: 1, pageSize: 20, total: 0 };
   isLoading = false;
+  isExporting = false;
   isLoadingPaymentMethods = false;
   isDeleting = false;
   successMessage = '';
@@ -219,6 +220,252 @@ export class OrdersComponent implements OnInit {
 
   onAddOrder(): void {
     this.router.navigate(['/admin/orders/add']);
+  }
+
+  onExportOrders(): void {
+    if (this.isExporting || this.isLoading) return;
+
+    this.isExporting = true;
+    this.successMessage = '';
+    this.errorMessage = '';
+
+    // Nếu người dùng đã tick chọn một số đơn hàng cụ thể trên bảng
+    if (this.selectedCount > 0) {
+      const selectedOrders = this.data.filter((r: any) => this.selectedIds.has(r.id));
+      this.generateAndDownloadReport(selectedOrders);
+      this.isExporting = false;
+      this.successMessage = `Đã xuất báo cáo thành công cho ${selectedOrders.length} đơn hàng đã chọn.`;
+      this.cdr.markForCheck();
+      return;
+    }
+
+    // Nếu không tick chọn đơn cụ thể, tiến hành lấy toàn bộ đơn hàng phù hợp với bộ lọc hiện tại
+    this.fetchAllOrdersForExport(1, []);
+  }
+
+  private fetchAllOrdersForExport(page: number, accumulatedOrders: any[]): void {
+    this.apiService.getOrders({
+      page,
+      limit: 100,
+      search: this.searchTerm || undefined,
+      status: this.selectedStatus || undefined,
+      paymentMethod: this.selectedPaymentMethod || undefined
+    }).subscribe({
+      next: (res) => {
+        if (!res.success || !Array.isArray(res.data)) {
+          this.isExporting = false;
+          this.errorMessage = 'Không thể lấy dữ liệu đơn hàng để xuất báo cáo.';
+          this.cdr.markForCheck();
+          return;
+        }
+
+        const allOrders = [...accumulatedOrders, ...res.data];
+        const pagination = res.pagination || {};
+        const totalPages = Number(pagination.totalPages) || 1;
+
+        if (page < totalPages) {
+          this.fetchAllOrdersForExport(page + 1, allOrders);
+          return;
+        }
+
+        if (allOrders.length === 0) {
+          this.isExporting = false;
+          this.errorMessage = 'Không có đơn hàng nào phù hợp với bộ lọc để xuất báo cáo.';
+          this.cdr.markForCheck();
+          return;
+        }
+
+        this.generateAndDownloadReport(allOrders);
+        this.isExporting = false;
+        this.successMessage = `Đã xuất báo cáo thành công cho ${allOrders.length} đơn hàng.`;
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.isExporting = false;
+        this.errorMessage = 'Có lỗi xảy ra khi tải dữ liệu xuất báo cáo. Vui lòng thử lại.';
+        console.error('Lỗi xuất báo cáo đơn hàng:', err);
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  private generateAndDownloadReport(orders: any[]): void {
+    const headers = [
+      'Mã đơn hàng',
+      'Ngày đặt',
+      'Khách hàng',
+      'Số điện thoại',
+      'Email',
+      'Địa chỉ giao hàng',
+      'Danh sách sản phẩm',
+      'Tổng số lượng món',
+      'Tiền hàng',
+      'Phí vận chuyển',
+      'Giảm giá',
+      'Mã giảm giá',
+      'Tổng thanh toán',
+      'Hình thức thanh toán',
+      'Trạng thái thanh toán',
+      'Trạng thái đơn hàng',
+      'Đơn vị vận chuyển',
+      'Mã vận đơn',
+      'Ghi chú đơn hàng'
+    ];
+
+    const lines: string[] = [headers.join(',')];
+
+    for (const o of orders) {
+      // 1. Mã đơn
+      const code = this.escapeCsvField(o.orderId || o.code || '');
+
+      // 2. Ngày đặt (DD/MM/YYYY HH:mm)
+      const rawDate = o.createdAt || o.dateAdded;
+      const formattedDate = this.escapeCsvField(this.formatReportDateTime(rawDate));
+
+      // 3. Khách hàng
+      const customer = this.escapeCsvField(o.customer || o.shippingAddress?.fullName || '');
+
+      // 4. Số điện thoại (dạng ="..." để Excel giữ nguyên số 0 đầu)
+      const rawPhone = o.customerPhone || o.phone || o.shippingAddress?.phone || '';
+      const phone = rawPhone ? `="` + rawPhone.replace(/"/g, '') + `"` : '""';
+
+      // 5. Email
+      const email = this.escapeCsvField(o.customerEmail || '');
+
+      // 6. Địa chỉ giao hàng
+      const addr = o.shippingAddress;
+      let fullAddress = '';
+      if (addr) {
+        const parts = [addr.address, addr.ward, addr.district, addr.province].filter(p => typeof p === 'string' && p.trim());
+        fullAddress = parts.join(', ');
+      }
+      const addressField = this.escapeCsvField(fullAddress);
+
+      // 7. Danh sách sản phẩm: [Tên SP (Phân loại) x Số lượng (Đơn giá)]
+      const items = Array.isArray(o.items) ? o.items : [];
+      const itemSummaries: string[] = [];
+      for (const it of items) {
+        const title = it.productSnapshot?.title || it.title || 'Sản phẩm';
+        const variantParts: string[] = [];
+        if (it.productSnapshot?.variant?.color) variantParts.push(`Màu: ${it.productSnapshot.variant.color}`);
+        if (it.productSnapshot?.variant?.size) variantParts.push(`Size: ${it.productSnapshot.variant.size}`);
+        if (it.productSnapshot?.variant?.classification) variantParts.push(it.productSnapshot.variant.classification);
+        const variantText = variantParts.length > 0 ? ` (${variantParts.join(' - ')})` : '';
+        const qty = it.quantity != null ? it.quantity : 1;
+        const price = it.unitPrice != null ? it.unitPrice.toLocaleString('vi-VN') + 'đ' : '';
+        itemSummaries.push(`${title}${variantText} x ${qty} [${price}]`);
+      }
+      const itemsField = this.escapeCsvField(itemSummaries.join(' | '));
+
+      // 8. Tổng số lượng món
+      const totalItemsCount = o.itemsCount != null
+        ? o.itemsCount
+        : items.reduce((sum: number, it: any) => sum + (it.quantity || 1), 0);
+
+      // 9. Tiền hàng
+      const subtotal = o.subtotal != null ? o.subtotal : (o.total || o.totalAmount || 0);
+
+      // 10. Phí vận chuyển
+      const shippingFee = o.shippingFee != null ? o.shippingFee : 0;
+
+      // 11. Giảm giá
+      const discount = (o.discountAmount || 0) + (o.couponDiscount || 0);
+
+      // 12. Mã giảm giá
+      const couponCode = this.escapeCsvField(o.couponCode || '');
+
+      // 13. Tổng thanh toán
+      const totalAmount = o.totalAmount != null ? o.totalAmount : (o.total || 0);
+
+      // 14. Hình thức thanh toán
+      const paymentMethod = this.escapeCsvField(o.payment || o.paymentMethodSnapshot?.name || o.paymentMethodCode || '');
+
+      // 15. Trạng thái thanh toán
+      const paymentStatus = this.escapeCsvField(this.getPaymentStatusLabel(o.paymentStatus));
+
+      // 16. Trạng thái đơn hàng
+      const orderStatus = this.escapeCsvField(o.statusText || o.status || '');
+
+      // 17. Đơn vị vận chuyển
+      const shippingProvider = this.escapeCsvField(o.shippingProvider || o.shippingMethodSnapshot?.name || '');
+
+      // 18. Mã vận đơn
+      const trackingNumber = o.trackingNumber ? `="` + o.trackingNumber.replace(/"/g, '') + `"` : '""';
+
+      // 19. Ghi chú
+      const notes = this.escapeCsvField(o.notes || '');
+
+      const row = [
+        code,
+        formattedDate,
+        customer,
+        phone,
+        email,
+        addressField,
+        itemsField,
+        totalItemsCount,
+        subtotal,
+        shippingFee,
+        discount,
+        couponCode,
+        totalAmount,
+        paymentMethod,
+        paymentStatus,
+        orderStatus,
+        shippingProvider,
+        trackingNumber,
+        notes
+      ];
+
+      lines.push(row.join(','));
+    }
+
+    const csvContent = '\uFEFF' + lines.join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const today = new Date().toISOString().slice(0, 10);
+    a.download = `don-hang-cheri-${today}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  }
+
+  private escapeCsvField(val: any): string {
+    if (val === null || val === undefined) return '""';
+    const str = String(val).replace(/"/g, '""');
+    return `"${str}"`;
+  }
+
+  private formatReportDateTime(dateVal: any): string {
+    if (!dateVal) return '';
+    try {
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return String(dateVal);
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      return `${day}/${month}/${year} ${hours}:${minutes}`;
+    } catch {
+      return String(dateVal);
+    }
+  }
+
+  private getPaymentStatusLabel(status: string): string {
+    if (!status) return 'Chưa xác định';
+    const s = String(status).toUpperCase();
+    switch (s) {
+      case 'PAID': return 'Đã thanh toán';
+      case 'PENDING': return 'Chờ thanh toán';
+      case 'FAILED': return 'Thất bại';
+      case 'REFUNDED': return 'Đã hoàn tiền';
+      case 'PARTIALLY_REFUNDED': return 'Hoàn tiền một phần';
+      default: return status;
+    }
   }
 
   onToolbarSelectAll(): void {

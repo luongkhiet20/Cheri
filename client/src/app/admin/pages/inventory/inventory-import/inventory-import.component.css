@@ -1,3 +1,12 @@
+:host {
+  display: block;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+}
+
+button, input, select, textarea, .btn, .form-control {
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+}
+
 .page-container {
   padding: 24px;
   display: flex;
@@ -223,7 +232,7 @@
 }
 
 .code-input {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
   font-weight: 600;
   letter-spacing: 0.05em;
   color: #0f172a;
@@ -397,7 +406,7 @@
 .dropdown-prod-sku {
   font-size: 11px;
   color: #64748b;
-  font-family: monospace;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
 }
 
 .dropdown-prod-stock {

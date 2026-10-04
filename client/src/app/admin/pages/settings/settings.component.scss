@@ -2,6 +2,15 @@
    CHÉRI ADMIN — SYSTEM SETTINGS STYLES
    ========================================================================== */
 
+:host {
+  display: block;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+}
+
+button, input, select, textarea, .btn, .form-control {
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+}
+
 .settings-page {
   max-width: 1040px;
   margin: 0 auto;

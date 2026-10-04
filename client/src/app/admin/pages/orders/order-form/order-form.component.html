@@ -36,14 +36,15 @@
       <h2>Thông tin khách hàng</h2>
       <div class="form-grid">
         <label>
-          Email <span class="required">*</span>
+          <span class="label-text">Email <span class="required">*</span></span>
           <input type="email" name="customerEmail" [(ngModel)]="customerEmail"
-            [required]="!isEditMode || canEditCustomerAddress" [disabled]="isEditMode && !canEditCustomerAddress" autocomplete="email">
+            [required]="!isEditMode || canEditCustomerAddress" [disabled]="isEditMode && !canEditCustomerAddress"
+            autocomplete="email" placeholder="example@gmail.com">
         </label>
         <label>
-          Số điện thoại liên hệ
+          <span class="label-text">Số điện thoại liên hệ</span>
           <input type="tel" name="customerPhone" [(ngModel)]="customerPhone"
-            [disabled]="isEditMode && !canEditCustomerAddress" autocomplete="tel">
+            [disabled]="isEditMode && !canEditCustomerAddress" autocomplete="tel" placeholder="0901234567">
         </label>
       </div>
     </section>
@@ -52,31 +53,37 @@
       <h2>Địa chỉ giao hàng</h2>
       <div class="form-grid">
         <label>
-          Họ tên người nhận <span class="required">*</span>
+          <span class="label-text">Họ tên người nhận <span class="required">*</span></span>
           <input type="text" id="fullName" name="fullName" [(ngModel)]="fullName"
-            [required]="!isEditMode || canEditCustomerAddress" [disabled]="isEditMode && !canEditCustomerAddress">
+            [required]="!isEditMode || canEditCustomerAddress" [disabled]="isEditMode && !canEditCustomerAddress"
+            placeholder="Nguyễn Văn A">
         </label>
         <label>
-          Số điện thoại người nhận <span class="required">*</span>
+          <span class="label-text">Số điện thoại người nhận <span class="required">*</span></span>
           <input type="tel" id="shippingPhone" name="shippingPhone" [(ngModel)]="shippingPhone"
-            [required]="!isEditMode || canEditCustomerAddress" [disabled]="isEditMode && !canEditCustomerAddress">
+            [required]="!isEditMode || canEditCustomerAddress" [disabled]="isEditMode && !canEditCustomerAddress"
+            placeholder="0987654321">
         </label>
         <label class="full-width">
-          Địa chỉ <span class="required">*</span>
+          <span class="label-text">Địa chỉ <span class="required">*</span></span>
           <input type="text" id="shippingAddress" name="shippingAddress" [(ngModel)]="shippingAddress"
-            [required]="!isEditMode || canEditCustomerAddress" [disabled]="isEditMode && !canEditCustomerAddress">
+            [required]="!isEditMode || canEditCustomerAddress" [disabled]="isEditMode && !canEditCustomerAddress"
+            placeholder="Số nhà, tên đường, ngõ/hẻm...">
         </label>
         <label>
-          Phường/Xã
-          <input type="text" name="ward" [(ngModel)]="ward" [disabled]="isEditMode && !canEditCustomerAddress">
+          <span class="label-text">Phường/Xã</span>
+          <input type="text" name="ward" [(ngModel)]="ward" [disabled]="isEditMode && !canEditCustomerAddress"
+            placeholder="Phường Bến Nghé">
         </label>
         <label>
-          Quận/Huyện
-          <input type="text" name="district" [(ngModel)]="district" [disabled]="isEditMode && !canEditCustomerAddress">
+          <span class="label-text">Quận/Huyện</span>
+          <input type="text" name="district" [(ngModel)]="district" [disabled]="isEditMode && !canEditCustomerAddress"
+            placeholder="Quận 1">
         </label>
         <label>
-          Tỉnh/Thành phố
-          <input type="text" name="province" [(ngModel)]="province" [disabled]="isEditMode && !canEditCustomerAddress">
+          <span class="label-text">Tỉnh/Thành phố</span>
+          <input type="text" name="province" [(ngModel)]="province" [disabled]="isEditMode && !canEditCustomerAddress"
+            placeholder="TP. Hồ Chí Minh">
         </label>
       </div>
     </section>
@@ -89,7 +96,7 @@
 
       <div class="order-item" *ngFor="let item of items; let i = index; trackBy: trackByClientId">
         <label>
-          Sản phẩm <span class="required">*</span>
+          <span class="label-text">Sản phẩm <span class="required">*</span></span>
           <select [name]="'productId-' + item.clientId" [(ngModel)]="item.productId"
             (ngModelChange)="onProductChange(item)" required>
             <option value="">Chọn sản phẩm</option>
@@ -100,7 +107,7 @@
         </label>
 
         <label *ngIf="item.variantRequired || item.isLoadingVariants">
-          Biến thể <span *ngIf="item.variantRequired" class="required">*</span>
+          <span class="label-text">Biến thể <span *ngIf="item.variantRequired" class="required">*</span></span>
           <select [name]="'variantId-' + item.clientId" [(ngModel)]="item.variantId"
             [required]="item.variantRequired" [disabled]="item.isLoadingVariants">
             <option [ngValue]="null">{{ item.isLoadingVariants ? 'Đang tải...' : 'Chọn biến thể' }}</option>
@@ -111,8 +118,8 @@
         </label>
 
         <label>
-          Số lượng <span class="required">*</span>
-          <input type="number" [name]="'quantity-' + item.clientId" [(ngModel)]="item.quantity" min="1" step="1" required>
+          <span class="label-text">Số lượng <span class="required">*</span></span>
+          <input type="number" [name]="'quantity-' + item.clientId" [(ngModel)]="item.quantity" min="1" step="1" required placeholder="1">
         </label>
 
         <button type="button" class="btn btn-danger remove-item" (click)="removeItem(i)">Xóa dòng</button>
@@ -125,15 +132,15 @@
       <h2>Thông tin xử lý giao hàng</h2>
       <div class="form-grid">
         <label>
-          Đơn vị vận chuyển
-          <input type="text" name="shippingProvider" [(ngModel)]="shippingProvider" [disabled]="!canEditFulfillment">
+          <span class="label-text">Đơn vị vận chuyển</span>
+          <input type="text" name="shippingProvider" [(ngModel)]="shippingProvider" [disabled]="!canEditFulfillment" placeholder="VD: Giao Hàng Nhanh, Viettel Post...">
         </label>
         <label>
-          Mã vận đơn
-          <input type="text" name="trackingNumber" [(ngModel)]="trackingNumber" [disabled]="!canEditFulfillment">
+          <span class="label-text">Mã vận đơn</span>
+          <input type="text" name="trackingNumber" [(ngModel)]="trackingNumber" [disabled]="!canEditFulfillment" placeholder="VD: GHN123456789">
         </label>
         <label>
-          Ngày giao dự kiến
+          <span class="label-text">Ngày giao dự kiến</span>
           <input type="date" name="estimatedDeliveryDate" [(ngModel)]="estimatedDeliveryDate" [disabled]="!canEditFulfillment">
         </label>
       </div>
@@ -143,7 +150,7 @@
       <h2>{{ isEditMode ? 'Ghi chú' : 'Thanh toán và ghi chú' }}</h2>
       <div class="form-grid">
         <label *ngIf="!isEditMode">
-          Phương thức thanh toán
+          <span class="label-text">Phương thức thanh toán</span>
           <select name="paymentMethodId" [(ngModel)]="paymentMethodId">
             <option [ngValue]="null">Không chọn</option>
             <option *ngFor="let method of paymentMethods" [value]="method._id || method.id">
@@ -152,8 +159,8 @@
           </select>
         </label>
         <label class="full-width">
-          Ghi chú
-          <textarea name="notes" [(ngModel)]="notes" rows="3"></textarea>
+          <span class="label-text">Ghi chú</span>
+          <textarea name="notes" [(ngModel)]="notes" rows="3" placeholder="Ghi chú đơn hàng (ví dụ: giao giờ hành chính, gọi trước khi giao...)"></textarea>
         </label>
       </div>
     </section>

@@ -132,7 +132,7 @@
 
       <div class="timeline-body">
         <div class="timeline-content">
-          <h2 class="card-title">THÔNG TIN SẢN PHẨM</h2>
+          <h2 class="card-title">Thông tin sản phẩm</h2>
           <div class="divider"></div>
 
           <div class="editorial-product-info">
@@ -145,7 +145,7 @@
                       points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
                     </polygon>
                   </svg>
-                  <span>ẢNH CHÍNH</span>
+                  <span>Ảnh chính</span>
                 </div>
                 <img *ngIf="activeImage" [src]="activeImage" [alt]="rawProduct.vi?.title || 'Ảnh chính sản phẩm'"
                   (error)="activeImage = ''" />
@@ -219,7 +219,7 @@
       <div class="timeline-body">
         <div class="timeline-content">
           <div class="card-title-flex">
-            <h2 class="card-title">HÌNH ẢNH</h2>
+            <h2 class="card-title">Hình ảnh</h2>
             <span class="tag tag--counter" *ngIf="rawProduct.images && rawProduct.images.length > 0">
               {{ rawProduct.images.length + (rawProduct.mainImage?.url ? 1 : 0) }} ảnh
             </span>
@@ -269,7 +269,7 @@
       <div class="timeline-body">
         <div class="timeline-content">
           <div class="card-title-flex">
-            <h2 class="card-title">GIÁ &amp; TỒN KHO</h2>
+            <h2 class="card-title">Giá &amp; tồn kho</h2>
             <span class="tag tag--structure-hint" *ngIf="!hasVariants">Quản lý cấp sản phẩm</span>
             <span class="tag tag--structure-variant" *ngIf="hasVariants">Quản lý theo từng biến thể</span>
           </div>
@@ -505,7 +505,7 @@
       <div class="timeline-body">
         <div class="timeline-content">
           <div class="card-title-flex">
-            <h2 class="card-title">BIẾN THỂ</h2>
+            <h2 class="card-title">Biến thể</h2>
             <span class="tag tag--counter">{{ variantsCount }} biến thể</span>
           </div>
           <div class="divider"></div>

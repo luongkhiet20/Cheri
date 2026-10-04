@@ -9,6 +9,7 @@ interface PaymentMethodFormData {
   isActive: boolean;
   description: string;
   paymentInfo: string;
+  paymentProofImage: string;
 }
 
 @Component({
@@ -29,8 +30,16 @@ export class PaymentMethodFormComponent implements OnInit {
     type: 'Online',
     isActive: true,
     description: '',
-    paymentInfo: ''
+    paymentInfo: '',
+    paymentProofImage: ''
   };
+
+  // Image management state
+  imagePreviewUrl: string | null = null;
+  imageUrlInput = '';
+  isUploadingImage = false;
+  imageError = '';
+  selectedFileName = '';
 
   errors: Record<string, string> = {};
   errorMessage = '';
@@ -73,14 +82,18 @@ export class PaymentMethodFormComponent implements OnInit {
         this.isLoading = false;
         if (res.success && res.data) {
           const m = res.data;
+          const proofImg = m.paymentProofImage || m.proofImage || '';
           this.formData = {
             name: m.name || '',
             code: (m.code || '').toUpperCase(),
             type: m.type || m.paymentType || 'Online',
             isActive: m.isActive !== false,
             description: m.description || '',
-            paymentInfo: m.paymentInfo || ''
+            paymentInfo: m.paymentInfo || '',
+            paymentProofImage: proofImg
           };
+          this.imagePreviewUrl = proofImg || null;
+          this.imageUrlInput = proofImg || '';
         } else {
           this.errorMessage = res.message || 'Không tìm thấy phương thức thanh toán';
         }
@@ -189,6 +202,93 @@ export class PaymentMethodFormComponent implements OnInit {
     return isValid;
   }
 
+  // ── Image Handling (Upload, Preview, Replace, Remove) ──
+  onImageFileSelected(event: any): void {
+    const file: File = event.target?.files?.[0];
+    if (!file) return;
+
+    // 1. Validate MIME type & extension
+    const validExtensions = ['.png', '.jpg', '.jpeg', '.webp', '.svg'];
+    const fileNameLower = file.name.toLowerCase();
+    const hasValidExt = validExtensions.some(ext => fileNameLower.endsWith(ext));
+    if (!file.type.startsWith('image/') && !hasValidExt) {
+      this.imageError = 'Chỉ chấp nhận tệp hình ảnh (PNG, JPG, JPEG, WEBP, SVG)';
+      this.cdr.markForCheck();
+      return;
+    }
+
+    // 2. Validate max size 5MB
+    const MAX_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      this.imageError = 'Kích thước tệp vượt quá 5MB. Vui lòng chọn tệp nhỏ hơn';
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.imageError = '';
+    this.selectedFileName = file.name;
+
+    // 3. Preview ngay lập tức trên giao diện
+    const reader = new FileReader();
+    reader.onload = () => {
+      this.imagePreviewUrl = reader.result as string;
+      this.cdr.markForCheck();
+    };
+    reader.readAsDataURL(file);
+
+    // 4. Upload lên máy chủ qua endpoint hiện có
+    this.isUploadingImage = true;
+    this.cdr.markForCheck();
+
+    this.apiService.uploadPaymentProofImage(file).subscribe({
+      next: (res: any) => {
+        this.isUploadingImage = false;
+        if (res && res.success && res.url) {
+          // Chỉ lưu URL ảnh vào formData.paymentProofImage, không lưu base64 vào DB
+          this.formData.paymentProofImage = res.url;
+          this.imageUrlInput = res.url;
+          this.imagePreviewUrl = res.url;
+          this.imageError = '';
+        } else {
+          this.imageError = res?.message || 'Tải ảnh lên máy chủ không thành công';
+        }
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.isUploadingImage = false;
+        this.imageError = err?.error?.message || 'Lỗi khi tải ảnh lên máy chủ';
+        console.error('Upload proof image error:', err);
+        this.cdr.markForCheck();
+      }
+    });
+
+    event.target.value = '';
+  }
+
+  onApplyImageUrl(): void {
+    const url = (this.imageUrlInput || '').trim();
+    if (!url) {
+      this.imageError = 'Vui lòng nhập đường dẫn URL hình ảnh hợp lệ';
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.imageError = '';
+    this.formData.paymentProofImage = url;
+    this.imagePreviewUrl = url;
+    this.selectedFileName = '';
+    this.cdr.markForCheck();
+  }
+
+  onRemoveImage(): void {
+    this.formData.paymentProofImage = '';
+    this.imagePreviewUrl = null;
+    this.imageUrlInput = '';
+    this.selectedFileName = '';
+    this.imageError = '';
+    this.cdr.markForCheck();
+  }
+
   onSubmit(): void {
     if (this.isSubmitting || this.isLoading) return;
 
@@ -212,7 +312,8 @@ export class PaymentMethodFormComponent implements OnInit {
       type: this.formData.type.trim(),
       isActive: Boolean(this.formData.isActive),
       description: (this.formData.description || '').trim(),
-      paymentInfo: (this.formData.paymentInfo || '').trim()
+      paymentInfo: (this.formData.paymentInfo || '').trim(),
+      paymentProofImage: (this.formData.paymentProofImage || '').trim()
     };
 
     if (this.isEditMode && this.methodId) {

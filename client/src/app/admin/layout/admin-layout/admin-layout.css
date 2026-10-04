@@ -31,11 +31,23 @@
   min-height: calc(100vh - var(--header-height, 60px));
   padding: 24px;
   box-sizing: border-box;
-  transition: margin-left var(--transition-base, 250ms ease);
+  transition: margin-left var(--transition-base, 250ms ease),
+              width var(--transition-base, 250ms ease);
 }
 
-/* ----- Mobile & Tablet (<= 1024px) ----- */
-@media (max-width: 1024px) {
+/* ----- Tablet / Collapsed Sidebar (769px - 1200px) ----- */
+@media (max-width: 1200px) and (min-width: 769px) {
+  .admin-shell {
+    --sidebar-width: 68px;
+  }
+}
+
+/* ----- Mobile (<= 768px) ----- */
+@media (max-width: 768px) {
+  .admin-shell {
+    --sidebar-width: 0px;
+  }
+
   .admin-main {
     margin-left: 0;
     width: 100%;

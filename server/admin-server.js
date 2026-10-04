@@ -4,10 +4,42 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const { MongoClient, ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 
 const app = express();
 const PORT = process.env.ADMIN_PORT || process.env.PORT_ADMIN || 5000;
 const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://tinhvttk24411_db_user:gZ7aJJyCWgYffiXa@cluster0.cbvni8r.mongodb.net/cheri?retryWrites=true&w=majority";
+
+// Uploads directory setup for static serving
+const uploadsDir = path.join(__dirname, 'uploads', 'payment-proofs');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const paymentImageStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadsDir);
+  },
+  filename: function (req, file, cb) {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const safeName = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9_-]/g, '_');
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, `${safeName}-${uniqueSuffix}${ext}`);
+  }
+});
+
+const uploadPaymentImage = multer({
+  storage: paymentImageStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // Max 5MB
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Chỉ chấp nhận tệp hình ảnh (PNG, JPG, JPEG, WEBP, SVG)'));
+    }
+    cb(null, true);
+  }
+});
 
 const allowedOrigins = [
   'https://cheri-three.vercel.app',
@@ -27,6 +59,30 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Endpoint upload image for payment proofs & general admin uploads
+app.post('/api/upload/image', (req, res) => {
+  uploadPaymentImage.single('file')(req, res, (err) => {
+    if (err) {
+      console.error('Multer upload error:', err);
+      return res.status(400).json({ success: false, message: err.message || 'Lỗi khi tải ảnh lên' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Vui lòng chọn tệp hình ảnh để tải lên' });
+    }
+    const fileUrl = `/uploads/payment-proofs/${req.file.filename}`;
+    res.json({
+      success: true,
+      message: 'Tải ảnh lên máy chủ thành công',
+      url: fileUrl,
+      filename: req.file.filename,
+      size: req.file.size
+    });
+  });
+});
 
 let db = null;
 let client = null;
@@ -3668,6 +3724,8 @@ function formatPaymentMethod(pm) {
     statusVariant: isActive ? 'success' : 'neutral',
     description: pm.description || '',
     paymentInfo: pm.paymentInfo || '',
+    paymentProofImage: pm.paymentProofImage || pm.proofImage || '',
+    logo: pm.logo || '',
     createdAt: (pm.createdAt || pm.dateAdded || new Date().toISOString()).toString().slice(0, 10),
     updatedAt: (pm.updatedAt || new Date().toISOString()).toString().slice(0, 19),
     raw: pm
@@ -3758,7 +3816,7 @@ app.get('/api/payment-methods/:id', async (req, res) => {
 // 6.3 POST /api/payment-methods (Create new payment method)
 app.post('/api/payment-methods', async (req, res) => {
   try {
-    const { name, code, type, isActive, description, paymentInfo } = req.body;
+    const { name, code, type, isActive, description, paymentInfo, paymentProofImage } = req.body;
 
     if (!name || !String(name).trim()) {
       return res.status(400).json({ success: false, message: 'Tên phương thức thanh toán là bắt buộc' });
@@ -3796,6 +3854,7 @@ app.post('/api/payment-methods', async (req, res) => {
       status: activeBool ? 'ACTIVE' : 'INACTIVE', // backward compat
       description: description ? String(description).trim() : '',
       paymentInfo: paymentInfo ? String(paymentInfo).trim() : '',
+      paymentProofImage: paymentProofImage ? String(paymentProofImage).trim() : '',
       createdAt: nowIso,
       updatedAt: nowIso
     };
@@ -3828,7 +3887,7 @@ const handleUpdatePaymentMethod = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Không tìm thấy phương thức thanh toán để cập nhật' });
     }
 
-    const { name, code, type, isActive, description, paymentInfo } = req.body;
+    const { name, code, type, isActive, description, paymentInfo, paymentProofImage } = req.body;
 
     const updateFields = {
       updatedAt: new Date().toISOString()
@@ -3881,6 +3940,10 @@ const handleUpdatePaymentMethod = async (req, res) => {
 
     if (paymentInfo !== undefined) {
       updateFields.paymentInfo = String(paymentInfo).trim();
+    }
+
+    if (paymentProofImage !== undefined) {
+      updateFields.paymentProofImage = String(paymentProofImage).trim();
     }
 
     await db.collection('payment_methods').updateOne(

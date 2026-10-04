@@ -8,6 +8,11 @@
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+}
+
+button, input, select, textarea, .btn, .form-control {
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
 }
 
 .dashboard-container {
@@ -517,7 +522,7 @@
 }
 
 .sku-chip {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
   background: #EEEEEE;
   color: #1F1F1F;
   padding: 1px 5px;
@@ -864,7 +869,7 @@
 .order-code-cell {
   font-weight: 700;
   color: #74070E;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
 }
 
 .order-customer-name {
@@ -994,7 +999,7 @@
 }
 
 .spec-value--success { color: #15803D; }
-.spec-value--brand { color: #74070E; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.spec-value--brand { color: #74070E; font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif); }
 .spec-value--alert { color: #B42318; }
 
 /* ── 11. Quick Actions ───────────────────────────────────────────────────── */

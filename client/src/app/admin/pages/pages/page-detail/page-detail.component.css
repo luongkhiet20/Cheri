@@ -1,3 +1,12 @@
+:host {
+  display: block;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+}
+
+button, input, select, textarea, .btn, .form-control {
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+}
+
 .breadcrumbs {
   display: flex;
   align-items: center;
@@ -216,7 +225,7 @@
   padding: 16px;
   border-radius: 8px;
   overflow-x: auto;
-  font-family: monospace;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
   font-size: 0.8125rem;
   line-height: 1.6;
   max-height: 500px;
@@ -262,7 +271,7 @@
 }
 
 .font-mono {
-  font-family: monospace;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
 }
 
 .text-primary {

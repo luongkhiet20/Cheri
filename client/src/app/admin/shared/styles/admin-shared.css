@@ -101,3 +101,55 @@
     min-height: 200px;
   }
 }
+
+/* ----- Alert Messages (Shared across Admin pages) ----- */
+:host ::ng-deep .admin-shell .alert-box,
+.admin-shell .alert-box {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm, 12px);
+  padding: 12px 18px;
+  border-radius: var(--radius-lg, 8px);
+  font-size: var(--font-size-base, 14px);
+  animation: alertSlideDown 0.25s ease-out;
+}
+
+:host ::ng-deep .admin-shell .alert-success,
+.admin-shell .alert-success {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+}
+
+:host ::ng-deep .admin-shell .alert-error,
+.admin-shell .alert-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+
+:host ::ng-deep .admin-shell .alert-icon,
+.admin-shell .alert-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+:host ::ng-deep .admin-shell .alert-content,
+.admin-shell .alert-content {
+  flex: 1;
+  min-width: 0;
+}
+
+@keyframes alertSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+

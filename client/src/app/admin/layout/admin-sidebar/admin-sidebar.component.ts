@@ -7,6 +7,7 @@ interface NavItem {
   label: string;
   route: string;
   exact?: boolean;
+  icon: string;
 }
 
 @Component({
@@ -20,15 +21,15 @@ export class AdminSidebarComponent implements OnInit, OnDestroy {
   private routerSub: Subscription | null = null;
 
   navItems: NavItem[] = [
-    { label: 'Dashboard',                     route: '/admin',                    exact: true },
-    { label: 'Quản lý sản phẩm',              route: '/admin/products' },
-    { label: 'Quản lý danh mục',              route: '/admin/categories' },
-    { label: 'Quản lý đơn hàng',              route: '/admin/orders' },
-    { label: 'Phương thức thanh toán',         route: '/admin/payment-methods' },
-    { label: 'Đơn vị vận chuyển',             route: '/admin/shipping-methods' },
-    { label: 'Quản lý tài khoản',             route: '/admin/users' },
-    { label: 'Quản lý tồn kho',               route: '/admin/inventory' },
-    { label: 'Quản lý trang',                 route: '/admin/pages' },
+    { label: 'Dashboard',                     route: '/admin',                    exact: true, icon: 'dashboard' },
+    { label: 'Quản lý sản phẩm',              route: '/admin/products',           icon: 'products' },
+    { label: 'Quản lý danh mục',              route: '/admin/categories',         icon: 'categories' },
+    { label: 'Quản lý đơn hàng',              route: '/admin/orders',             icon: 'orders' },
+    { label: 'Phương thức thanh toán',         route: '/admin/payment-methods',    icon: 'payment-methods' },
+    { label: 'Đơn vị vận chuyển',             route: '/admin/shipping-methods',   icon: 'shipping-methods' },
+    { label: 'Quản lý tài khoản',             route: '/admin/users',              icon: 'users' },
+    { label: 'Quản lý tồn kho',               route: '/admin/inventory',          icon: 'inventory' },
+    { label: 'Quản lý trang',                 route: '/admin/pages',              icon: 'pages' },
   ];
 
   constructor(private router: Router) {}

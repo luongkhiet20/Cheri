@@ -1,3 +1,12 @@
+:host {
+  display: block;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+}
+
+button, input, select, textarea, .btn, .form-control {
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+}
+
 .order-detail-page {
   padding: 24px;
   display: flex;
@@ -27,7 +36,7 @@
 
 .order-code-badge {
   display: inline-block;
-  font-family: monospace;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
   font-size: 13px;
   font-weight: 700;
   padding: 3px 10px;
@@ -690,7 +699,7 @@
 }
 
 .info-code {
-  font-family: monospace;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
   font-size: 12px;
   background: #f1f5f9;
   padding: 2px 6px;

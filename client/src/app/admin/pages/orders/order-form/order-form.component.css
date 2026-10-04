@@ -1,3 +1,12 @@
+:host {
+  display: block;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+}
+
+button, input, select, textarea, .btn, .form-control {
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+}
+
 .order-form {
   display: grid;
   gap: 20px;
@@ -18,7 +27,9 @@
 
 .form-section h2 {
   margin: 0 0 16px;
-  font-size: 18px;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+  font-size: var(--font-size-section-title, 17px);
+  font-weight: var(--font-weight-semibold, 600);
 }
 
 .section-heading,
@@ -51,8 +62,16 @@ label {
   display: grid;
   gap: 7px;
   color: #334155;
-  font-size: 14px;
-  font-weight: 600;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+  font-size: var(--font-size-label, 13px);
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.label-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  line-height: 1.4;
 }
 
 input,
@@ -64,8 +83,9 @@ textarea {
   border-radius: 8px;
   background: #fff;
   color: #0f172a;
-  font: inherit;
-  font-weight: 400;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+  font-size: var(--font-size-body, 14px);
+  font-weight: var(--font-weight-regular, 400);
   box-sizing: border-box;
 }
 
@@ -110,6 +130,7 @@ textarea {
 
 .required {
   color: #dc2626;
+  font-weight: 600;
 }
 
 .remove-item {

@@ -6,7 +6,7 @@
 export interface TableColumn {
   key: string;
   label: string;
-  type?: 'text' | 'number' | 'currency' | 'date' | 'image' | 'status' | 'badge';
+  type?: 'text' | 'number' | 'currency' | 'date' | 'image' | 'status' | 'badge' | 'sku-list';
   width?: string;
   sortable?: boolean;
   align?: 'left' | 'center' | 'right';

@@ -2,8 +2,11 @@
   <!-- Header / Action bar -->
   <div class="form-header">
     <div class="form-header-left">
-      <h1 class="page-title">Nhập kho</h1>
-      <p class="page-subtitle">Chọn sản phẩm và nhập thêm số lượng vào tồn kho hiện tại</p>
+      <h1 class="page-title">{{ isEditMode ? 'Chỉnh sửa tồn kho' : 'Nhập kho' }}</h1>
+      <p class="page-subtitle">
+        {{ isEditMode ? 'Cập nhật số lượng tồn kho thực tế của sản phẩm hoặc biến thể được chọn' : 'Chọn sản phẩm và
+        nhập thêm số lượng vào tồn kho hiện tại' }}
+      </p>
     </div>
     <div class="form-header-right">
       <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="isSubmitting">
@@ -11,21 +14,23 @@
       </button>
       <button type="button" class="btn btn-primary" (click)="onSubmit()" [disabled]="isSubmitting">
         <span *ngIf="isSubmitting" class="spinner"></span>
-        Nhập kho
+        {{ isEditMode ? 'Lưu thay đổi' : 'Nhập kho' }}
       </button>
     </div>
   </div>
 
   <!-- Alerts -->
   <div *ngIf="successMessage" class="alert-box alert-success">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+      stroke-linecap="round" stroke-linejoin="round">
       <polyline points="20 6 9 17 4 12"></polyline>
     </svg>
     <span>{{ successMessage }}</span>
   </div>
 
   <div *ngIf="errorMessage" class="alert-box alert-error">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+      stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="10"></circle>
       <line x1="12" y1="8" x2="12" y2="12"></line>
       <line x1="12" y1="16" x2="12.01" y2="16"></line>
@@ -36,7 +41,7 @@
   <!-- Main Form Content -->
   <form (ngSubmit)="onSubmit()" class="form-content" novalidate>
     <div class="card form-card">
-      <h2 class="card-section-title">Chi tiết nhập kho</h2>
+      <h2 class="card-section-title">{{ isEditMode ? 'Thông tin chỉnh sửa tồn kho' : 'Chi tiết nhập kho' }}</h2>
       <p class="card-section-subtitle">Các trường thông tin bắt buộc được đánh dấu sao (*)</p>
 
       <div class="form-grid">
@@ -46,30 +51,31 @@
             Sản phẩm <span class="required">*</span>
           </label>
 
-          <div class="product-picker-wrapper">
+          <!-- Khi ở Edit mode: hiển thị sản phẩm cố định -->
+          <div *ngIf="isEditMode && selectedProduct" class="product-locked-box">
+            <input type="text" class="form-control readonly-field"
+              [value]="selectedProduct.name + (selectedProduct.sku ? ' (SKU: ' + selectedProduct.sku + ')' : '')"
+              readonly />
+          </div>
+
+          <!-- Khi ở Import mode: Dropdown Picker -->
+          <div *ngIf="!isEditMode" class="product-picker-wrapper">
             <div class="search-input-box" (click)="isProductDropdownOpen = !isProductDropdownOpen">
-              <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2">
                 <circle cx="11" cy="11" r="8"></circle>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
               </svg>
-              <input
-                type="text"
-                id="product-select"
-                class="form-control picker-input"
+              <input type="text" id="product-select" class="form-control picker-input"
                 [class.is-invalid]="errors['product']"
                 [value]="selectedProduct ? (selectedProduct.name + ' (' + selectedProduct.sku + ')') : productSearchQuery"
-                (input)="onSearchProduct($any($event.target).value)"
-                (focus)="isProductDropdownOpen = true"
-                placeholder="-- Tìm kiếm hoặc chọn sản phẩm --"
-                autocomplete="off"
-              />
-              <button
-                type="button"
-                class="dropdown-arrow-btn"
+                (input)="onSearchProduct($any($event.target).value)" (focus)="isProductDropdownOpen = true"
+                placeholder="-- Tìm kiếm hoặc chọn sản phẩm --" autocomplete="off" />
+              <button type="button" class="dropdown-arrow-btn"
                 (click)="$event.stopPropagation(); isProductDropdownOpen = !isProductDropdownOpen"
-                aria-label="Chọn sản phẩm"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                aria-label="Chọn sản phẩm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
               </button>
@@ -85,15 +91,12 @@
                 Không tìm thấy sản phẩm nào khớp với tìm kiếm.
               </div>
 
-              <div
-                *ngFor="let prod of filteredProducts"
-                class="dropdown-item"
-                [class.selected]="prod._id === selectedProductId"
-                (click)="selectProduct(prod)"
-              >
+              <div *ngFor="let prod of filteredProducts" class="dropdown-item"
+                [class.selected]="prod._id === selectedProductId" (click)="selectProduct(prod)">
                 <div class="dropdown-item-main">
                   <span class="dropdown-prod-name">{{ prod.name }}</span>
-                  <span class="dropdown-prod-sku">{{ prod.sku }}</span>
+                  <span class="dropdown-prod-sku">{{ prod.hasVariants ? (prod.variants.length + ' biến thể') : (prod.sku
+                    ? ('SKU: ' + prod.sku) : 'Không có SKU') }}</span>
                 </div>
                 <span class="dropdown-prod-stock">Tồn: {{ prod.stock }}</span>
               </div>
@@ -102,101 +105,108 @@
 
           <div *ngIf="errors['product']" class="error-feedback">{{ errors['product'] }}</div>
           <div *ngIf="selectedProduct" class="selected-product-alert">
-            <span class="font-semibold">Đã chọn:</span> {{ selectedProduct.name }} — <code>{{ selectedProduct._id }}</code>
+            <span class="font-semibold">Đã chọn:</span> {{ selectedProduct.name }}
+            <span *ngIf="!hasVariants && selectedProduct.sku" class="badge-sku-code">SKU: {{ selectedProduct.sku
+              }}</span>
           </div>
+        </div>
+
+        <!-- [1.1] Chọn biến thể cụ thể * (Bắt buộc khi có biến thể) -->
+        <div *ngIf="selectedProduct && hasVariants" class="form-group full-width" id="field-variant">
+          <label class="form-label" for="variant-select">
+            Biến thể sản phẩm <span class="required">*</span>
+          </label>
+          <div class="variant-select-wrapper">
+            <select id="variant-select" class="form-control select-field" [class.is-invalid]="errors['variant']"
+              [ngModel]="selectedVariantId" (ngModelChange)="onSelectVariant($event)" name="variantSelect" required>
+              <option value="" disabled>-- Vui lòng chọn một biến thể cụ thể --</option>
+              <option *ngFor="let v of selectedProduct.variants" [value]="v.sku || v.id">
+                SKU: {{ v.sku || '---' }} &nbsp;|&nbsp; {{ getVariantLabel(v) }} &nbsp;(Tồn hiện tại: {{ v.stock }})
+              </option>
+            </select>
+          </div>
+          <div class="form-hint">Sản phẩm có biến thể: Bắt buộc chọn đúng biến thể cụ thể để thao tác tồn kho cho riêng
+            biến thể đó.</div>
+          <div *ngIf="errors['variant']" class="error-feedback">{{ errors['variant'] }}</div>
         </div>
 
         <!-- [2] Mã sản phẩm (SKU) -->
         <div class="form-group">
           <label class="form-label" for="product-sku">
-            Mã sản phẩm (SKU)
+            {{ hasVariants ? 'Mã SKU của biến thể' : 'Mã SKU sản phẩm' }}
           </label>
-          <input
-            type="text"
-            id="product-sku"
-            class="form-control readonly-field code-input"
-            [value]="sku || '---'"
-            readonly
-          />
-          <div class="form-hint">Mã định danh nghiệp vụ của sản phẩm (read-only).</div>
+          <input type="text" id="product-sku" class="form-control readonly-field code-input"
+            [value]="sku || (hasVariants ? '--- (Vui lòng chọn biến thể ở trên) ---' : '---')" readonly />
+          <div class="form-hint">
+            {{ hasVariants ? 'Mã SKU riêng của biến thể được chọn từ CSDL (read-only).' : 'Mã SKU của sản phẩm từ CSDL
+            (read-only).' }}
+          </div>
         </div>
 
         <!-- [3] Tồn kho hiện tại -->
         <div class="form-group">
           <label class="form-label" for="current-stock">
-            Tồn kho hiện tại
+            {{ hasVariants ? 'Tồn kho hiện tại của biến thể' : 'Tồn kho hiện tại của sản phẩm' }}
           </label>
           <div class="input-suffix-wrapper">
-            <input
-              type="text"
-              id="current-stock"
-              class="form-control readonly-field current-stock-input"
-              [value]="selectedProduct ? (currentStock + ' sản phẩm') : '---'"
-              readonly
-            />
+            <input type="text" id="current-stock" class="form-control readonly-field current-stock-input"
+              [value]="selectedProduct ? (hasVariants ? (selectedVariant ? (currentStock + ' sản phẩm') : '--- (Chưa chọn biến thể) ---') : (currentStock + ' sản phẩm')) : '---'"
+              readonly />
             <span *ngIf="isLoadingProductDetail" class="spinner-small"></span>
           </div>
-          <div class="form-hint">Lấy từ dữ liệu thực tế <code>vi.stock</code> của sản phẩm trong CSDL.</div>
+          <div class="form-hint">
+            {{ hasVariants ? 'Lấy từ dữ liệu variant.stock thực tế của biến thể trong CSDL.' : 'Lấy từ dữ liệu tồn kho
+            thực tế của sản phẩm trong CSDL.' }}
+          </div>
         </div>
 
-        <!-- [4] Số lượng nhập kho * -->
+        <!-- [4] Số lượng tồn kho (Nhập thêm hoặc Sửa) * -->
         <div class="form-group" id="field-quantity">
           <label class="form-label" for="import-quantity">
-            Số lượng nhập kho <span class="required">*</span>
+            {{ isEditMode ? 'Số lượng tồn kho mới' : 'Số lượng nhập kho' }} <span class="required">*</span>
           </label>
           <div class="input-suffix-wrapper">
-            <input
-              type="number"
-              id="import-quantity"
-              class="form-control"
-              [class.is-invalid]="errors['quantity']"
-              [(ngModel)]="importQuantity"
-              (ngModelChange)="onQuantityChange()"
-              name="importQuantity"
-              placeholder="Ví dụ: 20"
-              min="1"
-              step="1"
-              required
-            />
+            <input type="number" id="import-quantity" class="form-control" [class.is-invalid]="errors['quantity']"
+              [(ngModel)]="importQuantity" (ngModelChange)="onQuantityChange()" name="importQuantity"
+              [placeholder]="isEditMode ? 'Ví dụ: 15' : 'Ví dụ: 20'" [min]="isEditMode ? 0 : 1" step="1" required />
             <span class="input-suffix">sản phẩm</span>
           </div>
-          <div class="form-hint">Số nguyên dương lớn hơn 0. Không nhập số âm hoặc số thập phân.</div>
+          <div class="form-hint">
+            {{ isEditMode ? 'Nhập số lượng tồn kho mới (số nguyên >= 0). Số lượng này sẽ thay thế trực tiếp tồn kho hiện
+            tại.' : 'Số nguyên dương lớn hơn 0. Không nhập số âm hoặc số thập phân.' }}
+          </div>
           <div *ngIf="errors['quantity']" class="error-feedback">{{ errors['quantity'] }}</div>
         </div>
 
-        <!-- [5] Tồn kho sau khi nhập -->
+        <!-- [5] Tồn kho sau khi lưu -->
         <div class="form-group">
           <label class="form-label" for="preview-stock">
-            Tồn kho sau khi nhập (Dự tính)
+            {{ isEditMode ? 'Tồn kho mới sau khi lưu' : 'Tồn kho sau khi nhập (Dự tính)' }}
           </label>
           <div class="input-suffix-wrapper">
-            <input
-              type="text"
-              id="preview-stock"
-              class="form-control readonly-field preview-stock-input"
+            <input type="text" id="preview-stock" class="form-control readonly-field preview-stock-input"
               [class.has-preview]="previewStock !== null"
-              [value]="previewStock !== null ? (previewStock + ' sản phẩm') : '---'"
-              readonly
-            />
+              [value]="previewStock !== null ? (previewStock + ' sản phẩm') : '---'" readonly />
           </div>
           <div class="form-hint preview-hint">
-            <strong>Tồn kho sau nhập</strong> = Tồn kho hiện tại ({{ currentStock }}) + Số lượng nhập ({{ importQuantity || 0 }})
+            <span *ngIf="isEditMode">
+              <strong>Tồn kho mới</strong>: {{ previewStock !== null ? previewStock : '---' }} sản phẩm (Tồn kho hiện
+              tại: {{ currentStock }})
+            </span>
+            <span *ngIf="!isEditMode">
+              <strong>Tồn kho sau nhập</strong> = Tồn kho hiện tại ({{ currentStock }}) + Số lượng nhập ({{
+              importQuantity || 0 }})
+            </span>
           </div>
         </div>
 
         <!-- [6] Ghi chú -->
         <div class="form-group full-width">
           <label class="form-label" for="import-note">
-            Ghi chú nhập kho
+            Ghi chú điều chỉnh
           </label>
-          <textarea
-            id="import-note"
-            class="form-control textarea"
-            [(ngModel)]="note"
-            name="note"
-            rows="3"
-            placeholder="Ví dụ: Nhập thêm hàng đợt tháng 9, bổ sung hàng bán chạy..."
-          ></textarea>
+          <textarea id="import-note" class="form-control textarea" [(ngModel)]="note" name="note" rows="3"
+            [placeholder]="isEditMode ? 'Ví dụ: Kiểm kê lại kho đợt đầu tháng, điều chỉnh số liệu...' : 'Ví dụ: Nhập thêm hàng đợt tháng 9, bổ sung hàng bán chạy...'"></textarea>
           <div class="form-hint">Ghi chú bổ sung (không bắt buộc).</div>
         </div>
       </div>
@@ -214,8 +224,12 @@
       <div class="preview-notice-content">
         <div class="preview-notice-title">Xác nhận cập nhật tồn kho</div>
         <div class="preview-notice-desc">
-          Khi nhấn <strong>Nhập kho</strong>, hệ thống sẽ thực hiện cập nhật trường <code>vi.stock</code> của sản phẩm
-          <strong>{{ selectedProduct.name }}</strong> từ <strong>{{ currentStock }}</strong> lên <strong>{{ previewStock }}</strong>.
+
+          <span *ngIf="!isEditMode">
+            Khi nhấn <strong>Nhập kho</strong>, hệ thống sẽ thực hiện cập nhật trường <code>stock</code> của
+            <strong>{{ hasVariants ? ('biến thể ' + (selectedVariant?.sku || '')) : selectedProduct.name }}</strong>
+            từ <strong>{{ currentStock }}</strong> lên <strong>{{ previewStock }}</strong>.
+          </span>
         </div>
       </div>
     </div>
@@ -227,7 +241,7 @@
       </button>
       <button type="submit" class="btn btn-primary" [disabled]="isSubmitting">
         <span *ngIf="isSubmitting" class="spinner"></span>
-        Nhập kho
+        {{ isEditMode ? 'Lưu thay đổi' : 'Nhập kho' }}
       </button>
     </div>
   </form>

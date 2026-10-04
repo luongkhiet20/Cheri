@@ -11,15 +11,17 @@ import { AdminService } from '../../services/admin.service';
 })
 export class InventoryComponent implements OnInit {
   columns: TableColumn[] = [
+    { key: 'image', label: '', type: 'image', width: '72px' },
     { key: 'name', label: 'Tên sản phẩm', type: 'text', sortable: true },
-    { key: 'sku', label: 'SKU', type: 'text' },
+    { key: 'sku', label: 'SKU', type: 'sku-list', width: '200px' },
     { key: 'quantity', label: 'Tồn kho', type: 'number', sortable: true, align: 'right' },
     { key: 'reserved', label: 'Đã đặt', type: 'number', align: 'right' },
     { key: 'available', label: 'Có thể bán', type: 'number', align: 'right' },
     { key: 'status', label: 'Tình trạng', type: 'status' },
   ];
   actions: RowAction[] = [
-    { key: 'view', label: 'Xem' },
+    { key: 'view', label: 'Xem chi tiết' },
+    { key: 'edit', label: 'Sửa' },
     { key: 'delete', label: 'Xóa', variant: 'danger' }
   ];
   filterFields: FilterField[] = [
@@ -41,10 +43,17 @@ export class InventoryComponent implements OnInit {
   pendingDeleteId: any = null;
   isBulkDelete = false;
 
+
   get selectedCount(): number { return this.selectedIds.size; }
   get allSelected(): boolean { return this.data.length > 0 && this.data.every((r: any) => this.selectedIds.has(r.id)); }
   get isIndeterminate(): boolean { return this.selectedCount > 0 && !this.allSelected; }
   get displayTotal(): number { return this.pagination?.total ?? this.data.length; }
+
+  get deleteLabel(): string {
+    return this.selectedCount > 0
+      ? `Xóa đã chọn (${this.selectedCount})`
+      : 'Xóa đã chọn';
+  }
 
   isLoading = false;
 
@@ -70,16 +79,56 @@ export class InventoryComponent implements OnInit {
         if (res.success) {
           this.allData = (res.data || []).map((item: any) => {
             const raw = item.raw || item;
-            const hasVariants = Array.isArray(item.variants) && item.variants.length > 0;
-            const totalStock = hasVariants
-              ? item.variants.reduce((sum: number, v: any) => sum + (Number(v.stock) || 0), 0)
-              : Number(item.quantity !== undefined ? item.quantity : (raw.vi?.quantity ?? 0));
-            const reserved = item.reserved ?? 0;
-            const available = Math.max(0, totalStock - reserved);
+            const hasVariants = Boolean(item.hasVariants || (Array.isArray(item.variants) && item.variants.length > 0));
+
+            let totalStock = 0;
+            let totalReserved = 0;
+            let totalAvailable = 0;
+            let displaySku = item.sku || '';
+            let variantSkus: string[] = [];
+
+            if (hasVariants && Array.isArray(item.variants) && item.variants.length > 0) {
+              totalStock = item.variants.reduce((sum: number, v: any) => sum + (Number(v.stock) || 0), 0);
+              totalReserved = item.variants.reduce((sum: number, v: any) => sum + (Number(v.reserved) || 0), 0);
+              totalAvailable = item.variants.reduce(
+                (sum: number, v: any) => sum + Math.max(0, (Number(v.stock) || 0) - (Number(v.reserved) || 0)),
+                0
+              );
+              variantSkus = item.variants.map((v: any) => v.sku).filter(Boolean);
+              if (variantSkus.length > 0) {
+                displaySku = variantSkus.join(', ');
+              }
+            } else {
+              totalStock = Math.max(
+                0,
+                Number(item.stock !== undefined ? item.stock : (item.quantity !== undefined ? item.quantity : (raw.vi?.stock ?? (raw.vi?.quantity ?? 0))))
+              );
+              totalReserved = Math.max(0, Number(item.reserved) || 0);
+              totalAvailable = Math.max(0, totalStock - totalReserved);
+              displaySku = (item.sku || raw.sku || raw.vi?.sku || '').trim();
+            }
+
+            let status = 'Còn hàng';
+            let statusVariant = 'success';
+            if (totalAvailable <= 0) {
+              status = 'Hết hàng';
+              statusVariant = 'danger';
+            } else if (totalAvailable <= 5) {
+              status = 'Sắp hết';
+              statusVariant = 'warning';
+            }
+
             return {
               ...item,
+              image: item.image || raw.mainImage?.url || (Array.isArray(raw.images) && raw.images[0]) || '',
+              hasVariants,
+              sku: (hasVariants && variantSkus.length > 0) ? variantSkus : (displaySku || '---'),
               quantity: totalStock,
-              available
+              stock: totalStock,
+              reserved: totalReserved,
+              available: totalAvailable,
+              status,
+              statusVariant
             };
           });
           this.data = [...this.allData];
@@ -155,8 +204,15 @@ export class InventoryComponent implements OnInit {
   }
 
   onAction(e: ActionEvent): void {
+    const prodId = e.row.id || e.row._id || e.row.productId;
     if (e.action === 'view') {
-      alert(`Sản phẩm: ${e.row.name}\nSKU: ${e.row.sku}\nTồn: ${e.row.quantity} | Đã đặt: ${e.row.reserved} | Khả dụng: ${e.row.available}`);
+      if (prodId) {
+        this.router.navigate(['/admin/inventory', prodId]);
+      }
+    } else if (e.action === 'edit') {
+      if (prodId) {
+        this.router.navigate(['/admin/inventory', prodId, 'edit']);
+      }
     } else if (e.action === 'delete') {
       this.isBulkDelete = false;
       this.pendingDeleteId = e.row.id;
@@ -166,6 +222,11 @@ export class InventoryComponent implements OnInit {
     }
   }
 
+  getVariantDesc(v: any): string {
+    const parts = [v.color, v.size, v.classification].filter(Boolean);
+    return parts.length > 0 ? parts.join(' / ') : 'Mặc định';
+  }
+
   onSearch(v: string): void {
     if (!v) {
       this.data = [...this.allData];
@@ -173,8 +234,12 @@ export class InventoryComponent implements OnInit {
       this.cdr.markForCheck();
       return;
     }
-    const q = v.toLowerCase();
-    this.data = this.allData.filter(d => (d.name || '').toLowerCase().includes(q) || (d.sku || '').toLowerCase().includes(q));
+    const q = v.toLowerCase().trim();
+    this.data = this.allData.filter(d =>
+      (d.name || '').toLowerCase().includes(q) ||
+      (d.sku || '').toLowerCase().includes(q) ||
+      (d.variants && d.variants.some((v: any) => (v.sku || '').toLowerCase().includes(q)))
+    );
     this.pagination = { ...this.pagination, total: this.data.length };
     this.cdr.markForCheck();
   }

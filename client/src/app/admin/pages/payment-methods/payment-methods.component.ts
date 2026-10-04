@@ -52,7 +52,7 @@ export class PaymentMethodsComponent implements OnInit {
   confirmMessage = '';
   confirmLabel = '';
   confirmVariant: 'danger' | 'warning' | 'default' = 'danger';
-  confirmActionType: 'delete' | 'toggle' | null = null;
+  confirmActionType: 'delete' | 'toggle' | 'bulk_delete' | null = null;
   pendingItemId: string | null = null;
   pendingTargetActive = false;
 
@@ -64,6 +64,12 @@ export class PaymentMethodsComponent implements OnInit {
   get allSelected(): boolean { return this.data.length > 0 && this.data.every((r: any) => this.selectedIds.has(r.id)); }
   get isIndeterminate(): boolean { return this.selectedCount > 0 && !this.allSelected; }
   get displayTotal(): number { return this.pagination?.total ?? this.data.length; }
+
+  get deleteLabel(): string {
+    return this.selectedCount > 0
+      ? `Xóa đã chọn (${this.selectedCount})`
+      : 'Xóa đã chọn';
+  }
 
   constructor(
     private apiService: AdminService,
@@ -129,9 +135,6 @@ export class PaymentMethodsComponent implements OnInit {
     }
   }
 
-  onDeleteSelected(): void {
-    // Optional bulk delete if needed
-  }
 
   onAction(e: ActionEvent): void {
     const item = e.row;
@@ -173,7 +176,44 @@ export class PaymentMethodsComponent implements OnInit {
     }
   }
 
+  onDeleteSelected(): void {
+    const count = this.selectedCount;
+    if (count === 0) return;
+    this.pendingItemId = null;
+    this.confirmActionType = 'bulk_delete';
+    this.confirmTitle = 'Xác nhận xóa các phương thức thanh toán đã chọn';
+    this.confirmMessage = `Bạn có chắc chắn muốn xóa ${count} phương thức thanh toán đã chọn không? Hành động này không thể hoàn tác.`;
+    this.confirmLabel = this.deleteLabel;
+    this.confirmVariant = 'danger';
+    this.confirmOpen = true;
+    this.cdr.markForCheck();
+  }
+
   onConfirmDialog(): void {
+    if (this.confirmActionType === 'bulk_delete') {
+      const ids = Array.from(this.selectedIds);
+      this.confirmOpen = false;
+      this.confirmActionType = null;
+      this.isLoading = true;
+      this.cdr.markForCheck();
+
+      Promise.all(ids.map(id => this.apiService.deletePaymentMethod(id).toPromise()))
+        .then(() => {
+          this.isLoading = false;
+          this.selectedIds.clear();
+          this.successMessage = `Đã xóa ${ids.length} phương thức thanh toán thành công.`;
+          this.loadPaymentMethods();
+          setTimeout(() => this.successMessage = '', 4000);
+        })
+        .catch((err) => {
+          this.isLoading = false;
+          this.errorMessage = err?.error?.message || 'Lỗi khi xóa các phương thức thanh toán đã chọn.';
+          this.loadPaymentMethods();
+          setTimeout(() => this.errorMessage = '', 4000);
+        });
+      return;
+    }
+
     if (!this.pendingItemId) {
       this.confirmOpen = false;
       this.cdr.markForCheck();

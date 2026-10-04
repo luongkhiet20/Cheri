@@ -229,11 +229,31 @@ button, input, select, textarea, .btn, .form-control {
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
 }
 
+/* Đồng bộ hóa placeholder chuẩn theo ô Tên phương thức vận chuyển (14px, weight 400, color #94a3b8, text-transform none) */
+.form-control::placeholder,
+input::placeholder,
+textarea::placeholder {
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+  font-size: 14px;
+  font-weight: 400;
+  color: #94a3b8;
+  opacity: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  font-style: normal;
+}
+
 .code-input {
   font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+}
+
+.code-input::placeholder {
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 .textarea {

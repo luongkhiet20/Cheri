@@ -20,11 +20,15 @@
           </th>
 
           <!-- Data columns -->
-          <th *ngFor="let col of columns" class="admin-table__th" [class.is-sortable]="col.sortable"
+          <th *ngFor="let col of columns" class="admin-table__th"
+            [class.admin-table__th--image]="isImageColumn(col)"
+            [class.admin-table__th--sku]="isSkuColumn(col)"
+            [class.is-sortable]="col.sortable"
             [class.is-sorted-asc]="sortKey === col.key && sortDir === 'asc'"
             [class.is-sorted-desc]="sortKey === col.key && sortDir === 'desc'"
             [attr.aria-sort]="sortKey === col.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : (col.sortable ? 'none' : null)"
             [style.width]="col.width || 'auto'"
+            [style.minWidth]="col.width || null"
             (click)="onSort(col)">
             <span class="admin-table__th-inner">
               {{ col.label }}
@@ -54,19 +58,44 @@
           </td>
 
           <!-- Data cells -->
-          <td *ngFor="let col of columns" class="admin-table__td" [attr.data-label]="col.label">
+          <td *ngFor="let col of columns" class="admin-table__td"
+            [class.admin-table__td--image]="isImageColumn(col)"
+            [class.product-image-cell]="isImageColumn(col)"
+            [class.admin-table__td--sku]="isSkuColumn(col)"
+            [attr.data-label]="col.label"
+            [style.width]="col.width || null"
+            [style.minWidth]="col.width || null">
 
             <!-- Status Badge -->
             <app-admin-status-badge *ngIf="isStatusColumn(col)" [label]="formatValue(row, col)"
               [variant]="row[col.key + 'Variant'] || 'neutral'"></app-admin-status-badge>
 
             <!-- Image cell -->
-            <div *ngIf="isImageColumn(col)" class="cell-image">
-              <img [src]="getCellValue(row, col.key) || fallbackImage" [alt]="col.label" loading="lazy" />
+            <div *ngIf="isImageColumn(col)" class="product-image-wrapper cell-image">
+              <img [src]="getCellValue(row, col.key) || fallbackImage" [alt]="col.label || 'Ảnh sản phẩm'" class="product-image" loading="lazy" />
+            </div>
+
+            <!-- SKU list cell -->
+            <div *ngIf="isSkuColumn(col)" class="sku-list">
+              <ng-container *ngIf="getSkuList(row, col).length > 0; else noSku">
+                <span class="sku-item" *ngFor="let skuItem of getVisibleSkus(row, col)">
+                  {{ skuItem }}
+                </span>
+                <button
+                  *ngIf="hasMoreSkus(row, col)"
+                  type="button"
+                  class="sku-toggle"
+                  (click)="$event.stopPropagation(); toggleSkuExpanded(row)">
+                  {{ isSkuExpanded(row) ? 'Thu gọn' : ('Xem thêm (' + getHiddenSkuCount(row, col) + ')') }}
+                </button>
+              </ng-container>
+              <ng-template #noSku>
+                <span class="sku-empty">---</span>
+              </ng-template>
             </div>
 
             <!-- Default text -->
-            <span *ngIf="!isStatusColumn(col) && !isImageColumn(col)">
+            <span *ngIf="!isStatusColumn(col) && !isImageColumn(col) && !isSkuColumn(col)">
               {{ formatValue(row, col) }}
             </span>
           </td>

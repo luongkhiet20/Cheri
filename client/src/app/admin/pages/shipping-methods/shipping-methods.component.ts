@@ -67,12 +67,18 @@ export class ShippingMethodsComponent implements OnInit {
   confirmMessage = '';
   confirmLabel = 'Xác nhận';
   confirmVariant: 'danger' | 'warning' | 'default' = 'default';
-  pendingAction: { type: 'delete' | 'toggle'; row: any } | null = null;
+  pendingAction: { type: 'delete' | 'toggle' | 'bulk_delete'; row?: any; count?: number } | null = null;
 
   get selectedCount(): number { return this.selectedIds.size; }
   get allSelected(): boolean { return this.data.length > 0 && this.data.every((r: any) => this.selectedIds.has(r._id || r.id)); }
   get isIndeterminate(): boolean { return this.selectedCount > 0 && !this.allSelected; }
   get displayTotal(): number { return this.pagination?.total ?? this.data.length; }
+
+  get deleteLabel(): string {
+    return this.selectedCount > 0
+      ? `Xóa đã chọn (${this.selectedCount})`
+      : 'Xóa đã chọn';
+  }
 
   constructor(
     private apiService: AdminService,
@@ -174,6 +180,18 @@ export class ShippingMethodsComponent implements OnInit {
     }
   }
 
+  onDeleteSelected(): void {
+    const count = this.selectedCount;
+    if (count === 0) return;
+    this.pendingAction = { type: 'bulk_delete', count };
+    this.confirmTitle = 'Xác nhận xóa các phương thức vận chuyển đã chọn';
+    this.confirmMessage = `Bạn có chắc chắn muốn xóa ${count} phương thức vận chuyển đã chọn không? Hành động này không thể hoàn tác.`;
+    this.confirmLabel = this.deleteLabel;
+    this.confirmVariant = 'danger';
+    this.confirmOpen = true;
+    this.cdr.markForCheck();
+  }
+
   onConfirmDialog(): void {
     if (!this.pendingAction) {
       this.confirmOpen = false;
@@ -182,6 +200,29 @@ export class ShippingMethodsComponent implements OnInit {
     }
 
     const { type, row } = this.pendingAction;
+
+    if (type === 'bulk_delete') {
+      const ids = Array.from(this.selectedIds);
+      this.confirmOpen = false;
+      this.pendingAction = null;
+      this.isLoading = true;
+      this.cdr.markForCheck();
+
+      Promise.all(ids.map(id => this.apiService.deleteShippingMethod(id).toPromise()))
+        .then(() => {
+          this.isLoading = false;
+          this.selectedIds.clear();
+          this.showSuccess(`Đã xóa ${ids.length} phương thức vận chuyển thành công.`);
+          this.loadShippingMethods();
+        })
+        .catch((err) => {
+          this.isLoading = false;
+          this.showError(err?.error?.message || 'Lỗi khi xóa các phương thức vận chuyển đã chọn.');
+          this.loadShippingMethods();
+        });
+      return;
+    }
+
     const itemId = row._id || row.id;
 
     if (type === 'toggle') {

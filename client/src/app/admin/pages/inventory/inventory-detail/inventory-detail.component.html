@@ -1,0 +1,187 @@
+<div class="page-container">
+
+  <!-- Header trang -->
+  <div class="page-header">
+    <div class="header-titles">
+      <h1 class="form-title">Chi tiết tồn kho</h1>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-secondary" (click)="onBack()">
+        Quay lại danh sách
+      </button>
+    </div>
+  </div>
+
+  <!-- Alert Box: Hiển thị lỗi nếu có -->
+  <div *ngIf="errorMessage" class="alert-box alert-error">
+    <span>{{ errorMessage }}</span>
+    <button *ngIf="productId" type="button" class="btn-retry" (click)="loadDetail(productId)">Thử lại</button>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading-state">
+    <p class="loading-text">Đang tải dữ liệu tồn kho từ máy chủ...</p>
+  </div>
+
+  <!-- Main Content khi có dữ liệu -->
+  <div *ngIf="!isLoading && inventoryData" class="page-body">
+
+    <!-- Thẻ 1: Thông tin chung sản phẩm -->
+    <div class="detail-card">
+      <div class="card-header">
+        <h2 class="card-title">Thông tin chung sản phẩm</h2>
+      </div>
+
+      <div class="overview-grid">
+        <!-- Ảnh đại diện -->
+        <div class="product-thumb-container">
+          <img *ngIf="inventoryData.image" [src]="inventoryData.image" [alt]="inventoryData.name"
+            class="product-thumb" />
+          <div *ngIf="!inventoryData.image" class="product-thumb-placeholder">
+            <span>Chưa có ảnh</span>
+          </div>
+        </div>
+
+        <!-- Thông tin chính -->
+        <div class="info-fields-grid">
+          <div class="field-item">
+            <label class="form-label">Tên sản phẩm</label>
+            <input type="text" class="form-control" [value]="inventoryData.name" readonly />
+          </div>
+
+          <div class="field-item" *ngIf="!inventoryData.hasVariants">
+            <label class="form-label">Mã SKU sản phẩm</label>
+            <input type="text" class="form-control font-mono" [value]="inventoryData.sku || '---'" readonly />
+          </div>
+
+          <div class="field-item" *ngIf="inventoryData.category">
+            <label class="form-label">Danh mục sản phẩm</label>
+            <input type="text" class="form-control" [value]="inventoryData.category" readonly />
+          </div>
+
+          <div class="field-item" *ngIf="inventoryData.price">
+            <label class="form-label">Đơn giá niêm yết</label>
+            <input type="text" class="form-control" [value]="formatCurrency(inventoryData.price)" readonly />
+          </div>
+
+          <div class="field-item">
+            <label class="form-label">Loại cấu hình</label>
+            <input type="text" class="form-control"
+              [value]="inventoryData.hasVariants ? 'Sản phẩm có biến thể' : 'Sản phẩm đơn (không có biến thể)'"
+              readonly />
+          </div>
+
+          <div class="field-item">
+            <label class="form-label">Tình trạng tổng quan</label>
+            <div class="status-badge-container">
+              <span class="status-badge" [ngClass]="getStatusClass(inventoryData.status)">
+                {{ inventoryData.status }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Thẻ 2: Chỉ số đo lường tồn kho -->
+    <div class="detail-card">
+      <div class="card-header">
+        <h2 class="card-title">Chỉ số tồn kho</h2>
+      </div>
+
+      <div class="metrics-grid">
+        <div class="metric-box">
+          <span class="metric-label">Tổng tồn kho</span>
+          <span class="metric-number text-primary">{{ formatNumber(inventoryData.quantity) }}</span>
+        </div>
+
+        <div class="metric-box">
+          <span class="metric-label">Đã đặt</span>
+          <span class="metric-number text-warning">{{ formatNumber(inventoryData.reserved) }}</span>
+        </div>
+
+        <div class="metric-box">
+          <span class="metric-label">Có thể bán</span>
+          <span class="metric-number text-success">{{ formatNumber(inventoryData.available) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Trường hợp 1: Sản phẩm CÓ biến thể -->
+    <div *ngIf="inventoryData.hasVariants" class="detail-card">
+      <div class="card-header">
+        <h2 class="card-title">Danh sách biến thể ({{ inventoryData.variants?.length || 0 }})</h2>
+      </div>
+
+      <div class="table-responsive">
+        <table class="variants-table">
+          <thead>
+            <tr>
+              <th class="col-sku">Mã SKU biến thể</th>
+              <th class="col-color">Màu sắc</th>
+              <th class="col-size">Kích cỡ</th>
+              <th class="col-price text-right">Đơn giá</th>
+              <th class="col-number text-right">Tồn kho</th>
+              <th class="col-number text-right">Đã đặt</th>
+              <th class="col-number text-right">Có thể bán</th>
+              <th class="col-status">Tình trạng</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let v of inventoryData.variants">
+              <td class="col-sku font-mono">{{ v.sku || '---' }}</td>
+              <td class="col-color">{{ v.color || '---' }}</td>
+              <td class="col-size">{{ v.size || '---' }}</td>
+              <td class="col-price text-right">{{ formatCurrency(v.price) }}</td>
+              <td class="col-number text-right font-medium text-primary">{{ formatNumber(v.stock) }}</td>
+              <td class="col-number text-right text-warning font-medium">{{ formatNumber(v.reserved) }}</td>
+              <td class="col-number text-right text-success font-semibold">{{ formatNumber(v.available) }}</td>
+              <td class="col-status">
+                <span class="status-badge" [ngClass]="getStatusClass(v.status)">
+                  {{ v.status }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Trường hợp 2: Sản phẩm KHÔNG CÓ biến thể -->
+    <div *ngIf="!inventoryData.hasVariants" class="detail-card">
+      <div class="card-header">
+        <h2 class="card-title">Thông tin kho hàng sản phẩm đơn</h2>
+      </div>
+
+      <div class="single-product-grid">
+        <div class="field-item">
+          <label class="form-label">Mã SKU</label>
+          <input type="text" class="form-control font-mono" [value]="inventoryData.sku || '---'" readonly />
+        </div>
+
+        <div class="field-item">
+          <label class="form-label">Tồn kho hiện tại</label>
+          <input type="text" class="form-control" [value]="formatNumber(inventoryData.stock)" readonly />
+        </div>
+
+        <div class="field-item">
+          <label class="form-label">Đã đặt</label>
+          <input type="text" class="form-control" [value]="formatNumber(inventoryData.reserved)" readonly />
+        </div>
+
+        <div class="field-item">
+          <label class="form-label">Có thể bán</label>
+          <input type="text" class="form-control" [value]="formatNumber(inventoryData.available)" readonly />
+        </div>
+      </div>
+    </div>
+
+    <!-- Nút hành động cuối trang -->
+    <div class="page-footer-actions">
+      <button type="button" class="btn btn-secondary" (click)="onBack()">
+        Quay lại danh sách
+      </button>
+    </div>
+
+  </div>
+</div>

@@ -49,8 +49,9 @@
   <!-- Reusable Toolbar -->
   <app-admin-toolbar searchPlaceholder="Tìm kiếm theo tên, mã hoặc phạm vi giao hàng..." [filterFields]="filterFields"
     [selectable]="true" [allSelected]="allSelected" [indeterminate]="isIndeterminate" [selectedCount]="selectedCount"
-    [showDeleteSelected]="false" [total]="displayTotal" [isLoading]="isLoading" (searchChange)="onSearch($event)"
-    (filterChange)="onFilter($event)" (refresh)="onRefresh()" (selectAllChange)="onToolbarSelectAll()">
+    [showDeleteSelected]="true" [total]="displayTotal" [isLoading]="isLoading" (searchChange)="onSearch($event)"
+    (filterChange)="onFilter($event)" (refresh)="onRefresh()" (selectAllChange)="onToolbarSelectAll()"
+    (deleteSelected)="onDeleteSelected()">
   </app-admin-toolbar>
 
   <!-- Reusable Table -->

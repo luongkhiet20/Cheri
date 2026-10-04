@@ -170,6 +170,60 @@ export class AdminTableComponent implements OnChanges, AfterViewChecked {
 
   isImageColumn(col: TableColumn): boolean { return col.type === 'image'; }
 
+  isSkuColumn(col: TableColumn): boolean {
+    return col.type === 'sku-list' || col.key === 'sku';
+  }
+
+  getSkuList(row: any, col: TableColumn): string[] {
+    const val = this.getCellValue(row, col.key);
+    if (Array.isArray(val)) {
+      return val.map(s => String(s).trim()).filter(Boolean);
+    }
+    if (typeof val === 'string') {
+      const trimmed = val.trim();
+      if (!trimmed || trimmed === '---') return [];
+      return trimmed.split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
+    }
+    return [];
+  }
+
+  expandedSkuRows = new Set<any>();
+
+  getRowId(row: any): any {
+    return row[this.rowKey] ?? row.id ?? row._id ?? row;
+  }
+
+  isSkuExpanded(row: any): boolean {
+    return this.expandedSkuRows.has(this.getRowId(row));
+  }
+
+  toggleSkuExpanded(row: any): void {
+    const id = this.getRowId(row);
+    if (this.expandedSkuRows.has(id)) {
+      this.expandedSkuRows.delete(id);
+    } else {
+      this.expandedSkuRows.add(id);
+    }
+    this.cdr.markForCheck();
+  }
+
+  getVisibleSkus(row: any, col: TableColumn): string[] {
+    const list = this.getSkuList(row, col);
+    if (list.length <= 3 || this.isSkuExpanded(row)) {
+      return list;
+    }
+    return list.slice(0, 3);
+  }
+
+  hasMoreSkus(row: any, col: TableColumn): boolean {
+    return this.getSkuList(row, col).length > 3;
+  }
+
+  getHiddenSkuCount(row: any, col: TableColumn): number {
+    const list = this.getSkuList(row, col);
+    return Math.max(0, list.length - 3);
+  }
+
   onAction(event: ActionEvent): void { this.actionClick.emit(event); }
 
   onSort(col: TableColumn): void {

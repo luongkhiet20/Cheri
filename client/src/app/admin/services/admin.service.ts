@@ -269,8 +269,18 @@ export class AdminService {
     return this.http.get(`${this.baseUrl}/inventory`);
   }
 
-  importInventory(productId: string, quantity: number, note?: string): Observable<any> {
-    return this.http.patch(`${this.baseUrl}/products/${productId}/inventory`, { quantity, note });
+  getInventoryById(id: string): Observable<any> {
+    return this.http.get(`${this.baseUrl}/inventory/${id}`);
+  }
+
+  importInventory(productId: string, quantity: number, note?: string, variantId?: string, variantSku?: string, isEdit?: boolean): Observable<any> {
+    return this.http.patch(`${this.baseUrl}/products/${productId}/inventory`, {
+      quantity,
+      note,
+      variantId,
+      variantSku,
+      isEdit
+    });
   }
 
   // ── Pages ──────────────────────────────────

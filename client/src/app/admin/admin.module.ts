@@ -42,6 +42,7 @@ import { UsersComponent } from './pages/users/users.component';
 import { UsersFormComponent } from './pages/users/users-form/users-form.component';
 import { UsersDetailComponent } from './pages/users/users-detail/users-detail.component';
 import { InventoryComponent } from './pages/inventory/inventory.component';
+import { InventoryDetailComponent } from './pages/inventory/inventory-detail/inventory-detail.component';
 import { InventoryImportComponent } from './pages/inventory/inventory-import/inventory-import.component';
 import { PagesComponent } from './pages/pages/pages.component';
 import { PageFormComponent } from './pages/pages/page-form/page-form.component';
@@ -81,6 +82,8 @@ const routes: Routes = [
       { path: 'users/:id/edit', component: UsersFormComponent },
       { path: 'inventory', component: InventoryComponent },
       { path: 'inventory/import', component: InventoryImportComponent },
+      { path: 'inventory/:id', component: InventoryDetailComponent },
+      { path: 'inventory/:id/edit', component: InventoryImportComponent },
       { path: 'pages', component: PagesComponent },
       { path: 'pages/add', component: PageFormComponent },
       { path: 'pages/:id', component: PageDetailComponent },
@@ -130,6 +133,7 @@ const routes: Routes = [
     UsersFormComponent,
     UsersDetailComponent,
     InventoryComponent,
+    InventoryDetailComponent,
     InventoryImportComponent,
     PagesComponent,
     PageFormComponent,

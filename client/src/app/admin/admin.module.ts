@@ -21,6 +21,7 @@ import { ConfirmDialogComponent } from './shared/confirm-dialog/confirm-dialog.c
 import { LoadingStateComponent } from './shared/loading-state/loading-state.component';
 import { EmptyStateComponent } from './shared/empty-state/empty-state.component';
 import { NotificationComponent } from './shared/notification/notification.component';
+import { AdminBreadcrumbComponent } from './shared/admin-breadcrumb/admin-breadcrumb.component';
 
 // Pages
 import { DashboardComponent } from './pages/dashboard/dashboard.component';
@@ -114,6 +115,7 @@ const routes: Routes = [
     LoadingStateComponent,
     EmptyStateComponent,
     NotificationComponent,
+    AdminBreadcrumbComponent,
     // Pages
     DashboardComponent,
     ProductsComponent,
@@ -148,6 +150,10 @@ const routes: Routes = [
     FormsModule,
     ReactiveFormsModule,
     RouterModule.forChild(routes),
+  ],
+  exports: [
+    AdminBreadcrumbComponent,
   ]
 })
 export class AdminModule { }
+export { BreadcrumbItem } from './shared/admin-breadcrumb/admin-breadcrumb.component';

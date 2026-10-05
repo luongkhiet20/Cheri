@@ -3,11 +3,7 @@
   <!-- Page Header -->
   <div class="settings-header">
     <div class="header-info">
-      <div class="breadcrumb">
-        <a routerLink="/admin" class="breadcrumb-link">Quản trị</a>
-        <span class="breadcrumb-sep">/</span>
-        <span class="breadcrumb-current">Cài đặt</span>
-      </div>
+      <app-admin-breadcrumb [items]="breadcrumbs" [showHomeIcon]="true"></app-admin-breadcrumb>
       <h1 class="page-title">Cài đặt hệ thống</h1>
     </div>
 

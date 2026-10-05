@@ -1,0 +1,49 @@
+<nav class="admin-breadcrumb" aria-label="Đường dẫn điều hướng" *ngIf="items && items.length > 0">
+  <ol class="admin-breadcrumb__list">
+    <li *ngFor="let item of items; let isLast = last; let i = index" class="admin-breadcrumb__item" [class.is-current]="isLast">
+      
+      <!-- Link cho item không phải trang hiện tại -->
+      <ng-container *ngIf="!isLast && item.url; else currentOrStatic">
+        <a [routerLink]="item.url" [queryParams]="item.queryParams" class="admin-breadcrumb__link">
+          <!-- Back arrow nếu được bật ở item đầu tiên -->
+          <svg *ngIf="i === 0 && showBackArrow" width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+            class="admin-breadcrumb__icon admin-breadcrumb__back-icon" aria-hidden="true">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+
+          <!-- Home icon nếu được bật ở item đầu tiên -->
+          <svg *ngIf="i === 0 && showHomeIcon && !showBackArrow" width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            class="admin-breadcrumb__icon admin-breadcrumb__home-icon" aria-hidden="true">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+          </svg>
+
+          <span class="admin-breadcrumb__label">{{ item.label }}</span>
+        </a>
+      </ng-container>
+
+      <!-- Text cho item hiện tại (trang cuối) hoặc không có URL -->
+      <ng-template #currentOrStatic>
+        <span class="admin-breadcrumb__current" [attr.aria-current]="isLast ? 'page' : null">
+          {{ item.label }}
+        </span>
+      </ng-template>
+
+      <!-- Dấu phân cách -->
+      <span *ngIf="!isLast" class="admin-breadcrumb__sep" aria-hidden="true">
+        <ng-container *ngIf="separator === 'chevron'">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </ng-container>
+        <ng-container *ngIf="separator === 'slash'">
+          /
+        </ng-container>
+      </span>
+    </li>
+  </ol>
+</nav>

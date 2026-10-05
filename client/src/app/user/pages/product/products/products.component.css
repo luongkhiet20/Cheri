@@ -866,3 +866,100 @@
   background: #FFFFFF;
 }
 
+/* ── Products Empty State (Clean & Premium Fashion Style) ────────── */
+.products-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+  min-height: 420px;
+  padding: 64px 24px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.products-empty-icon {
+  width: 40px;
+  height: 40px;
+  stroke: #74070E;
+  margin-bottom: 20px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.products-empty-title {
+  margin: 0 0 12px 0;
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #74070E;
+  text-align: center;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.products-empty-desc {
+  margin: 0 auto 24px auto;
+  max-width: 520px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: #555555;
+  text-align: center;
+  text-transform: none;
+}
+
+.products-empty-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #74070E;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 22px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-transform: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+
+.products-empty-btn:hover {
+  background: #5C050B;
+}
+
+.products-empty-btn:active {
+  opacity: 0.95;
+}
+
+@media screen and (max-width: 768px) {
+  .products-empty {
+    min-height: 340px;
+    padding: 48px 24px;
+  }
+
+  .products-empty-title {
+    font-size: 18px;
+  }
+
+  .products-empty-desc {
+    font-size: 13.5px;
+    margin-bottom: 20px;
+  }
+
+  .products-empty-btn {
+    width: auto;
+    max-width: 100%;
+  }
+}
+

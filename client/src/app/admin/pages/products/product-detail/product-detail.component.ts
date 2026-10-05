@@ -30,6 +30,11 @@ export class ProductDetailComponent implements OnInit {
   // Active gallery image
   activeImage = '';
 
+  breadcrumbs = [
+    { label: 'Quản lý sản phẩm', url: '/admin/products' },
+    { label: 'Chi tiết' }
+  ];
+
   // Delete confirm dialog
   confirmOpen = false;
   confirmMessage = '';

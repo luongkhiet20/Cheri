@@ -13,6 +13,11 @@ export class SettingsComponent implements OnInit, OnDestroy {
   isLoading = true;
   isSaving = false;
 
+  breadcrumbs = [
+    { label: 'Quản trị', url: '/admin' },
+    { label: 'Cài đặt' }
+  ];
+
   settings: AppSettings = {
     site: {
       name: '',

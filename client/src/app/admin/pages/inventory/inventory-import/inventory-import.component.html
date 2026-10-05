@@ -3,10 +3,7 @@
   <div class="form-header">
     <div class="form-header-left">
       <h1 class="page-title">{{ isEditMode ? 'Chỉnh sửa tồn kho' : 'Nhập kho' }}</h1>
-      <p class="page-subtitle">
-        {{ isEditMode ? 'Cập nhật số lượng tồn kho thực tế của sản phẩm hoặc biến thể được chọn' : 'Chọn sản phẩm và
-        nhập thêm số lượng vào tồn kho hiện tại' }}
-      </p>
+
     </div>
     <div class="form-header-right">
       <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="isSubmitting">
@@ -42,7 +39,7 @@
   <form (ngSubmit)="onSubmit()" class="form-content" novalidate>
     <div class="card form-card">
       <h2 class="card-section-title">{{ isEditMode ? 'Thông tin chỉnh sửa tồn kho' : 'Chi tiết nhập kho' }}</h2>
-      <p class="card-section-subtitle">Các trường thông tin bắt buộc được đánh dấu sao (*)</p>
+      <p class="card-section-subtitle"></p>
 
       <div class="form-grid">
         <!-- [1] Chọn sản phẩm * -->
@@ -125,8 +122,6 @@
               </option>
             </select>
           </div>
-          <div class="form-hint">Sản phẩm có biến thể: Bắt buộc chọn đúng biến thể cụ thể để thao tác tồn kho cho riêng
-            biến thể đó.</div>
           <div *ngIf="errors['variant']" class="error-feedback">{{ errors['variant'] }}</div>
         </div>
 
@@ -138,8 +133,7 @@
           <input type="text" id="product-sku" class="form-control readonly-field code-input"
             [value]="sku || (hasVariants ? '--- (Vui lòng chọn biến thể ở trên) ---' : '---')" readonly />
           <div class="form-hint">
-            {{ hasVariants ? 'Mã SKU riêng của biến thể được chọn từ CSDL (read-only).' : 'Mã SKU của sản phẩm từ CSDL
-            (read-only).' }}
+            {{ hasVariants ? '(read-only)' : 'Mã SKU của sản phẩm' }}
           </div>
         </div>
 
@@ -154,10 +148,7 @@
               readonly />
             <span *ngIf="isLoadingProductDetail" class="spinner-small"></span>
           </div>
-          <div class="form-hint">
-            {{ hasVariants ? 'Lấy từ dữ liệu variant.stock thực tế của biến thể trong CSDL.' : 'Lấy từ dữ liệu tồn kho
-            thực tế của sản phẩm trong CSDL.' }}
-          </div>
+
         </div>
 
         <!-- [4] Số lượng tồn kho (Nhập thêm hoặc Sửa) * -->
@@ -171,10 +162,7 @@
               [placeholder]="isEditMode ? 'Ví dụ: 15' : 'Ví dụ: 20'" [min]="isEditMode ? 0 : 1" step="1" required />
             <span class="input-suffix">sản phẩm</span>
           </div>
-          <div class="form-hint">
-            {{ isEditMode ? 'Nhập số lượng tồn kho mới (số nguyên >= 0). Số lượng này sẽ thay thế trực tiếp tồn kho hiện
-            tại.' : 'Số nguyên dương lớn hơn 0. Không nhập số âm hoặc số thập phân.' }}
-          </div>
+
           <div *ngIf="errors['quantity']" class="error-feedback">{{ errors['quantity'] }}</div>
         </div>
 

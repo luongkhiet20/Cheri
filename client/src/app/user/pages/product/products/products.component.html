@@ -312,14 +312,15 @@
             } @else {
             <!-- Empty state -->
             <div class="products-empty">
-              <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
-                class="products-empty-icon">
+              <svg class="products-empty-icon" xmlns="http://www.w3.org/2000/svg" width="40" height="40"
+                viewBox="0 0 24 24" fill="none" stroke="#74070E" stroke-width="1.6" stroke-linecap="round"
+                stroke-linejoin="round" aria-hidden="true">
                 <circle cx="11" cy="11" r="8"></circle>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
               </svg>
+
               @if (searchQuery() || isImageSearch() || productIdsFilter()) {
-              <h3 class="products-empty-title">Không Tìm Thấy Sản Phẩm Phù Hợp</h3>
+              <h3 class="products-empty-title">Không tìm thấy sản phẩm phù hợp</h3>
               <p class="products-empty-desc">
                 @if (searchQuery() && (isImageSearch() || productIdsFilter())) {
                 Chéri không tìm thấy sản phẩm nào khớp với từ khóa "{{ searchQuery() }}" và hình ảnh đã chọn.
@@ -331,17 +332,15 @@
                 khóa nhé.
                 }
               </p>
-              <button type="button" class="products-empty-btn" (click)="clearSearch()">
-                Xem Toàn Bộ Sản Phẩm
-              </button>
+
               } @else {
-              <h3 class="products-empty-title">Chưa Tìm Thấy Sản Phẩm</h3>
+              <h3 class="products-empty-title">Chưa tìm thấy sản phẩm</h3>
               <p class="products-empty-desc">
                 Chéri chưa tìm thấy sản phẩm nào khớp với bộ lọc của bạn.
                 Hãy thử lại với danh mục khác nhé.
               </p>
               <button type="button" class="products-empty-btn" (click)="clearSearch()">
-                Xem Toàn Bộ Sản Phẩm
+                Xem toàn bộ sản phẩm
               </button>
               }
             </div>

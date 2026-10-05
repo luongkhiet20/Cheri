@@ -78,16 +78,6 @@
   } @else {
   <!-- Empty state: Căn giữa màn hình không khung -->
   <div class="wishlist-empty-panel">
-    @if (user()) {
-    <div class="wishlist-auth-header">
-      <svg class="wishlist-user-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-        <circle cx="12" cy="7" r="4"></circle>
-      </svg>
-      <p class="wishlist-auth-greeting">Xin chào, <strong>{{ user()?.name || user()?.fullName || user()?.email }}</strong></p>
-    </div>
-    }
 
     <div class="wishlist-empty-state">
       <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#74070e"

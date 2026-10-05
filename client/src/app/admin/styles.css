@@ -108,6 +108,34 @@
   box-sizing: border-box;
 }
 
+:host ::ng-deep .admin-shell button,
+:host ::ng-deep .admin-shell input,
+:host ::ng-deep .admin-shell select,
+:host ::ng-deep .admin-shell textarea,
+:host ::ng-deep .admin-shell .btn,
+:host ::ng-deep .admin-shell .form-control,
+.admin-shell button,
+.admin-shell input,
+.admin-shell select,
+.admin-shell textarea,
+.admin-shell .btn,
+.admin-shell .form-control,
+button,
+input,
+select,
+textarea,
+.btn,
+.form-control {
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
 :host ::ng-deep .admin-shell a,
 .admin-shell a {
   color: inherit;
@@ -474,7 +502,7 @@
   font-weight: 600;
   border-radius: 100px;
   letter-spacing: 0.3px;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 :host ::ng-deep .admin-shell .badge-success,

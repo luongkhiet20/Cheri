@@ -9,25 +9,10 @@
         <span class="sync-dot"></span>
         Cập nhật: {{ lastUpdatedText }}
       </span>
-      <button
-        type="button"
-        class="btn btn-refresh"
-        id="btn-refresh-dashboard"
-        (click)="loadStats(true)"
-        [disabled]="isRefreshing"
-      >
-        <svg
-          class="btn-icon"
-          [class.spinning]="isRefreshing"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
+      <button type="button" class="btn btn-refresh" id="btn-refresh-dashboard" (click)="loadStats(true)"
+        [disabled]="isRefreshing">
+        <svg class="btn-icon" [class.spinning]="isRefreshing" width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="23 4 23 10 17 10"></polyline>
           <polyline points="1 20 1 14 7 14"></polyline>
           <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
@@ -40,7 +25,8 @@
   <!-- ERROR ALERT WITH RETRY -->
   <div *ngIf="errorMessage" class="dash-alert dash-alert--danger" role="alert">
     <div class="dash-alert__content">
-      <svg class="alert-svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg class="alert-svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2">
         <circle cx="12" cy="12" r="10"></circle>
         <line x1="12" y1="8" x2="12" y2="12"></line>
         <line x1="12" y1="16" x2="12.01" y2="16"></line>
@@ -83,17 +69,12 @@
     <section class="kpi-grid" aria-label="Khu vực chỉ số chính">
 
       <!-- KPI 1: Tổng doanh thu -->
-      <article
-        class="kpi-card"
-        (click)="navigateOrders()"
-        tabindex="0"
-        role="button"
-        id="kpi-total-revenue"
-      >
+      <article class="kpi-card" (click)="navigateOrders()" tabindex="0" role="button" id="kpi-total-revenue">
         <div class="kpi-card__head">
           <span class="kpi-card__label">Tổng doanh thu</span>
           <div class="kpi-card__icon-box">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
               <line x1="12" y1="1" x2="12" y2="23"></line>
               <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
             </svg>
@@ -104,7 +85,8 @@
         </div>
         <div class="kpi-card__foot">
           <span class="badge-status-chip">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <polyline points="20 6 9 17 4 12"></polyline>
             </svg>
             <span>Hoàn tất</span>
@@ -114,17 +96,12 @@
       </article>
 
       <!-- KPI 2: Đơn hàng -->
-      <article
-        class="kpi-card"
-        (click)="navigateOrders()"
-        tabindex="0"
-        role="button"
-        id="kpi-total-orders"
-      >
+      <article class="kpi-card" (click)="navigateOrders()" tabindex="0" role="button" id="kpi-total-orders">
         <div class="kpi-card__head">
           <span class="kpi-card__label">Đơn hàng</span>
           <div class="kpi-card__icon-box">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
               <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
               <line x1="3" y1="6" x2="21" y2="6"></line>
               <path d="M16 10a4 4 0 0 1-8 0"></path>
@@ -140,17 +117,12 @@
       </article>
 
       <!-- KPI 3: Tổng sản phẩm -->
-      <article
-        class="kpi-card"
-        (click)="navigateProducts()"
-        tabindex="0"
-        role="button"
-        id="kpi-total-products"
-      >
+      <article class="kpi-card" (click)="navigateProducts()" tabindex="0" role="button" id="kpi-total-products">
         <div class="kpi-card__head">
           <span class="kpi-card__label">Tổng sản phẩm</span>
           <div class="kpi-card__icon-box">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
               <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
               <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
             </svg>
@@ -165,17 +137,12 @@
       </article>
 
       <!-- KPI 4: Khách hàng & Tài khoản -->
-      <article
-        class="kpi-card"
-        (click)="navigateUsers()"
-        tabindex="0"
-        role="button"
-        id="kpi-total-users"
-      >
+      <article class="kpi-card" (click)="navigateUsers()" tabindex="0" role="button" id="kpi-total-users">
         <div class="kpi-card__head">
           <span class="kpi-card__label">Khách hàng & Tài khoản</span>
           <div class="kpi-card__icon-box">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
               <circle cx="9" cy="7" r="4"></circle>
               <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
@@ -187,7 +154,8 @@
           {{ stats.usersCount | number }}
         </div>
         <div class="kpi-card__foot">
-          <span class="kpi-card__hint">7 ngày qua: <strong>+{{ stats.customers?.new7Days || 0 }}</strong> tài khoản</span>
+          <span class="kpi-card__hint">7 ngày qua: <strong>+{{ stats.customers?.new7Days || 0 }}</strong> tài
+            khoản</span>
         </div>
       </article>
 
@@ -201,7 +169,6 @@
         <div class="dash-card__header">
           <div>
             <h2 class="dash-card__title">Sản phẩm bán chạy</h2>
-            <p class="dash-card__subtitle">Dựa trên dữ liệu đơn hàng thực tế (orders.cart.items)</p>
           </div>
           <button type="button" class="dash-link" (click)="navigateProducts()">
             <span>Xem tất cả</span>
@@ -212,13 +179,8 @@
         </div>
 
         <div class="product-row-list" *ngIf="stats.topSellingProducts && stats.topSellingProducts.length > 0">
-          <div
-            *ngFor="let prod of stats.topSellingProducts; let idx = index"
-            class="product-row-item"
-            (click)="navigateProductEdit(prod.id)"
-            tabindex="0"
-            role="button"
-          >
+          <div *ngFor="let prod of stats.topSellingProducts; let idx = index" class="product-row-item"
+            (click)="navigateProductEdit(prod.id)" tabindex="0" role="button">
             <span class="rank-index" [class.rank-index--top]="idx === 0">#{{ idx + 1 }}</span>
             <div class="product-img-box">
               <img *ngIf="prod.image" [src]="prod.image" [alt]="prod.name" loading="lazy" />
@@ -259,7 +221,6 @@
               <h2 class="dash-card__title">Sản phẩm sắp hết</h2>
               <span class="chip-threshold">&le; {{ LOW_STOCK_THRESHOLD }} tồn</span>
             </div>
-            <p class="dash-card__subtitle">Tồn kho tính theo Product – Variant</p>
           </div>
           <button type="button" class="dash-link" (click)="navigateProducts()">
             <span>Xem tất cả</span>
@@ -270,33 +231,26 @@
         </div>
 
         <!-- Hết hàng banner if any -->
-        <div
-          class="alert-stock-notice"
-          (click)="navigateProducts()"
-          *ngIf="stats.outOfStockCount > 0"
-          role="button"
-          tabindex="0"
-        >
-          <span class="stock-badge-out">HẾT HÀNG</span>
-          <span class="stock-notice-text">Hiện có <strong>{{ stats.outOfStockCount }}</strong> sản phẩm đã hết hàng.</span>
+        <div class="alert-stock-notice" (click)="navigateProducts()" *ngIf="stats.outOfStockCount > 0" role="button"
+          tabindex="0">
+          <span class="stock-badge-out">Hết hàng</span>
+          <span class="stock-notice-text">Hiện có <strong>{{ stats.outOfStockCount }}</strong> sản phẩm đã hết
+            hàng.</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#74070E" stroke-width="2">
             <polyline points="9 18 15 12 9 6"></polyline>
           </svg>
         </div>
 
         <div class="product-row-list" *ngIf="stats.lowStockProducts && stats.lowStockProducts.length > 0">
-          <div
-            *ngFor="let p of stats.lowStockProducts"
-            class="product-row-item"
-            (click)="navigateProductEdit(p.id)"
-            tabindex="0"
-            role="button"
-          >
+          <div *ngFor="let p of stats.lowStockProducts" class="product-row-item" (click)="navigateProductEdit(p.id)"
+            tabindex="0" role="button">
             <div class="product-img-box">
               <img *ngIf="p.image" [src]="p.image" [alt]="p.name" loading="lazy" />
               <div *ngIf="!p.image" class="product-placeholder-svg">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
-                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                  <path
+                    d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+                  </path>
                   <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
                   <line x1="12" y1="22.08" x2="12" y2="12"></line>
                 </svg>
@@ -335,40 +289,23 @@
         <div class="dash-card__header">
           <div>
             <h2 class="dash-card__title">Doanh thu theo thời gian</h2>
-            <p class="dash-card__subtitle">Quy tắc doanh thu: Đơn hàng hoàn tất (Đã giao)</p>
           </div>
           <div class="chart-header-actions">
             <div class="time-filter-group" role="tablist">
-              <button
-                type="button"
-                class="time-pill"
-                [class.time-pill--active]="currentTimeRange === '7d'"
-                (click)="setTimeRange('7d')"
-              >
+              <button type="button" class="time-pill" [class.time-pill--active]="currentTimeRange === '7d'"
+                (click)="setTimeRange('7d')">
                 7 ngày
               </button>
-              <button
-                type="button"
-                class="time-pill"
-                [class.time-pill--active]="currentTimeRange === '30d'"
-                (click)="setTimeRange('30d')"
-              >
+              <button type="button" class="time-pill" [class.time-pill--active]="currentTimeRange === '30d'"
+                (click)="setTimeRange('30d')">
                 30 ngày
               </button>
-              <button
-                type="button"
-                class="time-pill"
-                [class.time-pill--active]="currentTimeRange === 'this_month'"
-                (click)="setTimeRange('this_month')"
-              >
+              <button type="button" class="time-pill" [class.time-pill--active]="currentTimeRange === 'this_month'"
+                (click)="setTimeRange('this_month')">
                 Tháng này
               </button>
-              <button
-                type="button"
-                class="time-pill"
-                [class.time-pill--active]="currentTimeRange === 'last_month'"
-                (click)="setTimeRange('last_month')"
-              >
+              <button type="button" class="time-pill" [class.time-pill--active]="currentTimeRange === 'last_month'"
+                (click)="setTimeRange('last_month')">
                 Tháng trước
               </button>
             </div>
@@ -384,18 +321,11 @@
         <!-- Custom Interactive Bar Chart -->
         <div class="chart-container">
           <div class="chart-bars-wrap">
-            <div
-              *ngFor="let point of stats.revenueTimeline"
-              class="chart-bar-column"
-              (mouseenter)="onPointHover(point)"
-              (mouseleave)="onPointLeave()"
-            >
+            <div *ngFor="let point of stats.revenueTimeline" class="chart-bar-column" (mouseenter)="onPointHover(point)"
+              (mouseleave)="onPointLeave()">
               <div class="bar-slot">
-                <div
-                  class="bar-stem"
-                  [style.height.%]="getBarHeight(point.revenue)"
-                  [class.bar-stem--has-data]="point.revenue > 0"
-                ></div>
+                <div class="bar-stem" [style.height.%]="getBarHeight(point.revenue)"
+                  [class.bar-stem--has-data]="point.revenue > 0"></div>
               </div>
               <span class="bar-date-label">{{ point.label }}</span>
             </div>
@@ -404,7 +334,8 @@
           <!-- Tooltip overlay -->
           <div *ngIf="hoveredPoint" class="chart-tooltip">
             <div class="tooltip-date">{{ hoveredPoint.fullDate || hoveredPoint.label }}</div>
-            <div class="tooltip-row">Doanh thu: <strong>{{ hoveredPoint.revenue | currency:'VND':'symbol':'1.0-0' }}</strong></div>
+            <div class="tooltip-row">Doanh thu: <strong>{{ hoveredPoint.revenue | currency:'VND':'symbol':'1.0-0'
+                }}</strong></div>
             <div class="tooltip-row">Đơn hàng: <strong>{{ hoveredPoint.ordersCount }} đơn</strong></div>
           </div>
         </div>
@@ -415,25 +346,20 @@
         <div class="dash-card__header">
           <div>
             <h2 class="dash-card__title">Trạng thái đơn hàng</h2>
-            <p class="dash-card__subtitle">Phân bổ theo dữ liệu đơn hàng thực tế</p>
           </div>
         </div>
 
         <div class="status-breakdown-list">
-          <div
-            *ngFor="let st of stats.ordersByStatus"
-            class="status-breakdown-item"
-            (click)="navigateOrdersByStatus(st.queryParam)"
-            tabindex="0"
-            role="button"
-          >
+          <div *ngFor="let st of stats.ordersByStatus" class="status-breakdown-item"
+            (click)="navigateOrdersByStatus(st.queryParam)" tabindex="0" role="button">
             <div class="status-item-left">
               <span class="status-color-dot status-dot--{{ st.variant }}"></span>
               <span class="status-name">{{ st.label }}</span>
             </div>
             <div class="status-item-right">
               <span class="status-badge-count badge-variant--{{ st.variant }}">{{ st.count }}</span>
-              <svg class="chevron-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <svg class="chevron-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2">
                 <polyline points="9 18 15 12 9 6"></polyline>
               </svg>
             </div>
@@ -450,8 +376,7 @@
       <div class="dash-card">
         <div class="dash-card__header">
           <div>
-            <h2 class="dash-card__title">Đơn hàng mới nhất từ MongoDB</h2>
-            <p class="dash-card__subtitle">Các giao dịch đơn hàng thực tế vừa ghi nhận</p>
+            <h2 class="dash-card__title">Đơn hàng mới nhất</h2>
           </div>
           <button type="button" class="dash-link" (click)="navigateOrders()">
             <span>Xem tất cả</span>
@@ -473,13 +398,8 @@
               </tr>
             </thead>
             <tbody>
-              <tr
-                *ngFor="let order of stats.recentOrders"
-                class="dash-table-row"
-                (click)="navigateOrderDetail(order.id)"
-                tabindex="0"
-                role="button"
-              >
+              <tr *ngFor="let order of stats.recentOrders" class="dash-table-row"
+                (click)="navigateOrderDetail(order.id)" tabindex="0" role="button">
                 <td class="order-code-cell">{{ order.code }}</td>
                 <td>
                   <div class="order-customer-name">{{ order.customer }}</div>
@@ -504,7 +424,6 @@
         <div class="dash-card__header">
           <div>
             <h2 class="dash-card__title">Trạng thái hệ thống</h2>
-            <p class="dash-card__subtitle">Kết nối dịch vụ backend và MongoDB Atlas</p>
           </div>
         </div>
 
@@ -536,7 +455,8 @@
             </div>
             <div class="spec-item">
               <span class="spec-label">Sản phẩm hết hàng</span>
-              <strong class="spec-value" [class.spec-value--alert]="stats.outOfStockCount > 0">{{ stats.outOfStockCount }} sản phẩm</strong>
+              <strong class="spec-value" [class.spec-value--alert]="stats.outOfStockCount > 0">{{ stats.outOfStockCount
+                }} sản phẩm</strong>
             </div>
             <div class="spec-item">
               <span class="spec-label">Danh mục hoạt động</span>

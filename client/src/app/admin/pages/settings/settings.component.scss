@@ -203,8 +203,8 @@ button, input, select, textarea, .btn, .form-control {
       font-weight: 700;
       color: var(--cheri-text, #2B2B2B);
       margin: 0 0 2px 0;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      text-transform: none;
+      letter-spacing: normal;
     }
 
     .card-desc {

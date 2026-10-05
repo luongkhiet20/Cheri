@@ -1,27 +1,26 @@
 <div class="profile-page-wrapper">
-  <div class="profile-container">
 
-    <!-- ── HERO CARD: Avatar + Name + Member ID + Logout ── -->
-    <div class="profile-hero-card">
-      <div class="profile-avatar-wrap">
-        <div class="profile-avatar-circle">
-          <span>{{ getUserInitial() }}</span>
-        </div>
-      </div>
-      <div class="profile-hero-info">
-        <div class="profile-member-badges">
-          <span class="profile-member-id">{{ getMemberCode() }}</span>
-          <span class="profile-member-tier">{{ getRoleLabel() }}</span>
-        </div>
-        <h2 class="profile-hero-name">{{ getDisplayName() }}</h2>
-        <p class="profile-hero-email">{{ user$()?.email }}</p>
-      </div>
-      <div class="profile-hero-action">
-        <button type="button" class="profile-logout-btn" (click)="onLogout()" title="Đăng xuất khỏi tài khoản">
-          <span>Đăng xuất</span>
-        </button>
+  <!-- ── HERO CARD: Avatar + Name + Member ID + Logout ── -->
+  <div class="profile-hero-card">
+    <div class="profile-avatar-wrap">
+      <div class="profile-avatar-circle">
+        <span>{{ getUserInitial() }}</span>
       </div>
     </div>
+    <div class="profile-hero-info">
+      <div class="profile-member-badges">
+      </div>
+      <h2 class="profile-hero-name">{{ getDisplayName() }}</h2>
+      <p class="profile-hero-email">{{ user$()?.email }}</p>
+    </div>
+    <div class="profile-hero-action">
+      <button type="button" class="profile-logout-btn" (click)="onLogout()" title="Đăng xuất khỏi tài khoản">
+        <span>Đăng xuất</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="profile-container">
 
     <!-- ── MAIN GRID: Orders (left) + Profile Sidebar (right) ── -->
     <div class="profile-main-grid">
@@ -39,10 +38,8 @@
 
         <!-- Filter tabs -->
         <div class="orders-tabs">
-          <button type="button" *ngFor="let tab of orderTabs"
-            class="order-tab-btn"
-            [class.active]="activeTab === tab.key"
-            (click)="setTab(tab.key)">
+          <button type="button" *ngFor="let tab of orderTabs" class="order-tab-btn"
+            [class.active]="activeTab === tab.key" (click)="setTab(tab.key)">
             <span class="tab-label">{{ tab.label }}</span>
             <span class="tab-badge">{{ getTabCount(tab.key) }}</span>
           </button>
@@ -84,19 +81,22 @@
             <div class="order-items-wrap" *ngIf="order.items && order.items.length > 0; else fallbackOrderItem">
               <div class="order-product-row" *ngFor="let item of order.items">
                 <div class="product-thumb-box">
-                  <img [src]="getItemImage(item)" [alt]="item.productSnapshot?.title || 'Sản phẩm'" class="product-thumb-img" />
+                  <img [src]="getItemImage(item)" [alt]="item.productSnapshot?.title || 'Sản phẩm'"
+                    class="product-thumb-img" />
                 </div>
                 <div class="product-details-box">
                   <h4 class="product-name">{{ item.productSnapshot?.title || 'Sản phẩm Cheri' }}</h4>
                   <div class="product-variants-row">
                     <span *ngIf="item.productSnapshot?.variant?.size">
-                      Kích thước: <strong>{{ item.productSnapshot?.variant?.size }}</strong>
+                      Kích thước: <strong>{{ item.productSnapshot.variant.size }}</strong>
                     </span>
-                    <span class="variant-separator" *ngIf="item.productSnapshot?.variant?.size && (item.productSnapshot?.variant?.color || item.productSnapshot?.variant?.classification)">|</span>
+                    <span class="variant-separator"
+                      *ngIf="item.productSnapshot?.variant?.size && (item.productSnapshot?.variant?.color || item.productSnapshot?.variant?.classification)">|</span>
                     <span *ngIf="item.productSnapshot?.variant?.color">
-                      Màu: <strong>{{ item.productSnapshot?.variant?.color }}</strong>
+                      Màu: <strong>{{ item.productSnapshot.variant.color }}</strong>
                     </span>
-                    <span class="variant-separator" *ngIf="item.productSnapshot?.variant?.color || item.productSnapshot?.variant?.size">|</span>
+                    <span class="variant-separator"
+                      *ngIf="item.productSnapshot?.variant?.color || item.productSnapshot?.variant?.size">|</span>
                     <span>
                       Số lượng: <strong>x{{ item.quantity || 1 }}</strong>
                     </span>
@@ -158,7 +158,8 @@
 
             <!-- 5. Bottom Tracking & Final Total Bar (No icons) -->
             <div class="order-card-footer">
-              <a class="btn-track-route" [routerLink]="['/' + (lang$ | async) + '/tracking']" [queryParams]="{ orderId: order.orderId }">
+              <a class="btn-track-route" [routerLink]="['/' + (lang$ | async) + '/tracking']"
+                [queryParams]="{ orderId: order.orderId }">
                 <span>Theo dõi vận trình</span>
               </a>
 

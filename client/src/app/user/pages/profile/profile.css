@@ -3,31 +3,29 @@
   width: 100%;
   min-height: 85vh;
   background-color: #faf8f5;
-  padding: 40px 20px 80px;
+  padding: 0 0 80px;
   box-sizing: border-box;
   font-family: var(--font-sans, "SF Compact Text", "SF Compact Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
 }
 
 .profile-page-wrapper {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.profile-container {
+  width: 100%;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 28px;
 }
 
-/* ── HERO CARD: Narrower, Brand #74070E ── */
+/* ── HERO CARD: Near full-width, 16px below Header, 32px side margins, 120–140px height ── */
 .profile-hero-card {
-  max-width: 860px;
-  width: 100%;
-  margin: 0 auto;
+  width: calc(100% - 64px);
+  margin: 16px 32px 24px;
+  min-height: 120px;
+  max-height: 140px;
   box-sizing: border-box;
   background: linear-gradient(135deg, #74070E 0%, #58050a 55%, #3e0205 100%);
-  border-radius: 18px;
-  box-shadow: 0 10px 30px -6px rgba(116, 7, 14, 0.32), 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px -4px rgba(116, 7, 14, 0.28), 0 2px 8px rgba(0, 0, 0, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.16);
   padding: 24px 32px;
   display: flex;
@@ -87,7 +85,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   position: relative;
   z-index: 1;
 }
@@ -106,7 +104,7 @@
   color: #ffffff;
   background: rgba(255, 255, 255, 0.16);
   border: 1px solid rgba(255, 255, 255, 0.28);
-  padding: 3px 11px;
+  padding: 2px 10px;
   border-radius: 20px;
   backdrop-filter: blur(4px);
 }
@@ -118,7 +116,7 @@
   color: #ffdf9e;
   background: rgba(0, 0, 0, 0.25);
   border: 1px solid rgba(255, 223, 158, 0.35);
-  padding: 3px 10px;
+  padding: 2px 10px;
   border-radius: 20px;
 }
 
@@ -127,7 +125,7 @@
   font-size: 18px;
   font-weight: 700;
   color: #ffffff;
-  margin: 2px 0 0;
+  margin: 1px 0 0;
   letter-spacing: -0.01em;
 }
 
@@ -163,6 +161,13 @@
   color: #74070E;
   border-color: #ffffff;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
+}
+
+/* ── Content Container below Hero ── */
+.profile-container {
+  width: calc(100% - 64px);
+  margin: 0 32px;
+  box-sizing: border-box;
 }
 
 /* ── Main Grid: Orders (left) + Profile Form (right) ── */
@@ -799,6 +804,16 @@
 
 /* ── Responsive ── */
 @media (max-width: 980px) {
+  .profile-hero-card {
+    width: calc(100% - 48px);
+    margin: 16px 24px 20px;
+  }
+
+  .profile-container {
+    width: calc(100% - 48px);
+    margin: 0 24px;
+  }
+
   .profile-main-grid {
     grid-template-columns: 1fr;
     gap: 28px;
@@ -807,15 +822,23 @@
 
 @media (max-width: 680px) {
   :host {
-    padding: 24px 14px 60px;
+    padding: 0 0 60px;
   }
 
   .profile-hero-card {
-    max-width: 100%;
+    width: calc(100% - 32px);
+    margin: 12px 16px 20px;
+    max-height: none;
+    min-height: auto;
     flex-direction: column;
     text-align: center;
     padding: 22px 18px;
-    gap: 16px;
+    gap: 14px;
+  }
+
+  .profile-container {
+    width: calc(100% - 32px);
+    margin: 0 16px;
   }
 
   .profile-member-badges {

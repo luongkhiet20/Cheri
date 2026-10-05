@@ -95,6 +95,8 @@ export class SignInComponent implements OnInit {
           localStorage.setItem(accessTokenKey, response.accessToken);
         }
         this.selectors.userState.update((state) => ({ ...state, user: response, loading: false }));
+        // Lập tức gọi getUser() để đồng bộ toàn bộ state người dùng (kể cả orders, avatar)
+        this.store.getUser();
         return this.lang$.pipe(take(1), map(lang => ({ user: response, lang })));
       })
     ).subscribe({

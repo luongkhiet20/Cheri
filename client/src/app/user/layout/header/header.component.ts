@@ -1,5 +1,5 @@
 import { debounceTime, take, delay } from 'rxjs/operators';
-import { Component, OnInit, PLATFORM_ID, Inject, Signal } from '@angular/core';
+import { Component, OnInit, PLATFORM_ID, Inject, Signal, ChangeDetectorRef, effect } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Observable, BehaviorSubject, of } from 'rxjs';
@@ -92,9 +92,22 @@ export class HeaderComponent implements OnInit {
     private _platformId: Object,
     private store: SignalStore,
     private selectors: SignalStoreSelectors,
-    public translate: TranslateService) {
+    public translate: TranslateService,
+    private cdr: ChangeDetectorRef) {
 
     this.lang$ = this.translate.getLang$() || of('vi');
+    this.user$ = this.selectors.user;
+    this.cart$ = this.selectors.cart;
+    this.productTitles$ = this.selectors.productsTitles;
+    this.userOrders$ = this.selectors.userOrders;
+
+    // Tự động re-render Header ngay lập tức khi user signal thay đổi
+    effect(() => {
+      const u = this.selectors.user();
+      this.avatarLoadFailed = false;
+      this.cdr.markForCheck();
+      this.cdr.detectChanges();
+    });
   }
 
   ngOnInit() {
@@ -102,6 +115,17 @@ export class HeaderComponent implements OnInit {
     this.cart$ = this.selectors.cart;
     this.productTitles$ = this.selectors.productsTitles;
     this.userOrders$ = this.selectors.userOrders;
+
+    // Khi vào web, nếu có accessToken mà chưa có thông tin user đầy đủ trong store, lập tức gọi getUser()
+    if (isPlatformBrowser(this._platformId)) {
+      const token = localStorage.getItem(accessTokenKey);
+      if (token && token !== 'null' && token !== 'undefined' && token.trim() !== '') {
+        const currentUser = this.selectors.user();
+        if (!currentUser || !currentUser.email) {
+          this.store.getUser();
+        }
+      }
+    }
 
     this.query.valueChanges.pipe(debounceTime(200)).subscribe(value => {
       const sendQuery = value || 'EMPTY___QUERY';
@@ -155,7 +179,7 @@ export class HeaderComponent implements OnInit {
     const user = typeof this.user$ === 'function' ? this.user$() : null;
     if (!user) return null;
 
-    const currentId = user.id || user._id || user.email;
+    const currentId = user.id || (user as any)._id || user.email;
     if (currentId !== this.lastUserId) {
       this.lastUserId = currentId;
       this.avatarLoadFailed = false;
@@ -163,7 +187,18 @@ export class HeaderComponent implements OnInit {
 
     if (this.avatarLoadFailed) return null;
 
-    // Lấy ảnh đại diện từ user$()?.images
+    // 1. Ưu tiên hàng đầu: trường avatar trực tiếp trong MongoDB user
+    if (user.avatar && typeof user.avatar === 'string' && user.avatar.trim().length > 0) {
+      return user.avatar.trim();
+    }
+    if ((user as any).avatarUrl && typeof (user as any).avatarUrl === 'string' && (user as any).avatarUrl.trim().length > 0) {
+      return (user as any).avatarUrl.trim();
+    }
+    if ((user as any).photoUrl && typeof (user as any).photoUrl === 'string' && (user as any).photoUrl.trim().length > 0) {
+      return (user as any).photoUrl.trim();
+    }
+
+    // 2. Mảng images
     const imgs = (user as any).images;
     if (Array.isArray(imgs) && imgs.length > 0) {
       const first = imgs.find((img: any) =>
@@ -175,9 +210,7 @@ export class HeaderComponent implements OnInit {
     if (typeof imgs === 'string' && (imgs as string).trim().length > 0) {
       return (imgs as string).trim();
     }
-    if (user.avatar && typeof user.avatar === 'string' && user.avatar.trim().length > 0) {
-      return user.avatar.trim();
-    }
+
     return null;
   }
 
@@ -190,6 +223,7 @@ export class HeaderComponent implements OnInit {
 
   onAvatarError(): void {
     this.avatarLoadFailed = true;
+    this.cdr.detectChanges();
   }
 
   onLogout(): void {

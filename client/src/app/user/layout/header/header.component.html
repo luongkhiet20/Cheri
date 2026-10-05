@@ -52,15 +52,15 @@
     </div>
     }
 
-    <!-- 5. Tài khoản: Hiển thị [ẢNH ĐẠI DIỆN] lấy từ user$()?.images -->
+    <!-- 5. Tài khoản: Hiển thị Avatar người dùng ngay khi đăng nhập / vào web -->
     <div class="nav-desktop nav-account-wrap">
-      @if (!user$()) {
+      @if (!user$() || !user$()?.email) {
       <a class="nav-account-guest-btn" [routerLink]="['/' + ((lang$ | async) || 'vi') + '/authorize/signin']"
         routerLinkActive="active" title="Đăng nhập">
         <mat-icon>account_circle</mat-icon>
       </a>
       } @else {
-      <a class="nav-avatar-btn" [routerLink]="['/' + (lang$ | async) + '/profile']" routerLinkActive="active"
+      <a class="nav-avatar-btn" [routerLink]="['/' + ((lang$ | async) || 'vi') + '/profile']" routerLinkActive="active"
         [title]="getUserDisplayName() || 'Hồ sơ cá nhân'">
         @if (getUserAvatar()) {
         <img class="header-avatar-img" [src]="getUserAvatar()" [alt]="getUserDisplayName() || 'Avatar'"
@@ -118,40 +118,11 @@
     <div class="mobile-nav-divider"></div>
   </div>
 
-  <!-- 1. GUEST: Chưa đăng nhập -->
-  @if (!user$()) {
-  <button mat-menu-item [routerLink]="['/' + ((lang$ | async) || 'vi') + '/authorize/signin']"
-    routerLinkActive="nav-active-link" title="Đăng nhập">
-    <mat-icon>account_circle</mat-icon>
-    <a class="nav-link">Đăng nhập</a>
-  </button>
-  }
 
-  <!-- 2. USER / ADMIN: Đã đăng nhập -->
-  @if (user$()) {
-  @if (userOrders$()?.length) {
-  <button mat-menu-item [routerLink]="['/' + ((lang$ | async) || 'vi') + '/orders']" routerLinkActive="nav-active-link"
-    title="Đơn hàng">
-    <mat-icon>assignment</mat-icon>
-    <a class="nav-link"> {{ 'Orders' | translate | async }}</a>
-  </button>
-  }
 
-  <button mat-menu-item [routerLink]="['/' + (lang$ | async) + '/profile']" routerLinkActive="nav-active-link"
-    title="Hồ sơ cá nhân">
-    @if (getUserAvatar()) {
-    <img class="mobile-menu-avatar" [src]="getUserAvatar()" [alt]="getUserDisplayName() || 'Avatar'"
-      (error)="onAvatarError()" />
-    } @else {
-    <mat-icon id="user_icon">person</mat-icon>
-    }
-    <a class="nav-link"> {{ getUserDisplayName() || 'Hồ sơ' }}</a>
-  </button>
-  }
+
+
 
 </ng-template>
 
-<app-search-modal
-  [isOpen]="isSearchModalOpen"
-  (close)="closeSearchModal()"
-></app-search-modal>
+<app-search-modal [isOpen]="isSearchModalOpen" (close)="closeSearchModal()"></app-search-modal>

@@ -97,6 +97,11 @@ export class AuthService {
     id: string;
     email: string;
     roles?: string[];
+    name?: string;
+    fullName?: string;
+    avatar?: string;
+    avatarUrl?: string;
+    images?: any[];
   }> {
     const { email, password } = authCredentialsDto;
     const cleanEmail = (email || '').trim().toLowerCase();
@@ -114,7 +119,20 @@ export class AuthService {
     const payload: JwtPayload = { email: user.email, id: user._id.toString(), roles: user.roles };
     const accessToken = await this.jwtService.sign(payload);
 
-    return { accessToken, id: user._id.toString(), roles: user.roles, email: user.email };
+    const rawAvatar = user.avatar || (user as any).avatarUrl || ((user as any).images?.[0]?.url || (user as any).images?.[0]) || '';
+    const images = Array.isArray((user as any).images) && (user as any).images.length > 0 ? (user as any).images : rawAvatar ? [rawAvatar] : [];
+
+    return {
+      accessToken,
+      id: user._id.toString(),
+      roles: user.roles,
+      email: user.email,
+      name: user.name || (user as any).fullName || user.email.split('@')[0],
+      fullName: (user as any).fullName || user.name || user.email.split('@')[0],
+      avatar: rawAvatar,
+      avatarUrl: rawAvatar,
+      images,
+    };
   }
 
   async signInGoogle(googleUserDto: GoogleUserDto) {

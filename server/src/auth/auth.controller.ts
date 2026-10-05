@@ -64,8 +64,12 @@ export class AuthController {
     address?: string;
     gender?: string;
     avatar?: string;
+    avatarUrl?: string;
+    images?: any[];
   } {
     const roles = Array.isArray(user.roles) ? [...user.roles] : (user as any).role ? [(user as any).role] : ['user'];
+    const rawAvatar = (user as any).avatar || (user as any).avatarUrl || ((user as any).images?.[0]?.url || (user as any).images?.[0]) || '';
+    const images = Array.isArray((user as any).images) && (user as any).images.length > 0 ? (user as any).images : rawAvatar ? [rawAvatar] : [];
     return {
       id: user._id,
       email: user.email,
@@ -75,7 +79,9 @@ export class AuthController {
       phoneNumber: (user as any).phoneNumber || '',
       address: (user as any).address || '',
       gender: (user as any).gender || '',
-      avatar: (user as any).avatar || '',
+      avatar: rawAvatar,
+      avatarUrl: rawAvatar,
+      images,
     };
   }
 
@@ -84,6 +90,8 @@ export class AuthController {
   async updateProfile(@GetUser() user: User, @Body() body: any) {
     const updated = await this.authService.updateUser(user._id.toString(), body);
     const roles = Array.isArray(updated.roles) ? [...updated.roles] : (updated as any).role ? [(updated as any).role] : ['user'];
+    const rawAvatar = (updated as any).avatar || (updated as any).avatarUrl || ((updated as any).images?.[0]?.url || (updated as any).images?.[0]) || '';
+    const images = Array.isArray((updated as any).images) && (updated as any).images.length > 0 ? (updated as any).images : rawAvatar ? [rawAvatar] : [];
     return {
       id: updated._id,
       email: updated.email,
@@ -93,7 +101,9 @@ export class AuthController {
       phoneNumber: (updated as any).phoneNumber || '',
       address: (updated as any).address || '',
       gender: (updated as any).gender || '',
-      avatar: (updated as any).avatar || '',
+      avatar: rawAvatar,
+      avatarUrl: rawAvatar,
+      images,
     };
   }
 

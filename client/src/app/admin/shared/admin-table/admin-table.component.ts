@@ -76,6 +76,7 @@ export class AdminTableComponent implements OnChanges, AfterViewChecked {
   // ── ngOnChanges: clear selection if data changes ─────────────
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['data']) {
+      this._cachedData = [];
       this.failedAvatarKeys.clear();
       // Remove selected IDs that no longer exist in new data
       const existingKeys = new Set(this.data.map(r => r[this.rowKey]));
@@ -285,8 +286,16 @@ export class AdminTableComponent implements OnChanges, AfterViewChecked {
 
   onAction(event: ActionEvent): void { this.actionClick.emit(event); }
 
+  isSortable(col: TableColumn): boolean {
+    if (!col) return false;
+    if (this.isImageColumn(col) || this.isAvatarColumn(col) || col.key === 'image' || col.key === 'avatar') {
+      return false;
+    }
+    return !!col.sortable;
+  }
+
   onSort(col: TableColumn): void {
-    if (!col.sortable) return;
+    if (!this.isSortable(col)) return;
     if (this.sortKey === col.key) {
       this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
     } else {
@@ -303,6 +312,9 @@ export class AdminTableComponent implements OnChanges, AfterViewChecked {
     }
 
     const col = this.columns.find(c => c.key === key);
+    if (col && !this.isSortable(col)) {
+      return data || [];
+    }
     const colType = col?.type || 'text';
     const multiplier = dir === 'desc' ? -1 : 1;
 
@@ -355,9 +367,13 @@ export class AdminTableComponent implements OnChanges, AfterViewChecked {
         if (isNaNB) return -1;
 
         cmp = timeA < timeB ? -1 : timeA > timeB ? 1 : 0;
+      } else if (typeof valA === 'boolean' || typeof valB === 'boolean') {
+        const boolA = Boolean(valA);
+        const boolB = Boolean(valB);
+        cmp = boolA === boolB ? 0 : boolA ? 1 : -1;
       } else {
-        const strA = String(valA).trim();
-        const strB = String(valB).trim();
+        const strA = Array.isArray(valA) ? valA.join(', ') : String(valA).trim();
+        const strB = Array.isArray(valB) ? valB.join(', ') : String(valB).trim();
         cmp = strA.localeCompare(strB, 'vi', { sensitivity: 'base', numeric: true });
       }
 

@@ -14,11 +14,11 @@ export class InventoryComponent implements OnInit {
   columns: TableColumn[] = [
     { key: 'image', label: '', type: 'image', width: '72px' },
     { key: 'name', label: 'Tên sản phẩm', type: 'text', sortable: true },
-    { key: 'sku', label: 'SKU', type: 'sku-list', width: '200px' },
+    { key: 'sku', label: 'SKU', type: 'sku-list', width: '200px', sortable: true },
     { key: 'quantity', label: 'Tồn kho', type: 'number', sortable: true, align: 'right' },
-    { key: 'reserved', label: 'Đã đặt', type: 'number', align: 'right' },
-    { key: 'available', label: 'Có thể bán', type: 'number', align: 'right' },
-    { key: 'status', label: 'Tình trạng', type: 'status' },
+    { key: 'reserved', label: 'Đã đặt', type: 'number', sortable: true, align: 'right' },
+    { key: 'available', label: 'Có thể bán', type: 'number', sortable: true, align: 'right' },
+    { key: 'status', label: 'Tình trạng', type: 'status', sortable: true },
   ];
   actions: RowAction[] = [
     { key: 'view', label: 'Xem' },

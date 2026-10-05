@@ -15,7 +15,7 @@ export class PaymentMethodsComponent implements OnInit {
     { key: 'name', label: 'Tên phương thức', type: 'text', sortable: true },
     { key: 'code', label: 'Mã phương thức', type: 'text', sortable: true },
     { key: 'type', label: 'Loại thanh toán', type: 'text', sortable: true },
-    { key: 'status', label: 'Trạng thái', type: 'status' },
+    { key: 'status', label: 'Trạng thái', type: 'status', sortable: true },
     { key: 'createdAt', label: 'Ngày tạo', type: 'date', sortable: true },
   ];
 

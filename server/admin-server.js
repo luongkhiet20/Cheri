@@ -477,12 +477,39 @@ app.get('/api/products', async (req, res) => {
     const pageSize = parseInt(req.query.limit) || parseInt(req.query.pageSize) || 20;
     const search = req.query.search ? req.query.search.trim() : '';
     const category = req.query.category || '';
+    const categoryId = req.query.categoryId ? String(req.query.categoryId).trim() : '';
     const status = req.query.status || '';
     const minPrice = parseFloat(req.query.minPrice);
     const maxPrice = parseFloat(req.query.maxPrice);
     const stockParam = req.query.stock || '';
     const sortParam = req.query.sort || 'newest';
     const lang = req.query.lang || req.headers['lang'] || 'vi';
+
+    let categoryDoc = null;
+    if (categoryId) {
+      if (ObjectId.isValid(categoryId)) {
+        categoryDoc = await db.collection('categories').findOne({ _id: new ObjectId(categoryId) });
+      }
+      if (!categoryDoc) {
+        categoryDoc = await db.collection('categories').findOne({
+          $or: [
+            { titleUrl: categoryId },
+            { 'vi.title': categoryId },
+            { title: categoryId }
+          ]
+        });
+      }
+    } else if (category && category !== 'all') {
+      categoryDoc = await db.collection('categories').findOne({
+        $or: [
+          { titleUrl: category },
+          { 'vi.title': category },
+          { title: category }
+        ]
+      });
+    }
+
+    const isCategoryNotFound = Boolean(categoryId && !categoryDoc);
 
     let queryConditions = [];
 
@@ -507,7 +534,20 @@ app.get('/api/products', async (req, res) => {
       });
     }
 
-    if (category && category !== 'all') {
+    if (isCategoryNotFound) {
+      queryConditions.push({ _id: null });
+    } else if (categoryDoc) {
+      const catName = categoryDoc.vi?.title || categoryDoc.title || categoryDoc.titleUrl || '';
+      const catSlug = categoryDoc.titleUrl || '';
+      const catConditions = [
+        { 'vi.categoryLevel1': { $regex: catName, $options: 'i' } },
+        { categoryLevel1: { $regex: catName, $options: 'i' } }
+      ];
+      if (catSlug) {
+        catConditions.push({ titleUrl: { $regex: catSlug, $options: 'i' } });
+      }
+      queryConditions.push({ $or: catConditions });
+    } else if (category && category !== 'all') {
       const cats = String(category).split(',').map(c => c.trim()).filter(Boolean);
       if (cats.length > 0) {
         const catConditions = cats.map(cat => {
@@ -632,6 +672,13 @@ app.get('/api/products', async (req, res) => {
 
     res.json({
       success: true,
+      category: categoryDoc ? {
+        id: categoryDoc._id.toString(),
+        _id: categoryDoc._id.toString(),
+        name: categoryDoc.vi?.title || categoryDoc.title || categoryDoc.titleUrl || '',
+        slug: categoryDoc.titleUrl || ''
+      } : null,
+      categoryNotFound: isCategoryNotFound,
       all: data,
       data,
       products: data,

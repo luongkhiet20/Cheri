@@ -40,19 +40,21 @@
   <div *ngIf="filteredCategoryId && filteredCategoryName" class="category-filter-banner" role="region" aria-label="Bộ lọc danh mục đang hoạt động">
     <div class="category-filter-info">
       <span class="category-filter-badge">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
         </svg>
         Danh mục
       </span>
       <span class="category-filter-label">
-        <span class="category-filter-name">{{ filteredCategoryName }}</span>
+        <span class="category-filter-prefix">Đang lọc theo:</span>
+        <strong class="category-filter-name">{{ filteredCategoryName }}</strong>
+        <span *ngIf="filteredCategorySlug" class="category-filter-slug">(slug: {{ filteredCategorySlug }})</span>
         <span class="category-filter-dot">•</span>
-        <span class="category-filter-count">{{ displayTotal }} sản phẩm</span>
+        <span class="category-filter-count"><strong>{{ displayTotal }}</strong> sản phẩm</span>
       </span>
     </div>
     <div class="category-filter-actions">
-      <button type="button" class="btn btn-outline btn-sm" id="btn-back-to-categories" (click)="goBackToCategories()">
+      <button type="button" class="btn btn-outline btn-sm btn-back-category" id="btn-back-to-categories" (click)="goBackToCategories()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <line x1="19" y1="12" x2="5" y2="12"></line>
           <polyline points="12 19 5 12 12 5"></polyline>

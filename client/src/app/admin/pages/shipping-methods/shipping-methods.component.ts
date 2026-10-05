@@ -13,12 +13,12 @@ import { NotificationService } from '../../shared/notification/notification.serv
 export class ShippingMethodsComponent implements OnInit {
   columns: TableColumn[] = [
     { key: 'name', label: 'Tên phương thức', type: 'text', sortable: true },
-    { key: 'code', label: 'Mã', type: 'text' },
+    { key: 'code', label: 'Mã', type: 'text', sortable: true },
     { key: 'baseCost', label: 'Phí cơ bản', type: 'currency', sortable: true },
-    { key: 'estimatedDays', label: 'Thời gian giao dự kiến', type: 'text' },
-    { key: 'coverageArea', label: 'Phạm vi giao hàng', type: 'text' },
-    { key: 'freeShippingThresholdText', label: 'Miễn phí từ', type: 'text' },
-    { key: 'statusText', label: 'Trạng thái', type: 'status' }
+    { key: 'estimatedDays', label: 'Thời gian giao dự kiến', type: 'text', sortable: true },
+    { key: 'coverageArea', label: 'Phạm vi giao hàng', type: 'text', sortable: true },
+    { key: 'freeShippingThresholdText', label: 'Miễn phí từ', type: 'text', sortable: true },
+    { key: 'statusText', label: 'Trạng thái', type: 'status', sortable: true }
   ];
 
   actions: RowAction[] = [

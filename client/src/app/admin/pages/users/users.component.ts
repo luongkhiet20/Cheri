@@ -14,10 +14,10 @@ export class UsersComponent implements OnInit {
   columns: TableColumn[] = [
     { key: 'image', label: '', type: 'image', shape: 'circle', isAvatar: true, width: '60px' },
     { key: 'name', label: 'Họ tên', type: 'text', sortable: true },
-    { key: 'email', label: 'Email', type: 'text' },
-    { key: 'phone', label: 'Số điện thoại', type: 'text' },
-    { key: 'role', label: 'Vai trò', type: 'text' },
-    { key: 'status', label: 'Trạng thái', type: 'status' },
+    { key: 'email', label: 'Email', type: 'text', sortable: true },
+    { key: 'phone', label: 'Số điện thoại', type: 'text', sortable: true },
+    { key: 'role', label: 'Vai trò', type: 'text', sortable: true },
+    { key: 'status', label: 'Trạng thái', type: 'status', sortable: true },
     { key: 'createdAt', label: 'Ngày tạo', type: 'date', sortable: true },
   ];
   actions: RowAction[] = [

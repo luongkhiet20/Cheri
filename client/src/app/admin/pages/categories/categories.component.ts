@@ -14,9 +14,9 @@ export class CategoriesComponent implements OnInit {
   columns: TableColumn[] = [
     { key: 'position', label: 'Vị trí', type: 'number', sortable: true, width: '90px', align: 'center' },
     { key: 'name', label: 'Tên danh mục', type: 'text', sortable: true },
-    { key: 'slug', label: 'Slug', type: 'text' },
+    { key: 'slug', label: 'Slug', type: 'text', sortable: true },
     { key: 'productCount', label: 'Số sản phẩm', type: 'number', sortable: true, align: 'right', clickable: true },
-    { key: 'status', label: 'Trạng thái', type: 'status' },
+    { key: 'status', label: 'Trạng thái', type: 'status', sortable: true },
   ];
   actions: RowAction[] = [
     { key: 'edit', label: 'Sửa' },
@@ -151,9 +151,13 @@ export class CategoriesComponent implements OnInit {
   onCellClick(event: { column: TableColumn; row: any }): void {
     if (event.column.key === 'productCount') {
       const categoryId = event.row.id || event.row._id;
+      const categorySlug = event.row.slug || event.row.titleUrl;
       if (categoryId) {
         this.router.navigate(['/admin/products'], {
-          queryParams: { categoryId }
+          queryParams: {
+            categoryId,
+            ...(categorySlug ? { category: categorySlug } : {})
+          }
         });
       }
     }

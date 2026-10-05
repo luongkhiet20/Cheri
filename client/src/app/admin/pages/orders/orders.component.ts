@@ -13,10 +13,10 @@ import { NotificationService } from '../../shared/notification/notification.serv
 export class OrdersComponent implements OnInit {
   columns: TableColumn[] = [
     { key: 'code', label: 'Mã đơn', type: 'text', sortable: true },
-    { key: 'customer', label: 'Khách hàng', type: 'text' },
+    { key: 'customer', label: 'Khách hàng', type: 'text', sortable: true },
     { key: 'total', label: 'Tổng tiền', type: 'currency', sortable: true, align: 'right' },
-    { key: 'payment', label: 'Thanh toán', type: 'text' },
-    { key: 'status', label: 'Trạng thái', type: 'status' },
+    { key: 'payment', label: 'Thanh toán', type: 'text', sortable: true },
+    { key: 'status', label: 'Trạng thái', type: 'status', sortable: true },
     { key: 'createdAt', label: 'Ngày đặt', type: 'date', sortable: true },
   ];
   actions: RowAction[] = [

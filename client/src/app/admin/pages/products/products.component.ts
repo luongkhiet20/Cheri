@@ -17,9 +17,9 @@ export class ProductsComponent implements OnInit {
     { key: 'image', label: '', type: 'image', width: '60px' },
     { key: 'name', label: 'Tên sản phẩm', type: 'text', sortable: true },
     { key: 'price', label: 'Giá', type: 'currency', sortable: true, align: 'right' },
-    { key: 'category', label: 'Danh mục', type: 'text' },
+    { key: 'category', label: 'Danh mục', type: 'text', sortable: true },
     { key: 'stock', label: 'Tồn kho', type: 'number', sortable: true, align: 'right' },
-    { key: 'status', label: 'Trạng thái', type: 'status' },
+    { key: 'status', label: 'Trạng thái', type: 'status', sortable: true },
   ];
 
   actions: RowAction[] = [
@@ -110,7 +110,9 @@ export class ProductsComponent implements OnInit {
 
   ngOnInit(): void {
     this.route.queryParams.subscribe(params => {
-      const newCatId = params['categoryId'] ? String(params['categoryId']).trim() : '';
+      const newCatId = params['categoryId']
+        ? String(params['categoryId']).trim()
+        : (params['category'] ? String(params['category']).trim() : '');
       if (newCatId !== this.filteredCategoryId) {
         this.filteredCategoryId = newCatId;
         this.pagination.page = 1;
@@ -126,7 +128,7 @@ export class ProductsComponent implements OnInit {
     this.filteredCategorySlug = '';
     this.categoryNotFound = false;
     this.router.navigate(['/admin/products'], {
-      queryParams: { categoryId: null },
+      queryParams: { categoryId: null, category: null },
       queryParamsHandling: 'merge'
     });
   }

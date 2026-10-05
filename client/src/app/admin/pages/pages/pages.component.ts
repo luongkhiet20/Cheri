@@ -13,9 +13,9 @@ import { NotificationService } from '../../shared/notification/notification.serv
 export class PagesComponent implements OnInit {
   columns: TableColumn[] = [
     { key: 'title', label: 'Tiêu đề trang', type: 'text', sortable: true },
-    { key: 'slug', label: 'Đường dẫn', type: 'text' },
+    { key: 'slug', label: 'Đường dẫn', type: 'text', sortable: true },
     { key: 'updatedAt', label: 'Cập nhật lần cuối', type: 'date', sortable: true },
-    { key: 'status', label: 'Trạng thái', type: 'status' },
+    { key: 'status', label: 'Trạng thái', type: 'status', sortable: true },
   ];
   actions: RowAction[] = [
     { key: 'view', label: 'Xem' },

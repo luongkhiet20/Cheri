@@ -5,10 +5,8 @@
     <div class="detail-header-info">
       <div class="header-badges">
         <span class="order-code-badge">{{ order.orderId || order.code || '—' }}</span>
-        <app-admin-status-badge
-          [label]="order.statusText || order.status || '—'"
-          [variant]="order.statusVariant || 'neutral'"
-        ></app-admin-status-badge>
+        <app-admin-status-badge [label]="order.statusText || order.status || '—'"
+          [variant]="order.statusVariant || 'neutral'"></app-admin-status-badge>
         <span *ngIf="order.type" class="type-badge">{{ order.type }}</span>
       </div>
       <h1 class="detail-title">Chi tiết đơn hàng {{ order.orderId || order.code || '—' }}</h1>
@@ -19,17 +17,18 @@
     </div>
 
     <div class="detail-header-actions">
-      <button type="button" class="btn btn-primary" (click)="onEdit()" id="btn-edit-order">
-        Chỉnh sửa
-      </button>
       <button type="button" class="btn btn-outline" (click)="onBack()" id="btn-back-orders">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
           <line x1="19" y1="12" x2="5" y2="12"></line>
           <polyline points="12 19 5 12 12 5"></polyline>
         </svg>
-        <span>Danh sách đơn hàng</span>
+        <span>Quay lại</span>
       </button>
+      <button type="button" class="btn btn-primary" (click)="onEdit()" id="btn-edit-order">
+        Chỉnh sửa
+      </button>
+
     </div>
   </div>
 
@@ -123,19 +122,12 @@
             <!-- Background vertical track line -->
             <div class="timeline-track-line" aria-hidden="true"></div>
 
-            <button
-              *ngFor="let st of ALL_STATUSES; let last = last"
-              type="button"
-              class="timeline-row-btn"
-              [class.is-current]="order.statusCode === st.code"
-              [class.is-selected]="selectedNextStatus === st.code"
+            <button *ngFor="let st of ALL_STATUSES; let last = last" type="button" class="timeline-row-btn"
+              [class.is-current]="order.statusCode === st.code" [class.is-selected]="selectedNextStatus === st.code"
               [class.is-allowed]="order.statusCode !== st.code && isTransitionAllowed(st.code)"
-              [class.is-disabled]="order.statusCode === st.code || !isTransitionAllowed(st.code)"
-              [class.is-last]="last"
+              [class.is-disabled]="order.statusCode === st.code || !isTransitionAllowed(st.code)" [class.is-last]="last"
               [disabled]="order.statusCode === st.code || !isTransitionAllowed(st.code)"
-              (click)="onSelectStatus(st.code)"
-              [id]="'btn-status-' + st.code.toLowerCase()"
-            >
+              (click)="onSelectStatus(st.code)" [id]="'btn-status-' + st.code.toLowerCase()">
               <!-- Left: Timeline dot on track -->
               <div class="timeline-dot-cell">
                 <span class="timeline-dot status-dot--{{ st.variant }}"></span>
@@ -147,10 +139,12 @@
                 <span *ngIf="order.statusCode === st.code" class="timeline-status-sub current-sub">
                   Hiện tại
                 </span>
-                <span *ngIf="order.statusCode !== st.code && isTransitionAllowed(st.code)" class="timeline-status-sub allowed-sub">
+                <span *ngIf="order.statusCode !== st.code && isTransitionAllowed(st.code)"
+                  class="timeline-status-sub allowed-sub">
                   {{ selectedNextStatus === st.code ? 'Đang chọn để xác nhận' : 'Khả dụng' }}
                 </span>
-                <span *ngIf="order.statusCode !== st.code && !isTransitionAllowed(st.code)" class="timeline-status-sub forbidden-sub">
+                <span *ngIf="order.statusCode !== st.code && !isTransitionAllowed(st.code)"
+                  class="timeline-status-sub forbidden-sub">
                   Không thể chuyển
                 </span>
               </div>
@@ -180,13 +174,8 @@
           <!-- Note input for status change -->
           <div class="status-note-wrap" *ngIf="selectedNextStatus">
             <label class="form-label" for="status-note-input">Ghi chú cập nhật trạng thái (tùy chọn):</label>
-            <input
-              type="text"
-              id="status-note-input"
-              class="form-control"
-              [(ngModel)]="statusNote"
-              placeholder="VD: Khách yêu cầu giao lại vào buổi chiều, đã đóng gói xong..."
-            />
+            <input type="text" id="status-note-input" class="form-control" [(ngModel)]="statusNote"
+              placeholder="VD: Khách yêu cầu giao lại vào buổi chiều, đã đóng gói xong..." />
           </div>
         </div>
 
@@ -201,13 +190,8 @@
             </span>
           </div>
 
-          <button
-            type="button"
-            class="btn btn-confirm-status"
-            [disabled]="!selectedNextStatus || isUpdatingStatus"
-            (click)="onRequestChangeStatus()"
-            id="btn-submit-status"
-          >
+          <button type="button" class="btn btn-confirm-status" [disabled]="!selectedNextStatus || isUpdatingStatus"
+            (click)="onRequestChangeStatus()" id="btn-submit-status">
             <span *ngIf="isUpdatingStatus" class="spinner-inline"></span>
             <span>{{ isUpdatingStatus ? 'Đang cập nhật...' : 'Xác nhận đổi trạng thái' }}</span>
           </button>
@@ -227,7 +211,8 @@
             Danh sách sản phẩm trong đơn hàng
           </h2>
           <span class="badge badge-neutral">
-            {{ getOrderItems().length }} loại sản phẩm • Tổng {{ getTotalQuantity() === null ? '—' : getTotalQuantity() }} món
+            {{ getOrderItems().length }} loại sản phẩm • Tổng {{ getTotalQuantity() === null ? '—' : getTotalQuantity()
+            }} món
           </span>
         </div>
 
@@ -246,14 +231,11 @@
                 <td class="td-product">
                   <div class="item-info-wrap">
                     <div class="item-thumb-box">
-                      <img
-                        *ngIf="getItemImage(it)"
-                        [src]="getItemImage(it)"
-                        [alt]="getItemTitle(it)"
-                        class="item-thumb"
-                      />
+                      <img *ngIf="getItemImage(it)" [src]="getItemImage(it)" [alt]="getItemTitle(it)"
+                        class="item-thumb" />
                       <div *ngIf="!getItemImage(it)" class="item-thumb-placeholder">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                          stroke-width="1.5">
                           <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                           <circle cx="8.5" cy="8.5" r="1.5"></circle>
                           <polyline points="21 15 16 10 5 21"></polyline>
@@ -279,7 +261,8 @@
                 </td>
                 <td class="td-qty text-center">
                   <span class="qty-bubble">
-                    <ng-container *ngIf="getItemQuantity(it) !== null; else missingQuantity">x{{ getItemQuantity(it) }}</ng-container>
+                    <ng-container *ngIf="getItemQuantity(it) !== null; else missingQuantity">x{{ getItemQuantity(it)
+                      }}</ng-container>
                     <ng-template #missingQuantity>—</ng-template>
                   </span>
                 </td>
@@ -317,7 +300,9 @@
             <div class="address-name font-semibold">{{ addr.fullName || addr.name || order.customer || '—' }}</div>
             <div class="address-phone" *ngIf="addr.phone || order.phone">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                <path
+                  d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z">
+                </path>
               </svg>
               <span>{{ addr.phone || order.phone }}</span>
             </div>
@@ -336,9 +321,9 @@
           </div>
         </div>
         <ng-template #noShippingAddress>
-        <div class="text-muted p-3">
-          Không có thông tin địa chỉ trong đơn hàng.
-        </div>
+          <div class="text-muted p-3">
+            Không có thông tin địa chỉ trong đơn hàng.
+          </div>
         </ng-template>
       </div>
 
@@ -407,7 +392,8 @@
           </div>
 
           <div class="summary-row" *ngIf="order.couponDiscount !== null && order.couponDiscount !== undefined">
-            <span class="summary-label">Giảm giá mã ưu đãi<span *ngIf="order.couponCode"> ({{ order.couponCode }})</span>:</span>
+            <span class="summary-label">Giảm giá mã ưu đãi<span *ngIf="order.couponCode"> ({{ order.couponCode
+                }})</span>:</span>
             <span class="summary-val">{{ order.couponDiscount | number:'1.0-0' }} {{ order.currency || '' }}</span>
           </div>
 
@@ -426,7 +412,8 @@
             <span class="summary-val">{{ order.paymentFee | number:'1.0-0' }} {{ order.currency || '' }}</span>
           </div>
 
-          <div class="summary-row" *ngIf="order.shippingMethodSnapshot?.name || order.shippingMethodSnapshot?.code || order.cart?.shippingType">
+          <div class="summary-row"
+            *ngIf="order.shippingMethodSnapshot?.name || order.shippingMethodSnapshot?.code || order.cart?.shippingType">
             <span class="summary-label">Phương thức vận chuyển:</span>
             <span class="summary-val badge badge-neutral">
               {{ order.shippingMethodSnapshot?.name || order.shippingMethodSnapshot?.code || order.cart?.shippingType }}
@@ -463,7 +450,8 @@
             <span class="summary-val">{{ order.deliveredAt | date:'dd/MM/yyyy HH:mm' }}</span>
           </div>
 
-          <div class="summary-row" *ngIf="order.cart?.shippingLimit !== undefined && order.cart?.shippingLimit !== null">
+          <div class="summary-row"
+            *ngIf="order.cart?.shippingLimit !== undefined && order.cart?.shippingLimit !== null">
             <span class="summary-label">Điều kiện miễn phí vận chuyển:</span>
             <span class="summary-val">{{ order.cart.shippingLimit | number:'1.0-0' }} {{ order.currency || '' }}</span>
           </div>
@@ -601,12 +589,6 @@
 </div>
 
 <!-- Modal xác nhận đổi trạng thái -->
-<app-confirm-dialog
-  [isOpen]="confirmOpen"
-  [title]="confirmDialogTitle"
-  [message]="confirmDialogMessage"
-  confirmLabel="Cập nhật ngay"
-  variant="default"
-  (confirmed)="onConfirmStatusUpdate()"
-  (cancelled)="onCancelConfirmDialog()"
-></app-confirm-dialog>
+<app-confirm-dialog [isOpen]="confirmOpen" [title]="confirmDialogTitle" [message]="confirmDialogMessage"
+  confirmLabel="Cập nhật ngay" variant="default" (confirmed)="onConfirmStatusUpdate()"
+  (cancelled)="onCancelConfirmDialog()"></app-confirm-dialog>

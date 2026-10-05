@@ -6,12 +6,16 @@ import {
   UseGuards,
   Get,
   Put,
+  Patch,
   Delete,
   Param,
   Req,
   Res,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 import { RolesGuard, AdminJwtAuthGuard } from './roles.guard';
 import { AuthCredentialDto } from './dto/auth-credential.dto';
@@ -91,6 +95,30 @@ export class AuthController {
       gender: (updated as any).gender || '',
       avatar: (updated as any).avatar || '',
     };
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('/avatar')
+  @UseInterceptors(FileInterceptor('avatar', {
+    limits: { fileSize: 5 * 1024 * 1024 },
+  }))
+  async uploadAvatar(
+    @GetUser() user: User,
+    @UploadedFile() file: any,
+  ) {
+    return this.authService.uploadAvatar(user, file);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Patch('/avatar')
+  @UseInterceptors(FileInterceptor('avatar', {
+    limits: { fileSize: 5 * 1024 * 1024 },
+  }))
+  async patchAvatar(
+    @GetUser() user: User,
+    @UploadedFile() file: any,
+  ) {
+    return this.authService.uploadAvatar(user, file);
   }
 
   @Post('/signup')

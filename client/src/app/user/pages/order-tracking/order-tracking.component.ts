@@ -1,8 +1,9 @@
-import { Component, Signal, OnInit, effect } from '@angular/core';
+import { Component, Signal, OnInit, effect, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
+import { finalize, timeout, catchError } from 'rxjs/operators';
 
 import { ApiService } from '../../../services/api.service';
 import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
@@ -54,6 +55,7 @@ export class OrderTrackingComponent implements OnInit {
     private store: SignalStore,
     private apiService: ApiService,
     private route: ActivatedRoute,
+    private cdr: ChangeDetectorRef,
   ) {
     this.user = this.selectors.user;
     this.userOrders = this.selectors.userOrders;
@@ -121,6 +123,7 @@ export class OrderTrackingComponent implements OnInit {
     this.selectedOrder = order;
     this.selectedOrderId = order.orderId;
     this.trackingResult = this.orderToTrackingResult(order);
+    this.cdr.detectChanges();
   }
 
   onOrderSelectChange(orderId: string): void {
@@ -139,33 +142,74 @@ export class OrderTrackingComponent implements OnInit {
     this.selectedOrder = null;
     this.selectedOrderId = '';
     this.trackingResult = null;
+    this.cdr.detectChanges();
   }
 
   // ─── Guest: tra cứu ──────────────────────────────────────────────────────
   trackGuest(): void {
-    if (!this.guestInput.trim() || !this.guestVerify.trim()) return;
+    const code = this.guestInput.trim();
+    const verify = this.guestVerify.trim();
+
+    if (!code || !verify) {
+      this.guestError = 'Vui lòng nhập đầy đủ mã đơn/mã vận đơn và email hoặc số điện thoại.';
+      this.cdr.detectChanges();
+      return;
+    }
 
     this.guestLoading = true;
     this.guestError = '';
     this.guestResult = null;
     this.trackingResult = null;
+    this.cdr.detectChanges();
 
     const payload: any = {
-      trackingCode: this.guestInput.trim(),
-      orderId: this.guestInput.trim(),
-      trackingNumber: this.guestInput.trim(),
-      authContact: this.guestVerify.trim(),
-      email: this.guestVerify.trim(),
-      phone: this.guestVerify.trim(),
+      trackingCode: code,
+      orderId: code,
+      trackingNumber: code,
+      authContact: verify,
+      email: verify,
+      phone: verify,
     };
 
-    this.apiService.trackOrder(payload).subscribe((res: any) => {
-      this.guestLoading = false;
-      if (res?.error) {
-        this.guestError = res.error;
-      } else {
-        this.guestResult = res as TrackingResult;
-        this.trackingResult = res as TrackingResult;
+    this.apiService.trackOrder(payload).pipe(
+      timeout(15000),
+      catchError((err: any) => {
+        return of({ error: err?.message || 'Có lỗi kết nối đến máy chủ. Vui lòng thử lại sau.' });
+      }),
+      finalize(() => {
+        this.guestLoading = false;
+        this.cdr.detectChanges();
+      })
+    ).subscribe({
+      next: (res: any) => {
+        if (res?.error) {
+          if (typeof res.error === 'string') {
+            this.guestError = res.error;
+          } else if (res.error?.error?.message) {
+            this.guestError = res.error.error.message;
+          } else if (res.error?.message) {
+            this.guestError = res.error.message;
+          } else {
+            this.guestError = 'Không tìm thấy đơn hàng hoặc thông tin xác thực không chính xác.';
+          }
+          this.guestResult = null;
+          this.trackingResult = null;
+        } else if (res?.orderId) {
+          this.guestError = '';
+          this.guestResult = res as TrackingResult;
+          this.trackingResult = res as TrackingResult;
+        } else {
+          this.guestError = 'Không tìm thấy đơn hàng hoặc thông tin xác thực không chính xác.';
+          this.guestResult = null;
+          this.trackingResult = null;
+        }
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.guestError = 'Không thể kết nối đến máy chủ. Vui lòng thử lại sau.';
+        this.guestResult = null;
+        this.trackingResult = null;
+        this.cdr.detectChanges();
       }
     });
   }
@@ -176,6 +220,8 @@ export class OrderTrackingComponent implements OnInit {
     this.guestError = '';
     this.guestResult = null;
     this.trackingResult = null;
+    this.guestLoading = false;
+    this.cdr.detectChanges();
   }
 
   // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -335,18 +381,310 @@ export class OrderTrackingComponent implements OnInit {
     return status === 'CANCELLED' || status === 'RETURNED';
   }
 
-  sortedLogs(logs: ShippingLog[]): ShippingLog[] {
-    if (!logs || !logs.length) return [];
-    return [...logs].sort((a, b) =>
-      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    );
+  // ─── THỨ TỰ QUY TRÌNH NGHIỆP VỤ ──────────────────────────────────────────
+  readonly trackingStageOrder: { [key: string]: number } = {
+    PICKED_UP: 1,        // Bước 1: Đã lấy hàng
+    IN_TRANSIT: 2,       // Bước 2: Đang vận chuyển
+    OUT_FOR_DELIVERY: 3,  // Bước 3: Đang giao hàng
+    DELIVERED: 4,        // Bước 4: Giao hàng thành công
+  };
+
+  readonly orderStatusOrder: { [key: string]: number } = {
+    PENDING: 1,          // 1. Chờ xác nhận
+    CONFIRMED: 2,        // 2. Đã xác nhận
+    PROCESSING: 3,       // 3. Đang chuẩn bị / Đang xử lý
+    SHIPPING: 4,         // 4. Đang vận chuyển
+    DELIVERED: 5,        // 5. Đã giao hàng
+    CANCELLED: 99,
+    RETURNED: 99,
+  };
+
+  /** Ánh xạ status của log từ đối tác vận chuyển sang thứ tự bước cố định (1..4) */
+  getLogStageOrder(status: string): number {
+    const s = (status || '').toUpperCase().trim();
+    if (
+      s.includes('LẤY HÀNG') ||
+      s.includes('PICKED') ||
+      s.includes('TIẾP NHẬN') ||
+      s.includes('ĐÃ NHẬN')
+    ) {
+      return 1; // Bước 1: Đã lấy hàng
+    }
+    if (
+      s.includes('GIAO THÀNH CÔNG') ||
+      s.includes('DELIVERED') ||
+      s.includes('ĐÃ GIAO') ||
+      s.includes('KÝ NHẬN') ||
+      s.includes('HOÀN TẤT')
+    ) {
+      return 4; // Bước 4: Giao hàng thành công
+    }
+    if (
+      s.includes('ĐANG GIAO') ||
+      s.includes('OUT_FOR_DELIVERY') ||
+      s.includes('BƯU CỤC PHÁT') ||
+      s.includes('PHÁT HÀNG')
+    ) {
+      return 3; // Bước 3: Đang giao hàng
+    }
+    if (
+      s.includes('VẬN CHUYỂN') ||
+      s.includes('TRANSIT') ||
+      s.includes('TRUNG CHUYỂN') ||
+      s.includes('PHÂN LOẠI') ||
+      s.includes('LUÂN CHUYỂN') ||
+      s.includes('KHO') ||
+      s.includes('SOC')
+    ) {
+      return 2; // Bước 2: Đang vận chuyển
+    }
+    return 2;
   }
 
+  /**
+   * Tạo danh sách timeline hành trình vận chuyển theo thứ tự quy trình cố định:
+   * Bước 1 (Đã lấy hàng) → Bước 2 (Đang vận chuyển) → Bước 3 (Đang giao hàng) → Bước 4 (Giao hàng thành công)
+   * Giữ nguyên dữ liệu thời gian, địa điểm, mô tả thực tế từ MongoDB.
+   * Các bước chưa diễn ra hiển thị ở trạng thái upcoming.
+   */
+  getShippingTimeline(): {
+    stageKey: 'PICKED_UP' | 'IN_TRANSIT' | 'OUT_FOR_DELIVERY' | 'DELIVERED';
+    stepNumber: number;
+    status: string;
+    location: string;
+    description: string;
+    timestamp: Date | string | null;
+    state: 'completed' | 'current' | 'upcoming';
+  }[] {
+    if (!this.trackingResult) return [];
+    const res = this.trackingResult;
+    const currentStatus = (res.status || '').toUpperCase().trim();
+    const rawLogs = Array.isArray(res.shippingLogs) ? res.shippingLogs : [];
+
+    // Xác định bước tiến trình cao nhất hiện tại dựa trên trạng thái thực tế
+    let maxStageReached = 1;
+    if (currentStatus === 'DELIVERED') {
+      maxStageReached = 4;
+    } else if (currentStatus === 'SHIPPING' || currentStatus === 'OUT_FOR_DELIVERY') {
+      maxStageReached = currentStatus === 'OUT_FOR_DELIVERY' ? 3 : 2;
+      for (const log of rawLogs) {
+        const stage = this.getLogStageOrder(log.status);
+        if (stage > maxStageReached) {
+          maxStageReached = stage;
+        }
+      }
+    } else if (currentStatus === 'CONFIRMED' || currentStatus === 'PROCESSING') {
+      maxStageReached = 0; // Đang xử lý nội bộ, chưa bàn giao cho carrier
+    }
+
+    const fullStages = [
+      {
+        num: 1,
+        key: 'PICKED_UP' as const,
+        title: 'Đã lấy hàng',
+        desc: 'Đơn vị vận chuyển đã tiếp nhận kiện hàng từ kho Chéri',
+        loc: 'Kho Chéri Tân Bình, TP. Hồ Chí Minh'
+      },
+      {
+        num: 2,
+        key: 'IN_TRANSIT' as const,
+        title: 'Đang vận chuyển',
+        desc: 'Kiện hàng đang được luân chuyển giữa các trung tâm phân loại',
+        loc: 'Trung tâm khai thác & phân loại'
+      },
+      {
+        num: 3,
+        key: 'OUT_FOR_DELIVERY' as const,
+        title: 'Đang giao hàng',
+        desc: 'Bưu tá đang phát hàng đến địa chỉ người nhận',
+        loc: res.shippingAddress?.district
+          ? `${res.shippingAddress.district}, ${res.shippingAddress.city || res.shippingAddress.province || ''}`
+          : 'Bưu cục phát'
+      },
+      {
+        num: 4,
+        key: 'DELIVERED' as const,
+        title: 'Giao hàng thành công',
+        desc: 'Người nhận kiểm tra và ký nhận kiện hàng nguyên vẹn',
+        loc: res.shippingAddress?.fullAddress || res.shippingAddress?.line1 || 'Địa chỉ người nhận'
+      }
+    ];
+
+    if (rawLogs.length > 0) {
+      // Sắp xếp các logs từ MongoDB theo THỨ TỰ BƯỚC NGHIỆP VỤ (1 → 2 → 3 → 4)
+      // Trong cùng một bước, sắp xếp theo thời gian tăng dần
+      const sorted = [...rawLogs].sort((a, b) => {
+        const stageA = this.getLogStageOrder(a.status);
+        const stageB = this.getLogStageOrder(b.status);
+        if (stageA !== stageB) {
+          return stageA - stageB;
+        }
+        return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+      });
+
+      const timeline: any[] = [];
+      const visitedStages = new Set<number>();
+
+      sorted.forEach((log) => {
+        const stage = this.getLogStageOrder(log.status);
+        visitedStages.add(stage);
+
+        let state: 'completed' | 'current' | 'upcoming' = 'completed';
+        if (currentStatus === 'DELIVERED') {
+          state = 'completed';
+        } else if (stage === maxStageReached) {
+          state = 'current';
+        } else if (stage > maxStageReached) {
+          state = 'upcoming';
+        } else {
+          state = 'completed';
+        }
+
+        const stageKeys: { [k: number]: 'PICKED_UP' | 'IN_TRANSIT' | 'OUT_FOR_DELIVERY' | 'DELIVERED' } = {
+          1: 'PICKED_UP',
+          2: 'IN_TRANSIT',
+          3: 'OUT_FOR_DELIVERY',
+          4: 'DELIVERED',
+        };
+
+        timeline.push({
+          stageKey: stageKeys[stage] || 'IN_TRANSIT',
+          stepNumber: stage,
+          status: log.status,
+          location: log.location || '',
+          description: log.description || '',
+          timestamp: log.timestamp || null,
+          state,
+        });
+      });
+
+      // Bổ sung các bước nghiệp vụ tiếp theo chưa diễn ra (upcoming / pending)
+      for (const fs of fullStages) {
+        if (!visitedStages.has(fs.num) && fs.num > maxStageReached) {
+          timeline.push({
+            stageKey: fs.key,
+            stepNumber: fs.num,
+            status: fs.title,
+            location: fs.loc,
+            description: fs.desc,
+            timestamp: fs.num === 4 ? (res.estimatedDelivery || null) : null,
+            state: 'upcoming',
+          });
+        }
+      }
+
+      // Đảm bảo timeline luôn đi theo thứ tự 1 → 2 → 3 → 4
+      timeline.sort((a, b) => {
+        if (a.stepNumber !== b.stepNumber) {
+          return a.stepNumber - b.stepNumber;
+        }
+        return (new Date(a.timestamp || 0).getTime()) - (new Date(b.timestamp || 0).getTime());
+      });
+
+      return timeline;
+    }
+
+    // Nếu chưa có logs chi tiết từ webhook carrier nhưng đơn hàng đã có vận đơn:
+    return fullStages.map((fs) => {
+      let state: 'completed' | 'current' | 'upcoming' = 'upcoming';
+      if (currentStatus === 'DELIVERED') {
+        state = 'completed';
+      } else if (maxStageReached > 0) {
+        if (fs.num < maxStageReached) state = 'completed';
+        else if (fs.num === maxStageReached) state = 'current';
+        else state = 'upcoming';
+      }
+
+      let timestamp: Date | string | null = null;
+      if (fs.num === 1 && maxStageReached >= 1) {
+        timestamp = res.shippedAt || res.dateAdded || null;
+      } else if (fs.num === 4) {
+        timestamp = currentStatus === 'DELIVERED' ? (res.deliveredAt || res.dateAdded || null) : (res.estimatedDelivery || null);
+      }
+
+      return {
+        stageKey: fs.key,
+        stepNumber: fs.num,
+        status: fs.title,
+        location: fs.loc,
+        description: fs.desc,
+        timestamp,
+        state,
+      };
+    });
+  }
+
+  /**
+   * Sắp xếp danh sách logs vận chuyển theo thứ tự nghiệp vụ (1 → 2 → 3 → 4)
+   * thay vì hiển thị mới nhất đến cũ nhất.
+   */
+  sortedLogs(logs: ShippingLog[]): ShippingLog[] {
+    if (!logs || !logs.length) return [];
+    return [...logs].sort((a, b) => {
+      const stageA = this.getLogStageOrder(a.status);
+      const stageB = this.getLogStageOrder(b.status);
+      if (stageA !== stageB) {
+        return stageA - stageB;
+      }
+      return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+    });
+  }
+
+  /**
+   * Sắp xếp Lịch sử xử lý đơn hàng theo tiến trình tuần tự:
+   * Chờ xác nhận (1) → Đã xác nhận (2) → Đang chuẩn bị (3) → Đang vận chuyển (4) → Đã giao hàng (5)
+   */
   sortedHistory(history: { status: string; updatedAt: Date; note: string }[]): any[] {
     if (!history || !history.length) return [];
-    return [...history].sort((a, b) =>
-      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-    );
+    return [...history].sort((a, b) => {
+      const orderA = this.orderStatusOrder[a.status] ?? 50;
+      const orderB = this.orderStatusOrder[b.status] ?? 50;
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+      return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+    });
+  }
+
+  /** Tạo URL tra cứu động trên website chính thức của đơn vị vận chuyển theo dữ liệu thật */
+  getCarrierTrackingUrl(): string | null {
+    if (!this.trackingResult) return null;
+    const res = this.trackingResult;
+
+    // 1. Nếu đơn hàng đã lưu sẵn URL tra cứu trực tiếp trong MongoDB
+    if (res.trackingUrl && typeof res.trackingUrl === 'string' && res.trackingUrl.trim().startsWith('http')) {
+      return res.trackingUrl.trim();
+    }
+
+    // 2. Tạo URL động từ mã vận đơn và hãng vận chuyển thực tế
+    const trackingCode = (res.trackingNumber || '').trim();
+    if (!trackingCode) return null;
+
+    const carrier = (res.carrierName || '').toLowerCase();
+    if (carrier.includes('viettel')) {
+      return `https://viettelpost.com.vn/tra-cuu-hanh-trinh-don-hang?id=${encodeURIComponent(trackingCode)}`;
+    }
+    if (carrier.includes('ghtk') || carrier.includes('tiết kiệm')) {
+      return `https://i.ghtk.vn/${encodeURIComponent(trackingCode)}`;
+    }
+    if (carrier.includes('ghn') || carrier.includes('giao hàng nhanh')) {
+      return `https://donhang.ghn.vn/?order_code=${encodeURIComponent(trackingCode)}`;
+    }
+    if (carrier.includes('spx') || carrier.includes('shopee')) {
+      return `https://spx.vn/track?bill=${encodeURIComponent(trackingCode)}`;
+    }
+    if (carrier.includes('vnpost') || carrier.includes('bưu điện')) {
+      return `http://www.vnpost.vn/vi-vn/dinh-vi/buu-pham?key=${encodeURIComponent(trackingCode)}`;
+    }
+    if (carrier.includes('j&t') || carrier.includes('jt')) {
+      return `https://jtexpress.vn/vi/tracking?billcode=${encodeURIComponent(trackingCode)}`;
+    }
+
+    return null;
+  }
+
+  getCarrierName(): string {
+    return this.trackingResult?.carrierName || 'hãng vận chuyển';
   }
 
   statusLabel(status: string): string {

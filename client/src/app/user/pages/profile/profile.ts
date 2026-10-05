@@ -1,4 +1,4 @@
-import { Component, OnInit, Inject, PLATFORM_ID, Signal, effect } from '@angular/core';
+import { Component, OnInit, Inject, PLATFORM_ID, Signal, effect, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -49,6 +49,12 @@ export class Profile implements OnInit {
   saveSuccess: boolean = false;
   saveError: string = '';
 
+  // Avatar upload state
+  isUploadingAvatar: boolean = false;
+  avatarUploadError: string = '';
+  previewAvatar: string | null = null;
+  @ViewChild('avatarFileInput') avatarFileInput!: ElementRef<HTMLInputElement>;
+
   // Sync time
   lastSyncTime: string = '';
 
@@ -68,15 +74,19 @@ export class Profile implements OnInit {
     effect(() => {
       const user = this.selectors.user();
       if (user) {
-        this.formName    = user.fullName || user.name || '';
-        this.formEmail   = user.email || '';
-        this.formPhone   = user.phoneNumber || '';
-        this.formAddress = user.address || '';
+        this.formName            = user.fullName || user.name || '';
+        this.formEmail           = user.email || '';
+        this.formPhone           = user.phoneNumber || '';
+        this.formAddress         = user.address || '';
+        this.formNewPassword     = '';
+        this.formConfirmPassword = '';
       }
     });
   }
 
   ngOnInit(): void {
+    this.formNewPassword = '';
+    this.formConfirmPassword = '';
     if (isPlatformBrowser(this.platformId)) {
       // Tải dữ liệu người dùng và đơn hàng mới nhất từ MongoDB qua API
       this.store.getUser();
@@ -93,6 +103,93 @@ export class Profile implements OnInit {
       const lang = (this.translate as any)?.lang || 'VN';
       this.lastSyncTime = `${h}:${m} ${lang.toUpperCase()}`;
     }
+  }
+
+  openAvatarPicker(): void {
+    if (this.isUploadingAvatar) return;
+    this.avatarUploadError = '';
+    if (this.avatarFileInput?.nativeElement) {
+      this.avatarFileInput.nativeElement.value = '';
+      this.avatarFileInput.nativeElement.click();
+    }
+  }
+
+  onAvatarSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    const file = input.files[0];
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      this.avatarUploadError = 'Định dạng ảnh không hợp lệ. Vui lòng chọn jpg, jpeg, png hoặc webp.';
+      return;
+    }
+
+    const maxSizeBytes = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSizeBytes) {
+      this.avatarUploadError = 'Ảnh đại diện không được vượt quá 5MB.';
+      return;
+    }
+
+    this.avatarUploadError = '';
+
+    // Preview trực tiếp trên giao diện
+    const reader = new FileReader();
+    reader.onload = (e: any) => {
+      this.previewAvatar = e.target.result;
+    };
+    reader.readAsDataURL(file);
+
+    // Upload lên backend
+    this.isUploadingAvatar = true;
+    this.apiService.uploadAvatar(file).subscribe({
+      next: (res: any) => {
+        this.isUploadingAvatar = false;
+        if (res?.error) {
+          this.previewAvatar = null;
+          this.avatarUploadError =
+            typeof res.error === 'string'
+              ? res.error
+              : (res.error?.message || 'Không thể cập nhật ảnh đại diện. Vui lòng thử lại.');
+          return;
+        }
+
+        const updatedUser = res.data || res;
+        const currentUser = this.user$() || ({} as User);
+        const newAvatarUrl = updatedUser.avatar || updatedUser.avatarUrl || this.previewAvatar;
+
+        // Cập nhật Angular state/signal ngay lập tức
+        this.store.storeUser({
+          ...currentUser,
+          ...updatedUser,
+          avatar: newAvatarUrl,
+        });
+
+        // Reset preview vì state đã có ảnh chính thức từ MongoDB
+        this.previewAvatar = null;
+        this.updateSyncTime();
+      },
+      error: (err: any) => {
+        this.isUploadingAvatar = false;
+        this.previewAvatar = null;
+        this.avatarUploadError = err?.error?.message || 'Không thể cập nhật ảnh đại diện. Vui lòng thử lại.';
+      }
+    });
+  }
+
+  getAvatarUrl(): string | null {
+    if (this.previewAvatar) {
+      return this.previewAvatar;
+    }
+    const avatar = this.user$()?.avatar;
+    if (!avatar) return null;
+    if (avatar.startsWith('http://') || avatar.startsWith('https://') || avatar.startsWith('data:')) {
+      return avatar;
+    }
+    if (avatar.startsWith('/')) {
+      return `${this.apiService.apiUrl}${avatar}`;
+    }
+    return `${this.apiService.apiUrl}/${avatar}`;
   }
 
   getUserInitial(): string {

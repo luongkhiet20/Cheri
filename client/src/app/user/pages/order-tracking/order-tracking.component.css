@@ -720,8 +720,8 @@ title {
 }
 
 .otp-timeline-dot {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: #74070e;
   box-shadow: 0 0 0 3px rgba(116, 7, 14, 0.15);
@@ -729,6 +729,35 @@ title {
   grid-column: 1;
   margin-top: 3px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.otp-timeline-dot--completed {
+  background: #74070e;
+  box-shadow: 0 0 0 3px rgba(116, 7, 14, 0.15);
+}
+
+.otp-timeline-dot--current {
+  background: #74070e;
+  box-shadow: 0 0 0 4px rgba(116, 7, 14, 0.28);
+  position: relative;
+}
+
+.otp-timeline-dot--current::after {
+  content: '';
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+.otp-timeline-dot--upcoming {
+  background: #ffffff;
+  border: 2px solid #cbd5e1;
+  box-shadow: none;
 }
 
 .otp-timeline-dot--sm {
@@ -741,9 +770,13 @@ title {
   grid-row: 2;
   grid-column: 1;
   width: 2px;
-  background: linear-gradient(to bottom, rgba(116, 7, 14, 0.2), transparent);
+  background: #74070e;
   margin: 4px auto 0;
-  min-height: 16px;
+  min-height: 22px;
+}
+
+.otp-timeline-line--upcoming {
+  background: repeating-linear-gradient(to bottom, #cbd5e1, #cbd5e1 4px, transparent 4px, transparent 8px);
 }
 
 .otp-timeline-item:last-child .otp-timeline-line {
@@ -755,21 +788,72 @@ title {
   grid-column: 2;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
+}
+
+.otp-timeline-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 2px;
+}
+
+.otp-timeline-step-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #74070e;
+  background: rgba(116, 7, 14, 0.08);
+  padding: 1.5px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.2px;
+}
+
+.otp-timeline-state-tag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 12px;
+  margin-left: auto;
+}
+
+.otp-timeline-state-tag[data-state="completed"] {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.otp-timeline-state-tag[data-state="current"] {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.otp-timeline-state-tag[data-state="upcoming"] {
+  background: #f1f5f9;
+  color: #64748b;
 }
 
 .otp-timeline-status {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 13.5px;
+  font-weight: 700;
   color: var(--cheri-text, #2B2B2B);
   text-transform: none;
+}
+
+.otp-timeline-item--upcoming .otp-timeline-status {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.otp-timeline-item--upcoming .otp-timeline-step-badge {
+  color: #64748b;
+  background: #f1f5f9;
 }
 
 .otp-timeline-location {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--cheri-text-secondary, #6B6B6B);
 }
 
@@ -781,9 +865,10 @@ title {
 }
 
 .otp-timeline-time {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--cheri-text-light, #9A9A9A);
-  margin-top: 2px;
+  margin-top: 3px;
+  font-weight: 500;
 }
 
 /* ─── Order history section ─────────────────────────────────────── */

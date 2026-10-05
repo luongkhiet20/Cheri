@@ -119,140 +119,171 @@ export class OrdersService {
     phone?: string;
     authContact?: string;
   }): Promise<any> {
-    const inputTrackingCode = (query.trackingCode || query.orderId || query.trackingNumber || '').trim();
-    const inputAuthContact = (query.authContact || query.email || query.phone || '').trim();
+    try {
+      const inputTrackingCode = (query.trackingCode || query.orderId || query.trackingNumber || '').trim();
+      const inputAuthContact = (query.authContact || query.email || query.phone || '').trim();
 
-    // Bắt buộc phải có cả mã tra cứu VÀ thông tin xác thực
-    if (!inputTrackingCode) {
-      return { error: 'Vui lòng nhập mã đơn hàng hoặc mã vận đơn.' };
-    }
-    if (!inputAuthContact) {
-      return { error: 'Vui lòng nhập email hoặc số điện thoại để xác thực.' };
-    }
+      // Bắt buộc phải có cả mã tra cứu VÀ thông tin xác thực
+      if (!inputTrackingCode) {
+        return { error: 'Vui lòng nhập mã đơn hàng hoặc mã vận đơn.' };
+      }
+      if (!inputAuthContact) {
+        return { error: 'Vui lòng nhập email hoặc số điện thoại để xác thực.' };
+      }
 
-    const isEmail = inputAuthContact.includes('@');
-    const cleanPhone = inputAuthContact.replace(/[\s\.\-\(\)]/g, '');
+      const isEmail = inputAuthContact.includes('@');
+      const escapedCode = inputTrackingCode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const codeRegex = new RegExp(`^${escapedCode}$`, 'i');
 
-    const escapedCode = inputTrackingCode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const codeRegex = new RegExp(`^${escapedCode}$`, 'i');
+      const codeConditions: any[] = [
+        { orderId: codeRegex },
+        { trackingNumber: codeRegex },
+        { 'shipping.trackingNumber': codeRegex }
+      ];
+      if (isValidObjectId(inputTrackingCode)) {
+        codeConditions.push({ _id: new Types.ObjectId(inputTrackingCode) });
+      }
 
-    const contactConditions: any[] = [];
-    if (isEmail) {
-      const emailRegex = new RegExp(`^${inputAuthContact.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
-      contactConditions.push({ customerEmail: emailRegex });
-      contactConditions.push({ 'shippingAddress.email': emailRegex });
-    } else {
-      contactConditions.push({ 'addresses.phone': cleanPhone });
-      contactConditions.push({ 'addresses.phone': inputAuthContact });
-      contactConditions.push({ 'shippingAddress.phone': cleanPhone });
-      contactConditions.push({ 'shippingAddress.phone': inputAuthContact });
-    }
-
-    // Query theo đúng BPMN:
-    const order: any = await this.orderModel.findOne({
-      $and: [
-        {
-          $or: [
-            { orderId: codeRegex },
-            { trackingNumber: codeRegex },
-            { 'shipping.trackingNumber': codeRegex }
-          ]
-        },
-        {
-          $or: contactConditions
+      const contactConditions: any[] = [];
+      if (isEmail) {
+        const emailRegex = new RegExp(`^${inputAuthContact.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+        contactConditions.push(
+          { customerEmail: emailRegex },
+          { 'customer.email': emailRegex },
+          { 'shippingAddress.email': emailRegex },
+          { 'addresses.email': emailRegex }
+        );
+      } else {
+        // Chuẩn hóa số điện thoại: hỗ trợ cả +84, 84, 0 và các định dạng có dấu cách/gạch nối
+        const digits = inputAuthContact.replace(/\D/g, '');
+        let core = digits;
+        if (digits.startsWith('84') && digits.length >= 10) {
+          core = digits.slice(2);
+        } else if (digits.startsWith('0') && digits.length >= 10) {
+          core = digits.slice(1);
         }
-      ]
-    }).lean();
 
-    if (!order) {
-      return { error: 'Không tìm thấy đơn hàng hoặc thông tin xác thực không chính xác.' };
+        if (core) {
+          const corePattern = core.split('').join('[\\s\\.\\-]*');
+          const phoneRegex = new RegExp(`^(\\+?84|0)?[\\s\\.\\-]*${corePattern}$`, 'i');
+          contactConditions.push(
+            { customerPhone: phoneRegex },
+            { 'customer.phone': phoneRegex },
+            { 'shippingAddress.phone': phoneRegex },
+            { 'addresses.phone': phoneRegex }
+          );
+        } else {
+          const cleanPhone = inputAuthContact.replace(/[\s\.\-\(\)]/g, '');
+          contactConditions.push(
+            { customerPhone: cleanPhone },
+            { 'customer.phone': cleanPhone },
+            { 'shippingAddress.phone': cleanPhone },
+            { 'addresses.phone': cleanPhone }
+          );
+        }
+      }
+
+      // Query đối chiếu với dữ liệu Order thực tế trong MongoDB:
+      // CẢ HAI thông tin (mã đơn VÀ email/sđt) phải thuộc CÙNG MỘT document
+      const order: any = await this.orderModel.findOne({
+        $and: [
+          { $or: codeConditions },
+          { $or: contactConditions }
+        ]
+      }).lean();
+
+      if (!order) {
+        return { error: 'Không tìm thấy đơn hàng hoặc thông tin xác thực không chính xác.' };
+      }
+
+      // Che 4 số giữa của số điện thoại cho khách vãng lai
+      const rawPhone = order.shippingAddress?.phone || order.addresses?.[0]?.phone || '';
+      const maskedPhone = rawPhone && rawPhone.length >= 7
+        ? rawPhone.slice(0, 3) + '****' + rawPhone.slice(-3)
+        : rawPhone;
+
+      // Chuẩn hóa địa chỉ nhận hàng
+      const addr = order.shippingAddress || (Array.isArray(order.addresses) ? order.addresses[0] : null) || {};
+      const fullAddress = [
+        addr.line1 || addr.address,
+        addr.line2,
+        addr.ward,
+        addr.district,
+        addr.city || addr.province,
+        addr.country
+      ].filter(Boolean).join(', ');
+
+      // Chuẩn hóa danh sách sản phẩm (hỗ trợ cả order.items và order.cart.items)
+      const items = (Array.isArray(order.items) && order.items.length > 0)
+        ? order.items.map((it: any) => ({
+            title: it.productSnapshot?.title || 'Sản phẩm',
+            sku: it.productSnapshot?.sku || '',
+            image: it.productSnapshot?.image || '',
+            variant: it.productSnapshot?.variant || null,
+            quantity: it.quantity || 1,
+            unitPrice: it.unitPrice || 0,
+            subtotal: it.subtotal || ((it.unitPrice || 0) * (it.quantity || 1))
+          }))
+        : (order.cart?.items || []).map((it: any) => ({
+            title: it.item?.title || 'Sản phẩm',
+            sku: it.item?.sku || '',
+            image: it.item?.mainImage?.url || it.item?.images?.[0] || '',
+            variant: it.item?.variants?.[0] ? {
+              color: it.item.variants[0].color,
+              size: it.item.variants[0].size,
+              classification: it.item.variants[0].classification
+            } : (it.variant || null),
+            quantity: it.qty || 1,
+            unitPrice: it.price || 0,
+            subtotal: (it.price || 0) * (it.qty || 1)
+          }));
+
+      // Chuẩn hóa logs vận chuyển và lịch sử trạng thái
+      const shippingLogs = Array.isArray(order.shipping?.logs) && order.shipping.logs.length > 0
+        ? order.shipping.logs
+        : (Array.isArray(order.shippingLogs) ? order.shippingLogs : []);
+
+      const statusHistory = Array.isArray(order.statusHistory)
+        ? order.statusHistory.map((h: any) => ({
+            status: h.status,
+            updatedAt: h.updatedAt || h.timestamp,
+            note: h.note || h.description || ''
+          }))
+        : [];
+
+      return {
+        orderId: order.orderId,
+        status: order.status || order.shipping?.status,
+        trackingNumber: order.shipping?.trackingNumber || order.trackingNumber || null,
+        trackingUrl: order.shipping?.trackingUrl || order.trackingUrl || null,
+        carrierName: order.shipping?.carrierName || order.shippingProvider || order.shippingMethodSnapshot?.name || null,
+        estimatedDelivery: order.shipping?.estimatedDelivery || order.estimatedDeliveryDate || null,
+        dateAdded: order.dateAdded || order.createdAt || null,
+        shippedAt: order.shippedAt || null,
+        deliveredAt: order.deliveredAt || null,
+        shippingAddress: {
+          name: addr.name || addr.fullName || addr.receiverName || '',
+          phone: maskedPhone,
+          line1: addr.line1 || addr.address || '',
+          line2: addr.line2 || '',
+          ward: addr.ward || '',
+          district: addr.district || '',
+          city: addr.city || addr.province || '',
+          country: addr.country || 'Việt Nam',
+          fullAddress: fullAddress || 'Theo thông tin đăng ký'
+        },
+        shippingLogs,
+        statusHistory,
+        items,
+        paymentMethod: order.type || order.paymentMethod || order.paymentMethodSnapshot?.name || 'COD',
+        subtotal: order.cart?.totalPrice ?? order.subtotal ?? 0,
+        shippingFee: order.cart?.shippingCost ?? order.shippingFee ?? 0,
+        totalAmount: order.amount ?? order.totalAmount ?? 0,
+        currency: order.currency || 'VND'
+      };
+    } catch (err: any) {
+      return { error: 'Không thể tra cứu đơn hàng vào lúc này. Vui lòng thử lại sau.' };
     }
-
-    // Che 4 số giữa của số điện thoại cho khách vãng lai
-    const rawPhone = order.shippingAddress?.phone || order.addresses?.[0]?.phone || '';
-    const maskedPhone = rawPhone && rawPhone.length >= 7
-      ? rawPhone.slice(0, 3) + '****' + rawPhone.slice(-3)
-      : rawPhone;
-
-    // Chuẩn hóa địa chỉ nhận hàng
-    const addr = order.shippingAddress || (Array.isArray(order.addresses) ? order.addresses[0] : null) || {};
-    const fullAddress = [
-      addr.line1 || addr.address,
-      addr.line2,
-      addr.ward,
-      addr.district,
-      addr.city || addr.province,
-      addr.country
-    ].filter(Boolean).join(', ');
-
-    // Chuẩn hóa danh sách sản phẩm (hỗ trợ cả order.items và order.cart.items)
-    const items = (Array.isArray(order.items) && order.items.length > 0)
-      ? order.items.map((it: any) => ({
-          title: it.productSnapshot?.title || 'Sản phẩm',
-          sku: it.productSnapshot?.sku || '',
-          image: it.productSnapshot?.image || '',
-          variant: it.productSnapshot?.variant || null,
-          quantity: it.quantity || 1,
-          unitPrice: it.unitPrice || 0,
-          subtotal: it.subtotal || ((it.unitPrice || 0) * (it.quantity || 1))
-        }))
-      : (order.cart?.items || []).map((it: any) => ({
-          title: it.item?.title || 'Sản phẩm',
-          sku: it.item?.sku || '',
-          image: it.item?.mainImage?.url || it.item?.images?.[0] || '',
-          variant: it.item?.variants?.[0] ? {
-            color: it.item.variants[0].color,
-            size: it.item.variants[0].size,
-            classification: it.item.variants[0].classification
-          } : (it.variant || null),
-          quantity: it.qty || 1,
-          unitPrice: it.price || 0,
-          subtotal: (it.price || 0) * (it.qty || 1)
-        }));
-
-    // Chuẩn hóa logs vận chuyển và lịch sử trạng thái
-    const shippingLogs = Array.isArray(order.shipping?.logs) && order.shipping.logs.length > 0
-      ? order.shipping.logs
-      : (Array.isArray(order.shippingLogs) ? order.shippingLogs : []);
-
-    const statusHistory = Array.isArray(order.statusHistory)
-      ? order.statusHistory.map((h: any) => ({
-          status: h.status,
-          updatedAt: h.updatedAt || h.timestamp,
-          note: h.note || h.description || ''
-        }))
-      : [];
-
-    return {
-      orderId: order.orderId,
-      status: order.status || order.shipping?.status,
-      trackingNumber: order.shipping?.trackingNumber || order.trackingNumber || null,
-      trackingUrl: order.shipping?.trackingUrl || order.trackingUrl || null,
-      carrierName: order.shipping?.carrierName || order.shippingProvider || order.shippingMethodSnapshot?.name || null,
-      estimatedDelivery: order.shipping?.estimatedDelivery || order.estimatedDeliveryDate || null,
-      dateAdded: order.dateAdded || order.createdAt || null,
-      shippedAt: order.shippedAt || null,
-      deliveredAt: order.deliveredAt || null,
-      shippingAddress: {
-        name: addr.name || addr.fullName || addr.receiverName || '',
-        phone: maskedPhone,
-        line1: addr.line1 || addr.address || '',
-        line2: addr.line2 || '',
-        ward: addr.ward || '',
-        district: addr.district || '',
-        city: addr.city || addr.province || '',
-        country: addr.country || 'Việt Nam',
-        fullAddress: fullAddress || 'Theo thông tin đăng ký'
-      },
-      shippingLogs,
-      statusHistory,
-      items,
-      paymentMethod: order.type || order.paymentMethod || order.paymentMethodSnapshot?.name || 'COD',
-      subtotal: order.cart?.totalPrice ?? order.subtotal ?? 0,
-      shippingFee: order.cart?.shippingCost ?? order.shippingFee ?? 0,
-      totalAmount: order.amount ?? order.totalAmount ?? 0,
-      currency: order.currency || 'VND'
-    };
   }
 
   // ─── Shipping Methods CRUD ─────────────────────────────────────────────────

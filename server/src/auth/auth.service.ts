@@ -13,6 +13,16 @@ import { GoogleUserDto } from './dto/google-user.dto';
 import { User } from './models/user.model';
 import { JwtPayload } from './models/jwt-payload.interface';
 import { AuthCredentialDto } from './dto/auth-credential.dto';
+import * as cloudinary from 'cloudinary';
+import * as streamifier from 'streamifier';
+import * as fs from 'fs';
+import * as path from 'path';
+
+cloudinary.v2.config({
+  cloud_name: process.env.CLOUDINARY_NAME,
+  api_key: process.env.CLOUDINARY_KEY,
+  api_secret: process.env.CLOUDINARY_SECRET,
+});
 
 @Injectable()
 export class AuthService {
@@ -260,5 +270,100 @@ export class AuthService {
   async deleteUser(id: string): Promise<any> {
     return this.userModel.findByIdAndDelete(id).exec();
   }
+
+  async uploadAvatar(user: User, file: any): Promise<any> {
+    if (!file) {
+      throw new BadRequestException('Vui lòng chọn file hình ảnh');
+    }
+
+    const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      throw new BadRequestException('Định dạng ảnh không hợp lệ. Chỉ chấp nhận jpg, jpeg, png, webp');
+    }
+
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      throw new BadRequestException('Ảnh đại diện không được vượt quá 5MB');
+    }
+
+    let avatarUrl = '';
+
+    const isCloudinaryConfigured =
+      process.env.CLOUDINARY_NAME &&
+      process.env.CLOUDINARY_KEY &&
+      process.env.CLOUDINARY_SECRET &&
+      !process.env.CLOUDINARY_KEY.includes('dummy') &&
+      !process.env.CLOUDINARY_KEY.includes('placeholder');
+
+    if (isCloudinaryConfigured) {
+      try {
+        const uploaded: any = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.v2.uploader.upload_stream(
+            {
+              folder: 'cheri/avatars',
+              resource_type: 'image',
+            },
+            (error, result) => {
+              if (result) resolve(result);
+              else reject(error);
+            },
+          );
+          streamifier.createReadStream(file.buffer).pipe(uploadStream);
+        });
+        avatarUrl = uploaded.secure_url || uploaded.url;
+      } catch (cldErr: any) {
+        console.warn('Cloudinary avatar upload error, fallback to local storage:', cldErr?.message || cldErr);
+      }
+    }
+
+    if (!avatarUrl) {
+      try {
+        const uploadDir = path.join(process.cwd(), 'server', 'uploads', 'avatars');
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        const ext = path.extname(file.originalname) || `.${file.mimetype.split('/')[1] || 'png'}`;
+        const filename = `avatar-${user._id}-${Date.now()}${ext}`;
+        const filePath = path.join(uploadDir, filename);
+        fs.writeFileSync(filePath, file.buffer);
+        const serverUrl = process.env.SERVER_URL || 'http://localhost:4000';
+        avatarUrl = `${serverUrl}/uploads/avatars/${filename}`;
+      } catch (fsErr: any) {
+        console.warn('Local file write failed, fallback to data URI:', fsErr?.message || fsErr);
+        const b64 = file.buffer.toString('base64');
+        avatarUrl = `data:${file.mimetype};base64,${b64}`;
+      }
+    }
+
+    const updated = await this.userModel.findByIdAndUpdate(
+      user._id,
+      { $set: { avatar: avatarUrl } },
+      { new: true },
+    );
+
+    if (!updated) {
+      throw new BadRequestException('Không tìm thấy người dùng');
+    }
+
+    const roles = Array.isArray(updated.roles)
+      ? [...updated.roles]
+      : (updated as any).role
+      ? [(updated as any).role]
+      : ['user'];
+
+    return {
+      id: updated._id,
+      email: updated.email,
+      roles,
+      name: updated.name || (updated as any).fullName || updated.email.split('@')[0],
+      fullName: (updated as any).fullName || updated.name || updated.email.split('@')[0],
+      phoneNumber: (updated as any).phoneNumber || '',
+      address: (updated as any).address || '',
+      gender: (updated as any).gender || '',
+      avatar: updated.avatar || avatarUrl,
+      avatarUrl: updated.avatar || avatarUrl,
+    };
+  }
 }
+
 

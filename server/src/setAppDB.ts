@@ -7,8 +7,18 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import compression from 'compression';
 import { json, urlencoded } from 'body-parser';
+import { join } from 'path';
+import * as fs from 'fs';
 
 export const setAppDB = (app: NestExpressApplication): void => {
+  const uploadsDir = join(process.cwd(), 'server', 'uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+  app.useStaticAssets(uploadsDir, {
+    prefix: '/uploads/',
+  });
+
   app.use(compression());
   app.use(json({ limit: '10mb' }));
   app.use(urlencoded({ limit: '10mb' }));

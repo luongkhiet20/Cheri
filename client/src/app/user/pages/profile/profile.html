@@ -3,16 +3,49 @@
   <!-- ── HERO CARD: Avatar + Name + Member ID + Logout ── -->
   <div class="profile-hero-card">
     <div class="profile-avatar-wrap">
-      <div class="profile-avatar-circle">
-        <span>{{ getUserInitial() }}</span>
+      <div
+        class="profile-avatar-circle"
+        (click)="openAvatarPicker()"
+        title="Nhấp để thay đổi ảnh đại diện"
+        role="button"
+        tabindex="0"
+        (keydown.enter)="openAvatarPicker()"
+        (keydown.space)="openAvatarPicker()"
+      >
+        <img
+          *ngIf="getAvatarUrl()"
+          [src]="getAvatarUrl()"
+          alt="Ảnh đại diện"
+          class="profile-avatar-image"
+        />
+
+        <span *ngIf="!getAvatarUrl()">
+          {{ getUserInitial() }}
+        </span>
+
+        <div class="profile-avatar-loading" *ngIf="isUploadingAvatar">
+          <div class="avatar-spinner"></div>
+        </div>
       </div>
+
+      <input
+        #avatarFileInput
+        type="file"
+        accept="image/png,image/jpeg,image/jpg,image/webp"
+        hidden
+        (change)="onAvatarSelected($event)"
+      />
     </div>
     <div class="profile-hero-info">
       <div class="profile-member-badges">
-
+        <span class="profile-member-tier" *ngIf="getRoleLabel()">{{ getRoleLabel() }}</span>
+        <span class="profile-member-id" *ngIf="getMemberCode()">{{ getMemberCode() }}</span>
       </div>
       <h2 class="profile-hero-name">{{ getDisplayName() }}</h2>
       <p class="profile-hero-email">{{ user$()?.email }}</p>
+      <div class="profile-avatar-error" *ngIf="avatarUploadError">
+        {{ avatarUploadError }}
+      </div>
     </div>
     <div class="profile-hero-action">
       <button type="button" class="profile-logout-btn" (click)="onLogout()" title="Đăng xuất khỏi tài khoản">
@@ -211,15 +244,17 @@
           <div class="password-sub-heading">Đổi mật khẩu</div>
 
           <div class="form-field-group">
-            <label class="field-label-sub">Mật khẩu mới</label>
-            <input type="password" class="field-input" [(ngModel)]="formNewPassword"
-              placeholder="Để trống nếu không muốn đổi" />
+            <label class="field-label-sub" for="profile-new-password">Mật khẩu mới</label>
+            <input id="profile-new-password" type="password" class="field-input" name="profileNewPassword"
+              [(ngModel)]="formNewPassword" placeholder="Để trống nếu không muốn đổi"
+              autocomplete="new-password" />
           </div>
 
           <div class="form-field-group">
-            <label class="field-label-sub">Nhập lại mật khẩu mới</label>
-            <input type="password" class="field-input" [(ngModel)]="formConfirmPassword"
-              placeholder="Để trống nếu không muốn đổi" />
+            <label class="field-label-sub" for="profile-confirm-password">Nhập lại mật khẩu mới</label>
+            <input id="profile-confirm-password" type="password" class="field-input" name="profileConfirmPassword"
+              [(ngModel)]="formConfirmPassword" placeholder="Để trống nếu không muốn đổi"
+              autocomplete="new-password" />
           </div>
 
           <!-- Feedback messages -->

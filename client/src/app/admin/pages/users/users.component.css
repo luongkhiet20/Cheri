@@ -1,1 +1,63 @@
+/* Users component styles */
 
+:host ::ng-deep .admin-table__th--avatar,
+:host ::ng-deep .admin-table__td--avatar,
+:host ::ng-deep .user-avatar-cell {
+  width: 60px !important;
+  min-width: 60px !important;
+  max-width: 60px !important;
+  padding: 8px 4px !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+:host ::ng-deep .user-avatar-cell-wrapper {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+}
+
+:host ::ng-deep .user-avatar {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  min-height: 40px !important;
+  max-width: 40px !important;
+  max-height: 40px !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background-color: #F8EBEB !important;
+  border: 1.5px solid #E5E7EB !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  margin: 0 auto !important;
+}
+
+:host ::ng-deep .user-avatar-img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  display: block !important;
+  border-radius: 50% !important;
+}
+
+:host ::ng-deep .user-avatar-initial {
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background-color: #F8EBEB !important;
+  color: #74070E !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  text-transform: uppercase !important;
+  user-select: none !important;
+  letter-spacing: 0.3px !important;
+}

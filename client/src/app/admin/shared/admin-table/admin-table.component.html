@@ -21,7 +21,8 @@
 
           <!-- Data columns -->
           <th *ngFor="let col of columns" class="admin-table__th"
-            [class.admin-table__th--image]="isImageColumn(col)"
+            [class.admin-table__th--image]="isProductImageColumn(col)"
+            [class.admin-table__th--avatar]="isAvatarColumn(col)"
             [class.admin-table__th--sku]="isSkuColumn(col)"
             [class.is-sortable]="col.sortable"
             [class.is-sorted-asc]="sortKey === col.key && sortDir === 'asc'"
@@ -59,9 +60,13 @@
 
           <!-- Data cells -->
           <td *ngFor="let col of columns" class="admin-table__td"
-            [class.admin-table__td--image]="isImageColumn(col)"
-            [class.product-image-cell]="isImageColumn(col)"
+            [class.admin-table__td--image]="isProductImageColumn(col, row)"
+            [class.product-image-cell]="isProductImageColumn(col, row)"
+            [class.admin-table__td--avatar]="isAvatarColumn(col, row)"
+            [class.user-avatar-cell]="isAvatarColumn(col, row)"
             [class.admin-table__td--sku]="isSkuColumn(col)"
+            [class.admin-table__td--product-count]="col.key === 'productCount'"
+            [attr.data-key]="col.key"
             [attr.data-label]="col.label"
             [style.width]="col.width || null"
             [style.minWidth]="col.width || null">
@@ -70,9 +75,28 @@
             <app-admin-status-badge *ngIf="isStatusColumn(col)" [label]="formatValue(row, col)"
               [variant]="row[col.key + 'Variant'] || 'neutral'"></app-admin-status-badge>
 
-            <!-- Image cell -->
-            <div *ngIf="isImageColumn(col)" class="product-image-wrapper cell-image">
+            <!-- Product Image cell -->
+            <div *ngIf="isProductImageColumn(col, row)" class="product-image-wrapper cell-image">
               <img [src]="getCellValue(row, col.key) || fallbackImage" [alt]="col.label || 'Ảnh sản phẩm'" class="product-image" loading="lazy" />
+            </div>
+
+            <!-- User Avatar cell -->
+            <div *ngIf="isAvatarColumn(col, row)" class="user-avatar-cell-wrapper">
+              <div class="user-avatar">
+                <img
+                  *ngIf="hasValidAvatar(row, col)"
+                  [src]="getAvatarUrl(row, col)"
+                  [alt]="getAvatarAlt(row, col)"
+                  class="user-avatar-img"
+                  loading="lazy"
+                  (error)="onAvatarError(row, col)" />
+                <div
+                  *ngIf="!hasValidAvatar(row, col)"
+                  class="user-avatar-initial"
+                  [attr.aria-label]="getAvatarAlt(row, col)">
+                  {{ getAvatarInitial(row, col) }}
+                </div>
+              </div>
             </div>
 
             <!-- SKU list cell -->
@@ -94,10 +118,20 @@
               </ng-template>
             </div>
 
-            <!-- Default text -->
-            <span *ngIf="!isStatusColumn(col) && !isImageColumn(col) && !isSkuColumn(col)">
-              {{ formatValue(row, col) }}
-            </span>
+            <!-- Default text / Clickable element -->
+            <ng-container *ngIf="!isStatusColumn(col) && !isImageColumn(col) && !isSkuColumn(col)">
+              <button
+                *ngIf="col.clickable"
+                type="button"
+                class="admin-table__clickable-cell"
+                [attr.aria-label]="col.key === 'productCount' ? ('Xem ' + formatValue(row, col) + ' sản phẩm thuộc danh mục ' + (row.name || '')) : ('Xem chi tiết ' + (col.label || ''))"
+                (click)="onCellClick(col, row, $event)">
+                {{ formatValue(row, col) }}
+              </button>
+              <span *ngIf="!col.clickable">
+                {{ formatValue(row, col) }}
+              </span>
+            </ng-container>
           </td>
 
           <!-- Actions Column -->

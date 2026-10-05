@@ -3,6 +3,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { Location } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { AdminService } from '../../services/admin.service';
+import { NotificationService } from '../../shared/notification/notification.service';
 
 @Component({
   selector: 'app-account',
@@ -56,7 +57,8 @@ export class AccountComponent implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private location: Location,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private notificationService: NotificationService
   ) { }
 
   ngOnInit(): void {
@@ -398,6 +400,7 @@ export class AccountComponent implements OnInit, OnDestroy {
   private showSuccess(msg: string): void {
     this.successMessage = msg;
     this.errorMessage = '';
+    this.notificationService.success(msg);
     this.cdr.markForCheck();
     if (this.messageTimer) clearTimeout(this.messageTimer);
     this.messageTimer = setTimeout(() => {
@@ -409,6 +412,7 @@ export class AccountComponent implements OnInit, OnDestroy {
   private showError(msg: string): void {
     this.errorMessage = msg;
     this.successMessage = '';
+    this.notificationService.error(msg);
     this.cdr.markForCheck();
     if (this.messageTimer) clearTimeout(this.messageTimer);
     this.messageTimer = setTimeout(() => {

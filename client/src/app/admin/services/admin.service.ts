@@ -22,13 +22,14 @@ export class AdminService {
   }
 
   // ── Products ───────────────────────────────
-  getProducts(params?: { page?: number; pageSize?: number; search?: string; category?: string; status?: string }): Observable<any> {
+  getProducts(params?: { page?: number; pageSize?: number; search?: string; category?: string; categoryId?: string; status?: string }): Observable<any> {
     let httpParams = new HttpParams();
     if (params) {
       if (params.page) httpParams = httpParams.set('page', params.page.toString());
       if (params.pageSize) httpParams = httpParams.set('pageSize', params.pageSize.toString());
       if (params.search) httpParams = httpParams.set('search', params.search);
       if (params.category) httpParams = httpParams.set('category', params.category);
+      if (params.categoryId) httpParams = httpParams.set('categoryId', params.categoryId);
       if (params.status) httpParams = httpParams.set('status', params.status);
     }
     return this.http.get(`${this.baseUrl}/products`, { params: httpParams });
@@ -99,7 +100,7 @@ export class AdminService {
   }
 
   // ── Orders ─────────────────────────────────
-  getOrders(params?: { page?: number; limit?: number; search?: string; status?: string; paymentMethod?: string }): Observable<any> {
+  getOrders(params?: { page?: number; limit?: number; search?: string; status?: string; paymentMethod?: string; userId?: string }): Observable<any> {
     let httpParams = new HttpParams();
     if (params) {
       if (params.page) httpParams = httpParams.set('page', params.page.toString());
@@ -107,8 +108,13 @@ export class AdminService {
       if (params.search) httpParams = httpParams.set('search', params.search);
       if (params.status) httpParams = httpParams.set('status', params.status);
       if (params.paymentMethod) httpParams = httpParams.set('paymentMethod', params.paymentMethod);
+      if (params.userId) httpParams = httpParams.set('userId', params.userId);
     }
     return this.http.get(`${this.baseUrl}/orders`, { params: httpParams });
+  }
+
+  getUserOrders(userId: string): Observable<any> {
+    return this.http.get(`${this.baseUrl}/users/${userId}/orders`);
   }
 
   getOrderById(id: string): Observable<any> {

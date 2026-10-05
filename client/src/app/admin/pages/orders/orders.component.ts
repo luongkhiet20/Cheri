@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
+import { NotificationService } from '../../shared/notification/notification.service';
 
 @Component({
   selector: 'app-orders',
@@ -84,7 +85,8 @@ export class OrdersComponent implements OnInit {
     private apiService: AdminService,
     private router: Router,
     private route: ActivatedRoute,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private notificationService: NotificationService
   ) { }
 
   ngOnInit(): void {
@@ -511,6 +513,7 @@ export class OrdersComponent implements OnInit {
           this.isBulkDelete = false;
           if (!res?.success) {
             this.errorMessage = 'Không thể xóa đơn hàng. Vui lòng thử lại.';
+            this.notificationService.error(this.errorMessage);
             this.loadOrders({ preserveError: true });
             this.cdr.markForCheck();
             return;
@@ -518,6 +521,7 @@ export class OrdersComponent implements OnInit {
           this.selectedIds.delete(deleteId);
           this.selectedIds = new Set(this.selectedIds);
           this.successMessage = 'Xóa đơn hàng thành công.';
+          this.notificationService.success(this.successMessage);
           this.loadOrders();
           this.cdr.markForCheck();
         },
@@ -527,6 +531,7 @@ export class OrdersComponent implements OnInit {
           this.pendingDeleteId = null;
           this.isBulkDelete = false;
           this.errorMessage = 'Không thể xóa đơn hàng. Vui lòng thử lại.';
+          this.notificationService.error(this.errorMessage);
           this.loadOrders({ preserveError: true });
           console.error('Lỗi xóa đơn hàng:', err);
           this.cdr.markForCheck();
@@ -550,6 +555,7 @@ export class OrdersComponent implements OnInit {
             this.pendingBulkQueryState = null;
             this.selectedIds = new Set(deleteIds);
             this.errorMessage = 'Không thể xóa các đơn hàng đã chọn. Vui lòng thử lại.';
+            this.notificationService.error(this.errorMessage);
             this.loadOrders({ preserveError: true, preserveSelection: true });
             this.cdr.markForCheck();
             return;
@@ -558,6 +564,7 @@ export class OrdersComponent implements OnInit {
           this.pendingBulkQueryState = null;
           this.selectedIds.clear();
           this.successMessage = 'Xóa các đơn hàng đã chọn thành công.';
+          this.notificationService.success(this.successMessage);
           this.loadOrders();
           this.cdr.markForCheck();
         },
@@ -570,6 +577,7 @@ export class OrdersComponent implements OnInit {
           this.pendingBulkQueryState = null;
           this.selectedIds = new Set(deleteIds);
           this.errorMessage = 'Không thể xóa các đơn hàng đã chọn. Vui lòng thử lại.';
+          this.notificationService.error(this.errorMessage);
           this.loadOrders({ preserveError: true, preserveSelection: true });
           console.error('Lỗi xóa hàng loạt đơn hàng:', err);
           this.cdr.markForCheck();

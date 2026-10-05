@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
+import { NotificationService } from '../../../shared/notification/notification.service';
 
 interface UserFormData {
   email: string;
@@ -52,7 +53,8 @@ export class UsersFormComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private apiService: AdminService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private notificationService: NotificationService
   ) { }
 
   ngOnInit(): void {
@@ -260,18 +262,21 @@ export class UsersFormComponent implements OnInit {
           this.isSubmitting = false;
           if (res.success) {
             this.successMessage = 'Cập nhật tài khoản thành công';
+            this.notificationService.success('Cập nhật tài khoản thành công');
             this.cdr.markForCheck();
             setTimeout(() => {
               this.router.navigate(['/admin/users', this.userId]);
             }, 500);
           } else {
             this.errorMessage = res.message || 'Cập nhật thất bại';
+            this.notificationService.error(this.errorMessage);
             this.cdr.markForCheck();
           }
         },
         error: (err) => {
           this.isSubmitting = false;
           this.errorMessage = err.error?.message || 'Lỗi khi cập nhật tài khoản lên máy chủ';
+          this.notificationService.error(this.errorMessage);
           console.error('Update user error:', err);
           this.cdr.markForCheck();
         }
@@ -298,18 +303,21 @@ export class UsersFormComponent implements OnInit {
           this.isSubmitting = false;
           if (res.success) {
             this.successMessage = 'Thêm tài khoản thành công';
+            this.notificationService.success('Thêm tài khoản thành công');
             this.cdr.markForCheck();
             setTimeout(() => {
               this.router.navigate(['/admin/users']);
             }, 500);
           } else {
             this.errorMessage = res.message || 'Thêm tài khoản thất bại';
+            this.notificationService.error(this.errorMessage);
             this.cdr.markForCheck();
           }
         },
         error: (err) => {
           this.isSubmitting = false;
           this.errorMessage = err.error?.message || 'Lỗi khi tạo mới tài khoản';
+          this.notificationService.error(this.errorMessage);
           console.error('Create user error:', err);
           this.cdr.markForCheck();
         }

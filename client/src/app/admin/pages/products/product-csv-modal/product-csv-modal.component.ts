@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, Output, ChangeDetectorRef } from '@angular/core';
 import { AdminService } from '../../../services/admin.service';
+import { NotificationService } from '../../../shared/notification/notification.service';
 
 @Component({
   selector: 'app-product-csv-modal',
@@ -32,7 +33,8 @@ export class ProductCsvModalComponent {
 
   constructor(
     private apiService: AdminService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private notificationService: NotificationService
   ) { }
 
   get canImport(): boolean {
@@ -175,6 +177,7 @@ export class ProductCsvModalComponent {
         this.isImporting = false;
         this.isCompleted = true;
         this.importResult = res;
+        this.notificationService.success(`Nhập dữ liệu thành công: ${res.summary?.totalProducts || 0} sản phẩm.`);
         // Emit imported event so parent products list reloads from API
         this.imported.emit(res);
         this.cdr.markForCheck();
@@ -182,6 +185,7 @@ export class ProductCsvModalComponent {
       error: (err) => {
         this.isImporting = false;
         this.errorMessage = 'Lỗi nhập dữ liệu vào MongoDB: ' + (err.error?.message || err.message);
+        this.notificationService.error(this.errorMessage);
         this.cdr.markForCheck();
       }
     });

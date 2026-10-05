@@ -30,6 +30,37 @@
   cursor: not-allowed;
 }
 
+/* Action 'view' / 'Xem': màu thương hiệu Cheri */
+.action-btn--view,
+button.action-btn[id^="action-view-"] {
+  background: var(--cheri-primary, #74070E);
+  border-color: var(--cheri-primary, #74070E);
+  color: #FFFFFF !important;
+}
+
+.action-btn--view:hover:not(:disabled),
+button.action-btn[id^="action-view-"]:hover:not(:disabled) {
+  background: #5F060B;
+  border-color: #5F060B;
+  color: #FFFFFF !important;
+}
+
+.action-btn--view:active:not(:disabled),
+button.action-btn[id^="action-view-"]:active:not(:disabled) {
+  background: #4D0509;
+  border-color: #4D0509;
+  color: #FFFFFF !important;
+}
+
+.action-btn--view:disabled,
+button.action-btn[id^="action-view-"]:disabled {
+  background: var(--cheri-primary, #74070E);
+  border-color: var(--cheri-primary, #74070E);
+  color: #FFFFFF !important;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .action-btn--danger {
   color: var(--cheri-danger);
   border-color: rgba(180, 35, 24, 0.3);

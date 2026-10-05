@@ -1,7 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
-
+import { NotificationService } from '../../shared/notification/notification.service';
 import { Router } from '@angular/router';
 
 @Component({
@@ -12,9 +12,10 @@ import { Router } from '@angular/router';
 })
 export class CategoriesComponent implements OnInit {
   columns: TableColumn[] = [
+    { key: 'position', label: 'Vị trí', type: 'number', sortable: true, width: '90px', align: 'center' },
     { key: 'name', label: 'Tên danh mục', type: 'text', sortable: true },
     { key: 'slug', label: 'Slug', type: 'text' },
-    { key: 'productCount', label: 'Số sản phẩm', type: 'number', sortable: true, align: 'right' },
+    { key: 'productCount', label: 'Số sản phẩm', type: 'number', sortable: true, align: 'right', clickable: true },
     { key: 'status', label: 'Trạng thái', type: 'status' },
   ];
   actions: RowAction[] = [
@@ -44,7 +45,8 @@ export class CategoriesComponent implements OnInit {
   constructor(
     private apiService: AdminService,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private notificationService: NotificationService
   ) { }
 
   ngOnInit(): void {
@@ -92,12 +94,14 @@ export class CategoriesComponent implements OnInit {
         next: () => {
           this.confirmOpen = false;
           this.pendingDeleteId = null;
+          this.notificationService.success('Xóa danh mục thành công.');
           this.loadCategories();
           this.cdr.markForCheck();
         },
         error: (err) => {
           this.confirmOpen = false;
           this.pendingDeleteId = null;
+          this.notificationService.error('Lỗi khi xóa danh mục.');
           console.error('Lỗi xóa danh mục:', err);
           this.cdr.markForCheck();
         }
@@ -108,12 +112,14 @@ export class CategoriesComponent implements OnInit {
           this.selectedIds.clear();
           this.confirmOpen = false;
           this.isBulkDelete = false;
+          this.notificationService.success('Đã xóa các danh mục đã chọn thành công.');
           this.loadCategories();
           this.cdr.markForCheck();
         },
         error: (err) => {
           this.confirmOpen = false;
           this.isBulkDelete = false;
+          this.notificationService.error('Lỗi khi xóa hàng loạt danh mục.');
           console.error('Lỗi xóa hàng loạt danh mục:', err);
           this.cdr.markForCheck();
         }
@@ -139,6 +145,17 @@ export class CategoriesComponent implements OnInit {
       this.cdr.markForCheck();
     } else if (e.action === 'edit') {
       this.router.navigate(['/admin/categories', e.row.id, 'edit']);
+    }
+  }
+
+  onCellClick(event: { column: TableColumn; row: any }): void {
+    if (event.column.key === 'productCount') {
+      const categoryId = event.row.id || event.row._id;
+      if (categoryId) {
+        this.router.navigate(['/admin/products'], {
+          queryParams: { categoryId }
+        });
+      }
     }
   }
 

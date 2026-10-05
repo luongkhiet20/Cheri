@@ -1434,7 +1434,7 @@ app.post('/api/products/import-csv', async (req, res) => {
 app.get('/api/products/categories', async (req, res) => {
   try {
     const lang = req.query.lang || req.headers['lang'] || 'vi';
-    const categoriesRaw = await db.collection('categories').find({}).toArray();
+    const categoriesRaw = await db.collection('categories').find({}).sort({ 'vi.position': 1, _id: 1 }).toArray();
     const formatted = categoriesRaw.map(c => {
       const langObj = c[lang] || c.vi || c.en || {};
       const fallbackObj = c.vi || c.en || {};
@@ -1445,6 +1445,7 @@ app.get('/api/products/categories', async (req, res) => {
         titleUrl: c.titleUrl,
         title: langObj.title || fallbackObj.title || c.title || c.titleUrl,
         description: langObj.description || fallbackObj.description || c.description || '',
+        position: typeof langObj.position === 'number' ? langObj.position : (typeof c.vi?.position === 'number' ? c.vi.position : (typeof c.position === 'number' ? c.position : 0)),
         visibility: langObj.visibility !== undefined ? langObj.visibility : (c.visibility !== false),
         subCategories: Array.isArray(c.subCategories) ? c.subCategories : [],
         mainImage: c.mainImage || { url: '', name: '' }
@@ -1832,7 +1833,6 @@ app.put('/api/products/:id', async (req, res) => {
       { $set: updateFields }
     );
 
-
     const updated = await db.collection('products').findOne({ _id: new ObjectId(id) });
 
     res.json({
@@ -1878,9 +1878,97 @@ app.post('/api/products/bulk-delete', async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 // 3. CATEGORIES API
 // ─────────────────────────────────────────────────────────────
+
+// Helper function to reorder sibling categories based on parentId scope
+async function reorderSiblingCategories(db, { categoryId, parentIdObj, newPosition, oldPosition = null, oldParentIdObj = null }) {
+  const currentParentQuery = parentIdObj ? parentIdObj : null;
+  const oldParentQuery = oldParentIdObj ? oldParentIdObj : null;
+
+  const isParentChanged = categoryId && String(currentParentQuery) !== String(oldParentQuery);
+
+  if (isParentChanged) {
+    // 1. Shift up siblings in the OLD parent group (fill the gap)
+    if (typeof oldPosition === 'number') {
+      await db.collection('categories').updateMany(
+        {
+          parentId: oldParentQuery,
+          _id: { $ne: new ObjectId(categoryId) },
+          'vi.position': { $gt: oldPosition }
+        },
+        { $inc: { 'vi.position': -1 } }
+      );
+    }
+    // 2. Shift down siblings in the NEW parent group (make room for newPosition)
+    await db.collection('categories').updateMany(
+      {
+        parentId: currentParentQuery,
+        _id: { $ne: new ObjectId(categoryId) },
+        'vi.position': { $gte: newPosition }
+      },
+      { $inc: { 'vi.position': 1 } }
+    );
+    return;
+  }
+
+  // Same parent group (or newly created category)
+  if (!categoryId) {
+    // CREATE: shift down any sibling with position >= newPosition
+    await db.collection('categories').updateMany(
+      {
+        parentId: currentParentQuery,
+        'vi.position': { $gte: newPosition }
+      },
+      { $inc: { 'vi.position': 1 } }
+    );
+    return;
+  }
+
+  // UPDATE in same parent group:
+  if (oldPosition === null || oldPosition === undefined) {
+    await db.collection('categories').updateMany(
+      {
+        parentId: currentParentQuery,
+        _id: { $ne: new ObjectId(categoryId) },
+        'vi.position': { $gte: newPosition }
+      },
+      { $inc: { 'vi.position': 1 } }
+    );
+    return;
+  }
+
+  if (newPosition === oldPosition) {
+    return;
+  }
+
+  if (newPosition > oldPosition) {
+    // Dịch lên: các category có position > oldPosition và <= newPosition giảm 1
+    // (ví dụ: A từ 3 -> 5; các category 4 -> 3, 5 -> 4; sau đó A thành 5)
+    await db.collection('categories').updateMany(
+      {
+        parentId: currentParentQuery,
+        _id: { $ne: new ObjectId(categoryId) },
+        'vi.position': { $gt: oldPosition, $lte: newPosition }
+      },
+      { $inc: { 'vi.position': -1 } }
+    );
+  } else {
+    // newPosition < oldPosition
+    // Đẩy xuống: các category có position >= newPosition và < oldPosition tăng 1
+    // (ví dụ: A từ 5 -> 2; các category 2 -> 3, 3 -> 4, 4 -> 5; sau đó A thành 2)
+    await db.collection('categories').updateMany(
+      {
+        parentId: currentParentQuery,
+        _id: { $ne: new ObjectId(categoryId) },
+        'vi.position': { $gte: newPosition, $lt: oldPosition }
+      },
+      { $inc: { 'vi.position': 1 } }
+    );
+  }
+}
+
 app.get('/api/categories', async (req, res) => {
   try {
-    const categoriesRaw = await db.collection('categories').find({}).toArray();
+    const categoriesRaw = await db.collection('categories').find({}).sort({ 'vi.position': 1, _id: 1 }).toArray();
     const data = await Promise.all(categoriesRaw.map(async (c) => {
       const name = c.vi?.title || c.title || c.titleUrl || 'Danh mục';
       // Đếm số sản phẩm thuộc danh mục này
@@ -1893,12 +1981,14 @@ app.get('/api/categories', async (req, res) => {
       });
 
       const isVisible = c.vi?.visibility !== false;
+      const position = typeof c.vi?.position === 'number' ? c.vi.position : (typeof c.position === 'number' ? c.position : 0);
       return {
         id: c._id.toString(),
         _id: c._id.toString(),
         name,
         slug: c.titleUrl || '',
         productCount: productCount || 0,
+        position,
         status: isVisible ? 'Hiển thị' : 'Ẩn',
         statusVariant: isVisible ? 'success' : 'neutral',
         image: c.mainImage?.url || ''
@@ -1984,6 +2074,18 @@ app.post('/api/categories', async (req, res) => {
       }
     }
 
+    // Parse and validate position (integer >= 0)
+    const rawPos = vi.position !== undefined ? vi.position : body.position;
+    const parsedPos = parseInt(rawPos, 10);
+    const position = Number.isInteger(parsedPos) && parsedPos >= 0 ? parsedPos : 0;
+
+    // Reorder siblings in the same parent group to avoid duplicate position
+    await reorderSiblingCategories(db, {
+      categoryId: null,
+      parentIdObj,
+      newPosition: position
+    });
+
     const mainImageUrl = body.mainImage?.url || body.image || '';
     const mainImageName = body.mainImage?.name || title || 'category-image';
 
@@ -2000,7 +2102,7 @@ app.post('/api/categories', async (req, res) => {
       vi: {
         title: title,
         description: (vi.description !== undefined ? vi.description : (body.description || '')).trim(),
-        position: Number(vi.position !== undefined ? vi.position : (body.position || 0)),
+        position: position,
         visibility: vi.visibility !== false && body.visibility !== false,
         menuHidden: !!vi.menuHidden
       },
@@ -2072,6 +2174,15 @@ app.put('/api/categories/:id', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Tên danh mục hoặc mã slug đã tồn tại trong hệ thống' });
     }
 
+    const oldCat = await db.collection('categories').findOne({ _id: new ObjectId(id) });
+    if (!oldCat) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy danh mục' });
+    }
+    const oldVi = oldCat.vi || {};
+    const oldTitle = oldVi.title || oldCat.title;
+    const oldPosition = typeof oldVi.position === 'number' ? oldVi.position : (typeof oldCat.position === 'number' ? oldCat.position : 0);
+    const oldParentIdObj = oldCat.parentId || null;
+
     let parentIdObj = null;
     if (body.parentId && body.parentId.trim() && ObjectId.isValid(body.parentId.trim()) && body.parentId.trim() !== id) {
       const parent = await db.collection('categories').findOne({ _id: new ObjectId(body.parentId.trim()) });
@@ -2080,8 +2191,27 @@ app.put('/api/categories/:id', async (req, res) => {
       }
     }
 
-    const mainImageUrl = body.mainImage?.url !== undefined ? body.mainImage.url : (body.image || '');
+    // Parse and validate position (integer >= 0)
+    const rawPos = vi.position !== undefined ? vi.position : body.position;
+    const parsedPos = parseInt(rawPos, 10);
+    const position = Number.isInteger(parsedPos) && parsedPos >= 0 ? parsedPos : oldPosition;
+
+    // Reorder siblings in the parent group to avoid duplicate positions
+    await reorderSiblingCategories(db, {
+      categoryId: id,
+      parentIdObj,
+      newPosition: position,
+      oldPosition,
+      oldParentIdObj
+    });
+
+    const mainImageUrl = body.mainImage?.url !== undefined ? body.mainImage.url : (body.image || oldCat.mainImage?.url || '');
     const mainImageName = body.mainImage?.name || title;
+
+    // Preserve existing vi fields if not explicitly overridden
+    const description = vi.description !== undefined ? String(vi.description).trim() : (body.description !== undefined ? String(body.description).trim() : (oldVi.description || ''));
+    const visibility = vi.visibility !== undefined ? vi.visibility : (body.visibility !== undefined ? body.visibility : (oldVi.visibility !== false));
+    const menuHidden = vi.menuHidden !== undefined ? !!vi.menuHidden : (oldVi.menuHidden !== undefined ? !!oldVi.menuHidden : false);
 
     const updateFields = {
       titleUrl: slug,
@@ -2090,14 +2220,11 @@ app.put('/api/categories/:id', async (req, res) => {
       parentId: parentIdObj,
       updatedAt: new Date().toISOString(),
       'vi.title': title,
-      'vi.description': (vi.description !== undefined ? vi.description : (body.description || '')).trim(),
-      'vi.position': Number(vi.position !== undefined ? vi.position : (body.position || 0)),
-      'vi.visibility': vi.visibility !== false && body.visibility !== false,
-      'vi.menuHidden': !!vi.menuHidden
+      'vi.description': description,
+      'vi.position': position,
+      'vi.visibility': visibility,
+      'vi.menuHidden': menuHidden
     };
-
-    const oldCat = await db.collection('categories').findOne({ _id: new ObjectId(id) });
-    const oldTitle = oldCat?.vi?.title || oldCat?.title;
 
     await db.collection('categories').updateOne(
       { _id: new ObjectId(id) },
@@ -2119,7 +2246,8 @@ app.put('/api/categories/:id', async (req, res) => {
         id,
         _id: id,
         name: title,
-        slug
+        slug,
+        position
       }
     });
   } catch (error) {
@@ -2132,7 +2260,7 @@ app.delete('/api/categories/:id', async (req, res) => {
   try {
     const id = req.params.id;
     if (!ObjectId.isValid(id)) {
-      return res.status(400).json({ success: false, message: 'ID không hợp lệ' });
+      return res.status(400).json({ success: false, message: 'ID danh mục không hợp lệ' });
     }
     const categoryToDelete = await db.collection('categories').findOne({ _id: new ObjectId(id) });
     const catTitle = categoryToDelete?.vi?.title || categoryToDelete?.title;
@@ -2146,6 +2274,20 @@ app.delete('/api/categories/:id', async (req, res) => {
         });
       }
     }
+
+    // Shift up remaining siblings in same parent group
+    if (typeof categoryToDelete?.vi?.position === 'number') {
+      const parentQuery = categoryToDelete.parentId ? categoryToDelete.parentId : null;
+      await db.collection('categories').updateMany(
+        {
+          parentId: parentQuery,
+          _id: { $ne: new ObjectId(id) },
+          'vi.position': { $gt: categoryToDelete.vi.position }
+        },
+        { $inc: { 'vi.position': -1 } }
+      );
+    }
+
     const result = await db.collection('categories').deleteOne({ _id: new ObjectId(id) });
     // Also remove from any parent's subCategories
     await db.collection('categories').updateMany(
@@ -2346,6 +2488,7 @@ function formatOrder(o) {
   return {
     id: mongoId,
     _id: mongoId,
+    userId: o.userId?.toString?.() || o._user?.toString?.() || null,
     orderId: orderCode,
     code: orderCode,
     customer: customerName,
@@ -2373,8 +2516,9 @@ function formatOrder(o) {
     shippingAddress,
     shippingMethodId: o.shippingMethodId ?? null,
     shippingMethodSnapshot: o.shippingMethodSnapshot ?? null,
+    shipping: o.shipping || null,
     shippingFee,
-    shippingProvider: o.shippingProvider || null,
+    shippingProvider: o.shippingProvider || o.shipping?.provider || null,
     trackingNumber: o.trackingNumber || null,
     estimatedDeliveryDate: o.estimatedDeliveryDate ?? null,
     shippedAt: o.shippedAt ?? null,
@@ -2944,7 +3088,24 @@ app.post('/api/admin/orders', async (req, res) => {
 // 4.1 GET /api/orders (List with composed search, filters and pagination)
 app.get('/api/orders', async (req, res) => {
   try {
-    const ordersRaw = await db.collection('orders').find({}).sort({ _id: -1 }).toArray();
+    const ordersFilter = {};
+    if (req.query.userId) {
+      const uId = String(req.query.userId).trim();
+      if (ObjectId.isValid(uId)) {
+        ordersFilter.$or = [
+          { userId: new ObjectId(uId) },
+          { userId: uId },
+          { _user: new ObjectId(uId) },
+          { _user: uId }
+        ];
+      } else {
+        ordersFilter.$or = [
+          { userId: uId },
+          { _user: uId }
+        ];
+      }
+    }
+    const ordersRaw = await db.collection('orders').find(ordersFilter).sort({ _id: -1 }).toArray();
     const formattedOrders = ordersRaw.map(formatOrder);
     const paymentMethodCodeById = new Map();
 
@@ -3322,6 +3483,22 @@ function formatUserResponse(u) {
     : (u.roles === 'admin' || u.roles === 'superadmin');
   const isActive = u.status !== false;
 
+  let avatarUrl = '';
+  if (typeof u.avatar === 'string' && u.avatar.trim()) {
+    avatarUrl = u.avatar.trim();
+  } else if (Array.isArray(u.images) && u.images.length > 0) {
+    const first = u.images[0];
+    if (typeof first === 'string' && first.trim()) {
+      avatarUrl = first.trim();
+    } else if (first && typeof first.url === 'string' && first.url.trim()) {
+      avatarUrl = first.url.trim();
+    }
+  } else if (typeof u.image === 'string' && u.image.trim()) {
+    avatarUrl = u.image.trim();
+  } else if (u.image && typeof u.image.url === 'string' && u.image.url.trim()) {
+    avatarUrl = u.image.url.trim();
+  }
+
   return {
     id: u._id.toString(),
     _id: u._id.toString(),
@@ -3338,7 +3515,7 @@ function formatUserResponse(u) {
     gender: u.gender || '',
     dateOfBirth: u.dateOfBirth || '',
     address: u.address || '',
-    avatar: u.avatar || '',
+    avatar: avatarUrl,
     description: u.description || '',
     cart: u.cart || { items: [] },
     images: Array.isArray(u.images) ? u.images : [],
@@ -3445,6 +3622,51 @@ app.get('/api/users/:id', async (req, res) => {
   } catch (error) {
     console.error('Error in GET /api/users/:id:', error);
     res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// 5.2.1 GET /api/users/:id/orders (Get orders of a specific user)
+app.get('/api/users/:id/orders', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'ID người dùng không hợp lệ' });
+    }
+
+    const userObjectId = new ObjectId(id);
+
+    // Verify user exists in collection users
+    const user = await db.collection('users').findOne({ _id: userObjectId }, { projection: { _id: 1 } });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản người dùng' });
+    }
+
+    // Query orders belonging to user (supporting both ObjectId and string representations of userId and _user)
+    const ordersRaw = await db.collection('orders')
+      .find({
+        $or: [
+          { userId: userObjectId },
+          { userId: id },
+          { _user: userObjectId },
+          { _user: id }
+        ]
+      })
+      .sort({ createdAt: -1, dateAdded: -1, _id: -1 })
+      .toArray();
+
+    const formattedOrders = ordersRaw.map(formatOrder);
+
+    res.json({
+      success: true,
+      data: formattedOrders,
+      total: formattedOrders.length
+    });
+  } catch (error) {
+    console.error('Error in GET /api/users/:id/orders:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Không thể tải danh sách đơn hàng. Vui lòng thử lại.'
+    });
   }
 });
 

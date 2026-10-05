@@ -1,1 +1,175 @@
 /* Products component styles (Shared layout inherited from admin-shared.css & admin/styles.css) */
+
+/* ── Compact Spacing for Page Content ──────────────────────── */
+:host .page-content {
+  gap: 14px;
+}
+
+:host .page-top {
+  margin-bottom: 0;
+}
+
+:host .page-title {
+  margin: 0;
+  font-family: var(--font-sans);
+}
+
+/* ── Category Breadcrumb ────────────────────────────────────── */
+.category-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  color: var(--cheri-text-secondary, #64748b);
+  margin-bottom: 4px;
+}
+
+.category-breadcrumb-link {
+  color: var(--cheri-primary, #9B1C1C);
+  text-decoration: none;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  transition: color 0.15s ease;
+}
+
+.category-breadcrumb-link:hover {
+  text-decoration: underline;
+  color: #771d1d;
+}
+
+.category-breadcrumb-sep {
+  color: var(--cheri-border, #cbd5e1);
+  font-size: 0.75rem;
+}
+
+.category-breadcrumb-current {
+  color: var(--cheri-text, #1e293b);
+  font-weight: 600;
+  font-family: var(--font-sans);
+}
+
+/* ── Category Filter Context Banner ─────────────────────────── */
+.category-filter-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 14px;
+  margin: 0;
+  background: linear-gradient(135deg, rgba(239, 246, 255, 0.95) 0%, rgba(240, 253, 244, 0.75) 100%);
+  border: 1px solid #bfdbfe;
+  border-radius: var(--radius-md, 8px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.category-filter-info {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-family: var(--font-sans);
+}
+
+.category-filter-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  background-color: #dbeafe;
+  color: #1e40af;
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  line-height: 1.4;
+}
+
+.category-filter-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  color: #1e293b;
+  line-height: 1.4;
+}
+
+.category-filter-name {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.category-filter-dot {
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
+.category-filter-count {
+  color: #475569;
+  font-weight: 500;
+  font-size: 0.8125rem;
+}
+
+.category-filter-actions {
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.category-filter-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  flex-shrink: 0;
+  border-radius: 6px;
+}
+
+.btn-clear-filter {
+  color: #dc2626 !important;
+  border-color: #fca5a5 !important;
+  background: #ffffff !important;
+}
+
+.btn-clear-filter:hover {
+  background-color: #fef2f2 !important;
+  border-color: #dc2626 !important;
+}
+
+.alert-box {
+  margin: 0;
+}
+
+.alert-inline-btn {
+  margin-left: 10px;
+  padding: 3px 10px;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+}
+
+@media (max-width: 640px) {
+  .category-filter-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .category-filter-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}

@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
+import { NotificationService } from '../../../shared/notification/notification.service';
 
 interface StatusOption {
   code: string;
@@ -57,13 +58,15 @@ export class OrderDetailComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private apiService: AdminService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private notificationService: NotificationService
   ) { }
 
   ngOnInit(): void {
     this.orderId = this.route.snapshot.paramMap.get('id');
     if (this.route.snapshot.queryParamMap.get('updated') === '1') {
       this.successMessage = 'Cập nhật đơn hàng thành công.';
+      this.notificationService.success('Cập nhật đơn hàng thành công.');
     }
     if (!this.orderId || this.orderId.trim() === '') {
       this.isNotFound = true;
@@ -202,8 +205,10 @@ export class OrderDetailComponent implements OnInit {
           this.selectedNextStatus = '';
           this.statusNote = '';
           this.successMessage = res.message || 'Cập nhật trạng thái đơn hàng thành công';
+          this.notificationService.success(this.successMessage);
         } else {
           this.errorMessage = res.message || 'Cập nhật trạng thái thất bại';
+          this.notificationService.error(this.errorMessage);
         }
         this.cdr.markForCheck();
       },
@@ -211,6 +216,7 @@ export class OrderDetailComponent implements OnInit {
         this.isUpdatingStatus = false;
         this.confirmOpen = false;
         this.errorMessage = 'Không thể cập nhật trạng thái đơn hàng. Vui lòng kiểm tra lại.';
+        this.notificationService.error(this.errorMessage);
         console.error('Update order status error:', err);
         this.cdr.markForCheck();
       }

@@ -5,10 +5,7 @@
       <h1 class="page-title">
         {{ isEditMode ? 'Chỉnh sửa phương thức vận chuyển' : 'Thêm phương thức vận chuyển' }}
       </h1>
-      <p class="page-subtitle">
-        {{ isEditMode ? 'Cập nhật cấu hình phương thức vận chuyển trong collection shippingmethods' : 'Tạo mới phương
-        thức vận chuyển vào collection shippingmethods trong MongoDB' }}
-      </p>
+
     </div>
     <div class="form-header-right">
       <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="isSubmitting">
@@ -167,15 +164,6 @@
       </div>
     </div>
 
-    <!-- Bottom Actions -->
-    <div class="form-bottom-actions">
-      <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="isSubmitting">
-        Hủy
-      </button>
-      <button type="submit" class="btn btn-primary" [disabled]="isSubmitting">
-        <span *ngIf="isSubmitting" class="spinner"></span>
-        {{ isEditMode ? 'Lưu thay đổi' : 'Lưu phương thức vận chuyển' }}
-      </button>
-    </div>
+
   </form>
 </div>

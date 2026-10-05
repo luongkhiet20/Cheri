@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
+import { NotificationService } from '../../../shared/notification/notification.service';
 
 export interface ProductVariant {
   key: string;            // Identity key e.g. "class:áo|color:đỏ|size:m"
@@ -146,7 +147,8 @@ export class ProductFormComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private apiService: AdminService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private notificationService: NotificationService
   ) { }
 
   ngOnInit(): void {
@@ -825,7 +827,8 @@ export class ProductFormComponent implements OnInit {
         next: (res) => {
           this.isSubmitting = false;
           if (res.success) {
-            this.successMessage = 'Cập nhật sản phẩm thành công vào cơ sở dữ liệu MongoDB!';
+            this.successMessage = 'Cập nhật sản phẩm thành công!';
+            this.notificationService.success('Cập nhật sản phẩm thành công!');
             this.isDirty = false;
             this.cdr.markForCheck();
             setTimeout(() => {
@@ -833,12 +836,14 @@ export class ProductFormComponent implements OnInit {
             }, 600);
           } else {
             this.errorMessage = res.message || 'Lỗi cập nhật sản phẩm';
+            this.notificationService.error(this.errorMessage);
             this.cdr.markForCheck();
           }
         },
         error: (err) => {
           this.isSubmitting = false;
           this.errorMessage = 'Lỗi lưu sản phẩm: ' + (err.error?.message || err.message);
+          this.notificationService.error(this.errorMessage);
           this.cdr.markForCheck();
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -849,7 +854,8 @@ export class ProductFormComponent implements OnInit {
         next: (res) => {
           this.isSubmitting = false;
           if (res.success) {
-            this.successMessage = 'Thêm sản phẩm thành công vào cơ sở dữ liệu MongoDB!';
+            this.successMessage = 'Thêm sản phẩm thành công!';
+            this.notificationService.success('Thêm sản phẩm thành công!');
             this.isDirty = false;
             this.cdr.markForCheck();
             const newId = res.id || res.data?._id;
@@ -862,12 +868,14 @@ export class ProductFormComponent implements OnInit {
             }, 600);
           } else {
             this.errorMessage = res.message || 'Lỗi thêm sản phẩm';
+            this.notificationService.error(this.errorMessage);
             this.cdr.markForCheck();
           }
         },
         error: (err) => {
           this.isSubmitting = false;
           this.errorMessage = 'Lỗi thêm sản phẩm: ' + (err.error?.message || err.message);
+          this.notificationService.error(this.errorMessage);
           this.cdr.markForCheck();
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }

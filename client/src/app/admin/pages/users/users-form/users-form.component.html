@@ -60,7 +60,8 @@
         <div class="form-group col-span-2" id="field-email">
           <label class="form-label required" for="user-email">Email</label>
           <input type="email" id="user-email" name="email" class="form-control" [class.is-invalid]="errors['email']"
-            [(ngModel)]="formData.email" (ngModelChange)="clearFieldError('email')" placeholder="example@domain.com" required />
+            [(ngModel)]="formData.email" (ngModelChange)="clearFieldError('email')" placeholder="example@domain.com"
+            required />
           <div *ngIf="errors['email']" class="field-error">{{ errors['email'] }}</div>
         </div>
 
@@ -68,10 +69,11 @@
         <div *ngIf="!isEditMode" class="form-group col-span-2" id="field-password">
           <label class="form-label required" for="user-password">Mật khẩu</label>
           <input type="password" id="user-password" name="password" class="form-control"
-            [class.is-invalid]="errors['password']" [(ngModel)]="formData.password" (ngModelChange)="clearFieldError('password')" placeholder="Tối thiểu 6 ký tự"
-            required />
+            [class.is-invalid]="errors['password']" [(ngModel)]="formData.password"
+            (ngModelChange)="clearFieldError('password')" placeholder="Tối thiểu 6 ký tự" required />
           <div *ngIf="errors['password']" class="field-error">{{ errors['password'] }}</div>
-          <small class="form-hint" *ngIf="!errors['password']">Mật khẩu sẽ được mã hóa an toàn trước khi lưu vào MongoDB.</small>
+          <small class="form-hint" *ngIf="!errors['password']">Mật khẩu sẽ được mã hóa an toàn trước khi lưu vào
+            MongoDB.</small>
         </div>
 
         <!-- Vai trò (roles) -->
@@ -79,11 +81,13 @@
           <label class="form-label required">Vai trò</label>
           <div class="checkbox-group" [class.is-invalid]="errors['roles']">
             <label class="custom-checkbox">
-              <input type="checkbox" id="user-role-user" [checked]="isRoleSelected('user')" (change)="onRoleChange('user', $event)" />
+              <input type="checkbox" id="user-role-user" [checked]="isRoleSelected('user')"
+                (change)="onRoleChange('user', $event)" />
               <span class="checkbox-label">Khách hàng (user)</span>
             </label>
             <label class="custom-checkbox">
-              <input type="checkbox" id="user-role-admin" [checked]="isRoleSelected('admin')" (change)="onRoleChange('admin', $event)" />
+              <input type="checkbox" id="user-role-admin" [checked]="isRoleSelected('admin')"
+                (change)="onRoleChange('admin', $event)" />
               <span class="checkbox-label">Quản trị viên (admin)</span>
             </label>
           </div>
@@ -170,16 +174,6 @@
       </div>
     </div>
 
-    <!-- Bottom Actions -->
-    <div class="form-bottom-actions">
-      <button type="button" class="btn btn-outline" (click)="onCancel()" [disabled]="isSubmitting">
-        Hủy
-      </button>
-      <button type="submit" class="btn btn-primary" [disabled]="isSubmitting">
-        <span *ngIf="isSubmitting" class="spinner-inline"></span>
-        <span>{{ isSubmitting ? 'Đang lưu...' : (isEditMode ? 'Lưu thay đổi' : 'Lưu tài khoản') }}</span>
-      </button>
-    </div>
 
   </form>
 </div>

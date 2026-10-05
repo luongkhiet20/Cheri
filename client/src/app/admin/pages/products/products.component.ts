@@ -1,7 +1,8 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
-import { Router } from '@angular/router';
-import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
+import { Router, ActivatedRoute } from '@angular/router';
+import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent, BadgeVariant } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
+import { NotificationService } from '../../shared/notification/notification.service';
 
 @Component({
   selector: 'app-products',
@@ -24,6 +25,16 @@ export class ProductsComponent implements OnInit {
   actions: RowAction[] = [
     { key: 'view', label: 'Xem' },
     { key: 'edit', label: 'Sửa' },
+    {
+      key: 'toggle',
+      label: 'Tắt',
+      showWhen: (r: any) => this?.isProductActive ? this.isProductActive(r) : (r?.status !== 'Ẩn' && r?.status !== 'Tạm ẩn' && r?.visibility !== false)
+    },
+    {
+      key: 'toggle',
+      label: 'Bật',
+      showWhen: (r: any) => this?.isProductActive ? !this.isProductActive(r) : (r?.status === 'Ẩn' || r?.status === 'Tạm ẩn' || r?.visibility === false)
+    },
     { key: 'delete', label: 'Xóa', variant: 'danger' },
   ];
 
@@ -56,6 +67,12 @@ export class ProductsComponent implements OnInit {
   selectedCategory = '';
   selectedStatus = '';
 
+  // ── Category Filter Context (When navigated from Categories page) ──
+  filteredCategoryId: string = '';
+  filteredCategoryName: string = '';
+  filteredCategorySlug: string = '';
+  categoryNotFound: boolean = false;
+
   // ── Selection State ──────────────────────────────────────────
   selectedIds: Set<any> = new Set();
 
@@ -86,12 +103,45 @@ export class ProductsComponent implements OnInit {
   constructor(
     private apiService: AdminService,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private route: ActivatedRoute,
+    private cdr: ChangeDetectorRef,
+    private notificationService: NotificationService
   ) { }
 
   ngOnInit(): void {
-    this.loadProducts();
+    this.route.queryParams.subscribe(params => {
+      const newCatId = params['categoryId'] ? String(params['categoryId']).trim() : '';
+      if (newCatId !== this.filteredCategoryId) {
+        this.filteredCategoryId = newCatId;
+        this.pagination.page = 1;
+      }
+      this.loadProducts();
+    });
     this.loadCategoriesForFilter();
+  }
+
+  clearCategoryFilter(): void {
+    this.filteredCategoryId = '';
+    this.filteredCategoryName = '';
+    this.filteredCategorySlug = '';
+    this.categoryNotFound = false;
+    this.router.navigate(['/admin/products'], {
+      queryParams: { categoryId: null },
+      queryParamsHandling: 'merge'
+    });
+  }
+
+  goBackToCategories(): void {
+    this.router.navigate(['/admin/categories']);
+  }
+
+  isProductActive(r: any): boolean {
+    if (!r) return false;
+    if (r.status === 'Hiện') return true;
+    if (r.status === 'Ẩn') return false;
+    if (r.status === 'Đang bán') return true;
+    if (r.status === 'Tạm ẩn') return false;
+    return r.visibility !== false && r.raw?.visibility !== false && r.raw?.vi?.visibility !== false;
   }
 
   loadCategoriesForFilter(): void {
@@ -121,19 +171,38 @@ export class ProductsComponent implements OnInit {
       pageSize: this.pagination.pageSize,
       search: this.searchQuery,
       category: this.selectedCategory,
+      categoryId: this.filteredCategoryId || undefined,
       status: this.selectedStatus
     }).subscribe({
       next: (res) => {
         this.isLoading = false;
         if (res.success) {
+          if (res.category) {
+            this.filteredCategoryName = res.category.name || '';
+            this.filteredCategorySlug = res.category.slug || '';
+            this.categoryNotFound = false;
+          } else if (res.categoryNotFound) {
+            this.categoryNotFound = true;
+            this.filteredCategoryName = '';
+            this.filteredCategorySlug = '';
+          } else if (!this.filteredCategoryId) {
+            this.filteredCategoryName = '';
+            this.filteredCategorySlug = '';
+            this.categoryNotFound = false;
+          }
           this.data = (res.data || []).map((p: any) => {
             const hasVariants = Array.isArray(p.variants) && p.variants.length > 0;
             const stock = hasVariants
               ? p.variants.reduce((sum: number, v: any) => sum + (Number(v.stock) || 0), 0)
               : Number(p.quantity !== undefined ? p.quantity : (p.raw?.vi?.quantity ?? (typeof p.stock === 'number' ? p.stock : 0)));
+            const isActive = this.isProductActive(p);
+            const status = isActive ? 'Hiện' : 'Ẩn';
+            const statusVariant: BadgeVariant = isActive ? 'success' : 'neutral';
             return {
               ...p,
-              stock
+              stock,
+              status,
+              statusVariant
             };
           });
           this.pagination = {
@@ -194,20 +263,98 @@ export class ProductsComponent implements OnInit {
 
   // ── Row Action Handler ───────────────────────────────────────
   onAction(event: ActionEvent): void {
-    if (event.action === 'view') {
-      // Navigate to /admin/products/:id
-      this.router.navigate(['/admin/products', event.row.id]);
-    } else if (event.action === 'edit') {
-      // Navigate to /admin/products/:id/edit
-      this.router.navigate(['/admin/products', event.row.id, 'edit']);
-    } else if (event.action === 'delete') {
-      this.isBulkDelete = false;
-      this.pendingDeleteId = event.row.id;
-      this.pendingDeleteName = event.row.name || '';
-      this.confirmMessage = `Bạn có chắc chắn muốn xóa sản phẩm "${this.pendingDeleteName}" không?`;
-      this.confirmOpen = true;
-      this.cdr.markForCheck();
+    switch (event.action) {
+      case 'view':
+        // Navigate to /admin/products/:id
+        this.router.navigate(['/admin/products', event.row.id]);
+        break;
+
+      case 'edit':
+        // Navigate to /admin/products/:id/edit
+        this.router.navigate(['/admin/products', event.row.id, 'edit']);
+        break;
+
+      case 'toggle':
+        this.onToggleStatus(event.row);
+        break;
+
+      case 'delete':
+        this.isBulkDelete = false;
+        this.pendingDeleteId = event.row.id;
+        this.pendingDeleteName = event.row.name || '';
+        this.confirmMessage = `Bạn có chắc chắn muốn xóa sản phẩm "${this.pendingDeleteName}" không?`;
+        this.confirmOpen = true;
+        this.cdr.markForCheck();
+        break;
     }
+  }
+
+  onToggleStatus(row: any): void {
+    if (!row) return;
+
+    const productId = row.id || row._id;
+    if (!productId) return;
+
+    const targetActive = !this.isProductActive(row);
+    const raw = row.raw || {};
+    const rawVi = raw.vi || {};
+
+    const payload: any = {
+      ...raw,
+      visibility: targetActive,
+      variants: row.variants || raw.variants || [],
+      vi: {
+        ...rawVi,
+        title: rawVi.title || row.title || row.name || '',
+        categoryLevel1: rawVi.categoryLevel1 || row.category || 'Thời trang',
+        visibility: targetActive
+      }
+    };
+
+    this.apiService.updateProduct(productId, payload).subscribe({
+      next: (res) => {
+        if (res && res.success) {
+          const newStatus = targetActive ? 'Hiện' : 'Ẩn';
+          const newStatusVariant: BadgeVariant = targetActive ? 'success' : 'neutral';
+
+          // Update local row state without reload
+          row.visibility = targetActive;
+          row.status = newStatus;
+          row.statusVariant = newStatusVariant;
+
+          if (row.raw) {
+            row.raw.visibility = targetActive;
+            if (row.raw.vi) {
+              row.raw.vi.visibility = targetActive;
+            }
+          }
+
+          if (res.data) {
+            const preservedStock = row.stock;
+            Object.assign(row, res.data, {
+              status: newStatus,
+              statusVariant: newStatusVariant,
+              visibility: targetActive,
+              stock: preservedStock
+            });
+          }
+
+          this.data = [...this.data];
+          const successMsg = targetActive
+            ? 'Đã bật sản phẩm thành công.'
+            : 'Đã tắt sản phẩm thành công.';
+          this.showSuccess(successMsg);
+          this.cdr.markForCheck();
+        } else {
+          this.showError(res?.message || 'Không thể cập nhật trạng thái sản phẩm.');
+        }
+      },
+      error: (err) => {
+        console.error('Lỗi khi cập nhật trạng thái sản phẩm:', err);
+        const errMsg = err?.error?.message || err?.message || 'Lỗi khi cập nhật trạng thái sản phẩm.';
+        this.showError(errMsg);
+      }
+    });
   }
 
   onConfirmDelete(): void {
@@ -253,17 +400,13 @@ export class ProductsComponent implements OnInit {
 
   showSuccess(msg: string): void {
     this.successMessage = msg;
+    this.notificationService.success(msg);
     this.cdr.markForCheck();
-    setTimeout(() => {
-      if (this.successMessage === msg) {
-        this.successMessage = '';
-        this.cdr.markForCheck();
-      }
-    }, 4000);
   }
 
   showError(msg: string): void {
     this.errorMessage = msg;
+    this.notificationService.error(msg);
     this.cdr.markForCheck();
   }
 

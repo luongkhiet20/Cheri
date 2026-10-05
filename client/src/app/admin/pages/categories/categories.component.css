@@ -1,1 +1,28 @@
+/* =============================================
+   CATEGORIES COMPONENT STYLES
+   ============================================= */
 
+/* ── Cột "Số sản phẩm" (Product Count Link) ── */
+:host ::ng-deep td[data-label="Số sản phẩm"] .admin-table__clickable-cell,
+:host ::ng-deep td[data-key="productCount"] .admin-table__clickable-cell,
+:host ::ng-deep .admin-table__td--product-count .admin-table__clickable-cell {
+  color: var(--cheri-primary, #74070E) !important;
+  text-decoration: underline !important;
+  text-underline-offset: 3px !important;
+  text-decoration-color: rgba(116, 7, 14, 0.4) !important;
+  transition: color 0.15s ease-in-out, text-decoration-color 0.15s ease-in-out, background-color 0.15s ease-in-out !important;
+}
+
+:host ::ng-deep td[data-label="Số sản phẩm"] .admin-table__clickable-cell:hover,
+:host ::ng-deep td[data-key="productCount"] .admin-table__clickable-cell:hover,
+:host ::ng-deep .admin-table__td--product-count .admin-table__clickable-cell:hover {
+  color: #5F060B !important;
+  text-decoration-color: #5F060B !important;
+  background-color: rgba(116, 7, 14, 0.08) !important;
+}
+
+:host ::ng-deep td[data-label="Số sản phẩm"] .admin-table__clickable-cell:focus-visible,
+:host ::ng-deep td[data-key="productCount"] .admin-table__clickable-cell:focus-visible,
+:host ::ng-deep .admin-table__td--product-count .admin-table__clickable-cell:focus-visible {
+  outline-color: var(--cheri-primary, #74070E) !important;
+}

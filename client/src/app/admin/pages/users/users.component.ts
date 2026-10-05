@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
+import { NotificationService } from '../../shared/notification/notification.service';
 
 @Component({
   selector: 'app-users',
@@ -11,6 +12,7 @@ import { AdminService } from '../../services/admin.service';
 })
 export class UsersComponent implements OnInit {
   columns: TableColumn[] = [
+    { key: 'image', label: '', type: 'image', shape: 'circle', isAvatar: true, width: '60px' },
     { key: 'name', label: 'Họ tên', type: 'text', sortable: true },
     { key: 'email', label: 'Email', type: 'text' },
     { key: 'phone', label: 'Số điện thoại', type: 'text' },
@@ -48,11 +50,19 @@ export class UsersComponent implements OnInit {
   constructor(
     private apiService: AdminService,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private notificationService: NotificationService
   ) { }
 
   ngOnInit(): void {
     this.loadUsers();
+  }
+
+  getUserInitial(user: any): string {
+    if (!user) return 'U';
+    const raw = (typeof user === 'string' ? user : (user.fullName || user.name || user.email || '')).trim();
+    if (!raw) return 'U';
+    return String(Array.from(raw)[0] || 'U').toUpperCase();
   }
 
   loadUsers(): void {
@@ -63,10 +73,21 @@ export class UsersComponent implements OnInit {
         if (res.success) {
           this.allUsers = (res.data || []).map((u: any) => {
             const isActive = u.status !== false;
+            const avatarUrl = (u.avatar && typeof u.avatar === 'string' && u.avatar.trim() !== '')
+              ? u.avatar.trim()
+              : ((u.image && typeof u.image === 'string' && !u.image.startsWith('data:image')) ? u.image.trim() : '');
+            const initial = this.getUserInitial(u);
+            const displayName = u.fullName || u.name || u.email?.split('@')[0] || 'Người dùng';
+
             return {
               ...u,
               id: u.id || u._id,
-              name: u.fullName || u.name || u.email?.split('@')[0] || 'Người dùng',
+              avatar: avatarUrl,
+              image: avatarUrl,
+              initial,
+              userInitial: initial,
+              avatarAlt: displayName,
+              name: displayName,
               phone: u.phoneNumber || u.phone || '—',
               role: u.roleText || (Array.isArray(u.roles) ? (u.roles.includes('admin') || u.roles.includes('superadmin') ? 'Admin' : 'Khách hàng') : u.role) || 'Khách hàng',
               status: u.statusText || (isActive ? 'Hoạt động' : 'Đã khóa'),
@@ -129,6 +150,7 @@ export class UsersComponent implements OnInit {
         next: () => {
           this.confirmOpen = false;
           this.pendingDeleteId = null;
+          this.notificationService.success('Xóa người dùng thành công.');
           this.loadUsers();
           this.cdr.markForCheck();
         },
@@ -136,6 +158,7 @@ export class UsersComponent implements OnInit {
           console.error('Lỗi khi xóa user:', err);
           this.confirmOpen = false;
           this.pendingDeleteId = null;
+          this.notificationService.error('Lỗi khi xóa người dùng.');
           this.cdr.markForCheck();
         }
       });
@@ -159,8 +182,12 @@ export class UsersComponent implements OnInit {
       this.router.navigate(['/admin/users', e.row.id, 'edit']);
     } else if (e.action === 'lock') {
       this.apiService.toggleUserStatus(e.row.id).subscribe({
-        next: () => this.loadUsers(),
+        next: () => {
+          this.notificationService.success('Cập nhật trạng thái người dùng thành công.');
+          this.loadUsers();
+        },
         error: (err) => {
+          this.notificationService.error('Lỗi khi cập nhật trạng thái người dùng.');
           console.error(err);
           this.cdr.markForCheck();
         }

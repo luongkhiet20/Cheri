@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
+import { NotificationService } from '../../shared/notification/notification.service';
 
 @Component({
   selector: 'app-shipping-methods',
@@ -83,7 +84,8 @@ export class ShippingMethodsComponent implements OnInit {
   constructor(
     private apiService: AdminService,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private notificationService: NotificationService
   ) { }
 
   ngOnInit(): void {
@@ -318,23 +320,13 @@ export class ShippingMethodsComponent implements OnInit {
 
   private showSuccess(msg: string): void {
     this.successMessage = msg;
+    this.notificationService.success(msg);
     this.cdr.markForCheck();
-    setTimeout(() => {
-      if (this.successMessage === msg) {
-        this.successMessage = '';
-        this.cdr.markForCheck();
-      }
-    }, 4000);
   }
 
   private showError(msg: string): void {
     this.errorMessage = msg;
+    this.notificationService.error(msg);
     this.cdr.markForCheck();
-    setTimeout(() => {
-      if (this.errorMessage === msg) {
-        this.errorMessage = '';
-        this.cdr.markForCheck();
-      }
-    }, 5000);
   }
 }

@@ -172,30 +172,22 @@
       </div>
 
       <!-- Position -->
-      <div class="form-card">
+      <div class="form-card" id="field-position">
         <h2 class="card-section-title">Thứ tự hiển thị</h2>
 
         <div class="form-group">
           <label class="form-label" for="categoryPosition">Vị trí sắp xếp</label>
-          <input type="number" id="categoryPosition" class="form-control" [(ngModel)]="formData.position"
-            (ngModelChange)="markDirty()" name="position" min="0" />
-          <span class="form-hint">Số thứ tự ưu tiên khi sắp xếp hiển thị trên menu cửa hàng (0, 1, 2...)</span>
+          <input type="number" id="categoryPosition" class="form-control" [class.is-invalid]="errors['position']"
+            [(ngModel)]="formData.position" (ngModelChange)="markDirty(); clearFieldError('position')"
+            name="position" min="0" step="1" />
+          <div *ngIf="errors['position']" class="invalid-feedback">
+            {{ errors['position'] }}
+          </div>
+          <span class="form-hint" *ngIf="!errors['position']">Số thứ tự ưu tiên khi sắp xếp hiển thị trên menu cửa hàng (0, 1, 2...)</span>
         </div>
       </div>
 
-      <!-- Action Card -->
-      <div class="form-card action-bottom-card">
-        <button type="button" class="btn btn-primary btn-block mb-2" (click)="onSubmit()" [disabled]="isSubmitting"
-          id="btn-save-bottom">
-          <span *ngIf="isSubmitting" class="spinner-inline"></span>
-          {{ isSubmitting ? 'Đang lưu...' : (isEditMode ? 'Lưu thay đổi' : 'Lưu danh mục') }}
-        </button>
 
-        <button type="button" class="btn btn-outline btn-block" (click)="onCancel()" [disabled]="isSubmitting"
-          id="btn-cancel-bottom">
-          Hủy bỏ
-        </button>
-      </div>
 
     </div>
 

@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
+import { NotificationService } from '../../../shared/notification/notification.service';
 
 export interface PageFormData {
   title: string;
@@ -41,7 +42,8 @@ export class PageFormComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private apiService: AdminService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private notificationService: NotificationService
   ) { }
 
   ngOnInit(): void {
@@ -149,19 +151,25 @@ export class PageFormComponent implements OnInit {
         next: (res) => {
           this.isSubmitting = false;
           if (res.success) {
-            this.successMessage = 'Cập nhật trang thành công vào MongoDB!';
+            const msg = 'Cập nhật trang thành công!';
+            this.successMessage = msg;
+            this.notificationService.success(msg);
             this.isDirty = false;
             setTimeout(() => {
               this.router.navigate(['/admin/pages', this.pageId]);
             }, 600);
           } else {
-            this.errorMessage = res.message || 'Lỗi cập nhật trang';
+            const msg = res.message || 'Lỗi cập nhật trang';
+            this.errorMessage = msg;
+            this.notificationService.error(msg);
           }
           this.cdr.markForCheck();
         },
         error: (err) => {
           this.isSubmitting = false;
-          this.errorMessage = err.error?.message || 'Lỗi khi cập nhật trang vào MongoDB';
+          const msg = err.error?.message || 'Lỗi khi cập nhật trang vào MongoDB';
+          this.errorMessage = msg;
+          this.notificationService.error(msg);
           this.cdr.markForCheck();
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -172,7 +180,9 @@ export class PageFormComponent implements OnInit {
         next: (res) => {
           this.isSubmitting = false;
           if (res.success) {
-            this.successMessage = 'Tạo trang mới thành công vào MongoDB!';
+            const msg = 'Tạo trang mới thành công!';
+            this.successMessage = msg;
+            this.notificationService.success(msg);
             this.isDirty = false;
             const newId = res.id || res.data?.id || res.data?._id;
             setTimeout(() => {
@@ -183,13 +193,17 @@ export class PageFormComponent implements OnInit {
               }
             }, 600);
           } else {
-            this.errorMessage = res.message || 'Lỗi tạo trang mới';
+            const msg = res.message || 'Lỗi tạo trang mới';
+            this.errorMessage = msg;
+            this.notificationService.error(msg);
           }
           this.cdr.markForCheck();
         },
         error: (err) => {
           this.isSubmitting = false;
-          this.errorMessage = err.error?.message || 'Lỗi khi tạo trang mới trong MongoDB';
+          const msg = err.error?.message || 'Lỗi khi tạo trang mới trong MongoDB';
+          this.errorMessage = msg;
+          this.notificationService.error(msg);
           this.cdr.markForCheck();
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -220,15 +234,20 @@ export class PageFormComponent implements OnInit {
       next: (res) => {
         this.confirmDeleteOpen = false;
         if (res.success) {
+          this.notificationService.success('Xóa trang thành công');
           this.router.navigate(['/admin/pages']);
         } else {
-          this.errorMessage = res.message || 'Lỗi khi xóa trang';
+          const msg = res.message || 'Lỗi khi xóa trang';
+          this.errorMessage = msg;
+          this.notificationService.error(msg);
           this.cdr.markForCheck();
         }
       },
       error: (err) => {
         this.confirmDeleteOpen = false;
-        this.errorMessage = err.error?.message || 'Lỗi khi xóa trang khỏi MongoDB';
+        const msg = err.error?.message || 'Lỗi khi xóa trang khỏi MongoDB';
+        this.errorMessage = msg;
+        this.notificationService.error(msg);
         this.cdr.markForCheck();
       }
     });

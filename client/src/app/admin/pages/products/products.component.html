@@ -3,7 +3,16 @@
   <!-- Page Header -->
   <div class="page-top">
     <div>
-      <h1 class="page-title">Quản lý sản phẩm</h1>
+      <div *ngIf="filteredCategoryId && filteredCategoryName" class="category-breadcrumb">
+        <a routerLink="/admin/categories" class="category-breadcrumb-link">Quản lý danh mục</a>
+        <span class="category-breadcrumb-sep">/</span>
+        <span class="category-breadcrumb-current">{{ filteredCategoryName }}</span>
+        <span class="category-breadcrumb-sep">/</span>
+        <span class="category-breadcrumb-current">Sản phẩm</span>
+      </div>
+      <h1 class="page-title">
+        {{ filteredCategoryId && filteredCategoryName ? ('Sản phẩm thuộc danh mục: ' + filteredCategoryName) : 'Quản lý sản phẩm' }}
+      </h1>
     </div>
     <div class="page-actions">
       <button class="btn btn-outline" id="btn-import-csv" (click)="openCsvModal()">
@@ -24,6 +33,55 @@
         </svg>
         Thêm sản phẩm
       </button>
+    </div>
+  </div>
+
+  <!-- Category Filter Context Banner -->
+  <div *ngIf="filteredCategoryId && filteredCategoryName" class="category-filter-banner" role="region" aria-label="Bộ lọc danh mục đang hoạt động">
+    <div class="category-filter-info">
+      <span class="category-filter-badge">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+        </svg>
+        Danh mục
+      </span>
+      <span class="category-filter-label">
+        <span class="category-filter-name">{{ filteredCategoryName }}</span>
+        <span class="category-filter-dot">•</span>
+        <span class="category-filter-count">{{ displayTotal }} sản phẩm</span>
+      </span>
+    </div>
+    <div class="category-filter-actions">
+      <button type="button" class="btn btn-outline btn-sm" id="btn-back-to-categories" (click)="goBackToCategories()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        Quay lại danh mục
+      </button>
+      <button type="button" class="btn btn-outline btn-sm btn-clear-filter" id="btn-clear-category-filter" (click)="clearCategoryFilter()" aria-label="Xóa bộ lọc danh mục">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+        Xóa lọc
+      </button>
+    </div>
+  </div>
+
+  <!-- Category Not Found Alert -->
+  <div *ngIf="categoryNotFound" class="alert-box alert-error" role="alert">
+    <div class="alert-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+    </div>
+    <div class="alert-content">
+      Không tìm thấy danh mục trong hệ thống.
+      <button type="button" class="btn btn-outline btn-sm alert-inline-btn" (click)="clearCategoryFilter()">Xem tất cả sản phẩm</button>
+      <button type="button" class="btn btn-outline btn-sm alert-inline-btn" (click)="goBackToCategories()">Quay lại Quản lý danh mục</button>
     </div>
   </div>
 
@@ -61,8 +119,9 @@
   <app-loading-state *ngIf="isLoading" message="Đang tải dữ liệu sản phẩm từ MongoDB Atlas..."></app-loading-state>
 
   <!-- Empty State -->
-  <app-empty-state *ngIf="!isLoading && (!data || data.length === 0)" title="Không tìm thấy sản phẩm nào"
-    description="Không có sản phẩm nào khớp với điều kiện tìm kiếm hoặc cơ sở dữ liệu chưa có sản phẩm."
+  <app-empty-state *ngIf="!isLoading && (!data || data.length === 0)"
+    [title]="filteredCategoryId ? ('Chưa có sản phẩm thuộc danh mục ' + (filteredCategoryName || 'này')) : 'Không tìm thấy sản phẩm nào'"
+    [description]="filteredCategoryId ? 'Danh mục này hiện chưa có sản phẩm nào. Bạn có thể thêm sản phẩm mới hoặc xóa bộ lọc để xem tất cả sản phẩm.' : 'Không có sản phẩm nào khớp với điều kiện tìm kiếm hoặc cơ sở dữ liệu chưa có sản phẩm.'"
     actionLabel="+ Thêm sản phẩm mới" (action)="onAddProduct()"></app-empty-state>
 
   <!-- Data Table with row checkboxes -->

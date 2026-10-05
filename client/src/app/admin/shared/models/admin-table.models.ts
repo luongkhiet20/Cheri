@@ -6,10 +6,13 @@
 export interface TableColumn {
   key: string;
   label: string;
-  type?: 'text' | 'number' | 'currency' | 'date' | 'image' | 'status' | 'badge' | 'sku-list';
+  type?: 'text' | 'number' | 'currency' | 'date' | 'image' | 'avatar' | 'status' | 'badge' | 'sku-list';
   width?: string;
   sortable?: boolean;
   align?: 'left' | 'center' | 'right';
+  clickable?: boolean;
+  shape?: 'circle' | 'square' | 'rounded';
+  isAvatar?: boolean;
 }
 
 /** Row action definition */

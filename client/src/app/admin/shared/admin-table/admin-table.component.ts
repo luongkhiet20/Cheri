@@ -32,6 +32,7 @@ export class AdminTableComponent implements OnChanges, AfterViewChecked {
 
   // ── Existing Outputs ─────────────────────────────────────────
   @Output() actionClick = new EventEmitter<ActionEvent>();
+  @Output() cellClick = new EventEmitter<{ column: TableColumn; row: any }>();
   @Output() pageChange = new EventEmitter<number>();
   @Output() pageSizeChange = new EventEmitter<number>();
 
@@ -75,6 +76,7 @@ export class AdminTableComponent implements OnChanges, AfterViewChecked {
   // ── ngOnChanges: clear selection if data changes ─────────────
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['data']) {
+      this.failedAvatarKeys.clear();
       // Remove selected IDs that no longer exist in new data
       const existingKeys = new Set(this.data.map(r => r[this.rowKey]));
       const cleaned = new Set([...this.selectedIds].filter(id => existingKeys.has(id)));
@@ -168,7 +170,58 @@ export class AdminTableComponent implements OnChanges, AfterViewChecked {
     return col.type === 'status' || col.type === 'badge';
   }
 
-  isImageColumn(col: TableColumn): boolean { return col.type === 'image'; }
+  isImageColumn(col: TableColumn): boolean { return col.type === 'image' || col.type === 'avatar'; }
+
+  isAvatarColumn(col: TableColumn, row?: any): boolean {
+    if (col.type === 'avatar' || col.isAvatar === true || col.shape === 'circle') return true;
+    if (col.type === 'image' && row && (row.avatar !== undefined || (row.role && !row.price))) return true;
+    return false;
+  }
+
+  isProductImageColumn(col: TableColumn, row?: any): boolean {
+    return col.type === 'image' && !this.isAvatarColumn(col, row);
+  }
+
+  failedAvatarKeys = new Set<string>();
+
+  getAvatarKey(row: any, col: TableColumn): string {
+    const id = this.getRowId(row) || '';
+    const src = this.getCellValue(row, col.key) || row.avatar || '';
+    return `${id}_${src}`;
+  }
+
+  getAvatarUrl(row: any, col: TableColumn): string {
+    const val = this.getCellValue(row, col.key) || row.avatar || '';
+    if (typeof val === 'string' && val.trim() && !val.startsWith('data:image/svg+xml')) {
+      return val.trim();
+    }
+    return '';
+  }
+
+  hasValidAvatar(row: any, col: TableColumn): boolean {
+    const url = this.getAvatarUrl(row, col);
+    if (!url) return false;
+    const key = this.getAvatarKey(row, col);
+    return !this.failedAvatarKeys.has(key);
+  }
+
+  onAvatarError(row: any, col: TableColumn): void {
+    const key = this.getAvatarKey(row, col);
+    this.failedAvatarKeys.add(key);
+    this.cdr.markForCheck();
+  }
+
+  getAvatarInitial(row: any, col?: TableColumn): string {
+    if (row.initial) return String(row.initial).toUpperCase();
+    if (row.userInitial) return String(row.userInitial).toUpperCase();
+    const raw = (row.fullName || row.name || row.email || '').trim();
+    if (!raw) return 'U';
+    return String(Array.from(raw)[0] || 'U').toUpperCase();
+  }
+
+  getAvatarAlt(row: any, col?: TableColumn): string {
+    return (row.fullName || row.name || row.email || 'Ảnh đại diện').trim();
+  }
 
   isSkuColumn(col: TableColumn): boolean {
     return col.type === 'sku-list' || col.key === 'sku';
@@ -222,6 +275,12 @@ export class AdminTableComponent implements OnChanges, AfterViewChecked {
   getHiddenSkuCount(row: any, col: TableColumn): number {
     const list = this.getSkuList(row, col);
     return Math.max(0, list.length - 3);
+  }
+
+  onCellClick(col: TableColumn, row: any, event: MouseEvent): void {
+    if (!col.clickable) return;
+    event.stopPropagation();
+    this.cellClick.emit({ column: col, row });
   }
 
   onAction(event: ActionEvent): void { this.actionClick.emit(event); }

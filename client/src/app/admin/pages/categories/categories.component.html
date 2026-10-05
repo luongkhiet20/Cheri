@@ -34,6 +34,7 @@
     [pagination]="pagination" [selectable]="true" [selectedIds]="selectedIds"
     totalLabel="danh mục"
     (actionClick)="onAction($event)"
+    (cellClick)="onCellClick($event)"
     (selectionChange)="onSelectionChange($event)"
     (pageChange)="onPageChange($event)"
     (pageSizeChange)="onPageSizeChange($event)"

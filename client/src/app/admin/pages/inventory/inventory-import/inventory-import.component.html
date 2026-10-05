@@ -234,15 +234,6 @@
       </div>
     </div>
 
-    <!-- Bottom Actions -->
-    <div class="form-bottom-actions">
-      <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="isSubmitting">
-        Hủy
-      </button>
-      <button type="submit" class="btn btn-primary" [disabled]="isSubmitting">
-        <span *ngIf="isSubmitting" class="spinner"></span>
-        {{ isEditMode ? 'Lưu thay đổi' : 'Nhập kho' }}
-      </button>
-    </div>
+
   </form>
 </div>

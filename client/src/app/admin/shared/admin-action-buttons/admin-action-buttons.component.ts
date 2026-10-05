@@ -20,12 +20,20 @@ export class AdminActionButtonsComponent {
 
   getButtonClass(action: RowAction): string {
     const base = 'action-btn';
-    switch (action.variant) {
-      case 'danger':   return `${base} action-btn--danger`;
-      case 'warning':  return `${base} action-btn--warning`;
-      case 'primary':  return `${base} action-btn--primary`;
-      default:         return base;
+    const isViewAction = action.key === 'view' || action.label === 'Xem';
+    const actionKeyClass = action.key ? `action-btn--${action.key}` : '';
+    const classes = [base, actionKeyClass];
+    if (isViewAction && !classes.includes('action-btn--view')) {
+      classes.push('action-btn--view');
     }
+
+    switch (action.variant) {
+      case 'danger':   classes.push('action-btn--danger'); break;
+      case 'warning':  classes.push('action-btn--warning'); break;
+      case 'primary':  classes.push('action-btn--primary'); break;
+      default:         break;
+    }
+    return classes.filter(Boolean).join(' ');
   }
 
   onClick(action: RowAction): void {

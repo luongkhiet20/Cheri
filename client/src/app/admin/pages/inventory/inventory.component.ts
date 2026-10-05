@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
+import { NotificationService } from '../../shared/notification/notification.service';
 
 @Component({
   selector: 'app-inventory',
@@ -20,7 +21,7 @@ export class InventoryComponent implements OnInit {
     { key: 'status', label: 'Tình trạng', type: 'status' },
   ];
   actions: RowAction[] = [
-    { key: 'view', label: 'Xem chi tiết' },
+    { key: 'view', label: 'Xem' },
     { key: 'edit', label: 'Sửa' },
     { key: 'delete', label: 'Xóa', variant: 'danger' }
   ];
@@ -60,7 +61,8 @@ export class InventoryComponent implements OnInit {
   constructor(
     private apiService: AdminService,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private notificationService: NotificationService
   ) { }
 
   onImportInventory(): void {
@@ -165,12 +167,14 @@ export class InventoryComponent implements OnInit {
         next: () => {
           this.confirmOpen = false;
           this.pendingDeleteId = null;
+          this.notificationService.success('Xóa sản phẩm thành công.');
           this.loadInventory();
           this.cdr.markForCheck();
         },
         error: (err) => {
           this.confirmOpen = false;
           this.pendingDeleteId = null;
+          this.notificationService.error('Lỗi khi xóa sản phẩm từ kho.');
           console.error('Lỗi khi xóa sản phẩm từ kho:', err);
           this.cdr.markForCheck();
         }
@@ -181,12 +185,14 @@ export class InventoryComponent implements OnInit {
           this.selectedIds.clear();
           this.confirmOpen = false;
           this.isBulkDelete = false;
+          this.notificationService.success('Đã xóa các sản phẩm được chọn thành công.');
           this.loadInventory();
           this.cdr.markForCheck();
         },
         error: (err) => {
           this.confirmOpen = false;
           this.isBulkDelete = false;
+          this.notificationService.error('Lỗi khi xóa hàng loạt sản phẩm.');
           console.error('Lỗi khi xóa hàng loạt sản phẩm từ kho:', err);
           this.cdr.markForCheck();
         }

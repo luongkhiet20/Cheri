@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
+import { NotificationService } from '../../../shared/notification/notification.service';
 
 export interface ProductVariantItem {
   id: string;
@@ -77,7 +78,8 @@ export class InventoryImportComponent implements OnInit {
     private apiService: AdminService,
     private router: Router,
     private route: ActivatedRoute,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private notificationService: NotificationService
   ) { }
 
   ngOnInit(): void {
@@ -465,12 +467,14 @@ export class InventoryImportComponent implements OnInit {
               ? `Đã cập nhật tồn kho ${targetName} thành công. Tồn kho mới: ${finalStock}.`
               : `Đã nhập thêm ${qty} vào ${targetName}. Tồn kho hiện tại: ${finalStock}.`
           );
+          this.notificationService.success(this.successMessage);
           this.cdr.markForCheck();
           setTimeout(() => {
             this.router.navigate(['/admin/inventory']);
           }, 900);
         } else {
           this.errorMessage = res.message || 'Không thể lưu thay đổi tồn kho. Vui lòng thử lại.';
+          this.notificationService.error(this.errorMessage);
           this.cdr.markForCheck();
         }
       },
@@ -484,6 +488,7 @@ export class InventoryImportComponent implements OnInit {
         } else {
           this.errorMessage = err.error?.message || 'Không thể lưu tồn kho. Vui lòng thử lại.';
         }
+        this.notificationService.error(this.errorMessage);
         this.cdr.markForCheck();
       }
     });

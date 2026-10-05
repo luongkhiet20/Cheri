@@ -112,7 +112,13 @@ const OrderSchema = new Schema(
   {
     // Thông tin cơ bản
     orderId: { type: String, required: true, unique: true, index: true },
+    userId: { type: Schema.Types.ObjectId, ref: 'User', index: true, default: null },
     _user: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+    customer: {
+      name: { type: String, default: '' },
+      email: { type: String, default: '' },
+      phone: { type: String, default: '' },
+    },
     customerEmail: { type: String, required: true },
     customerPhone: { type: String, default: '' },
     status: {
@@ -129,8 +135,16 @@ const OrderSchema = new Schema(
     // Địa chỉ giao hàng (snapshot)
     shippingAddress: { type: ShippingAddressSchema, required: true },
 
-    // Vận chuyển
-    shippingMethodId: { type: Schema.Types.ObjectId, ref: 'ShippingMethod', default: null },
+    // Vận chuyển (chuẩn hóa & snapshot)
+    shipping: {
+      method: { type: String, default: 'STANDARD' },
+      provider: { type: String, default: '' },
+      trackingNumber: { type: String, default: '' },
+      estimatedDeliveryDate: { type: Date, default: null },
+      shippedAt: { type: Date, default: null },
+      deliveredAt: { type: Date, default: null },
+    },
+    shippingMethodId: { type: Schema.Types.ObjectId, ref: 'ShippingMethod', index: true, default: null },
     shippingMethodSnapshot: { type: ShippingMethodSnapshotSchema, default: null },
     shippingFee: { type: Number, default: 0, min: 0 },
     shippingProvider: { type: String, default: '' },
@@ -140,8 +154,17 @@ const OrderSchema = new Schema(
     shippedAt: { type: Date, default: null },
     deliveredAt: { type: Date, default: null },
 
-    // Thanh toán
-    paymentMethodId: { type: Schema.Types.ObjectId, ref: 'PaymentMethod', default: null },
+    // Thanh toán (chuẩn hóa & snapshot)
+    payment: {
+      method: { type: String, default: 'COD' },
+      status: { type: String, default: 'PENDING' },
+      provider: { type: String, default: null },
+      transactionId: { type: String, default: null },
+      paidAt: { type: Date, default: null },
+      refundedAmount: { type: Number, default: 0, min: 0 },
+      refundedAt: { type: Date, default: null },
+    },
+    paymentMethodId: { type: Schema.Types.ObjectId, ref: 'PaymentMethod', index: true, default: null },
     paymentMethodSnapshot: { type: PaymentMethodSnapshotSchema, default: null },
     paymentStatus: {
       type: String,
@@ -164,6 +187,13 @@ const OrderSchema = new Schema(
     couponDiscount: { type: Number, default: 0, min: 0 },
     totalAmount: { type: Number, required: true, min: 0, default: 0 },
     currency: { type: String, default: 'VND' },
+
+    // Legacy fields bảo toàn tương thích ngược
+    amount: { type: Number, default: null },
+    cart: { type: Schema.Types.Mixed, default: null },
+    addresses: { type: [Schema.Types.Mixed], default: [] },
+    outcome: { type: Schema.Types.Mixed, default: null },
+    dateAdded: { type: Date, default: null },
 
     // Lịch sử trạng thái đơn hàng (PENDING → CONFIRMED → SHIPPING → DELIVERED)
     statusHistory: { type: [StatusHistorySchema], default: [] },

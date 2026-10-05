@@ -62,10 +62,37 @@ export interface ShippingLogEntry {
   timestamp: Date;
 }
 
+export interface CustomerSnapshot {
+  name: string;
+  email: string;
+  phone: string;
+}
+
+export interface OrderPaymentInfo {
+  method: string;
+  status: string;
+  provider?: string | null;
+  transactionId?: string | null;
+  paidAt?: Date | null;
+  refundedAmount?: number;
+  refundedAt?: Date | null;
+}
+
+export interface OrderShippingInfo {
+  method: string;
+  provider: string;
+  trackingNumber?: string | null;
+  estimatedDeliveryDate?: Date | null;
+  shippedAt?: Date | null;
+  deliveredAt?: Date | null;
+}
+
 export interface Order extends Document {
   // Cơ bản
   orderId: string;
+  userId?: Types.ObjectId;
   _user?: Types.ObjectId;
+  customer?: CustomerSnapshot;
   customerEmail: string;
   customerPhone?: string;
   status: string;
@@ -78,6 +105,7 @@ export interface Order extends Document {
   shippingAddress: ShippingAddress;
 
   // Vận chuyển
+  shipping?: OrderShippingInfo;
   shippingMethodId?: Types.ObjectId;
   shippingMethodSnapshot?: ShippingMethodSnapshot;
   shippingFee: number;
@@ -90,6 +118,7 @@ export interface Order extends Document {
   shippingLogs?: ShippingLogEntry[];
 
   // Thanh toán
+  payment?: OrderPaymentInfo;
   paymentMethodId?: Types.ObjectId;
   paymentMethodSnapshot?: PaymentMethodSnapshot;
   paymentStatus: string;

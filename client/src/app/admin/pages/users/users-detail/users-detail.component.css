@@ -484,6 +484,152 @@ button, input, select, textarea, .btn, .form-control {
 }
 
 /* =========================
+   ORDERS SECTION
+========================= */
+
+.card-head-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.card-head-sub {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 400;
+}
+
+.card-head-sub strong {
+  color: #0f172a;
+}
+
+.orders-loading-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.spinner-small {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #e2e8f0;
+  border-top-color: #990000;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.orders-error-message {
+  padding: 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  border-radius: 8px;
+  font-size: 14px;
+  margin: 12px 0;
+}
+
+.orders-table-wrap {
+  overflow-x: auto;
+}
+
+.orders-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.orders-table th,
+.orders-table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.orders-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+}
+
+.order-code {
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.badge-neutral {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.badge-primary {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.badge-warning {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.badge-success {
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.badge-danger {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.payment-method-text,
+.shipping-method-text {
+  color: #334155;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.btn-action-view {
+  padding: 6px 12px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-action-view:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.empty-orders-message {
+  padding: 24px 0;
+  color: #64748b;
+  font-style: italic;
+  font-size: 14px;
+}
+
+/* =========================
    RESPONSIVE
 ========================= */
 

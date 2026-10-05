@@ -1,0 +1,31 @@
+<div class="notification-container" aria-live="polite" aria-atomic="true">
+  <div
+    *ngFor="let item of notifications; trackBy: trackById"
+    class="notification-toast notification-toast--{{ item.type }}"
+    [class.is-leaving]="item.isLeaving"
+    role="status"
+  >
+    <div class="notification-body">
+      <span class="notification-message">{{ item.message }}</span>
+      <span class="notification-sparkle" aria-hidden="true">
+        <!-- 4-pointed Sparkle / Hoa 4 cánh SVG -->
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 0C12 6.627 6.627 12 0 12C6.627 12 12 17.373 12 24C12 17.373 17.373 12 24 12C17.373 12 12 6.627 12 0Z"/>
+        </svg>
+      </span>
+    </div>
+
+    <button
+      type="button"
+      class="notification-close-btn"
+      (click)="onDismiss(item.id)"
+      title="Đóng"
+      aria-label="Đóng"
+    >
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+  </div>
+</div>

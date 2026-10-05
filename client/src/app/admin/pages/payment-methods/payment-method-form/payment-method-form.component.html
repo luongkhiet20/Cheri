@@ -4,10 +4,6 @@
   <div class="form-header">
     <div class="form-header-info">
       <h1 class="form-title">{{ isEditMode ? 'Chỉnh sửa phương thức thanh toán' : 'Thêm phương thức thanh toán' }}</h1>
-      <p class="form-subtitle">
-        {{ isEditMode ? 'Cập nhật cấu hình phương thức thanh toán trong collection payment_methods' : 'Tạo mới phương
-        thức thanh toán vào collection payment_methods' }}
-      </p>
     </div>
     <div class="form-header-actions">
       <button type="button" class="btn btn-outline" (click)="onCancel()" [disabled]="isSubmitting"
@@ -229,16 +225,6 @@
       </div>
     </div>
 
-    <!-- Bottom Actions -->
-    <div class="form-bottom-actions">
-      <button type="button" class="btn btn-outline" (click)="onCancel()" [disabled]="isSubmitting">
-        Hủy
-      </button>
-      <button type="button" class="btn btn-primary" (click)="onSubmit()" [disabled]="isSubmitting || isLoading">
-        <span *ngIf="isSubmitting" class="spinner-inline"></span>
-        <span>{{ isSubmitting ? 'Đang lưu...' : (isEditMode ? 'Lưu thay đổi' : 'Lưu phương thức thanh toán') }}</span>
-      </button>
-    </div>
 
   </form>
 

@@ -681,17 +681,6 @@
         </div>
       </div>
 
-      <!-- Save Actions Box -->
-      <div class="form-card action-bottom-card">
-        <button type="button" class="btn btn-primary btn-block mb-2" (click)="onSubmit()" [disabled]="isSubmitting">
-          <span *ngIf="isSubmitting" class="spinner-inline"></span>
-          {{ isSubmitting ? 'Đang lưu...' : (isEditMode ? 'Lưu thay đổi' : 'Lưu sản phẩm') }}
-        </button>
-
-        <button type="button" class="btn btn-outline btn-block" (click)="onCancel()" [disabled]="isSubmitting">
-          Hủy bỏ
-        </button>
-      </div>
 
     </div>
 

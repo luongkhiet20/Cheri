@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { SettingsService } from './settings.service';
 import { AppSettings } from './settings.model';
+import { NotificationService } from '../../shared/notification/notification.service';
 
 @Component({
   selector: 'app-settings',
@@ -83,8 +84,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   constructor(
     private settingsService: SettingsService,
-    private cdr: ChangeDetectorRef
-  ) {}
+    private cdr: ChangeDetectorRef,
+    private notificationService: NotificationService
+  ) { }
 
   ngOnInit(): void {
     this.loadSettings();
@@ -330,6 +332,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   private showSuccess(msg: string): void {
     this.successMessage = msg;
     this.errorMessage = '';
+    this.notificationService.success(msg);
     this.cdr.markForCheck();
     if (this.timer) clearTimeout(this.timer);
     this.timer = setTimeout(() => {
@@ -341,6 +344,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   private showError(msg: string): void {
     this.errorMessage = msg;
     this.successMessage = '';
+    this.notificationService.error(msg);
     this.cdr.markForCheck();
     if (this.timer) clearTimeout(this.timer);
     this.timer = setTimeout(() => {

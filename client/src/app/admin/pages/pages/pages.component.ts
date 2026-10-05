@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
+import { NotificationService } from '../../shared/notification/notification.service';
 
 @Component({
   selector: 'app-pages',
@@ -55,7 +56,8 @@ export class PagesComponent implements OnInit {
   constructor(
     private apiService: AdminService,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private notificationService: NotificationService
   ) { }
 
   ngOnInit(): void {
@@ -123,7 +125,9 @@ export class PagesComponent implements OnInit {
             completed++;
             if (completed === idsToDelete.length) {
               this.selectedIds.clear();
-              this.successMessage = `Đã xóa thành công ${completed} trang`;
+              const msg = `Đã xóa thành công ${completed} trang`;
+              this.successMessage = msg;
+              this.notificationService.success(msg);
               this.cdr.markForCheck();
               setTimeout(() => {
                 this.successMessage = '';
@@ -134,6 +138,8 @@ export class PagesComponent implements OnInit {
           },
           error: (err) => {
             console.error('Lỗi khi xóa trang:', err);
+            const msg = err.error?.message || 'Lỗi khi xóa một số trang';
+            this.notificationService.error(msg);
             this.cdr.markForCheck();
           }
         });
@@ -145,9 +151,11 @@ export class PagesComponent implements OnInit {
           this.pendingDeleteId = null;
           if (res.success) {
             this.successMessage = 'Xóa trang thành công';
+            this.notificationService.success('Xóa trang thành công');
             this.loadPages();
           } else {
             this.errorMessage = res.message || 'Lỗi khi xóa trang';
+            this.notificationService.error(res.message || 'Lỗi khi xóa trang');
           }
           this.cdr.markForCheck();
           setTimeout(() => {
@@ -159,7 +167,9 @@ export class PagesComponent implements OnInit {
         error: (err) => {
           this.confirmOpen = false;
           this.pendingDeleteId = null;
-          this.errorMessage = err.error?.message || 'Lỗi khi xóa trang khỏi MongoDB';
+          const msg = err.error?.message || 'Lỗi khi xóa trang khỏi MongoDB';
+          this.errorMessage = msg;
+          this.notificationService.error(msg);
           this.cdr.markForCheck();
           setTimeout(() => {
             this.errorMessage = '';
@@ -190,10 +200,14 @@ export class PagesComponent implements OnInit {
       this.apiService.patchPageStatus(e.row.id, newTarget).subscribe({
         next: (res) => {
           if (res.success) {
-            this.successMessage = res.message || 'Cập nhật trạng thái thành công';
+            const msg = res.message || 'Cập nhật trạng thái thành công';
+            this.successMessage = msg;
+            this.notificationService.success(msg);
             this.loadPages();
           } else {
-            this.errorMessage = res.message || 'Lỗi khi đổi trạng thái';
+            const msg = res.message || 'Lỗi khi đổi trạng thái';
+            this.errorMessage = msg;
+            this.notificationService.error(msg);
           }
           this.cdr.markForCheck();
           setTimeout(() => {
@@ -203,7 +217,9 @@ export class PagesComponent implements OnInit {
           }, 3000);
         },
         error: (err) => {
-          this.errorMessage = err.error?.message || 'Lỗi kết nối khi đổi trạng thái trang';
+          const msg = err.error?.message || 'Lỗi kết nối khi đổi trạng thái trang';
+          this.errorMessage = msg;
+          this.notificationService.error(msg);
           this.cdr.markForCheck();
           setTimeout(() => {
             this.errorMessage = '';

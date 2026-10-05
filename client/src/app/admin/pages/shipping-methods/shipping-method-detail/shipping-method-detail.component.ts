@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
+import { NotificationService } from '../../../shared/notification/notification.service';
 
 @Component({
   selector: 'app-shipping-method-detail',
@@ -30,7 +31,8 @@ export class ShippingMethodDetailComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private apiService: AdminService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private notificationService: NotificationService
   ) { }
 
   ngOnInit(): void {
@@ -127,20 +129,26 @@ export class ShippingMethodDetailComponent implements OnInit {
           this.confirmOpen = false;
           if (res.success && res.data) {
             this.method = res.data;
-            this.successMessage = res.message || `Đã ${targetActive ? 'bật' : 'tắt'} phương thức vận chuyển thành công`;
+            const msg = res.message || `Đã ${targetActive ? 'bật' : 'tắt'} phương thức vận chuyển thành công`;
+            this.successMessage = msg;
+            this.notificationService.success(msg);
             setTimeout(() => {
               this.successMessage = '';
               this.cdr.markForCheck();
             }, 4000);
           } else {
-            this.errorMessage = res.message || 'Không thể cập nhật trạng thái';
+            const msg = res.message || 'Không thể cập nhật trạng thái';
+            this.errorMessage = msg;
+            this.notificationService.error(msg);
           }
           this.cdr.markForCheck();
         },
         error: (err) => {
           this.isProcessing = false;
           this.confirmOpen = false;
-          this.errorMessage = err.error?.message || 'Lỗi khi cập nhật trạng thái trong MongoDB';
+          const msg = err.error?.message || 'Lỗi khi cập nhật trạng thái trong MongoDB';
+          this.errorMessage = msg;
+          this.notificationService.error(msg);
           this.cdr.markForCheck();
         }
       });
@@ -151,16 +159,21 @@ export class ShippingMethodDetailComponent implements OnInit {
           this.isProcessing = false;
           this.confirmOpen = false;
           if (res.success) {
+            this.notificationService.success('Đã xóa phương thức vận chuyển thành công');
             this.router.navigate(['/admin/shipping-methods']);
           } else {
-            this.errorMessage = res.message || 'Không thể xóa phương thức vận chuyển';
+            const msg = res.message || 'Không thể xóa phương thức vận chuyển';
+            this.errorMessage = msg;
+            this.notificationService.error(msg);
             this.cdr.markForCheck();
           }
         },
         error: (err) => {
           this.isProcessing = false;
           this.confirmOpen = false;
-          this.errorMessage = err.error?.message || 'Lỗi khi xóa phương thức vận chuyển';
+          const msg = err.error?.message || 'Lỗi khi xóa phương thức vận chuyển';
+          this.errorMessage = msg;
+          this.notificationService.error(msg);
           this.cdr.markForCheck();
         }
       });

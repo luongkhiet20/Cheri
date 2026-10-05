@@ -5,14 +5,10 @@
     <div class="detail-header-info">
       <div class="header-badges">
         <span class="code-badge">{{ method.code }}</span>
-        <app-admin-status-badge
-          [label]="method.isActive !== false ? 'Đang hoạt động' : 'Tạm khóa'"
-          [variant]="method.isActive !== false ? 'success' : 'neutral'"
-        ></app-admin-status-badge>
-        <span class="type-badge">{{ method.type }}</span>
+        <app-admin-status-badge [label]="method.isActive !== false ? 'Đang hoạt động' : 'Tạm khóa'"
+          [variant]="method.isActive !== false ? 'success' : 'neutral'"></app-admin-status-badge>
       </div>
       <h1 class="detail-title">{{ method.name }}</h1>
-      <p class="detail-subtitle">Mã định danh MongoDB: <code>{{ methodId }}</code></p>
     </div>
 
     <div class="detail-header-actions">
@@ -27,12 +23,8 @@
       </button>
 
       <!-- Button Bật / Tắt -->
-      <button
-        type="button"
-        [class]="method.isActive !== false ? 'btn btn-warning-outline' : 'btn btn-success-outline'"
-        (click)="onToggleStatusClick()"
-        id="btn-toggle-status"
-      >
+      <button type="button" [class]="method.isActive !== false ? 'btn btn-warning-outline' : 'btn btn-success-outline'"
+        (click)="onToggleStatusClick()" id="btn-toggle-status">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
           <circle cx="12" cy="12" r="10"></circle>
@@ -95,7 +87,9 @@
       </svg>
     </div>
     <h2 class="state-title">Không tìm thấy phương thức thanh toán</h2>
-    <p class="state-desc">Phương thức thanh toán có mã <code>{{ methodId }}</code> không tồn tại trong collection <code>payment_methods</code>.</p>
+    <p class="state-desc">Phương thức thanh toán có mã <code>{{ methodId }}</code> không tồn tại trong collection
+      <code>payment_methods</code>.
+    </p>
     <button type="button" class="btn btn-outline" (click)="onBack()">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
         stroke-linecap="round" stroke-linejoin="round" class="btn-icon" aria-hidden="true">
@@ -137,10 +131,8 @@
         <div class="info-row">
           <span class="info-label">Trạng thái (isActive):</span>
           <span class="info-value">
-            <app-admin-status-badge
-              [label]="method.isActive !== false ? 'Bật (Đang hoạt động)' : 'Tắt (Tạm khóa)'"
-              [variant]="method.isActive !== false ? 'success' : 'neutral'"
-            ></app-admin-status-badge>
+            <app-admin-status-badge [label]="method.isActive !== false ? 'Bật (Đang hoạt động)' : 'Tắt (Tạm khóa)'"
+              [variant]="method.isActive !== false ? 'success' : 'neutral'"></app-admin-status-badge>
           </span>
         </div>
         <div class="info-row">
@@ -165,7 +157,8 @@
       <div class="info-list">
         <div class="payment-info-box">
           <p class="payment-info-text" *ngIf="method.paymentInfo">{{ method.paymentInfo }}</p>
-          <p class="payment-info-empty" *ngIf="!method.paymentInfo">Chưa có thông tin chuyển khoản / tài khoản nhận tiền cho phương thức này.</p>
+          <p class="payment-info-empty" *ngIf="!method.paymentInfo">Chưa có thông tin chuyển khoản / tài khoản nhận tiền
+            cho phương thức này.</p>
         </div>
       </div>
     </div>
@@ -242,12 +235,6 @@
 </div>
 
 <!-- Modal xác nhận Bật/Tắt -->
-<app-confirm-dialog
-  [isOpen]="confirmOpen"
-  [title]="confirmTitle"
-  [message]="confirmMessage"
-  [confirmLabel]="confirmLabel"
-  [variant]="confirmVariant"
-  (confirmed)="onConfirmStatusChange()"
-  (cancelled)="onCancelStatusChange()"
-></app-confirm-dialog>
+<app-confirm-dialog [isOpen]="confirmOpen" [title]="confirmTitle" [message]="confirmMessage"
+  [confirmLabel]="confirmLabel" [variant]="confirmVariant" (confirmed)="onConfirmStatusChange()"
+  (cancelled)="onCancelStatusChange()"></app-confirm-dialog>

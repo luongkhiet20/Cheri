@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
+import { NotificationService } from '../../shared/notification/notification.service';
 
 @Component({
   selector: 'app-payment-methods',
@@ -74,7 +75,8 @@ export class PaymentMethodsComponent implements OnInit {
   constructor(
     private apiService: AdminService,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private notificationService: NotificationService
   ) { }
 
   ngOnInit(): void {
@@ -202,12 +204,14 @@ export class PaymentMethodsComponent implements OnInit {
           this.isLoading = false;
           this.selectedIds.clear();
           this.successMessage = `Đã xóa ${ids.length} phương thức thanh toán thành công.`;
+          this.notificationService.success(this.successMessage);
           this.loadPaymentMethods();
           setTimeout(() => this.successMessage = '', 4000);
         })
         .catch((err) => {
           this.isLoading = false;
           this.errorMessage = err?.error?.message || 'Lỗi khi xóa các phương thức thanh toán đã chọn.';
+          this.notificationService.error(this.errorMessage);
           this.loadPaymentMethods();
           setTimeout(() => this.errorMessage = '', 4000);
         });
@@ -230,11 +234,13 @@ export class PaymentMethodsComponent implements OnInit {
       this.apiService.updatePaymentMethodStatus(targetId, targetActive).subscribe({
         next: (res) => {
           this.successMessage = res.message || (targetActive ? 'Đã bật phương thức thanh toán' : 'Đã tắt phương thức thanh toán');
+          this.notificationService.success(this.successMessage);
           this.loadPaymentMethods();
           setTimeout(() => this.successMessage = '', 4000);
         },
         error: (err) => {
           this.errorMessage = err.error?.message || 'Lỗi khi cập nhật trạng thái';
+          this.notificationService.error(this.errorMessage);
           console.error(err);
           this.cdr.markForCheck();
         }
@@ -248,11 +254,13 @@ export class PaymentMethodsComponent implements OnInit {
       this.apiService.deletePaymentMethod(targetId).subscribe({
         next: (res) => {
           this.successMessage = res.message || 'Xóa phương thức thanh toán thành công';
+          this.notificationService.success(this.successMessage);
           this.loadPaymentMethods();
           setTimeout(() => this.successMessage = '', 4000);
         },
         error: (err) => {
           this.errorMessage = err.error?.message || 'Lỗi khi xóa phương thức thanh toán';
+          this.notificationService.error(this.errorMessage);
           console.error(err);
           this.cdr.markForCheck();
         }

@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
+import { NotificationService } from '../../../shared/notification/notification.service';
 
 interface ShippingMethodFormData {
   name: string;
@@ -44,7 +45,8 @@ export class ShippingMethodFormComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private apiService: AdminService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private notificationService: NotificationService
   ) { }
 
   ngOnInit(): void {
@@ -237,17 +239,20 @@ export class ShippingMethodFormComponent implements OnInit {
           this.isSubmitting = false;
           if (res.success) {
             this.successMessage = 'Cập nhật phương thức vận chuyển thành công';
+            this.notificationService.success('Cập nhật phương thức vận chuyển thành công');
             setTimeout(() => {
               this.router.navigate(['/admin/shipping-methods', this.methodId]);
             }, 800);
           } else {
             this.errorMessage = res.message || 'Cập nhật thất bại';
+            this.notificationService.error(this.errorMessage);
           }
           this.cdr.markForCheck();
         },
         error: (err) => {
           this.isSubmitting = false;
           this.errorMessage = err.error?.message || 'Có lỗi xảy ra khi lưu vào MongoDB. Vui lòng kiểm tra lại.';
+          this.notificationService.error(this.errorMessage);
           console.error('Update shipping method error:', err);
           this.cdr.markForCheck();
         }
@@ -259,17 +264,20 @@ export class ShippingMethodFormComponent implements OnInit {
           this.isSubmitting = false;
           if (res.success) {
             this.successMessage = 'Thêm phương thức vận chuyển thành công';
+            this.notificationService.success('Thêm phương thức vận chuyển thành công');
             setTimeout(() => {
               this.router.navigate(['/admin/shipping-methods']);
             }, 800);
           } else {
             this.errorMessage = res.message || 'Thêm mới thất bại';
+            this.notificationService.error(this.errorMessage);
           }
           this.cdr.markForCheck();
         },
         error: (err) => {
           this.isSubmitting = false;
           this.errorMessage = err.error?.message || 'Có lỗi xảy ra khi tạo document mới trong MongoDB. Vui lòng kiểm tra lại.';
+          this.notificationService.error(this.errorMessage);
           console.error('Create shipping method error:', err);
           this.cdr.markForCheck();
         }

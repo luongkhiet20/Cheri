@@ -20,6 +20,7 @@ import { AdminCardComponent } from './shared/admin-card/admin-card.component';
 import { ConfirmDialogComponent } from './shared/confirm-dialog/confirm-dialog.component';
 import { LoadingStateComponent } from './shared/loading-state/loading-state.component';
 import { EmptyStateComponent } from './shared/empty-state/empty-state.component';
+import { NotificationComponent } from './shared/notification/notification.component';
 
 // Pages
 import { DashboardComponent } from './pages/dashboard/dashboard.component';
@@ -112,6 +113,7 @@ const routes: Routes = [
     ConfirmDialogComponent,
     LoadingStateComponent,
     EmptyStateComponent,
+    NotificationComponent,
     // Pages
     DashboardComponent,
     ProductsComponent,
@@ -148,4 +150,4 @@ const routes: Routes = [
     RouterModule.forChild(routes),
   ]
 })
-export class AdminModule {}
+export class AdminModule { }

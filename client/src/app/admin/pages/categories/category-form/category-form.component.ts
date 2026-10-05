@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
+import { NotificationService } from '../../../shared/notification/notification.service';
 
 export interface CategoryFormData {
   title: string;
@@ -45,7 +46,8 @@ export class CategoryFormComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private apiService: AdminService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private notificationService: NotificationService
   ) { }
 
   ngOnInit(): void {
@@ -89,13 +91,18 @@ export class CategoryFormComponent implements OnInit {
         if (res.success && res.data) {
           const cat = res.data;
           const vi = cat.vi || {};
+          const position = typeof vi.position === 'number'
+            ? vi.position
+            : (typeof cat.position === 'number'
+              ? cat.position
+              : (vi.position !== undefined && !isNaN(Number(vi.position)) ? Number(vi.position) : 0));
           this.formData = {
             title: vi.title || cat.name || '',
             slug: cat.slug || cat.titleUrl || '',
             parentId: cat.parentId || '',
             description: vi.description || '',
             imageUrl: cat.mainImage?.url || cat.image || '',
-            position: typeof vi.position === 'number' ? vi.position : 0,
+            position: position,
             visibility: vi.visibility !== false
           };
           this.isSlugCustomized = !!this.formData.slug;
@@ -157,6 +164,8 @@ export class CategoryFormComponent implements OnInit {
           el = document.getElementById('categoryTitle');
         } else if (key === 'slug') {
           el = document.getElementById('categorySlug');
+        } else if (key === 'position') {
+          el = document.getElementById('categoryPosition');
         }
       }
 
@@ -227,6 +236,17 @@ export class CategoryFormComponent implements OnInit {
       this.errors['slug'] = 'Mã slug chỉ được chứa chữ thường không dấu, số và dấu gạch ngang (-)';
     }
 
+    // Validate position: Must be an integer >= 0
+    const posVal = this.formData.position;
+    if (posVal === null || posVal === undefined || String(posVal).trim() === '') {
+      this.errors['position'] = 'Vị trí sắp xếp không được để trống';
+    } else {
+      const num = Number(posVal);
+      if (isNaN(num) || !Number.isInteger(num) || num < 0) {
+        this.errors['position'] = 'Vị trí sắp xếp phải là số nguyên lớn hơn hoặc bằng 0 (0, 1, 2...)';
+      }
+    }
+
     return Object.keys(this.errors).length === 0;
   }
 
@@ -235,7 +255,7 @@ export class CategoryFormComponent implements OnInit {
     this.successMessage = '';
 
     if (!this.validate()) {
-      const fieldOrder = ['title', 'slug'];
+      const fieldOrder = ['title', 'slug', 'position'];
       const firstError = fieldOrder.find(k => !!this.errors[k]);
       if (firstError) {
         this.scrollToFirstError(firstError);
@@ -247,6 +267,8 @@ export class CategoryFormComponent implements OnInit {
 
     const title = this.formData.title.trim();
     const slug = (this.formData.slug || this.slugify(title)).trim();
+    const parsedPos = parseInt(String(this.formData.position), 10);
+    const position = Number.isInteger(parsedPos) && parsedPos >= 0 ? parsedPos : 0;
 
     const payload = {
       titleUrl: slug,
@@ -258,7 +280,7 @@ export class CategoryFormComponent implements OnInit {
       vi: {
         title: title,
         description: (this.formData.description || '').trim(),
-        position: Number(this.formData.position || 0),
+        position: position,
         visibility: this.formData.visibility,
         menuHidden: false
       }
@@ -271,6 +293,7 @@ export class CategoryFormComponent implements OnInit {
           this.isSubmitting = false;
           if (res.success) {
             this.successMessage = 'Cập nhật danh mục thành công!';
+            this.notificationService.success('Cập nhật danh mục thành công!');
             this.isDirty = false;
             this.cdr.markForCheck();
             setTimeout(() => {
@@ -278,12 +301,14 @@ export class CategoryFormComponent implements OnInit {
             }, 600);
           } else {
             this.errorMessage = res.message || 'Lỗi cập nhật danh mục';
+            this.notificationService.error(this.errorMessage);
             this.cdr.markForCheck();
           }
         },
         error: (err) => {
           this.isSubmitting = false;
           this.errorMessage = err.error?.message || 'Lỗi khi cập nhật danh mục vào MongoDB';
+          this.notificationService.error(this.errorMessage);
           this.cdr.markForCheck();
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -295,6 +320,7 @@ export class CategoryFormComponent implements OnInit {
           this.isSubmitting = false;
           if (res.success) {
             this.successMessage = 'Thêm danh mục thành công!';
+            this.notificationService.success('Thêm danh mục thành công!');
             this.isDirty = false;
             this.cdr.markForCheck();
             setTimeout(() => {
@@ -302,12 +328,14 @@ export class CategoryFormComponent implements OnInit {
             }, 600);
           } else {
             this.errorMessage = res.message || 'Lỗi thêm danh mục';
+            this.notificationService.error(this.errorMessage);
             this.cdr.markForCheck();
           }
         },
         error: (err) => {
           this.isSubmitting = false;
           this.errorMessage = err.error?.message || 'Lỗi khi thêm danh mục vào MongoDB';
+          this.notificationService.error(this.errorMessage);
           this.cdr.markForCheck();
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }

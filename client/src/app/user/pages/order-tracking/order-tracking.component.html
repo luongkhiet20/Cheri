@@ -12,7 +12,7 @@
        PHẦN 1: KHỐI ĐIỀU HƯỚNG & NHẬP LIỆU
        Tự động thích ứng theo trạng thái đăng nhập
   ══════════════════════════════════════════════════════════════════ -->
-  <div class="otp-hero">
+  <div class="otp-hero" [class.has-back-btn]="!!trackingResult && !user()">
     <div class="otp-hero-inner">
 
       <!-- KHÁCH ĐÃ ĐĂNG NHẬP -->
@@ -44,6 +44,16 @@
             </select>
 
           </div>
+        </div>
+        } @else {
+        <div class="otp-empty-state">
+          <svg class="otp-empty-cart-svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#74070e"
+            stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="9" cy="21" r="1"></circle>
+            <circle cx="20" cy="21" r="1"></circle>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+          </svg>
+          <p>Bạn chưa có đơn hàng nào.</p>
         </div>
         }
       </div>

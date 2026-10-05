@@ -60,7 +60,8 @@
         }
         <h4 class="pcard-name">{{ product.name || product.title }}</h4>
         <div class="pcard-prices">
-          <span class="pcard-price">{{ formatVND(hasDiscount(product) ? (product.salePrice || product.regularPrice) : (product.salePrice || product.regularPrice || product.price || 0)) }}</span>
+          <span class="pcard-price">{{ formatVND(hasDiscount(product) ? (product.salePrice || product.regularPrice) :
+            (product.salePrice || product.regularPrice || product.price || 0)) }}</span>
           @if (hasDiscount(product)) {
           <span class="pcard-original">{{ formatVND(product.regularPrice || product.salePrice) }}</span>
           }
@@ -74,16 +75,12 @@
   } @else {
   <!-- Empty state -->
   <div class="wishlist-empty">
-    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="wishlist-empty-icon">
+    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#74070e"
+      stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="wishlist-empty-icon">
       <path
         d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
     </svg>
-    <h3 class="wishlist-empty-title">Chưa lưu thiết kế mộng mơ nào</h3>
-    <p class="wishlist-empty-desc">Nhấn vào biểu tượng trái tim trên thẻ sản phẩm để lưu vào đây</p>
-    <button type="button" class="wishlist-empty-btn" (click)="onNavigate('products')">
-      Ghé Thăm Cửa Hàng Chéri
-    </button>
+    <p class="wishlist-empty-title">Bạn chưa lưu sản phẩm nào.</p>
   </div>
   }
 

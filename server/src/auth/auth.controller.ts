@@ -75,6 +75,24 @@ export class AuthController {
     };
   }
 
+  @UseGuards(AuthGuard('jwt'))
+  @Put('/profile')
+  async updateProfile(@GetUser() user: User, @Body() body: any) {
+    const updated = await this.authService.updateUser(user._id.toString(), body);
+    const roles = Array.isArray(updated.roles) ? [...updated.roles] : (updated as any).role ? [(updated as any).role] : ['user'];
+    return {
+      id: updated._id,
+      email: updated.email,
+      roles,
+      name: updated.name || (updated as any).fullName || updated.email.split('@')[0],
+      fullName: (updated as any).fullName || updated.name || updated.email.split('@')[0],
+      phoneNumber: (updated as any).phoneNumber || '',
+      address: (updated as any).address || '',
+      gender: (updated as any).gender || '',
+      avatar: (updated as any).avatar || '',
+    };
+  }
+
   @Post('/signup')
   signUp(
     @Body(ValidationPipe) authCredentialsDto: AuthCredentialDto,

@@ -9,6 +9,7 @@
     </div>
     <div class="profile-hero-info">
       <div class="profile-member-badges">
+
       </div>
       <h2 class="profile-hero-name">{{ getDisplayName() }}</h2>
       <p class="profile-hero-email">{{ user$()?.email }}</p>
@@ -143,9 +144,7 @@
                 <button type="button" class="btn-action-outline" *ngIf="normalizeStatus(order.status) === 'DELIVERED'">
                   Trả hàng / Hoàn tiền
                 </button>
-                <a class="btn-action-more" [routerLink]="['/' + (lang$ | async) + '/orders/' + order.orderId]">
-                  <span>Thêm</span>
-                </a>
+
               </div>
             </div>
 
@@ -193,7 +192,8 @@
 
           <div class="form-field-group">
             <label class="field-label">Email liên lạc</label>
-            <input type="email" class="field-input" [(ngModel)]="formEmail" placeholder="Nhập email" />
+            <input type="email" class="field-input readonly-input" [(ngModel)]="formEmail" [readonly]="true"
+              title="Email định danh tài khoản" />
           </div>
 
           <div class="form-field-group">

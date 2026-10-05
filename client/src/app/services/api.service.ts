@@ -101,6 +101,14 @@ export class ApiService {
     );
   }
 
+  updateProfile(userData: any): Observable<any> {
+    const profileUrl = this.apiUrl + '/api/auth/profile';
+    return this.http.put(profileUrl, userData, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: any) => of({ error: error?.error || error })),
+    );
+  }
+
   deleteUser(id: string): Observable<any> {
     const usersUrl = this.apiUrl + `/api/auth/users/${id}`;
     return this.http.delete(usersUrl, this.getRequestOptions()).pipe(

@@ -1,4 +1,4 @@
-import { Component, OnInit, Inject, PLATFORM_ID, Signal } from '@angular/core';
+import { Component, OnInit, Inject, PLATFORM_ID, Signal, effect } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -61,23 +61,28 @@ export class Profile implements OnInit {
     private router: Router
   ) {
     this.lang$ = this.translate.getLang$();
-  }
-
-  ngOnInit(): void {
     this.user$ = this.selectors.user;
     this.userOrders$ = this.selectors.userOrders;
 
-    // Pre-fill form from user store
-    const user = this.user$();
-    if (user) {
-      this.formName    = user.fullName || user.name || '';
-      this.formEmail   = user.email || '';
-      this.formPhone   = user.phoneNumber || '';
-      this.formAddress = user.address || '';
-    }
+    // Tự động đồng bộ dữ liệu vào Form khi user signal thay đổi từ MongoDB
+    effect(() => {
+      const user = this.selectors.user();
+      if (user) {
+        this.formName    = user.fullName || user.name || '';
+        this.formEmail   = user.email || '';
+        this.formPhone   = user.phoneNumber || '';
+        this.formAddress = user.address || '';
+      }
+    });
+  }
 
-    // Set sync time
-    this.updateSyncTime();
+  ngOnInit(): void {
+    if (isPlatformBrowser(this.platformId)) {
+      // Tải dữ liệu người dùng và đơn hàng mới nhất từ MongoDB qua API
+      this.store.getUser();
+      this.store.getUserOrders();
+      this.updateSyncTime();
+    }
   }
 
   updateSyncTime(): void {
@@ -107,7 +112,7 @@ export class Profile implements OnInit {
     const user = this.user$();
     if (!user) return 'Thành viên';
     const roles = user.roles || (user.role ? [user.role] : []);
-    if (roles.includes('admin')) return 'Quản trị viên';
+    if (roles.includes('admin') || roles.includes('super-admin')) return 'Quản trị viên';
     return 'Thành viên';
   }
 
@@ -156,7 +161,7 @@ export class Profile implements OnInit {
     return sorted.filter(o => this.normalizeStatus(o.status) === this.activeTab);
   }
 
-  // ── Formatting & Display helpers ──
+  // ── Formatting & Display helpers (100% dữ liệu thực từ MongoDB) ──
   formatOrderDate(order: Order): string {
     const d = order.createdAt || order.dateAdded;
     if (!d) return '—';
@@ -190,8 +195,10 @@ export class Profile implements OnInit {
   }
 
   getReviewDeadline(order: Order): string {
-    const d = order.deliveredAt || order.createdAt || order.dateAdded;
-    const base = d ? new Date(d) : new Date();
+    const d = order.deliveredAt || (order as any).shipping?.deliveredAt || order.createdAt || order.dateAdded;
+    if (!d) return '—';
+    const base = new Date(d);
+    if (isNaN(base.getTime())) return '—';
     base.setDate(base.getDate() + 30);
     const dd = String(base.getDate()).padStart(2, '0');
     const mm = String(base.getMonth() + 1).padStart(2, '0');
@@ -200,7 +207,7 @@ export class Profile implements OnInit {
   }
 
   getOrderPhone(order: Order): string {
-    return order.shippingAddress?.phone || order.customerPhone || this.user$()?.phoneNumber || '0881 1880 080';
+    return order.shippingAddress?.phone || order.customerPhone || this.user$()?.phoneNumber || '—';
   }
 
   getOrderAddress(order: Order): string {
@@ -213,7 +220,7 @@ export class Profile implements OnInit {
       ].filter(Boolean);
       return parts.join(', ');
     }
-    return this.user$()?.address || '118 Linh Trung, Phường Linh Trung, Thủ Đức, Thành phố Hồ Chí Minh';
+    return this.user$()?.address || '—';
   }
 
   getStatusClass(status: string | undefined): string {
@@ -242,13 +249,17 @@ export class Profile implements OnInit {
     }
   }
 
-  // ── Save profile ──
+  // ── Save profile (Gửi API cập nhật MongoDB & đồng bộ state tức thì) ──
   onSave(): void {
     this.saveSuccess = false;
     this.saveError = '';
 
-    // Validate passwords if provided
+    // Validate mật khẩu nếu người dùng muốn đổi
     if (this.formNewPassword || this.formConfirmPassword) {
+      if (!this.formNewPassword || !this.formConfirmPassword) {
+        this.saveError = 'Vui lòng nhập cả mật khẩu mới và xác nhận mật khẩu.';
+        return;
+      }
       if (this.formNewPassword !== this.formConfirmPassword) {
         this.saveError = 'Mật khẩu mới không khớp. Vui lòng kiểm tra lại.';
         return;
@@ -261,21 +272,15 @@ export class Profile implements OnInit {
 
     const user = this.user$();
     if (!user) {
-      this.saveError = 'Không tìm thấy thông tin tài khoản.';
-      return;
-    }
-
-    const userId = user._id || user.id;
-    if (!userId) {
-      this.saveError = 'Không xác định được tài khoản.';
+      this.saveError = 'Không tìm thấy phiên đăng nhập. Vui lòng đăng nhập lại.';
       return;
     }
 
     const payload: any = {
-      fullName: this.formName.trim() || undefined,
-      email: this.formEmail.trim() || undefined,
-      phoneNumber: this.formPhone.trim() || undefined,
-      address: this.formAddress.trim() || undefined,
+      fullName: this.formName?.trim() || undefined,
+      name: this.formName?.trim() || undefined,
+      phoneNumber: this.formPhone?.trim() ?? '',
+      address: this.formAddress?.trim() ?? '',
     };
 
     if (this.formNewPassword) {
@@ -283,24 +288,27 @@ export class Profile implements OnInit {
     }
 
     this.isSaving = true;
-    this.apiService.updateUser(userId, payload).subscribe({
+    this.apiService.updateProfile(payload).subscribe({
       next: (res: any) => {
         this.isSaving = false;
         if (res?.error) {
-          this.saveError = res.error?.message || 'Có lỗi xảy ra khi lưu.';
+          this.saveError = res.error?.message || (typeof res.error === 'string' ? res.error : 'Có lỗi xảy ra khi lưu thông tin.');
           return;
         }
-        // Update store with new data
-        this.store.storeUser({ ...user, ...payload });
+
+        // Cập nhật store với dữ liệu người dùng thật vừa được lưu vào MongoDB
+        const updatedUser = res.data || res;
+        this.store.storeUser({ ...user, ...updatedUser });
+
         this.formNewPassword = '';
         this.formConfirmPassword = '';
         this.saveSuccess = true;
         this.updateSyncTime();
         setTimeout(() => { this.saveSuccess = false; }, 4000);
       },
-      error: () => {
+      error: (err: any) => {
         this.isSaving = false;
-        this.saveError = 'Có lỗi kết nối. Vui lòng thử lại.';
+        this.saveError = err?.error?.message || 'Có lỗi kết nối máy chủ. Vui lòng thử lại.';
       }
     });
   }

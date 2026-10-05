@@ -746,6 +746,13 @@
   box-shadow: 0 0 0 3px rgba(116, 7, 14, 0.08);
 }
 
+.readonly-input {
+  background-color: #f7f5f2 !important;
+  color: #786e65 !important;
+  cursor: not-allowed;
+  border-color: #e5e0d8 !important;
+}
+
 .field-textarea {
   resize: vertical;
   min-height: 64px;

@@ -161,48 +161,6 @@
 
   <div class="sf-divider"></div>
 
-  <!-- ── 4. Tình trạng hàng ── -->
-  <div class="sf-section">
-    <button type="button" class="sf-section-header" (click)="showStock = !showStock">
-      <span class="sf-section-title">Tình trạng hàng</span>
-      <svg class="sf-chevron" [class.rotated]="!showStock" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-        stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="18 15 12 9 6 15"></polyline>
-      </svg>
-    </button>
-
-    @if (showStock) {
-    <div class="sf-section-body">
-      <div class="sf-radio-group">
-        <!-- Tất cả -->
-        <label class="sf-radio-row" (click)="onStockChange('all')">
-          <span class="sf-custom-radio" [class.checked]="stock === 'all'">
-            <span class="sf-radio-dot"></span>
-          </span>
-          <span class="sf-radio-text" [class.active]="stock === 'all'">Tất cả</span>
-        </label>
-
-        <!-- Còn hàng -->
-        <label class="sf-radio-row" (click)="onStockChange('onStock')">
-          <span class="sf-custom-radio" [class.checked]="stock === 'onStock'">
-            <span class="sf-radio-dot"></span>
-          </span>
-          <span class="sf-radio-text" [class.active]="stock === 'onStock'">Còn hàng</span>
-        </label>
-
-        <!-- Hết hàng -->
-        <label class="sf-radio-row" (click)="onStockChange('unavailable')">
-          <span class="sf-custom-radio" [class.checked]="stock === 'unavailable'">
-            <span class="sf-radio-dot"></span>
-          </span>
-          <span class="sf-radio-text" [class.active]="stock === 'unavailable'">Hết hàng</span>
-        </label>
-      </div>
-    </div>
-    }
-  </div>
-
-  <div class="sf-divider"></div>
 
   <!-- ── 5. Đánh giá sao ── -->
   <div class="sf-section">

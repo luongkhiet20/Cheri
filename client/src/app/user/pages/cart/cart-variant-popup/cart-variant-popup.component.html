@@ -1,0 +1,183 @@
+@if (isOpen && cartItem) {
+  <div class="cheri-modal-wrapper" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <!-- Backdrop overlay -->
+    <div class="cheri-modal-backdrop" (click)="onCancel()"></div>
+
+    <!-- Modal Dialog -->
+    <div class="cheri-modal-dialog">
+      <!-- Header -->
+      <div class="cheri-modal-header">
+        <h3 class="cheri-modal-title" id="modal-title">Chọn lại sản phẩm</h3>
+        <button
+          type="button"
+          class="btn-close-modal"
+          (click)="onCancel()"
+          aria-label="Đóng popup">
+          <i class="material-icons">close</i>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="cheri-modal-body">
+        <!-- Thông tin sản phẩm vắn tắt -->
+        <div class="modal-product-summary">
+          <img
+            class="modal-prod-img"
+            [src]="cartItem?.item?.mainImage?.url"
+            [alt]="cartItem?.item?.title" />
+          <div class="modal-prod-info">
+            <h4 class="modal-prod-title">{{ cartItem?.item?.title }}</h4>
+            @if (modalSelectedVariant?.sku || cartItem.sku) {
+              <span class="modal-prod-sku">SKU: {{ modalSelectedVariant?.sku || cartItem.sku }}</span>
+            }
+            <div class="modal-prod-prices">
+              <span class="modal-prod-price">{{ modalPrice | priceFormat }} {{ currency }}</span>
+              @if (modalRegularPrice && modalRegularPrice > modalPrice) {
+                <span class="modal-prod-regular-price">{{ modalRegularPrice | priceFormat }} {{ currency }}</span>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Nhóm Phân loại -->
+        @if (hasClassification() && getAvailableClassifications().length > 0) {
+          <div class="cheri-modal-option-group">
+            <label class="cheri-option-title">
+              Phân loại:
+              @if (modalClassification) {
+                <span class="cheri-option-current">{{ modalClassification }}</span>
+              }
+            </label>
+            <div class="cheri-options-chips">
+              @for (cls of getAvailableClassifications(); track cls) {
+                <button
+                  type="button"
+                  class="cheri-choice-pill"
+                  [class.is-active]="modalClassification === cls"
+                  (click)="onSelectClassification(cls)">
+                  {{ cls }}
+                </button>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Nhóm Màu sắc -->
+        @if (hasColors() && getAvailableColors().length > 0) {
+          <div class="cheri-modal-option-group">
+            <label class="cheri-option-title">
+              Màu sắc:
+              @if (modalColor) {
+                <span class="cheri-option-current">{{ modalColor }}</span>
+              }
+            </label>
+            <div class="cheri-colors-swatch-list">
+              @for (c of getAvailableColors(); track c.name) {
+                <button
+                  type="button"
+                  class="cheri-color-swatch-btn"
+                  [class.is-active]="modalColor === c.name"
+                  [title]="c.name"
+                  (click)="onSelectColor(c.name)">
+                  <span
+                    class="swatch-color-circle"
+                    [style.background-color]="c.hex || '#74070E'">
+                  </span>
+                  <span class="swatch-name-label">{{ c.name }}</span>
+                </button>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Nhóm Kích cỡ -->
+        @if (hasSizes() && getAvailableSizes().length > 0) {
+          <div class="cheri-modal-option-group">
+            <label class="cheri-option-title">
+              Kích cỡ:
+              @if (modalSize) {
+                <span class="cheri-option-current">{{ modalSize }}</span>
+              }
+            </label>
+            <div class="cheri-sizes-grid">
+              @for (s of getAvailableSizes(); track s) {
+                <button
+                  type="button"
+                  class="cheri-size-btn"
+                  [class.is-active]="modalSize === s"
+                  (click)="onSelectSize(s)">
+                  {{ s }}
+                </button>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Số lượng trong modal -->
+        <div class="modal-qty-section">
+          <label class="cheri-option-title">Số lượng:</label>
+          <div class="modal-qty-row">
+            <div class="cart-qty-control">
+              <button
+                type="button"
+                class="qty-btn qty-btn-minus"
+                [disabled]="modalQuantity <= 1"
+                (click)="decreaseQuantity()">
+                −
+              </button>
+              <input
+                type="number"
+                class="qty-input"
+                [value]="modalQuantity"
+                [min]="1"
+                [max]="modalStock"
+                (blur)="onQuantityInputChange($event)"
+                (keyup.enter)="onQuantityInputChange($event)" />
+              <button
+                type="button"
+                class="qty-btn qty-btn-plus"
+                [disabled]="modalQuantity >= modalStock || modalStock <= 0"
+                (click)="increaseQuantity()">
+                +
+              </button>
+            </div>
+
+            <span class="modal-stock-text" [class.is-out]="modalStock <= 0">
+              @if (modalStock <= 0) {
+                Hết hàng
+              } @else {
+                Tồn kho: {{ modalStock }} sản phẩm
+              }
+            </span>
+          </div>
+        </div>
+
+        <!-- Cảnh báo lỗi nếu có -->
+        @if (modalError) {
+          <div class="modal-error-alert">
+            <i class="material-icons">error_outline</i>
+            <span>{{ modalError }}</span>
+          </div>
+        }
+      </div>
+
+      <!-- Footer -->
+      <div class="cheri-modal-footer">
+        <button type="button" class="btn-modal-cancel" (click)="onCancel()">
+          Hủy
+        </button>
+        <button
+          type="button"
+          class="btn-modal-save"
+          [disabled]="isModalSubmitting || modalStock <= 0 || !modalSelectedVariant"
+          (click)="onSubmit()">
+          @if (isModalSubmitting) {
+            Đang cập nhật...
+          } @else {
+            Cập nhật giỏ hàng
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}

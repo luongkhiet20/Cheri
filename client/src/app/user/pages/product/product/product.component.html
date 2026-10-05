@@ -7,284 +7,228 @@
 
     <!-- TRẠNG THÁI LOADING -->
     @if (!product$() || productLoading$()) {
-      <div class="cheri-popup-loading">
-        <mat-spinner diameter="42" strokeWidth="2.5"></mat-spinner>
-        <p class="loading-text">Đang tải thông tin sản phẩm...</p>
-      </div>
+    <div class="cheri-popup-loading">
+      <mat-spinner diameter="42" strokeWidth="2.5"></mat-spinner>
+      <p class="loading-text">Đang tải thông tin sản phẩm...</p>
+    </div>
     } @else {
-      <!-- TRẠNG THÁI SẢN PHẨM BỊ ẨN / TẠM NGƯNG BÁN -->
-      @if (isUnavailable) {
-        <div class="cheri-popup-unavailable">
-          <div class="unavailable-symbol">✦</div>
-          <h2 class="unavailable-title">Sản phẩm không khả dụng</h2>
-          <p class="unavailable-desc">Sản phẩm này hiện đang tạm ẩn hoặc không còn được kinh doanh.</p>
-          <button type="button" class="cheri-action-btn primary-btn" (click)="goBack()">
-            Khám phá sản phẩm khác
+    <!-- TRẠNG THÁI SẢN PHẨM BỊ ẨN / TẠM NGƯNG BÁN -->
+    @if (isUnavailable) {
+    <div class="cheri-popup-unavailable">
+      <div class="unavailable-symbol">✦</div>
+      <h2 class="unavailable-title">Sản phẩm không khả dụng</h2>
+      <p class="unavailable-desc">Sản phẩm này hiện đang tạm ẩn hoặc không còn được kinh doanh.</p>
+
+    </div>
+    } @else {
+    <!-- NỘI DUNG CHÍNH POPUP: 2 CỘT -->
+    <div class="cheri-popup-body">
+      <!-- CỘT BÊN TRÁI: HÌNH ẢNH SẢN PHẨM -->
+      <div class="cheri-gallery-col">
+        <!-- Ảnh chính lớn -->
+        <div class="cheri-main-image-container" (click)="openGalleryDialog()">
+          @if (selectedImage) {
+          <img [src]="selectedImage" [alt]="productTitle" class="cheri-main-image" loading="eager" />
+          <span class="cheri-zoom-hint" title="Bấm để phóng to">
+            <i class="material-icons">zoom_in</i>
+          </span>
+          } @else {
+          <div class="cheri-no-image-placeholder">
+            <i class="material-icons">image_not_supported</i>
+            <p>Chưa có hình ảnh sản phẩm</p>
+          </div>
+          }
+        </div>
+
+        <!-- Thumbnail danh sách bên dưới -->
+        @if (galleryImages.length > 1) {
+        <div class="cheri-thumbnails-row">
+          @for (img of galleryImages; track $index) {
+          <button type="button" class="cheri-thumb-item" [class.is-selected]="selectedImage === img"
+            (click)="selectImage(img)" [attr.aria-label]="'Ảnh ' + ($index + 1)">
+            <img [src]="img" [alt]="productTitle + ' ' + ($index + 1)" />
+          </button>
+          }
+        </div>
+        }
+      </div>
+
+      <!-- CỘT BÊN PHẢI: THÔNG TIN SẢN PHẨM & MUA HÀNG -->
+      <div class="cheri-details-col">
+        <!-- 4.1 Danh mục -->
+        @if (categoryBreadcrumb) {
+        <div class="cheri-category-breadcrumb">
+          {{ categoryBreadcrumb }}
+        </div>
+        }
+
+        <!-- 4.2 Tên sản phẩm -->
+        <h1 class="cheri-product-heading">{{ productTitle }}</h1>
+
+        <!-- Mã sản phẩm SKU nếu có -->
+        @if (displaySku) {
+        <div class="cheri-sku-badge">
+          Mã sản phẩm: <span>{{ displaySku }}</span>
+        </div>
+        }
+
+
+
+        <!-- 5. Giá & 6. Tình trạng -->
+        <div class="cheri-price-status-container">
+          <div class="cheri-price-group">
+            @if (isOnSale && displayRegularPrice > displaySalePrice) {
+            <span class="cheri-price-sale">{{ displaySalePrice | priceFormat }} ₫</span>
+            <span class="cheri-price-regular">{{ displayRegularPrice | priceFormat }} ₫</span>
+            } @else {
+            <span class="cheri-price-sale">{{ (displaySalePrice || displayRegularPrice) | priceFormat }} ₫</span>
+            }
+          </div>
+
+        </div>
+
+        <hr class="cheri-section-divider" />
+
+        <!-- 8. Phân loại (Classification) -->
+        @if (hasClassification && availableClassifications.length > 0) {
+        <div class="cheri-option-group">
+          <label class="cheri-option-title">
+            Phân loại:
+            @if (selectedClassification) {
+            <span class="cheri-option-current">{{ selectedClassification }}</span>
+            }
+          </label>
+          <div class="cheri-options-chips">
+            @for (cls of availableClassifications; track cls) {
+            <button type="button" class="cheri-choice-pill" [class.is-active]="selectedClassification === cls"
+              (click)="onSelectClassification(cls)">
+              {{ cls }}
+            </button>
+            }
+          </div>
+        </div>
+        }
+
+        <!-- 9. Màu sắc (Colors) -->
+        @if (hasColors && availableColors.length > 0) {
+        <div class="cheri-option-group">
+          <label class="cheri-option-title">
+            Màu sắc:
+            @if (selectedColor) {
+            <span class="cheri-option-current">{{ selectedColor }}</span>
+            }
+          </label>
+          <div class="cheri-colors-swatch-list">
+            @for (c of availableColors; track c.name) {
+            <button type="button" class="cheri-color-swatch-btn" [class.is-active]="selectedColor === c.name"
+              [title]="c.name" (click)="onSelectColor(c.name)">
+              <span class="swatch-color-circle" [style.background-color]="c.hex || '#74070E'"></span>
+              <span class="swatch-name-label">{{ c.name }}</span>
+            </button>
+            }
+          </div>
+        </div>
+        }
+
+        <!-- 10. Kích cỡ (Sizes) -->
+        @if (hasSizes && availableSizes.length > 0) {
+        <div class="cheri-option-group">
+          <label class="cheri-option-title">
+            Kích cỡ:
+            @if (selectedSize) {
+            <span class="cheri-option-current">{{ selectedSize }}</span>
+            }
+          </label>
+          <div class="cheri-sizes-grid">
+            @for (s of availableSizes; track s) {
+            <button type="button" class="cheri-size-btn" [class.is-active]="selectedSize === s"
+              (click)="onSelectSize(s)">
+              {{ s }}
+            </button>
+            }
+          </div>
+        </div>
+        }
+
+        <!-- 14. Số lượng -->
+        <div class="cheri-option-group cheri-quantity-row">
+          <label class="cheri-option-title">Số lượng:</label>
+          <div class="cheri-stepper-box">
+            <button type="button" class="stepper-btn" [disabled]="quantity <= 1 || isOutOfStock" (click)="decreaseQty()"
+              aria-label="Giảm số lượng">
+              −
+            </button>
+            <span class="stepper-count">{{ quantity }}</span>
+            <button type="button" class="stepper-btn"
+              [disabled]="(maxStock > 0 && quantity >= maxStock) || isOutOfStock" (click)="increaseQty()"
+              aria-label="Tăng số lượng">
+              +
+            </button>
+          </div>
+        </div>
+
+        <!-- 15. Nút Mua Hàng -->
+        <div class="cheri-action-buttons">
+          <button type="button" class="cheri-action-btn secondary-btn" [disabled]="isOutOfStock"
+            (click)="handleAddToCart()">
+            Thêm vào giỏ hàng
+          </button>
+
+          <button type="button" class="cheri-action-btn primary-btn" [disabled]="isOutOfStock" (click)="handleBuyNow()">
+            Mua ngay
           </button>
         </div>
-      } @else {
-        <!-- NỘI DUNG CHÍNH POPUP: 2 CỘT -->
-        <div class="cheri-popup-body">
-          <!-- CỘT BÊN TRÁI: HÌNH ẢNH SẢN PHẨM -->
-          <div class="cheri-gallery-col">
-            <!-- Ảnh chính lớn -->
-            <div class="cheri-main-image-container" (click)="openGalleryDialog()">
-              @if (selectedImage) {
-                <img
-                  [src]="selectedImage"
-                  [alt]="productTitle"
-                  class="cheri-main-image"
-                  loading="eager"
-                />
-                <span class="cheri-zoom-hint" title="Bấm để phóng to">
-                  <i class="material-icons">zoom_in</i>
-                </span>
-              } @else {
-                <div class="cheri-no-image-placeholder">
-                  <i class="material-icons">image_not_supported</i>
-                  <p>Chưa có hình ảnh sản phẩm</p>
-                </div>
-              }
-            </div>
 
-            <!-- Thumbnail danh sách bên dưới -->
-            @if (galleryImages.length > 1) {
-              <div class="cheri-thumbnails-row">
-                @for (img of galleryImages; track $index) {
-                  <button
-                    type="button"
-                    class="cheri-thumb-item"
-                    [class.is-selected]="selectedImage === img"
-                    (click)="selectImage(img)"
-                    [attr.aria-label]="'Ảnh ' + ($index + 1)"
-                  >
-                    <img [src]="img" [alt]="productTitle + ' ' + ($index + 1)" />
-                  </button>
-                }
-              </div>
-            }
+        <!-- 16. Vận chuyển -->
+        @if (shippingInfo) {
+        <div class="cheri-shipping-panel">
+          <div class="shipping-panel-header">
+            <i class="material-icons">local_shipping</i>
+            <span>Vận chuyển</span>
           </div>
-
-          <!-- CỘT BÊN PHẢI: THÔNG TIN SẢN PHẨM & MUA HÀNG -->
-          <div class="cheri-details-col">
-            <!-- 4.1 Danh mục -->
-            @if (categoryBreadcrumb) {
-              <div class="cheri-category-breadcrumb">
-                {{ categoryBreadcrumb }}
-              </div>
-            }
-
-            <!-- 4.2 Tên sản phẩm -->
-            <h1 class="cheri-product-heading">{{ productTitle }}</h1>
-
-            <!-- Mã sản phẩm SKU nếu có -->
-            @if (displaySku) {
-              <div class="cheri-sku-badge">
-                Mã sản phẩm: <span>{{ displaySku }}</span>
-              </div>
-            }
-
-            <!-- 4.3 Mô tả ngắn -->
-            @if (productDescription) {
-              <div class="cheri-description-text">
-                {{ productDescription }}
-              </div>
-            }
-
-            <!-- 5. Giá & 6. Tình trạng -->
-            <div class="cheri-price-status-container">
-              <div class="cheri-price-group">
-                @if (isOnSale && displayRegularPrice > displaySalePrice) {
-                  <span class="cheri-price-sale">{{ displaySalePrice | priceFormat }} ₫</span>
-                  <span class="cheri-price-regular">{{ displayRegularPrice | priceFormat }} ₫</span>
-                } @else {
-                  <span class="cheri-price-sale">{{ (displaySalePrice || displayRegularPrice) | priceFormat }} ₫</span>
-                }
-              </div>
-
-              <div class="cheri-stock-indicator" [class.is-out]="isOutOfStock">
-                <span class="stock-pulse"></span>
-                <span class="stock-label">{{ isOutOfStock ? 'Hết hàng' : 'Đang còn hàng' }}</span>
-              </div>
+          <div class="shipping-panel-body">
+            @if (shippingInfo.basicCost !== null) {
+            <div class="shipping-fee-line">
+              <span class="fee-name">Phí cơ bản:</span>
+              <span class="fee-val">{{ shippingInfo.basicCost | priceFormat }} ₫</span>
             </div>
-
-            <hr class="cheri-section-divider" />
-
-            <!-- 8. Phân loại (Classification) -->
-            @if (hasClassification && availableClassifications.length > 0) {
-              <div class="cheri-option-group">
-                <label class="cheri-option-title">
-                  Phân loại:
-                  @if (selectedClassification) {
-                    <span class="cheri-option-current">{{ selectedClassification }}</span>
-                  }
-                </label>
-                <div class="cheri-options-chips">
-                  @for (cls of availableClassifications; track cls) {
-                    <button
-                      type="button"
-                      class="cheri-choice-pill"
-                      [class.is-active]="selectedClassification === cls"
-                      (click)="onSelectClassification(cls)"
-                    >
-                      {{ cls }}
-                    </button>
-                  }
-                </div>
-              </div>
             }
-
-            <!-- 9. Màu sắc (Colors) -->
-            @if (hasColors && availableColors.length > 0) {
-              <div class="cheri-option-group">
-                <label class="cheri-option-title">
-                  Màu sắc:
-                  @if (selectedColor) {
-                    <span class="cheri-option-current">{{ selectedColor }}</span>
-                  }
-                </label>
-                <div class="cheri-colors-swatch-list">
-                  @for (c of availableColors; track c.name) {
-                    <button
-                      type="button"
-                      class="cheri-color-swatch-btn"
-                      [class.is-active]="selectedColor === c.name"
-                      [title]="c.name"
-                      (click)="onSelectColor(c.name)"
-                    >
-                      <span
-                        class="swatch-color-circle"
-                        [style.background-color]="c.hex || '#74070E'"
-                      ></span>
-                      <span class="swatch-name-label">{{ c.name }}</span>
-                    </button>
-                  }
-                </div>
-              </div>
-            }
-
-            <!-- 10. Kích cỡ (Sizes) -->
-            @if (hasSizes && availableSizes.length > 0) {
-              <div class="cheri-option-group">
-                <label class="cheri-option-title">
-                  Kích cỡ:
-                  @if (selectedSize) {
-                    <span class="cheri-option-current">{{ selectedSize }}</span>
-                  }
-                </label>
-                <div class="cheri-sizes-grid">
-                  @for (s of availableSizes; track s) {
-                    <button
-                      type="button"
-                      class="cheri-size-btn"
-                      [class.is-active]="selectedSize === s"
-                      (click)="onSelectSize(s)"
-                    >
-                      {{ s }}
-                    </button>
-                  }
-                </div>
-              </div>
-            }
-
-            <!-- 14. Số lượng -->
-            <div class="cheri-option-group cheri-quantity-row">
-              <label class="cheri-option-title">Số lượng</label>
-              <div class="cheri-stepper-box">
-                <button
-                  type="button"
-                  class="stepper-btn"
-                  [disabled]="quantity <= 1 || isOutOfStock"
-                  (click)="decreaseQty()"
-                  aria-label="Giảm số lượng"
-                >
-                  −
-                </button>
-                <span class="stepper-count">{{ quantity }}</span>
-                <button
-                  type="button"
-                  class="stepper-btn"
-                  [disabled]="(maxStock > 0 && quantity >= maxStock) || isOutOfStock"
-                  (click)="increaseQty()"
-                  aria-label="Tăng số lượng"
-                >
-                  +
-                </button>
-              </div>
+            @if (shippingInfo.extendedCost !== null) {
+            <div class="shipping-fee-line">
+              <span class="fee-name">Phí mở rộng:</span>
+              <span class="fee-val">{{ shippingInfo.extendedCost | priceFormat }} ₫</span>
             </div>
-
-            <!-- 15. Nút Mua Hàng -->
-            <div class="cheri-action-buttons">
-              <button
-                type="button"
-                class="cheri-action-btn secondary-btn"
-                [disabled]="isOutOfStock"
-                (click)="handleAddToCart()"
-              >
-                Thêm vào giỏ hàng
-              </button>
-
-              <button
-                type="button"
-                class="cheri-action-btn primary-btn"
-                [disabled]="isOutOfStock"
-                (click)="handleBuyNow()"
-              >
-                Mua ngay
-              </button>
-            </div>
-
-            <!-- 16. Vận chuyển -->
-            @if (shippingInfo) {
-              <div class="cheri-shipping-panel">
-                <div class="shipping-panel-header">
-                  <i class="material-icons">local_shipping</i>
-                  <span>Vận chuyển</span>
-                </div>
-                <div class="shipping-panel-body">
-                  @if (shippingInfo.basicCost !== null) {
-                    <div class="shipping-fee-line">
-                      <span class="fee-name">Phí cơ bản:</span>
-                      <span class="fee-val">{{ shippingInfo.basicCost | priceFormat }} ₫</span>
-                    </div>
-                  }
-                  @if (shippingInfo.extendedCost !== null) {
-                    <div class="shipping-fee-line">
-                      <span class="fee-name">Phí mở rộng:</span>
-                      <span class="fee-val">{{ shippingInfo.extendedCost | priceFormat }} ₫</span>
-                    </div>
-                  }
-                  @if (shippingInfo.note) {
-                    <div class="shipping-note-line">{{ shippingInfo.note }}</div>
-                  }
-                </div>
-              </div>
             }
-
-            <!-- 4.3 Mô tả chi tiết nếu có -->
-            @if (productDescriptionFull && productDescriptionFull.length > 0) {
-              <div class="cheri-full-desc-panel">
-                <div class="full-desc-title">Thông tin chi tiết:</div>
-                <ul class="full-desc-list">
-                  @for (bullet of productDescriptionFull; track $index) {
-                    <li>{{ bullet }}</li>
-                  }
-                </ul>
-              </div>
-            }
-
-            <!-- 18. Tags -->
-            @if (productTags && productTags.length > 0) {
-              <div class="cheri-tags-container">
-                @for (t of productTags; track t) {
-                  <span class="cheri-tag-item">#{{ t }}</span>
-                }
-              </div>
+            @if (shippingInfo.note) {
+            <div class="shipping-note-line">{{ shippingInfo.note }}</div>
             }
           </div>
         </div>
-      }
+        }
+
+        <!-- 4.3 Mô tả chi tiết nếu có -->
+        @if (productDescriptionFull && productDescriptionFull.length > 0) {
+        <div class="cheri-full-desc-panel">
+          <div class="full-desc-title">Thông tin chi tiết:</div>
+          <ul class="full-desc-list">
+            @for (bullet of productDescriptionFull; track $index) {
+            <li>{{ bullet }}</li>
+            }
+          </ul>
+        </div>
+        }
+
+        <!-- 18. Tags -->
+        @if (productTags && productTags.length > 0) {
+        <div class="cheri-tags-container">
+          @for (t of productTags; track t) {
+          <span class="cheri-tag-item">#{{ t }}</span>
+          }
+        </div>
+        }
+      </div>
+    </div>
+    }
     }
   </div>
 </div>
-

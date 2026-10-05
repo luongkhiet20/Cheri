@@ -197,6 +197,77 @@ export class SignalStore {
     });
   };
 
+  updateCartQuantity = (id: string, qty: number, lang = 'vi') => {
+    return this.apiService.updateCartQuantity(id, qty, lang).pipe(
+      map((response: any) => {
+        if (response && !response.error) {
+          this.selectors.productState.update((state) => ({ ...state, cart: response }));
+        }
+        return response;
+      })
+    );
+  };
+
+  deleteCartItem = (id: string, lang = 'vi') => {
+    return this.apiService.deleteCartItem(id, lang).pipe(
+      map((response: any) => {
+        if (response && !response.error) {
+          this.selectors.productState.update((state) => ({ ...state, cart: response }));
+        }
+        return response;
+      })
+    );
+  };
+
+  deleteCartItems = (ids: string[], lang = 'vi') => {
+    return this.apiService.deleteCartItems(ids, lang).pipe(
+      map((response: any) => {
+        if (response && !response.error) {
+          this.selectors.productState.update((state) => ({ ...state, cart: response }));
+        }
+        return response;
+      })
+    );
+  };
+
+  updateCartVariant = (
+    id: string,
+    options: { variantId?: string; classification?: string; color?: string; size?: string },
+    lang = 'vi',
+  ) => {
+    return this.apiService.updateCartVariant(id, options, lang).pipe(
+      map((response: any) => {
+        if (response && !response.error) {
+          const cartData = response.cart || response;
+          this.selectors.productState.update((state) => ({ ...state, cart: cartData }));
+        }
+        return response;
+      }),
+    );
+  };
+
+  toggleCartItemSelect = (id: string, selected: boolean, lang = 'vi') => {
+    return this.apiService.toggleCartItemSelect(id, selected, lang).pipe(
+      map((response: any) => {
+        if (response && !response.error) {
+          this.selectors.productState.update((state) => ({ ...state, cart: response }));
+        }
+        return response;
+      }),
+    );
+  };
+
+  selectAllCartItems = (selected: boolean, lang = 'vi') => {
+    return this.apiService.selectAllCartItems(selected, lang).pipe(
+      map((response: any) => {
+        if (response && !response.error) {
+          this.selectors.productState.update((state) => ({ ...state, cart: response }));
+        }
+        return response;
+      }),
+    );
+  };
+
   makeOrder = (payload) => {
     this.selectors.productState.update((state) => ({ ...state, loading: true }));
     this.apiService.makeOrder(payload).subscribe((response: any) => {

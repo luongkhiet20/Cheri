@@ -61,18 +61,30 @@ export interface ProductVariant {
   updatedAt?          : Date | string;
 }
 
+export interface CartItem {
+  id?: string;
+  item: Product;
+  price: number;
+  regularPrice?: number;
+  qty: number;
+  stock?: number;
+  sku?: string;
+  variantId?: string;
+  selectedClassification?: string;
+  selectedColor?: string;
+  selectedSize?: string;
+  variant?: ProductVariant;
+  isSelected?: boolean;
+  shipingCostType?: string;
+}
+
 export interface Cart {
   totalQty    : number;
   totalPrice  : number;
   shippingCost?: number;
   shippingLimit?: number;
   shippingType?: string;
-  items       : {
-    id? : string;
-    item: Product;
-    price: number;
-    qty  : number;
-  }[];
+  items       : CartItem[];
 }
 
 export interface Category {

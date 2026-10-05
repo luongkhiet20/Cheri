@@ -1,4 +1,4 @@
-﻿declare const Stripe: any;
+declare const Stripe: any;
 
 import { Component, Input, EventEmitter, Inject, PLATFORM_ID, ViewChild, ElementRef, OnInit, Output } from '@angular/core';
 import { isPlatformServer, DOCUMENT } from '@angular/common';
@@ -82,7 +82,21 @@ export class CardComponent implements OnInit {
         this.stripe = Stripe(stripePublishableKey);
         const elements = this.stripe.elements();
 
-        this.card = elements.create('card');
+        const style = {
+          base: {
+            fontFamily: '"SF Compact Text", "SF Compact Display", "SF Compact", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+            fontSize: '13px',
+            color: '#2B2B2B',
+            '::placeholder': {
+              color: '#9CA3AF',
+            },
+          },
+          invalid: {
+            color: '#B42318',
+          },
+        };
+
+        this.card = elements.create('card', { style });
         this.card.mount(this.cardElement.nativeElement);
 
         this.card.addEventListener('change', ({ error, complete }) => {

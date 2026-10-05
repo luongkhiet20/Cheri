@@ -93,6 +93,7 @@ export const prepareProduct = (
   return {
     _id: p._id,
     id: p.id || (p._id ? p._id.toString() : ''),
+    sku: p.sku || '',
     titleUrl: p.titleUrl || '',
     mainImage,
     images: p.images || [],
@@ -100,6 +101,17 @@ export const prepareProduct = (
     rating: p.rating !== undefined ? p.rating : 5,
     _user: p._user,
     dateAdded: p.dateAdded,
+    hasClassification: p.hasClassification ?? langData.hasClassification,
+    hasColors: p.hasColors ?? langData.hasColors,
+    hasSizes: p.hasSizes ?? langData.hasSizes,
+    classifications: p.classifications || langData.classifications || [],
+    colors: p.colors || langData.colors || [],
+    sizes: p.sizes || langData.sizes || [],
+    variants: allVariants,
+    shippingBasicCost: p.shippingBasicCost !== undefined ? p.shippingBasicCost : langData.shippingBasicCost,
+    shippingExtendedCost: p.shippingExtendedCost !== undefined ? p.shippingExtendedCost : langData.shippingExtendedCost,
+    shippingCost: p.shippingCost !== undefined ? p.shippingCost : langData.shippingCost,
+    shipping: p.shipping || langData.shipping,
     ...langData,
     title,
     regularPrice,
@@ -117,19 +129,89 @@ export const prepareCart = (cart, lang: string, config): CartModel => {
     ? cart.items
         .map((cartItem: any) => {
           const prepareItem = prepareProduct(cartItem.item, lang, true);
-          const price: number = prepareItem.salePrice;
+          const allVariants = Array.isArray(prepareItem.variants) ? prepareItem.variants : [];
+
+          // Find active/selected variant
+          let variant = cartItem.variant || null;
+          if (!variant && allVariants.length > 0) {
+            if (cartItem.variantId) {
+              variant = allVariants.find(
+                (v: any) =>
+                  (v._id && v._id.toString() === cartItem.variantId) ||
+                  v.id === cartItem.variantId ||
+                  v.sku === cartItem.variantId,
+              );
+            }
+            if (
+              !variant &&
+              (cartItem.selectedClassification ||
+                cartItem.selectedColor ||
+                cartItem.selectedSize)
+            ) {
+              variant = allVariants.find((v: any) => {
+                const mClass =
+                  !cartItem.selectedClassification ||
+                  v.classification === cartItem.selectedClassification;
+                const mColor =
+                  !cartItem.selectedColor || v.color === cartItem.selectedColor;
+                const mSize =
+                  !cartItem.selectedSize || v.size === cartItem.selectedSize;
+                return mClass && mColor && mSize;
+              });
+            }
+            if (!variant) {
+              variant = allVariants[0];
+            }
+          }
+
+          let price: number = prepareItem.salePrice;
+          let regularPrice: number = prepareItem.regularPrice;
+          let stock: number = prepareItem.quantity;
+          let sku: string = prepareItem.sku || '';
+
+          if (variant) {
+            const vReg = Number(variant.price) || regularPrice;
+            const vDisc = Number(variant.discountPrice) || 0;
+            if (vDisc > 0 && vDisc < vReg) {
+              price = vDisc;
+              regularPrice = vReg;
+            } else {
+              price = vReg;
+              regularPrice = vReg;
+            }
+            stock = Math.max(0, Number(variant.stock) || 0);
+            sku = variant.sku || sku;
+          }
+
           const shipingCostType: string = prepareItem.shipping;
           return {
             item: prepareItem,
             id: cartItem.id,
             qty: cartItem.qty,
             price,
+            regularPrice,
+            stock,
+            sku,
+            variantId: variant
+              ? (variant._id?.toString() || variant.id || variant.sku)
+              : (cartItem.variantId || null),
+            selectedClassification: variant
+              ? variant.classification
+              : (cartItem.selectedClassification || null),
+            selectedColor: variant
+              ? variant.color
+              : (cartItem.selectedColor || null),
+            selectedSize: variant
+              ? variant.size
+              : (cartItem.selectedSize || null),
+            variant,
+            isSelected: cartItem.isSelected !== false,
             shipingCostType,
           };
         })
         .filter(
           (cartItem: any) =>
-            cartItem.item.visibility && cartItem.item.salePrice,
+            cartItem.item.visibility && (cartItem.price > 0 || cartItem.item.salePrice > 0),
         )
     : [];
 

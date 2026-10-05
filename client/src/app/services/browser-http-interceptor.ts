@@ -15,7 +15,11 @@ export class BrowserHttpInterceptor implements HttpInterceptor {
 
     if (isPlatformBrowser(this.platformId)) {
       const token = localStorage.getItem(accessTokenKey);
-      if (token && token !== 'null' && token !== 'undefined' && token.trim() !== '' && !request.headers.has('Authorization')) {
+      const isInternalRequest = !request.url.startsWith('http://') && !request.url.startsWith('https://')
+        || request.url.includes('localhost')
+        || (typeof window !== 'undefined' && request.url.includes(window.location.hostname));
+
+      if (token && token !== 'null' && token !== 'undefined' && token.trim() !== '' && !request.headers.has('Authorization') && isInternalRequest) {
         req = request.clone({
           setHeaders: {
             Authorization: `Bearer ${token}`

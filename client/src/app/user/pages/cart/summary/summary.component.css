@@ -1,8 +1,19 @@
-:host h2 {
-  text-align: center;
-  margin: auto;
-  padding: 16px 0;
-  color: #4bb543;
-  font-size: 25px;
-  line-height: 30px;
+:host {
+  display: block;
+  font-family: inherit;
 }
+:host .summary-success-title {
+  text-align: center;
+  margin: 20px auto 16px auto;
+  padding: 12px 0;
+  color: var(--cheri-primary, #74070E);
+  font-family: inherit;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+:host button {
+  font-family: inherit;
+  font-size: 14px;
+}
+

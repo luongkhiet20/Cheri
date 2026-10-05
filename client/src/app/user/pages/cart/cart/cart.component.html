@@ -2,121 +2,424 @@
   @if (!(cart$ | async)) {
   <mat-progress-bar mode="indeterminate"></mat-progress-bar>
   }
-  <div class="container">
+  <div class="container cart-container">
     @if (cart$ | async; as cart) {
 
     <div class="cart">
-      <div class="cart-with-order">
-        <ul class="cart-wrap" [class.cart-empty]="!cart?.items?.length">
-          <li class="cart-items">
-            <h2>{{ 'Cart_title' | translate | async }}</h2>
-          </li>
-          @for (cartItem of cart?.items; track cartItem; let last = $last) {
-          <li class="cart-items" [class.cart-last-item]="last">
-            <div class="cart-image-wrap">
-              <a [routerLink]="['/' + (lang$ | async) + '/product/' + cartItem?.item?.titleUrl]">
-                <img class="cart-image" src="{{ cartItem?.item?.mainImage?.url }}" />
-              </a>
-              <div class="cart-title">{{ cartItem?.item.title }}</div>
+      <div class="cart-with-order" [class.is-empty]="!cart?.items?.length">
+
+        <!-- ═══════════════════════════════════════════════════
+             KHỐI 1: GIỎ HÀNG (BÊN TRÁI)
+        ═══════════════════════════════════════════════════ -->
+        @if (cart?.items?.length) {
+        <div class="cart-wrap">
+          <!-- Tiêu đề & Chọn tất cả toolbar -->
+          <div class="cart-header-box">
+            <h2 class="cart-main-title">
+              Giỏ hàng <span class="cart-badge-count">({{ cart.items.length }} sản phẩm)</span>
+            </h2>
+
+            <div class="cart-toolbar">
+              <mat-checkbox [checked]="isAllSelected(cart)" [indeterminate]="isIndeterminate(cart)"
+                (change)="toggleSelectAll(cart)" color="primary">
+                <span class="toolbar-label">
+                  Chọn tất cả ({{ getSelectedCount(cart) }}/{{ cart.items.length }})
+                </span>
+              </mat-checkbox>
+
+              <button type="button" class="btn-delete-selected" [disabled]="selectedItemIds.size === 0"
+                (click)="deleteSelectedItems(cart); $event.stopPropagation()" title="Xóa các sản phẩm đã chọn">
+                <span>Xóa đã chọn</span>
+              </button>
             </div>
-            <div class="cart-item-part">{{ cartItem.qty }} ks</div>
-            <div class="cart-item-part">
-              {{ cartItem.price | priceFormat }}
-              {{ currency$ | async }}
+          </div>
+
+          <!-- Danh sách sản phẩm trong giỏ -->
+          <!-- Danh sách sản phẩm trong giỏ -->
+          <ul class="cart-list">
+            @for (cartItem of cart?.items; track cartItem.id; let last = $last) {
+            <li class="cart-items" [class.cart-last-item]="last" [class.is-out-of-stock]="isItemOutOfStock(cartItem)">
+
+              <!-- Checkbox chọn sản phẩm -->
+              <div class="cart-item-checkbox">
+                <mat-checkbox [checked]="isSelected(cartItem.id)" [disabled]="isItemOutOfStock(cartItem)"
+                  (change)="toggleSelectItem(cartItem)" color="primary">
+                </mat-checkbox>
+              </div>
+
+              <!-- Cột Ảnh sản phẩm -->
+              <div class="cart-image-col">
+                <a [routerLink]="['/' + (lang$ | async) + '/product/' + cartItem?.item?.titleUrl]">
+                  <img class="cart-image" [src]="cartItem?.item?.mainImage?.url" [alt]="cartItem?.item?.title" />
+                </a>
+              </div>
+
+              <!-- Cột Chi tiết & Điều khiển bên trái cạnh sản phẩm -->
+              <div class="cart-item-content">
+                <!-- Tên sản phẩm & SKU -->
+                <div class="cart-title-row">
+                  <a [routerLink]="['/' + (lang$ | async) + '/product/' + cartItem?.item?.titleUrl]" class="cart-title">
+                    {{ cartItem?.item?.title }}
+                  </a>
+                  @if (cartItem.sku) {
+                  <span class="cart-item-sku">SKU: {{ cartItem.sku }}</span>
+                  }
+                </div>
+
+                <!-- Dòng tóm tắt biến thể (Click để mở popup chọn lại) -->
+                @if (hasAnyVariants(cartItem)) {
+                <button type="button" class="cart-variant-badge-wrap"
+                  (click)="openVariantModal(cartItem); $event.stopPropagation()"
+                  title="Bấm để chọn lại phân loại, màu sắc, kích cỡ">
+                  <span class="cart-variant-summary-text">
+                    {{ getVariantSummary(cartItem) }}
+                  </span>
+                </button>
+                }
+
+                <!-- Bộ điều khiển số lượng & Nút xóa gần khu vực sản phẩm về bên trái -->
+                <div class="cart-item-actions-row">
+                  <div class="cart-qty-control">
+                    <button type="button" class="qty-btn qty-btn-minus"
+                      [disabled]="cartItem.qty <= 1 || isItemOutOfStock(cartItem) || updatingItemId === cartItem.id"
+                      (click)="decreaseQuantity(cartItem)" title="Giảm số lượng">
+                      −
+                    </button>
+                    <input type="number" class="qty-input" [value]="cartItem.qty" [min]="1"
+                      [max]="getItemStock(cartItem)"
+                      [disabled]="isItemOutOfStock(cartItem) || updatingItemId === cartItem.id"
+                      (blur)="onQuantityInputChange(cartItem, $event)"
+                      (keyup.enter)="onQuantityInputChange(cartItem, $event)" />
+                    <button type="button" class="qty-btn qty-btn-plus"
+                      [disabled]="cartItem.qty >= getItemStock(cartItem) || isItemOutOfStock(cartItem) || updatingItemId === cartItem.id"
+                      (click)="increaseQuantity(cartItem)" title="Tăng số lượng">
+                      +
+                    </button>
+                  </div>
+
+                  <button type="button" class="cart-remove-btn" [disabled]="updatingItemId === cartItem.id"
+                    (click)="removeSingleItem(cartItem); $event.stopPropagation()" title="Xóa khỏi giỏ hàng">
+                    <span>Xóa</span>
+                  </button>
+
+                  @if (isItemOutOfStock(cartItem)) {
+                  <span class="stock-badge stock-badge--out">Hết hàng</span>
+                  } @else if (getItemStock(cartItem) <= 5) { <span class="stock-badge stock-badge--low">Chỉ còn {{
+                    getItemStock(cartItem) }} sản phẩm</span>
+                    }
+                </div>
+
+                <!-- Đơn giá & Thành tiền: Đơn giá căn trái, Thành tiền căn phải -->
+                <div class="cart-item-price-row">
+                  <div class="cart-unit-price-group">
+                    <span class="price-label">Đơn giá:</span>
+                    <span class="price-val">{{ cartItem.price | priceFormat }} {{ currency$ | async }}</span>
+                    @if (cartItem.regularPrice && cartItem.regularPrice > cartItem.price) {
+                    <span class="cart-regular-price-val">{{ cartItem.regularPrice | priceFormat }} {{ currency$ | async
+                      }}</span>
+                    }
+                  </div>
+                  <div class="cart-subtotal-price-group">
+                    <span class="subtotal-label">Thành tiền:</span>
+                    <strong class="cart-subtotal-val">{{ (cartItem.price * cartItem.qty) | priceFormat }} {{ currency$ |
+                      async }}</strong>
+                  </div>
+                </div>
+
+              </div>
+            </li>
+            }
+          </ul>
+
+          <!-- Khu vực Mã giảm giá (Coupon) -->
+          <div class="cart-coupon-section">
+            <div class="coupon-header">
+              <i class="material-icons coupon-icon">local_offer</i>
+              <span class="coupon-title">Mã ưu đãi / Giảm giá</span>
             </div>
-            <div class="cart-remove" (click)="removeFromCart(cartItem?.item?._id)"><i class="material-icons cart-icon">remove</i></div>
-          </li>
-          } @if (cart.shippingType) {
-          <li class="cart-items">
-            <div class="cart-image-wrap">{{ 'Shipping' | translate | async }} ({{ cart.shippingType | translate | async }})</div>
-            <div class="cart-item-part">&nbsp;</div>
-            <div class="cart-item-part">
-              {{ cart.shippingCost | priceFormat }}
-              {{ currency$ | async }}
+
+            @if (!appliedCoupon) {
+            <div class="coupon-form">
+              <input type="text" class="coupon-input" placeholder="Nhập mã (VD: CHERI10, CHERI50K)"
+                [(ngModel)]="couponInput" (keyup.enter)="applyCoupon(cart)" />
+              <button type="button" class="coupon-btn" [disabled]="isApplyingCoupon || !couponInput.trim()"
+                (click)="applyCoupon(cart)">
+                {{ isApplyingCoupon ? 'Đang kiểm tra...' : 'Áp dụng' }}
+              </button>
             </div>
-            <div class="cart-item-last-down"></div>
-          </li>
-          }
-          <li class="cart-items cart-items-last">
-            <div class="cart-image-wrap">
-              <b>{{ 'Summary' | translate | async }}</b>
+            @if (couponError) {
+            <div class="coupon-msg coupon-msg--error">{{ couponError }}</div>
+            }
+            } @else {
+            <div class="applied-coupon-box">
+              <div class="applied-coupon-info">
+                <div class="applied-coupon-badge">
+                  <i class="material-icons badge-icon">check_circle</i>
+                  <span class="applied-code">{{ appliedCoupon.code }}</span>
+                </div>
+                <div class="applied-desc">{{ appliedCoupon.description || 'Ưu đãi đã được áp dụng' }}</div>
+                <div class="applied-val">-{{ getDiscountAmount(cart) | priceFormat }} {{ currency$ | async }}</div>
+              </div>
+              <button type="button" class="btn-remove-coupon" (click)="removeCoupon()" title="Gỡ mã giảm giá">
+                <i class="material-icons">close</i>
+              </button>
             </div>
-            <div class="cart-item-part">
-              <b>{{ cart.totalQty }} ks</b>
+            }
+          </div>
+
+          <!-- Khu vực Phương thức vận chuyển (Sau Mã giảm giá, trước Tạm tính) -->
+          <br>
+          <div class="cart-shipping-section">
+            <div class="shipping-section-header">
+              <i class="material-icons shipping-icon">local_shipping</i>
+              <span class="shipping-section-title">Phương thức vận chuyển</span>
             </div>
-            <div class="cart-item-part">
-              <b>
-                {{ cart.totalPrice | priceFormat }}
-                {{ currency$ | async }}
+
+            <div class="shipping-methods-list" role="radiogroup" aria-label="Phương thức vận chuyển">
+              @for (method of shippingMethods; track method.id) {
+              <div class="shipping-method-card" [class.is-selected]="selectedShippingMethodId === method.id"
+                role="radio" tabindex="0" [attr.aria-checked]="selectedShippingMethodId === method.id"
+                (click)="selectShippingMethod(method)"
+                (keydown.space)="selectShippingMethod(method); $event.preventDefault()"
+                (keydown.enter)="selectShippingMethod(method); $event.preventDefault()">
+
+                <div class="shipping-card-left">
+                  <div class="shipping-radio-circle" [class.is-checked]="selectedShippingMethodId === method.id">
+                    @if (selectedShippingMethodId === method.id) {
+                    <div class="shipping-radio-inner"></div>
+                    }
+                  </div>
+                  <div class="shipping-method-info">
+                    <div class="shipping-method-name">{{ method.name }}</div>
+                    <div class="shipping-method-desc">{{ method.description }}</div>
+                  </div>
+                </div>
+
+                <div class="shipping-method-fee">
+                  {{ method.fee | priceFormat }} {{ currency$ | async }}
+                </div>
+              </div>
+              }
+            </div>
+          </div>
+
+          <!-- Khu vực Tóm tắt & Tổng cộng (chỉ tính sản phẩm đã chọn) -->
+          <div class="cart-summary-breakdown">
+            <div class="summary-line">
+              <span class="summary-line-label">Tạm tính ({{ getSelectedCount(cart) }} sản phẩm):</span>
+              <span class="summary-line-val">{{ getSelectedSubtotal(cart) | priceFormat }} {{ currency$ | async
+                }}</span>
+            </div>
+
+            @if (appliedCoupon && getDiscountAmount(cart) > 0) {
+            <div class="summary-line summary-line--discount">
+              <span class="summary-line-label">Giảm giá ưu đãi ({{ appliedCoupon.code }}):</span>
+              <span class="summary-line-val">-{{ getDiscountAmount(cart) | priceFormat }} {{ currency$ | async }}</span>
+            </div>
+            }
+
+            <div class="summary-line">
+              <span class="summary-line-label">Phí vận chuyển:</span>
+              <span class="summary-line-val">
+                @if (getSelectedSubtotal(cart) === 0 || !cart?.items?.length) {
+                0 {{ currency$ | async }}
+                } @else {
+                {{ getShippingFee(cart) | priceFormat }} {{ currency$ | async }}
+                }
+              </span>
+            </div>
+
+            <div class="summary-line summary-line--total">
+              <b>Tổng thanh toán:</b>
+              <b class="final-total-price">
+                {{ getFinalTotal(cart) | priceFormat }} {{ currency$ | async }}
               </b>
             </div>
-            <div class="cart-item-last-down"></div>
-          </li>
-        </ul>
 
+            @if (selectedItemIds.size === 0) {
+            <div class="cart-selection-warning">
+              <i class="material-icons warning-icon">info</i>
+              Vui lòng tích chọn ít nhất 1 sản phẩm để tiến hành đặt hàng.
+            </div>
+            }
+          </div>
+        </div>
+        } @else {
+        <!-- Empty State giỏ hàng -->
+        <div class="cart-wrap cart-empty-card">
+          <div class="empty-icon-box">
+            <i class="material-icons empty-icon">shopping_bag</i>
+          </div>
+          <h3 class="empty-title">Giỏ hàng của bạn đang trống</h3>
+          <p class="empty-desc">Không có sản phẩm nào trong giỏ hàng. Hãy khám phá các bộ sưu tập mới nhất của Chéri!
+          </p>
+          <a [routerLink]="['/' + (lang$ | async) + '/product']" class="btn-continue-shopping">
+            Tiếp tục mua sắm
+          </a>
+        </div>
+        }
+
+        <!-- ═══════════════════════════════════════════════════
+             KHỐI 2: THÔNG TIN ĐẶT HÀNG (BÊN PHẢI)
+        ═══════════════════════════════════════════════════ -->
         @if (!!cart?.items?.length && !(loading$ | async)) {
         <div class="order-form-wrap">
-          <h2 class="cart-order-title">{{ 'Make_order' | translate | async }}</h2>
+          <h2 class="cart-order-title">Thông tin đặt hàng</h2>
           <mat-horizontal-stepper [linear]="true" #stepper>
+            <!-- BƯỚC 1: ĐỊA CHỈ NHẬN HÀNG -->
             <mat-step [stepControl]="orderForm">
               <form [formGroup]="orderForm">
-                <ng-template matStepLabel>{{ 'Address' | translate | async }}</ng-template>
-                <mat-form-field class="order-field">
-                  <mat-label>
-                    {{ 'Firstname' | translate | async }}
-                    {{ 'and' | translate | async }}
-                    {{ 'Surname' | translate | async }}
-                  </mat-label>
-                  <input matInput formControlName="name" type="text" name="name" />
+                <ng-template matStepLabel>Địa chỉ nhận hàng</ng-template>
+
+                <!-- 1. Họ và tên -->
+                <mat-form-field class="order-field" appearance="outline">
+                  <mat-label>Họ và tên *</mat-label>
+                  <input matInput formControlName="name" type="text" />
+                  @if (orderForm.get('name')?.hasError('required')) {
+                  <mat-error>Họ và tên không được để trống</mat-error>
+                  } @if (orderForm.get('name')?.hasError('pattern')) {
+                  <mat-error>Họ và tên không hợp lệ (không chứa số hoặc ký tự đặc biệt)</mat-error>
+                  }
                 </mat-form-field>
-                <mat-form-field class="order-field">
-                  <mat-label>Email</mat-label>
-                  <input matInput formControlName="email" type="email" name="email" />
-                </mat-form-field>
-                <mat-form-field class="order-field">
-                  <mat-label>{{ 'Address' | translate | async }}</mat-label>
-                  <input matInput formControlName="address" type="text" name="address" />
-                </mat-form-field>
+
+                <!-- 2 & 3. Email & Số điện thoại -->
                 <div class="cart-address-field">
-                  <mat-form-field class="order-field-small">
-                    <mat-label>{{ 'City' | translate | async }}</mat-label>
-                    <input matInput formControlName="city" type="text" name="city" />
+                  <!-- Email liên lạc -->
+                  <mat-form-field class="order-field-small" appearance="outline">
+                    <mat-label>Email liên lạc *</mat-label>
+                    <input matInput formControlName="email" placeholder="example@email.com" type="email" />
+                    @if (orderForm.get('email')?.hasError('required')) {
+                    <mat-error>Email không được để trống</mat-error>
+                    } @if (orderForm.get('email')?.hasError('email')) {
+                    <mat-error>Email không đúng định dạng</mat-error>
+                    }
                   </mat-form-field>
-                  <mat-form-field class="order-field-small">
-                    <mat-label>{{ 'ZIP' | translate | async }}</mat-label>
-                    <input matInput formControlName="zip" type="text" name="zip" />
+
+                  <!-- Điện thoại liên hệ -->
+                  <mat-form-field class="order-field-small" appearance="outline">
+                    <mat-label>Điện thoại liên hệ *</mat-label>
+                    <input matInput formControlName="phone" type="tel" />
+                    @if (orderForm.get('phone')?.hasError('required')) {
+                    <mat-error>Điện thoại không được để trống</mat-error>
+                    } @if (orderForm.get('phone')?.hasError('pattern')) {
+                    <mat-error>Số điện thoại không hợp lệ (10 số, VD: 0912345678)</mat-error>
+                    }
                   </mat-form-field>
                 </div>
-                <mat-form-field class="order-field">
-                  <mat-label>{{ 'Country' | translate | async }}</mat-label>
-                  <input matInput formControlName="country" type="text" name="country" />
+
+                <!-- 4 & 5. Tỉnh / Thành phố & Quận / Huyện -->
+                <div class="cart-address-field">
+                  <!-- Tỉnh / Thành phố -->
+                  <mat-form-field class="order-field-small" appearance="outline">
+                    <mat-label>Tỉnh / Thành phố *</mat-label>
+                    <mat-select formControlName="provinceCode" (selectionChange)="onProvinceChange($event.value)">
+                      @if (isProvincesLoading) {
+                      <mat-option disabled>Đang tải danh sách...</mat-option>
+                      }
+                      @for (p of provinces; track p.code) {
+                      <mat-option [value]="p.code">{{ p.name }}</mat-option>
+                      }
+                    </mat-select>
+                    @if (orderForm.get('provinceCode')?.hasError('required')) {
+                    <mat-error>Vui lòng chọn Tỉnh / Thành phố</mat-error>
+                    }
+                    @if (provincesError) {
+                    <mat-hint class="address-error-hint">
+                      {{ provincesError }}
+                      <button type="button" class="retry-link" (click)="loadProvinces()">Thử lại</button>
+                    </mat-hint>
+                    }
+                  </mat-form-field>
+
+                  <!-- Quận / Huyện -->
+                  <mat-form-field class="order-field-small" appearance="outline">
+                    <mat-label>Quận / Huyện *</mat-label>
+                    <mat-select formControlName="districtCode"
+                      [disabled]="!orderForm.get('provinceCode')?.value || isDistrictsLoading"
+                      (selectionChange)="onDistrictChange($event.value)">
+                      @if (isDistrictsLoading) {
+                      <mat-option disabled>Đang tải danh sách...</mat-option>
+                      }
+                      @for (d of districts; track d.code) {
+                      <mat-option [value]="d.code">{{ d.name }}</mat-option>
+                      }
+                    </mat-select>
+                    @if (orderForm.get('districtCode')?.hasError('required')) {
+                    <mat-error>Vui lòng chọn Quận / Huyện</mat-error>
+                    }
+                    @if (districtsError) {
+                    <mat-hint class="address-error-hint">
+                      {{ districtsError }}
+                      <button type="button" class="retry-link"
+                        (click)="loadDistricts(orderForm.get('provinceCode')?.value)">Thử lại</button>
+                    </mat-hint>
+                    }
+                  </mat-form-field>
+                </div>
+
+                <!-- 6. Phường / Xã -->
+                <mat-form-field class="order-field" appearance="outline">
+                  <mat-label>Phường / Xã *</mat-label>
+                  <mat-select formControlName="wardCode"
+                    [disabled]="!orderForm.get('districtCode')?.value || isWardsLoading"
+                    (selectionChange)="onWardChange($event.value)">
+                    @if (isWardsLoading) {
+                    <mat-option disabled>Đang tải danh sách...</mat-option>
+                    }
+                    @for (w of wards; track w.code) {
+                    <mat-option [value]="w.code">{{ w.name }}</mat-option>
+                    }
+                  </mat-select>
+                  @if (orderForm.get('wardCode')?.hasError('required')) {
+                  <mat-error>Vui lòng chọn Phường / Xã</mat-error>
+                  }
+                  @if (wardsError) {
+                  <mat-hint class="address-error-hint">
+                    {{ wardsError }}
+                    <button type="button" class="retry-link"
+                      (click)="loadWards(orderForm.get('districtCode')?.value)">Thử lại</button>
+                  </mat-hint>
+                  }
                 </mat-form-field>
-                <mat-form-field class="order-field">
-                  <mat-label>{{ 'Notes' | translate | async }}</mat-label>
-                  <textarea matInput formControlName="notes" name="notes"> </textarea>
+
+                <!-- 7. Địa chỉ giao hàng chi tiết -->
+                <mat-form-field class="order-field" appearance="outline">
+                  <mat-label>Địa chỉ giao hàng *</mat-label>
+                  <input matInput formControlName="addressDetail" placeholder="Số nhà, tên đường..." type="text" />
+                  @if (orderForm.get('addressDetail')?.hasError('required')) {
+                  <mat-error>Địa chỉ giao hàng không được để trống</mat-error>
+                  }
                 </mat-form-field>
+
+                <!-- 8. Ghi chú đơn hàng -->
+                <mat-form-field class="order-field" appearance="outline">
+                  <mat-label>Ghi chú đơn hàng</mat-label>
+                  <textarea matInput formControlName="notes" rows="2"
+                    placeholder="Ví dụ: Giao hàng giờ hành chính, gọi trước khi giao..."></textarea>
+                </mat-form-field>
+
                 <div>
-                  <button class="cart-navigation-button" mat-stroked-button matStepperNext>
-                    {{ 'Next' | translate | async }}
+                  <button class="cart-navigation-button" mat-stroked-button matStepperNext
+                    [disabled]="orderForm.invalid || selectedItemIds.size === 0">
+                    Tiếp tục
                   </button>
                 </div>
               </form>
             </mat-step>
+
+            <!-- BƯỚC 2: PHƯƠNG THỨC THANH TOÁN -->
             <mat-step [stepControl]="toggleCard">
-              <ng-template matStepLabel>{{ 'Payment_method' | translate | async }}</ng-template>
+              <ng-template matStepLabel>Phương thức thanh toán</ng-template>
               @if (orderForm.valid) {
               <mat-radio-group class="delivery-button" [(ngModel)]="toggleCard">
                 <mat-radio-button class="payment-choice" [class.payment-choice--active]="toggleCard" [value]="true">
                   <span class="flex">
                     <mat-icon>credit_card</mat-icon>
                     <span class="margin-left-small">
-                      {{ 'Pay' | translate | async }}
+                      Thanh toán online qua thẻ
                       <b>
-                        {{ cart?.totalPrice | priceFormat }}
-                        {{ currency$ | async }}
+                        ({{ getFinalTotal(cart) | priceFormat }} {{ currency$ | async }})
                       </b>
-                      {{ 'with' | translate | async }}
-                      {{ 'card' | translate | async }}
                     </span>
                   </span>
                 </mat-radio-button>
@@ -124,9 +427,7 @@
                   <span class="flex">
                     <mat-icon>local_atm</mat-icon>
                     <span class="margin-left-small">
-                      {{ 'Payment' | translate | async }}
-                      {{ 'on' | translate | async }}
-                      {{ 'delivery' | translate | async }}
+                      Thanh toán khi nhận hàng (COD)
                     </span>
                   </span>
                 </mat-radio-button>
@@ -134,82 +435,97 @@
               }
               <div>
                 <button class="cart-navigation-button" mat-stroked-button matStepperNext>
-                  {{ 'Next' | translate | async }}
+                  Tiếp tục
                 </button>
                 <button class="cart-navigation-button" mat-stroked-button matStepperPrevious>
-                  {{ 'Back' | translate | async }}
+                  Quay lại
                 </button>
               </div>
             </mat-step>
+
+            <!-- BƯỚC 3: XÁC NHẬN ĐƠN HÀNG -->
             <mat-step>
-              <ng-template matStepLabel>{{ 'Summary_and_payment' | translate | async }}</ng-template>
-              <div class="flex items-start margin-top-basic">
-                <span>{{ 'Your_summary' | translate | async }}</span>
+              <ng-template matStepLabel>Xác nhận đơn hàng</ng-template>
+              <div class="order-confirmation-box">
+                <span class="summary-section-label">Thông tin giao hàng:</span>
                 <div class="order-last-summary">
-                  <span>
-                    {{ orderForm.get('name').value }}
-                  </span>
-                  <span>
-                    {{ orderForm.get('email').value }}
-                  </span>
-                  <span>
-                    {{ orderForm.get('address').value }}
-                  </span>
-                  <span> {{ orderForm.get('city').value }},{{ orderForm.get('zip').value }} </span>
-                  <span>
-                    {{ orderForm.get('country').value }}
-                  </span>
+                  <div><strong>Người nhận:</strong> {{ orderForm.get('name')?.value }}</div>
+                  <div><strong>Email:</strong> {{ orderForm.get('email')?.value }}</div>
+                  <div><strong>Điện thoại:</strong> {{ orderForm.get('phone')?.value }}</div>
+                  <div>
+                    <strong>Địa chỉ:</strong>
+                    {{ orderForm.get('addressDetail')?.value }}<span *ngIf="orderForm.get('wardName')?.value">, {{
+                      orderForm.get('wardName')?.value }}</span><span *ngIf="orderForm.get('districtName')?.value">, {{
+                      orderForm.get('districtName')?.value }}</span><span *ngIf="orderForm.get('provinceName')?.value">,
+                      {{ orderForm.get('provinceName')?.value }}</span>
+                  </div>
+                  @if (orderForm.get('notes')?.value) {
+                  <div><strong>Ghi chú:</strong> {{ orderForm.get('notes')?.value }}</div>
+                  }
+                </div>
+
+                <div class="order-checkout-recap">
+                  <div>Sản phẩm đã chọn: <strong>{{ getSelectedCount(cart) }} món</strong></div>
+                  <div>Tạm tính: <strong>{{ getSelectedSubtotal(cart) | priceFormat }} {{ currency$ | async }}</strong>
+                  </div>
+                  @if (appliedCoupon && getDiscountAmount(cart) > 0) {
+                  <div class="color-success">Mã giảm giá ({{ appliedCoupon.code }}): <strong>-{{ getDiscountAmount(cart)
+                      | priceFormat }} {{ currency$ | async }}</strong></div>
+                  }
+                  <div>Phí vận chuyển: <strong>{{ getShippingFee(cart) === 0 ? 'Miễn phí' : (getShippingFee(cart) |
+                      priceFormat) + ' ' + (currency$ | async) }}</strong></div>
+                  <div class="recap-total">Tổng tiền: <strong class="color-primary">{{ getFinalTotal(cart) | priceFormat
+                      }} {{ currency$ | async }}</strong></div>
                 </div>
               </div>
 
               @if (toggleCard) {
-              <app-card
-                [price]="cart?.totalPrice | priceFormat"
-                [currency]="currency$ | async"
-                [loading]="loading$ | async"
-                (scrollToTop)="scrollToTop()"
-                (payWithCardEmit)="payWithCard($event)"
-              >
+              <app-card [price]="getFinalTotal(cart) | priceFormat" [currency]="currency$ | async"
+                [loading]="loading$ | async" (scrollToTop)="scrollToTop()" (payWithCardEmit)="payWithCard($event)">
               </app-card>
               } @if (!toggleCard && (currency$ | async); as currency) {
-              <button
-                mat-raised-button
-                color="primary"
-                type="submit"
-                class="submit-order-button"
-                [disabled]="orderForm.invalid"
-                (click)="submit(currency)"
-              >
-                {{ 'MakeOrder' | translate | async }}
+              <button mat-raised-button color="primary" type="submit" class="submit-order-button"
+                [disabled]="orderForm.invalid || selectedItemIds.size === 0" (click)="submit(currency)">
+                Hoàn tất đặt hàng ({{ getFinalTotal(cart) | priceFormat }} {{ currency$ | async }})
               </button>
               }
               <div>
                 <button class="cart-navigation-button" mat-stroked-button matStepperPrevious>
-                  {{ 'Back' | translate | async }}
+                  Quay lại
                 </button>
               </div>
             </mat-step>
           </mat-horizontal-stepper>
         </div>
         }
-          @if ((loading$ | async)) {
+
+        @if ((loading$ | async)) {
         <mat-progress-bar mode="indeterminate"></mat-progress-bar>
         }
-          @if (!cart?.items?.length && order$ | async; as order) {
+
+        @if (!cart?.items?.length && order$ | async; as order) {
         <div class="order-form-wrap">
           @if (order.outcome.seller_message) { @if (order.outcome.seller_message === 'WITH_PAYMENT') {
           <div class="pay-success">
-            {{ 'SuccessPayment' | translate | async }}
+            Thanh toán đơn hàng thành công!
           </div>
           } @if (order.outcome.seller_message === 'PAYMENT_ON_DELIVERY') {
           <div class="pay-success">
-            {{ 'SuccessOrder' | translate | async }}
+            Đặt hàng thành công!
           </div>
           } }
         </div>
         }
+
       </div>
     </div>
+
+    <!-- ═══════════════════════════════════════════════════
+         POPUP MODAL: CHỌN LẠI SẢN PHẨM (BIẾN THỂ)
+    ═══════════════════════════════════════════════════ -->
+    <app-cart-variant-popup [isOpen]="isVariantModalOpen" [cartItem]="editingCartItem" [currency]="currency$ | async"
+      [lang]="(lang$ | async) || 'vi'" (close)="closeVariantModal()" (updated)="onVariantModalUpdated()">
+    </app-cart-variant-popup>
 
     }
   </div>

@@ -90,6 +90,28 @@ export class OrdersController {
     return this.ordersService.trackOrder(body);
   }
 
+  // ─── Public: Lấy danh mục địa giới hành chính (Tỉnh/Thành, Quận/Huyện, Phường/Xã) ───
+  @Get('/address/provinces')
+  getProvinces() {
+    return this.ordersService.getProvinces();
+  }
+
+  @Get('/address/districts/:code')
+  getDistricts(@Param('code') code: string) {
+    return this.ordersService.getDistricts(code);
+  }
+
+  @Get('/address/wards/:code')
+  getWards(@Param('code') code: string) {
+    return this.ordersService.getWards(code);
+  }
+
+  // ─── Public: Kiểm tra và áp dụng mã giảm giá ─────────────────────────────
+  @Post('/coupon/validate')
+  validateCoupon(@Body() body: { code: string; subtotal: number }) {
+    return this.ordersService.validateCoupon(body.code, body.subtotal);
+  }
+
   // ─── Đặt hàng COD — yêu cầu đăng nhập để lấy cart từ DB ─────────────────
   @UseGuards(AuthGuard('jwt'))
   @Post('/add')

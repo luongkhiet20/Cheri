@@ -520,6 +520,87 @@ export class ApiService {
     );
   }
 
+  updateCartQuantity(id: string, qty: number, lang = 'vi') {
+    this.ranNumber = this.ranNumber + 1;
+    const randomNum = '&random=' + this.ranNumber;
+    const url = `${this.apiUrl}/api/cart/update-quantity?id=${encodeURIComponent(id)}&qty=${qty}&lang=${lang}${randomNum}`;
+    return this.http.get(url, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  deleteCartItem(id: string, lang = 'vi') {
+    this.ranNumber = this.ranNumber + 1;
+    const randomNum = '&random=' + this.ranNumber;
+    const url = `${this.apiUrl}/api/cart/delete-item?id=${encodeURIComponent(id)}&lang=${lang}${randomNum}`;
+    return this.http.get(url, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  deleteCartItems(ids: string[], lang = 'vi') {
+    this.ranNumber = this.ranNumber + 1;
+    const randomNum = '&random=' + this.ranNumber;
+    const joinedIds = ids.map(id => encodeURIComponent(id)).join(',');
+    const url = `${this.apiUrl}/api/cart/delete-items?ids=${joinedIds}&lang=${lang}${randomNum}`;
+    return this.http.get(url, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  updateCartVariant(
+    id: string,
+    options: { variantId?: string; classification?: string; color?: string; size?: string },
+    lang = 'vi',
+  ) {
+    this.ranNumber = this.ranNumber + 1;
+    const randomNum = '&random=' + this.ranNumber;
+    const params = new URLSearchParams();
+    params.set('id', id);
+    if (options.variantId) params.set('variantId', options.variantId);
+    if (options.classification) params.set('classification', options.classification);
+    if (options.color) params.set('color', options.color);
+    if (options.size) params.set('size', options.size);
+    params.set('lang', lang);
+
+    const url = `${this.apiUrl}/api/cart/update-variant?${params.toString()}${randomNum}`;
+    return this.http.get(url, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  toggleCartItemSelect(id: string, selected: boolean, lang = 'vi') {
+    this.ranNumber = this.ranNumber + 1;
+    const randomNum = '&random=' + this.ranNumber;
+    const url = `${this.apiUrl}/api/cart/toggle-select?id=${encodeURIComponent(id)}&selected=${selected}&lang=${lang}${randomNum}`;
+    return this.http.get(url, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  selectAllCartItems(selected: boolean, lang = 'vi') {
+    this.ranNumber = this.ranNumber + 1;
+    const randomNum = '&random=' + this.ranNumber;
+    const url = `${this.apiUrl}/api/cart/select-all?selected=${selected}&lang=${lang}${randomNum}`;
+    return this.http.get(url, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  validateCoupon(code: string, subtotal: number) {
+    const url = `${this.apiUrl}/api/orders/coupon/validate`;
+    return this.http.post(url, { code, subtotal }, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ valid: false, message: 'Lỗi kiểm tra mã giảm giá' })),
+    );
+  }
+
   getLangTranslations(lang: string) {
     const translationsUrl = this.apiUrl + '/api/translations?lang=' + lang;
     return this.http.get(translationsUrl).pipe(

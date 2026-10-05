@@ -57,6 +57,13 @@ const ShippingAddressSchema = new Schema(
     ward: { type: String, default: '' },
     district: { type: String, default: '' },
     province: { type: String, default: '' },
+    provinceCode: { type: String, default: '' },
+    provinceName: { type: String, default: '' },
+    districtCode: { type: String, default: '' },
+    districtName: { type: String, default: '' },
+    wardCode: { type: String, default: '' },
+    wardName: { type: String, default: '' },
+    addressDetail: { type: String, default: '' },
   },
   { _id: false },
 );

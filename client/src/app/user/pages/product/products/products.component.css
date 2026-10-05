@@ -414,10 +414,10 @@
 }
 
 .products-title {
-  font-family: var(--font-lux-serif, "Playfair Display", serif);
-  font-size: clamp(16px, 2vw, 22px);
-  font-weight: 400;
-  color: #74070e;
+  font-family: var(--font-sans);
+  font-size: 18px;
+  font-weight: 600;
+  color: #74070E;
   margin: 0 0 2px;
   letter-spacing: 0.02em;
 }
@@ -777,10 +777,10 @@
 }
 
 .products-empty-title {
-  font-family: var(--font-lux-serif, "Playfair Display", serif);
+  font-family: var(--font-sans);
   font-size: 18px;
-  font-weight: 400;
-  color: #374151;
+  font-weight: 600;
+  color: #74070E;
   margin: 0;
 }
 

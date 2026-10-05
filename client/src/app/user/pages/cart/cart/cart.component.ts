@@ -1,16 +1,33 @@
-﻿import { toObservable } from '@angular/core/rxjs-interop';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { map, filter, take, withLatestFrom } from 'rxjs/operators';
-import { Component } from '@angular/core';
+import { filter, take, withLatestFrom } from 'rxjs/operators';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Location } from '@angular/common';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Observable } from 'rxjs';
-
+import { Observable, Subscription } from 'rxjs';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { TranslateService } from '../../../../services/translate.service';
 import { Cart, User, Order } from '../../../shared/models';
 import { SignalStore } from '../../../../store/signal.store';
 import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
+import { ApiService } from '../../../../services/api.service';
+import { VietnamAddressService, AdministrativeUnit } from '../../../../services/vietnam-address.service';
+
+export interface AppliedCoupon {
+  code: string;
+  description?: string;
+  discountType: 'PERCENTAGE' | 'FIXED' | string;
+  discountValue: number;
+  discountAmount: number;
+}
+
+export interface ShippingOption {
+  id: string;
+  name: string;
+  description: string;
+  fee: number;
+}
 
 @Component({
   selector: 'app-cart',
@@ -18,7 +35,7 @@ import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
   styleUrls: ['./cart.component.css'],
   standalone: false
 })
-export class CartComponent {
+export class CartComponent implements OnInit, OnDestroy {
   cart$: Observable<Cart>;
   lang$: Observable<string>;
   order$: Observable<Order>;
@@ -30,91 +47,1240 @@ export class CartComponent {
   loading$: Observable<boolean>;
   error$: Observable<string>;
 
+  // Dữ liệu địa giới hành chính
+  provinces: AdministrativeUnit[] = [];
+  districts: AdministrativeUnit[] = [];
+  wards: AdministrativeUnit[] = [];
+
+  // Trạng thái tải và lỗi địa chỉ
+  isProvincesLoading = false;
+  isDistrictsLoading = false;
+  isWardsLoading = false;
+  provincesError = '';
+  districtsError = '';
+  wardsError = '';
+
+  // ─── 1. CHỌN SẢN PHẨM & SELECTION ───
+  selectedItemIds = new Set<string>();
+  private readonly storageKey = 'cheri_cart_selected_ids';
+  private cartSub?: Subscription;
+  latestCart: Cart | null = null;
+
+  // ─── 2 & 3. TĂNG / GIẢM & NHẬP SỐ LƯỢNG ───
+  updatingItemId: string | null = null;
+
+  // ─── 6. MÃ GIẢM GIÁ ───
+  couponInput = '';
+  appliedCoupon: AppliedCoupon | null = null;
+  isApplyingCoupon = false;
+  couponError = '';
+  couponSuccess = '';
+
+  // ─── 7. MODAL CHỌN LẠI BIẾN THỂ (POPUP) ───
+  isVariantModalOpen = false;
+  editingCartItem: any = null;
+  modalClassification: string | null = null;
+  modalColor: string | null = null;
+  modalSize: string | null = null;
+  modalSelectedVariant: any = null;
+  modalQuantity = 1;
+  modalPrice = 0;
+  modalRegularPrice = 0;
+  modalStock = 0;
+  modalError = '';
+  isModalSubmitting = false;
+
+  // ─── 8. PHƯƠNG THỨC VẬN CHUYỂN ───
+  shippingMethods: ShippingOption[] = [
+    {
+      id: 'standard',
+      name: 'Giao hàng tiêu chuẩn',
+      description: 'Dự kiến nhận hàng: 3 - 5 ngày',
+      fee: 25000
+    },
+    {
+      id: 'express',
+      name: 'Giao hàng nhanh',
+      description: 'Dự kiến nhận hàng: 1 - 2 ngày',
+      fee: 40000
+    }
+  ];
+  private readonly shippingStorageKey = 'cheri_cart_shipping_method';
+  selectedShippingMethodId = 'standard';
+
   readonly component = 'cartComponent';
+
+  // Regex xác thực họ tên (chữ tiếng Việt và khoảng trắng, không số)
+  private readonly namePattern = /^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềểỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ\s]+$/;
+  // Regex xác thực số điện thoại Việt Nam (10 số, bắt đầu 03, 05, 07, 08, 09 hoặc +84)
+  private readonly phonePattern = /^(0|\+84)(3[2-9]|5[2|6|8|9]|7[0|6-9]|8[1-9]|9[0-9])[0-9]{7}$/;
 
   constructor(
     private store: SignalStore,
     private selectors: SignalStoreSelectors,
+    private apiService: ApiService,
     private fb: FormBuilder,
     private router: Router,
     private location: Location,
-    private translate: TranslateService) {
-
+    private translate: TranslateService,
+    private addressService: VietnamAddressService,
+    private snackBar: MatSnackBar
+  ) {
     this.store.cleanError();
 
     this.lang$ = this.translate.getLang$();
     this.cart$ = toObservable(this.selectors.cart);
     this.order$ = toObservable(this.selectors.order).pipe(filter(order => !!order));
     this.user$ = toObservable(this.selectors.user);
+    this.currency$ = toObservable(this.selectors.currency);
+    this.loading$ = toObservable(this.selectors.loading);
+    this.error$ = toObservable(this.selectors.error);
 
     this.orderForm = this.fb.group({
-      name: ['', Validators.required],
-      email: ['', Validators.required],
-      address: ['', Validators.required],
-      city: ['', Validators.required],
-      country: ['', Validators.required],
-      zip: ['', Validators.required],
+      // 1. Họ và tên
+      name: ['', [Validators.required, Validators.pattern(this.namePattern)]],
+      // 2. Email liên lạc
+      email: ['', [Validators.required, Validators.email]],
+      // 3. Điện thoại liên hệ
+      phone: ['', [Validators.required, Validators.pattern(this.phonePattern)]],
+      // 4. Tỉnh / Thành phố
+      provinceCode: ['', Validators.required],
+      provinceName: [''],
+      // 5. Quận / Huyện
+      districtCode: [{ value: '', disabled: true }, Validators.required],
+      districtName: [''],
+      // 6. Phường / Xã
+      wardCode: [{ value: '', disabled: true }, Validators.required],
+      wardName: [''],
+      // 7. Địa chỉ chi tiết
+      addressDetail: ['', Validators.required],
+      // 8. Ghi chú đơn hàng
       notes: ['']
     });
-
-    this.currency$ = toObservable(this.selectors.currency);
 
     this.order$.pipe(
       filter(order => !!order),
       withLatestFrom(this.lang$),
-      take(1))
-      .subscribe(([order, lang]) => {
-        this.router.navigate(['/' + lang + '/cart/summary'])
+      take(1)
+    ).subscribe(([order, lang]) => {
+      this.router.navigate(['/' + lang + '/cart/summary']);
+    });
+  }
+
+  ngOnInit(): void {
+    this.loadProvinces();
+    this.autoFillUserData();
+    this.restoreSelectionFromStorage();
+    this.restoreShippingMethodFromStorage();
+
+    // Theo dõi giỏ hàng để cập nhật trạng thái chọn
+    this.cartSub = this.cart$.subscribe((cart) => {
+      this.latestCart = cart;
+      if (cart && cart.items && cart.items.length > 0) {
+        this.syncSelectionWithCart(cart);
+        // Ưu tiên phương thức vận chuyển từ backend nếu có lưu
+        if ((cart as any)?.shippingMethodId && this.shippingMethods.some(m => m.id === (cart as any).shippingMethodId)) {
+          this.selectedShippingMethodId = (cart as any).shippingMethodId;
+        }
+        // Tự động kiểm tra lại mã giảm giá nếu subtotal thay đổi
+        if (this.appliedCoupon) {
+          this.revalidateAppliedCoupon(cart);
+        }
+      } else {
+        this.selectedItemIds.clear();
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (this.cartSub) {
+      this.cartSub.unsubscribe();
+    }
+  }
+
+  // ─── PHẦN 1: CHỌN SẢN PHẨM & CHECKBOX SELECTION ───
+
+  private restoreSelectionFromStorage(): void {
+    try {
+      const saved = localStorage.getItem(this.storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          this.selectedItemIds = new Set(parsed);
+        }
+      }
+    } catch {
+      // Bỏ qua lỗi parse storage
+    }
+  }
+
+  private saveSelectionToStorage(): void {
+    try {
+      localStorage.setItem(this.storageKey, JSON.stringify(Array.from(this.selectedItemIds)));
+    } catch {
+      // Bỏ qua lỗi storage
+    }
+  }
+
+  private syncSelectionWithCart(cart: Cart): void {
+    const currentItemIds = new Set(cart.items.map((i: any) => i.id));
+
+    // Nếu storage có lưu ID, chỉ giữ lại các ID còn tồn tại
+    if (this.selectedItemIds.size > 0) {
+      for (const id of Array.from(this.selectedItemIds)) {
+        if (!currentItemIds.has(id)) {
+          this.selectedItemIds.delete(id);
+        }
+      }
+    }
+
+    // Nếu chưa có item nào được chọn, mặc định chọn tất cả sản phẩm hợp lệ
+    if (this.selectedItemIds.size === 0) {
+      cart.items.forEach((item: any) => {
+        if (item.isSelected !== false && !this.isItemOutOfStock(item)) {
+          this.selectedItemIds.add(item.id);
+        }
       });
+    }
+    this.saveSelectionToStorage();
+  }
+
+  isSelected(id: string): boolean {
+    return this.selectedItemIds.has(id);
+  }
+
+  toggleSelectItem(cartItem: any): void {
+    if (this.isItemOutOfStock(cartItem)) return;
+
+    const willSelect = !this.selectedItemIds.has(cartItem.id);
+    if (willSelect) {
+      this.selectedItemIds.add(cartItem.id);
+    } else {
+      this.selectedItemIds.delete(cartItem.id);
+    }
+    this.saveSelectionToStorage();
+
+    this.lang$.pipe(take(1)).subscribe((lang) => {
+      this.store.toggleCartItemSelect(cartItem.id, willSelect, lang).subscribe();
+    });
+
+    if (this.latestCart && this.appliedCoupon) {
+      this.revalidateAppliedCoupon(this.latestCart);
+    }
+  }
+
+  isAllSelected(cart: Cart): boolean {
+    const availableItems = (cart?.items || []).filter((i: any) => !this.isItemOutOfStock(i));
+    if (availableItems.length === 0) return false;
+    return availableItems.every((item: any) => this.selectedItemIds.has(item.id));
+  }
+
+  isIndeterminate(cart: Cart): boolean {
+    const availableItems = (cart?.items || []).filter((i: any) => !this.isItemOutOfStock(i));
+    if (availableItems.length === 0) return false;
+    const selectedCount = availableItems.filter((item: any) => this.selectedItemIds.has(item.id)).length;
+    return selectedCount > 0 && selectedCount < availableItems.length;
+  }
+
+  toggleSelectAll(cart: Cart): void {
+    const availableItems = (cart?.items || []).filter((i: any) => !this.isItemOutOfStock(i));
+    const allSelected = this.isAllSelected(cart);
+
+    if (allSelected) {
+      // Bỏ chọn toàn bộ
+      this.selectedItemIds.clear();
+    } else {
+      // Chọn tất cả
+      availableItems.forEach((item: any) => this.selectedItemIds.add(item.id));
+    }
+    this.saveSelectionToStorage();
+
+    this.lang$.pipe(take(1)).subscribe((lang) => {
+      this.store.selectAllCartItems(!allSelected, lang).subscribe();
+    });
+
+    if (this.appliedCoupon) {
+      this.revalidateAppliedCoupon(cart);
+    }
+  }
+
+  getSelectedCount(cart: Cart): number {
+    return (cart?.items || []).filter((item: any) => this.selectedItemIds.has(item.id)).length;
+  }
+
+  // ─── PHẦN 2: BIẾN THỂ SẢN PHẨM TRONG CART ───
+
+  hasClassification(cartItem: any): boolean {
+    const viData = cartItem?.item?.vi || cartItem?.item;
+    const directFlag = Boolean(viData?.hasClassification ?? cartItem?.item?.hasClassification);
+    return directFlag || this.getAvailableClassifications(cartItem).length > 0;
+  }
+
+  getAvailableClassifications(cartItem: any): string[] {
+    const viData = cartItem?.item?.vi || cartItem?.item;
+    let list: string[] = [];
+    if (Array.isArray(viData?.classifications) && viData.classifications.length > 0) {
+      list = viData.classifications;
+    } else if (Array.isArray(cartItem?.item?.classifications) && cartItem.item.classifications.length > 0) {
+      list = cartItem.item.classifications;
+    }
+    if (list.length === 0 && Array.isArray(cartItem?.item?.variants)) {
+      const distinct = Array.from(
+        new Set(cartItem.item.variants.map((v: any) => v.classification).filter(Boolean)),
+      ) as string[];
+      if (distinct.length > 0) list = distinct;
+    }
+    return list;
+  }
+
+  getSelectedClassification(cartItem: any): string | null {
+    if (cartItem?.selectedClassification) return cartItem.selectedClassification;
+    if (cartItem?.variant?.classification) return cartItem.variant.classification;
+    const available = this.getAvailableClassifications(cartItem);
+    return available.length > 0 ? available[0] : null;
+  }
+
+  hasColors(cartItem: any): boolean {
+    const viData = cartItem?.item?.vi || cartItem?.item;
+    const directFlag = Boolean(viData?.hasColors ?? cartItem?.item?.hasColors);
+    return directFlag || this.getAvailableColors(cartItem).length > 0;
+  }
+
+  getAvailableColors(cartItem: any): { name: string; hex: string }[] {
+    const viData = cartItem?.item?.vi || cartItem?.item;
+    let list: { name: string; hex: string }[] = [];
+    if (Array.isArray(viData?.colors) && viData.colors.length > 0) {
+      list = viData.colors;
+    } else if (Array.isArray(cartItem?.item?.colors) && cartItem.item.colors.length > 0) {
+      list = cartItem.item.colors;
+    }
+    if (list.length === 0 && Array.isArray(cartItem?.item?.variants)) {
+      const distinctNames = Array.from(
+        new Set(cartItem.item.variants.map((v: any) => v.color).filter(Boolean)),
+      ) as string[];
+      if (distinctNames.length > 0) {
+        list = distinctNames.map((name) => ({ name, hex: '#74070E' }));
+      }
+    }
+    return list;
+  }
+
+  getSelectedColor(cartItem: any): string | null {
+    if (cartItem?.selectedColor) return cartItem.selectedColor;
+    if (cartItem?.variant?.color) return cartItem.variant.color;
+    const available = this.getAvailableColors(cartItem);
+    return available.length > 0 ? available[0].name : null;
+  }
+
+  hasSizes(cartItem: any): boolean {
+    const viData = cartItem?.item?.vi || cartItem?.item;
+    const directFlag = Boolean(viData?.hasSizes ?? cartItem?.item?.hasSizes);
+    return directFlag || this.getAvailableSizes(cartItem).length > 0;
+  }
+
+  getAvailableSizes(cartItem: any): string[] {
+    const viData = cartItem?.item?.vi || cartItem?.item;
+    let list: string[] = [];
+    if (Array.isArray(viData?.sizes) && viData.sizes.length > 0) {
+      list = viData.sizes;
+    } else if (Array.isArray(cartItem?.item?.sizes) && cartItem.item.sizes.length > 0) {
+      list = cartItem.item.sizes;
+    }
+    if (list.length === 0 && Array.isArray(cartItem?.item?.variants)) {
+      const distinct = Array.from(
+        new Set(cartItem.item.variants.map((v: any) => v.size).filter(Boolean)),
+      ) as string[];
+      if (distinct.length > 0) list = distinct;
+    }
+    return list;
+  }
+
+  getSelectedSize(cartItem: any): string | null {
+    if (cartItem?.selectedSize) return cartItem.selectedSize;
+    if (cartItem?.variant?.size) return cartItem.variant.size;
+    const available = this.getAvailableSizes(cartItem);
+    return available.length > 0 ? available[0] : null;
+  }
+
+  onSelectClassification(cartItem: any, cls: string): void {
+    this.onSelectOption(cartItem, 'classification', cls);
+  }
+
+  onSelectColor(cartItem: any, colorName: string): void {
+    this.onSelectOption(cartItem, 'color', colorName);
+  }
+
+  onSelectSize(cartItem: any, sizeName: string): void {
+    this.onSelectOption(cartItem, 'size', sizeName);
+  }
+
+  onSelectOption(
+    cartItem: any,
+    type: 'classification' | 'color' | 'size',
+    value: string,
+  ): void {
+    if (this.updatingItemId) return;
+
+    const currentCls = type === 'classification' ? value : this.getSelectedClassification(cartItem);
+    const currentColor = type === 'color' ? value : this.getSelectedColor(cartItem);
+    const currentSize = type === 'size' ? value : this.getSelectedSize(cartItem);
+
+    const variants: any[] = Array.isArray(cartItem?.item?.variants) ? cartItem.item.variants : [];
+    if (variants.length === 0) return;
+
+    // Tìm variant khớp tốt nhất
+    let matchedVariant = variants.find((v: any) => {
+      const mClass = !this.hasClassification(cartItem) || !currentCls || v.classification === currentCls;
+      const mColor = !this.hasColors(cartItem) || !currentColor || v.color === currentColor;
+      const mSize = !this.hasSizes(cartItem) || !currentSize || v.size === currentSize;
+      return mClass && mColor && mSize;
+    });
+
+    if (!matchedVariant) {
+      if (type === 'classification') {
+        matchedVariant = variants.find((v: any) => v.classification === value);
+      } else if (type === 'color') {
+        matchedVariant = variants.find((v: any) => v.color === value);
+      } else if (type === 'size') {
+        matchedVariant = variants.find((v: any) => v.size === value);
+      }
+    }
+
+    if (!matchedVariant) {
+      this.snackBar.open('Tùy chọn này hiện chưa có sẵn cho sản phẩm', 'Đóng', { duration: 2500 });
+      return;
+    }
+
+    const newVarId = matchedVariant._id?.toString() || matchedVariant.id || matchedVariant.sku;
+    if (newVarId === cartItem.variantId) return;
+
+    this.updatingItemId = cartItem.id;
+    this.lang$.pipe(take(1)).subscribe((lang) => {
+      this.store
+        .updateCartVariant(
+          cartItem.id,
+          {
+            variantId: newVarId,
+            classification: matchedVariant.classification,
+            color: matchedVariant.color,
+            size: matchedVariant.size,
+          },
+          lang,
+        )
+        .subscribe({
+          next: (res: any) => {
+            this.updatingItemId = null;
+            if (res && res.error) {
+              this.snackBar.open('Cập nhật biến thể thất bại', 'Đóng', { duration: 2500 });
+              return;
+            }
+            if (res?.capped) {
+              this.snackBar.open(
+                `Số lượng đã được tự động điều chỉnh về ${res.newQty} theo tồn kho của biến thể mới`,
+                'Đóng',
+                { duration: 3500 },
+              );
+            } else {
+              this.snackBar.open('Đã đổi biến thể sản phẩm', 'Đóng', { duration: 2000 });
+            }
+            if (this.appliedCoupon && this.latestCart) {
+              this.revalidateAppliedCoupon(this.latestCart);
+            }
+          },
+          error: () => {
+            this.updatingItemId = null;
+            this.snackBar.open('Cập nhật biến thể thất bại', 'Đóng', { duration: 2500 });
+          },
+        });
+    });
+  }
+
+  // ─── TÓM TẮT BIẾN THỂ & MODAL POPUP ───
+
+  hasAnyVariants(cartItem: any): boolean {
+    if (!cartItem) return false;
+    const variants = cartItem?.item?.variants;
+    if (Array.isArray(variants) && variants.length > 0) return true;
+    if (cartItem.selectedClassification || cartItem.selectedColor || cartItem.selectedSize || cartItem.variant) return true;
+    const item = cartItem?.item;
+    if (item?.hasClassification || item?.hasColors || item?.hasSizes) return true;
+    if (Array.isArray(item?.classifications) && item.classifications.length > 0) return true;
+    if (Array.isArray(item?.colors) && item.colors.length > 0) return true;
+    if (Array.isArray(item?.sizes) && item.sizes.length > 0) return true;
+    return false;
+  }
+
+  getVariantSummary(cartItem: any): string {
+    const parts: string[] = [];
+    const cls = this.getSelectedClassification(cartItem);
+    const color = this.getSelectedColor(cartItem);
+    const size = this.getSelectedSize(cartItem);
+
+    if (cls) parts.push(cls);
+    if (color) parts.push(`Màu ${color}`);
+    if (size) parts.push(`Size ${size}`);
+
+    return parts.length > 0 ? parts.join('  ·  ') : 'Chọn phân loại, màu, kích cỡ';
+  }
+
+  openVariantModal(cartItem: any): void {
+    if (!cartItem) return;
+    this.editingCartItem = {
+      ...cartItem,
+      productId: cartItem.item?._id || cartItem.item?.id || (typeof cartItem.id === 'string' ? cartItem.id.split('_')[0] : ''),
+      variantId: cartItem.variantId || cartItem.variant?._id || cartItem.variant?.sku || '',
+      cartItemId: cartItem.id,
+      selectedClassification: this.getSelectedClassification(cartItem),
+      selectedColor: this.getSelectedColor(cartItem),
+      selectedSize: this.getSelectedSize(cartItem),
+      qty: cartItem.qty || 1
+    };
+    this.isVariantModalOpen = true;
+  }
+
+  closeVariantModal(): void {
+    this.isVariantModalOpen = false;
+    this.editingCartItem = null;
+  }
+
+  onVariantModalUpdated(): void {
+    this.closeVariantModal();
+    this.lang$.pipe(take(1)).subscribe((lang) => {
+      this.store.getCart(lang);
+      if (this.appliedCoupon && this.latestCart) {
+        this.revalidateAppliedCoupon(this.latestCart);
+      }
+    });
+  }
+
+  updateModalVariant(): void {
+    if (!this.editingCartItem) return;
+    const variants: any[] = Array.isArray(this.editingCartItem?.item?.variants)
+      ? this.editingCartItem.item.variants
+      : [];
+
+    if (variants.length === 0) {
+      this.modalSelectedVariant = null;
+      this.modalPrice = this.editingCartItem.price || 0;
+      this.modalRegularPrice = this.editingCartItem.regularPrice || this.modalPrice;
+      this.modalStock = this.getItemStock(this.editingCartItem);
+      return;
+    }
+
+    // Match variant by classification, color, and size
+    let matched = variants.find((v: any) => {
+      const mClass = !this.hasClassification(this.editingCartItem) || !this.modalClassification || v.classification === this.modalClassification;
+      const mColor = !this.hasColors(this.editingCartItem) || !this.modalColor || v.color === this.modalColor;
+      const mSize = !this.hasSizes(this.editingCartItem) || !this.modalSize || v.size === this.modalSize;
+      return mClass && mColor && mSize;
+    });
+
+    if (!matched) {
+      matched = variants.find((v: any) => {
+        const mClass = !this.modalClassification || v.classification === this.modalClassification;
+        const mColor = !this.modalColor || v.color === this.modalColor;
+        return mClass && mColor;
+      });
+    }
+
+    if (!matched && variants.length > 0) {
+      matched = variants[0];
+    }
+
+    this.modalSelectedVariant = matched;
+
+    if (matched) {
+      const vReg = Number(matched.price) || 0;
+      const vDisc = Number(matched.discountPrice) || 0;
+      if (vDisc > 0 && vDisc < vReg) {
+        this.modalPrice = vDisc;
+        this.modalRegularPrice = vReg;
+      } else {
+        this.modalPrice = vReg || this.editingCartItem.price;
+        this.modalRegularPrice = vReg || this.editingCartItem.regularPrice;
+      }
+
+      this.modalStock = Math.max(0, Number(matched.stock) || 0);
+
+      if (this.modalStock > 0 && this.modalQuantity > this.modalStock) {
+        this.modalQuantity = this.modalStock;
+      } else if (this.modalStock <= 0) {
+        this.modalQuantity = 1;
+      }
+
+      if (this.modalStock <= 0) {
+        this.modalError = 'Biến thể này hiện đã hết hàng, vui lòng chọn lựa chọn khác';
+      } else {
+        this.modalError = '';
+      }
+    } else {
+      this.modalError = 'Không tìm thấy biến thể phù hợp';
+    }
+  }
+
+  onModalSelectClassification(cls: string): void {
+    this.modalClassification = cls;
+    this.updateModalVariant();
+  }
+
+  onModalSelectColor(colorName: string): void {
+    this.modalColor = colorName;
+    this.updateModalVariant();
+  }
+
+  onModalSelectSize(sizeName: string): void {
+    this.modalSize = sizeName;
+    this.updateModalVariant();
+  }
+
+  increaseModalQuantity(): void {
+    if (this.modalStock > 0 && this.modalQuantity < this.modalStock) {
+      this.modalQuantity++;
+    }
+  }
+
+  decreaseModalQuantity(): void {
+    if (this.modalQuantity > 1) {
+      this.modalQuantity--;
+    }
+  }
+
+  onModalQuantityInputChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    let target = parseInt(input.value, 10);
+    if (isNaN(target) || target < 1) {
+      target = 1;
+    } else if (this.modalStock > 0 && target > this.modalStock) {
+      target = this.modalStock;
+      this.snackBar.open(`Tồn kho chỉ còn ${this.modalStock} sản phẩm`, 'Đóng', { duration: 2500 });
+    }
+    this.modalQuantity = target;
+    input.value = String(target);
+  }
+
+  submitVariantModal(): void {
+    if (!this.editingCartItem || !this.modalSelectedVariant) return;
+
+    if (this.modalStock <= 0) {
+      this.modalError = 'Biến thể này hiện đã hết hàng, không thể cập nhật';
+      return;
+    }
+
+    const newVarId =
+      this.modalSelectedVariant._id?.toString() ||
+      this.modalSelectedVariant.id ||
+      this.modalSelectedVariant.sku;
+    const targetItemId = this.editingCartItem.id;
+    const targetQty = this.modalQuantity;
+
+    this.isModalSubmitting = true;
+    this.modalError = '';
+
+    this.lang$.pipe(take(1)).subscribe((lang) => {
+      this.store
+        .updateCartVariant(
+          targetItemId,
+          {
+            variantId: newVarId,
+            classification: this.modalSelectedVariant.classification,
+            color: this.modalSelectedVariant.color,
+            size: this.modalSelectedVariant.size,
+          },
+          lang,
+        )
+        .subscribe({
+          next: (res: any) => {
+            if (res && res.error) {
+              this.isModalSubmitting = false;
+              this.modalError = 'Cập nhật biến thể thất bại: ' + (res.error?.message || 'Lỗi server');
+              return;
+            }
+
+            if (targetQty !== this.editingCartItem.qty) {
+              this.store.updateCartQuantity(targetItemId, targetQty, lang).subscribe({
+                next: () => {
+                  this.finishModalSubmit();
+                },
+                error: () => {
+                  this.finishModalSubmit();
+                },
+              });
+            } else {
+              this.finishModalSubmit();
+            }
+          },
+          error: () => {
+            this.isModalSubmitting = false;
+            this.modalError = 'Cập nhật biến thể thất bại';
+          },
+        });
+    });
+  }
+
+  private finishModalSubmit(): void {
+    this.isModalSubmitting = false;
+    this.closeVariantModal();
+    this.snackBar.open('Đã cập nhật sản phẩm thành công', 'Đóng', { duration: 2500 });
+    if (this.appliedCoupon && this.latestCart) {
+      this.revalidateAppliedCoupon(this.latestCart);
+    }
+  }
+
+  // ─── PHẦN 3: TĂNG / GIẢM / NHẬP SỐ LƯỢNG ───
+
+  getItemStock(cartItem: any): number {
+    if (cartItem?.stock !== undefined && cartItem.stock !== null) {
+      return Math.max(0, Number(cartItem.stock) || 0);
+    }
+    if (cartItem?.variant?.stock !== undefined) {
+      return Math.max(0, Number(cartItem.variant.stock) || 0);
+    }
+    if (cartItem?.item?.quantity !== undefined) {
+      return Math.max(0, Number(cartItem.item.quantity) || 0);
+    }
+    return 999;
+  }
+
+  isItemOutOfStock(cartItem: any): boolean {
+    const stock = this.getItemStock(cartItem);
+    const stockStatus = cartItem?.item?.stock;
+    return stock <= 0 || stockStatus === 'out' || stockStatus === 'outOfStock';
+  }
+
+  increaseQuantity(cartItem: any): void {
+    if (this.updatingItemId) return;
+    const maxStock = this.getItemStock(cartItem);
+    if (cartItem.qty >= maxStock) {
+      this.snackBar.open(`Số lượng đã đạt giới hạn tồn kho (${maxStock})`, 'Đóng', { duration: 2500 });
+      return;
+    }
+
+    this.updatingItemId = cartItem.id;
+    this.lang$.pipe(take(1)).subscribe((lang) => {
+      this.store.updateCartQuantity(cartItem.id, cartItem.qty + 1, lang).subscribe({
+        next: (res: any) => {
+          this.updatingItemId = null;
+          if (res?.error) {
+            this.snackBar.open('Cập nhật số lượng thất bại', 'Đóng', { duration: 2000 });
+            return;
+          }
+          if (this.appliedCoupon && this.latestCart) {
+            this.revalidateAppliedCoupon(this.latestCart);
+          }
+        },
+        error: () => {
+          this.updatingItemId = null;
+          this.snackBar.open('Cập nhật số lượng thất bại', 'Đóng', { duration: 2000 });
+        },
+      });
+    });
+  }
+
+  decreaseQuantity(cartItem: any): void {
+    if (this.updatingItemId) return;
+    if (cartItem.qty <= 1) return;
+
+    this.updatingItemId = cartItem.id;
+    this.lang$.pipe(take(1)).subscribe((lang) => {
+      this.store.updateCartQuantity(cartItem.id, cartItem.qty - 1, lang).subscribe({
+        next: (res: any) => {
+          this.updatingItemId = null;
+          if (res?.error) {
+            this.snackBar.open('Cập nhật số lượng thất bại', 'Đóng', { duration: 2000 });
+            return;
+          }
+          if (this.appliedCoupon && this.latestCart) {
+            this.revalidateAppliedCoupon(this.latestCart);
+          }
+        },
+        error: () => {
+          this.updatingItemId = null;
+          this.snackBar.open('Cập nhật số lượng thất bại', 'Đóng', { duration: 2000 });
+        },
+      });
+    });
+  }
+
+  onQuantityInputChange(cartItem: any, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    let targetQty = parseInt(input.value, 10);
+    const maxStock = this.getItemStock(cartItem);
+
+    if (isNaN(targetQty) || targetQty < 1) {
+      targetQty = 1;
+      input.value = '1';
+    } else if (maxStock > 0 && targetQty > maxStock) {
+      targetQty = maxStock;
+      input.value = String(maxStock);
+      this.snackBar.open(`Tồn kho chỉ còn ${maxStock} sản phẩm`, 'Đóng', { duration: 2500 });
+    }
+
+    if (targetQty === cartItem.qty) return;
+
+    this.updatingItemId = cartItem.id;
+    this.lang$.pipe(take(1)).subscribe((lang) => {
+      this.store.updateCartQuantity(cartItem.id, targetQty, lang).subscribe({
+        next: (res: any) => {
+          this.updatingItemId = null;
+          if (res?.error) {
+            input.value = String(cartItem.qty);
+            this.snackBar.open('Không thể cập nhật số lượng', 'Đóng', { duration: 2000 });
+            return;
+          }
+          if (this.appliedCoupon && this.latestCart) {
+            this.revalidateAppliedCoupon(this.latestCart);
+          }
+        },
+        error: () => {
+          this.updatingItemId = null;
+          input.value = String(cartItem.qty);
+          this.snackBar.open('Không thể cập nhật số lượng', 'Đóng', { duration: 2000 });
+        },
+      });
+    });
+  }
+
+  // ─── PHẦN 4: XÓA SẢN PHẨM ───
+
+  removeSingleItem(cartItem: any): void {
+    this.updatingItemId = cartItem.id;
+    this.lang$.pipe(take(1)).subscribe((lang) => {
+      this.store.deleteCartItem(cartItem.id, lang).subscribe({
+        next: (res: any) => {
+          this.selectedItemIds.delete(cartItem.id);
+          this.saveSelectionToStorage();
+          this.updatingItemId = null;
+          if (res?.error) {
+            this.snackBar.open('Xóa sản phẩm thất bại', 'Đóng', { duration: 2000 });
+            return;
+          }
+          this.snackBar.open('Đã xóa sản phẩm khỏi giỏ hàng', 'Đóng', { duration: 2000 });
+          if (this.appliedCoupon && this.latestCart) {
+            this.revalidateAppliedCoupon(this.latestCart);
+          }
+        },
+        error: () => {
+          this.updatingItemId = null;
+          this.snackBar.open('Xóa sản phẩm thất bại', 'Đóng', { duration: 2000 });
+        },
+      });
+    });
+  }
+
+  deleteSelectedItems(cart: Cart): void {
+    const selectedIds = Array.from(this.selectedItemIds);
+    if (selectedIds.length === 0) {
+      this.snackBar.open('Chưa chọn sản phẩm nào để xóa', 'Đóng', { duration: 2000 });
+      return;
+    }
+
+    this.lang$.pipe(take(1)).subscribe((lang) => {
+      this.store.deleteCartItems(selectedIds, lang).subscribe({
+        next: (res: any) => {
+          this.selectedItemIds.clear();
+          this.saveSelectionToStorage();
+          if (res?.error) {
+            this.snackBar.open('Xóa các sản phẩm thất bại', 'Đóng', { duration: 2000 });
+            return;
+          }
+          this.snackBar.open(`Đã xóa ${selectedIds.length} sản phẩm`, 'Đóng', { duration: 2500 });
+          this.store.getCart(lang);
+          if (this.appliedCoupon && this.latestCart) {
+            this.revalidateAppliedCoupon(this.latestCart);
+          }
+        },
+        error: () => {
+          this.snackBar.open('Xóa các sản phẩm thất bại', 'Đóng', { duration: 2000 });
+        },
+      });
+    });
+  }
+
+  // ─── PHẦN 5 & 7: TÍNH TIỀN THEO SẢN PHẨM ĐƯỢC CHỌN ───
+
+  getSelectedSubtotal(cart: Cart): number {
+    if (!cart?.items?.length) return 0;
+    return cart.items
+      .filter((item: any) => this.selectedItemIds.has(item.id))
+      .reduce((sum: number, item: any) => sum + (item.price * item.qty), 0);
+  }
+
+  getSelectedTotalQty(cart: Cart): number {
+    if (!cart?.items?.length) return 0;
+    return cart.items
+      .filter((item: any) => this.selectedItemIds.has(item.id))
+      .reduce((sum: number, item: any) => sum + item.qty, 0);
+  }
+
+  // ─── PHẦN 8: PHƯƠNG THỨC VẬN CHUYỂN LOGIC ───
+
+  private restoreShippingMethodFromStorage(): void {
+    try {
+      const saved = localStorage.getItem(this.shippingStorageKey);
+      if (saved && this.shippingMethods.some(m => m.id === saved)) {
+        this.selectedShippingMethodId = saved;
+      }
+    } catch {
+      // Bỏ qua lỗi storage
+    }
+  }
+
+  private saveShippingMethodToStorage(): void {
+    try {
+      localStorage.setItem(this.shippingStorageKey, this.selectedShippingMethodId);
+    } catch {
+      // Bỏ qua lỗi storage
+    }
+  }
+
+  selectShippingMethod(method: ShippingOption): void {
+    if (!method) return;
+    this.selectedShippingMethodId = method.id;
+    this.saveShippingMethodToStorage();
+    // Ghi chú API: Hiện tại backend chưa có API chuyên biệt để lưu riêng shipping method vào Cart session/DB.
+    // Khi backend hỗ trợ (vd: PUT /api/cart/shipping-method), hãy gọi apiService ở đây:
+    // this.apiService.updateCartShippingMethod(method.id).subscribe(...)
+  }
+
+  getSelectedShippingMethod(): ShippingOption | undefined {
+    return this.shippingMethods.find(m => m.id === this.selectedShippingMethodId) || this.shippingMethods[0];
+  }
+
+  getShippingFee(cart: Cart): number {
+    const subtotal = this.getSelectedSubtotal(cart);
+    if (subtotal === 0 || !cart?.items?.length) return 0;
+    const method = this.getSelectedShippingMethod();
+    return method ? method.fee : 25000;
+  }
+
+  getDiscountAmount(cart: Cart): number {
+    if (!this.appliedCoupon) return 0;
+    const subtotal = this.getSelectedSubtotal(cart);
+    if (subtotal <= 0) return 0;
+
+    let discount = 0;
+    if (this.appliedCoupon.discountType === 'PERCENTAGE') {
+      discount = Math.round((subtotal * this.appliedCoupon.discountValue) / 100);
+      if (this.appliedCoupon.discountAmount > 0 && discount > this.appliedCoupon.discountAmount) {
+        discount = this.appliedCoupon.discountAmount;
+      }
+    } else {
+      discount = this.appliedCoupon.discountValue;
+    }
+    return Math.min(discount, subtotal);
+  }
+
+  getFinalTotal(cart: Cart): number {
+    const subtotal = this.getSelectedSubtotal(cart);
+    if (subtotal === 0 || !cart?.items?.length) return 0;
+    const shipping = this.getShippingFee(cart);
+    const discount = this.getDiscountAmount(cart);
+    return Math.max(0, subtotal + shipping - discount);
+  }
+
+  // ─── PHẦN 6: MÃ GIẢM GIÁ (COUPON) ───
+
+  applyCoupon(cart: Cart): void {
+    this.couponError = '';
+    this.couponSuccess = '';
+
+    const code = this.couponInput.trim().toUpperCase();
+    if (!code) {
+      this.couponError = 'Vui lòng nhập mã giảm giá';
+      return;
+    }
+
+    const subtotal = this.getSelectedSubtotal(cart);
+    if (subtotal === 0) {
+      this.couponError = 'Vui lòng chọn ít nhất 1 sản phẩm trước khi áp dụng mã';
+      return;
+    }
+
+    this.isApplyingCoupon = true;
+    this.apiService.validateCoupon(code, subtotal).subscribe({
+      next: (res: any) => {
+        this.isApplyingCoupon = false;
+        if (res.valid) {
+          this.appliedCoupon = {
+            code: res.code,
+            description: res.description,
+            discountType: res.discountType,
+            discountValue: res.discountValue,
+            discountAmount: res.discountAmount,
+          };
+          this.couponSuccess = res.message || `Đã áp dụng mã giảm giá ${res.code}`;
+          this.snackBar.open(this.couponSuccess, 'Đóng', { duration: 3000 });
+        } else {
+          this.appliedCoupon = null;
+          this.couponError = res.message || 'Mã giảm giá không hợp lệ hoặc không đủ điều kiện';
+        }
+      },
+      error: () => {
+        this.isApplyingCoupon = false;
+        this.couponError = 'Lỗi kết nối khi kiểm tra mã giảm giá';
+      }
+    });
+  }
+
+  removeCoupon(): void {
+    this.appliedCoupon = null;
+    this.couponInput = '';
+    this.couponError = '';
+    this.couponSuccess = '';
+    this.snackBar.open('Đã gỡ bỏ mã giảm giá', 'Đóng', { duration: 2000 });
+  }
+
+  private revalidateAppliedCoupon(cart: Cart): void {
+    if (!this.appliedCoupon) return;
+    const subtotal = this.getSelectedSubtotal(cart);
+    if (subtotal <= 0) {
+      this.appliedCoupon = null;
+      this.couponError = 'Đã gỡ mã do không có sản phẩm nào được chọn';
+      return;
+    }
+
+    this.apiService.validateCoupon(this.appliedCoupon.code, subtotal).subscribe({
+      next: (res: any) => {
+        if (res.valid) {
+          this.appliedCoupon = {
+            code: res.code,
+            description: res.description,
+            discountType: res.discountType,
+            discountValue: res.discountValue,
+            discountAmount: res.discountAmount,
+          };
+        } else {
+          this.appliedCoupon = null;
+          this.couponError = res.message || 'Đơn hàng không còn đủ điều kiện áp dụng mã';
+        }
+      }
+    });
+  }
+
+  // ─── ĐỊA CHỈ & THÔNG TIN ĐẶT HÀNG ───
+
+  private autoFillUserData(): void {
+    this.user$.pipe(take(1)).subscribe((user: User) => {
+      if (user) {
+        const patchData: any = {};
+        if (user.fullName || user.name) {
+          patchData.name = user.fullName || user.name;
+        }
+        if (user.email) {
+          patchData.email = user.email;
+        }
+        if ((user as any).phoneNumber) {
+          patchData.phone = (user as any).phoneNumber;
+        }
+        if (Object.keys(patchData).length > 0) {
+          this.orderForm.patchValue(patchData);
+        }
+      }
+    });
+  }
+
+  loadProvinces(): void {
+    this.isProvincesLoading = true;
+    this.provincesError = '';
+    this.addressService.getProvinces().subscribe({
+      next: (data) => {
+        this.provinces = data || [];
+        this.isProvincesLoading = false;
+      },
+      error: () => {
+        this.provincesError = 'Không thể tải danh sách Tỉnh/Thành phố. Vui lòng thử lại.';
+        this.isProvincesLoading = false;
+      }
+    });
+  }
+
+  onProvinceChange(code: number | string): void {
+    const selected = this.provinces.find(p => String(p.code) === String(code));
+    this.orderForm.patchValue({
+      provinceName: selected ? selected.name : '',
+      districtCode: '',
+      districtName: '',
+      wardCode: '',
+      wardName: ''
+    });
+
+    this.districts = [];
+    this.wards = [];
+    this.orderForm.get('districtCode')?.disable();
+    this.orderForm.get('wardCode')?.disable();
+    this.districtsError = '';
+    this.wardsError = '';
+
+    if (code) {
+      this.loadDistricts(code);
+    }
+  }
+
+  loadDistricts(provinceCode: number | string): void {
+    this.isDistrictsLoading = true;
+    this.districtsError = '';
+    this.addressService.getDistricts(provinceCode).subscribe({
+      next: (data) => {
+        this.districts = data || [];
+        this.isDistrictsLoading = false;
+        this.orderForm.get('districtCode')?.enable();
+      },
+      error: () => {
+        this.districtsError = 'Không thể tải danh sách Quận/Huyện. Vui lòng thử lại.';
+        this.isDistrictsLoading = false;
+      }
+    });
+  }
+
+  onDistrictChange(code: number | string): void {
+    const selected = this.districts.find(d => String(d.code) === String(code));
+    this.orderForm.patchValue({
+      districtName: selected ? selected.name : '',
+      wardCode: '',
+      wardName: ''
+    });
+
+    this.wards = [];
+    this.orderForm.get('wardCode')?.disable();
+    this.wardsError = '';
+
+    if (code) {
+      this.loadWards(code);
+    }
+  }
+
+  loadWards(districtCode: number | string): void {
+    this.isWardsLoading = true;
+    this.wardsError = '';
+    this.addressService.getWards(districtCode).subscribe({
+      next: (data) => {
+        this.wards = data || [];
+        this.isWardsLoading = false;
+        this.orderForm.get('wardCode')?.enable();
+      },
+      error: () => {
+        this.wardsError = 'Không thể tải danh sách Phường/Xã. Vui lòng thử lại.';
+        this.isWardsLoading = false;
+      }
+    });
+  }
+
+  onWardChange(code: number | string): void {
+    const selected = this.wards.find(w => String(w.code) === String(code));
+    this.orderForm.patchValue({
+      wardName: selected ? selected.name : ''
+    });
   }
 
   goBack(): void {
     this.location.back();
   }
 
-  removeFromCart(id: string): void {
-    this.lang$.pipe(take(1)).subscribe(lang => {
-      this.store.removeFromCart('?id=' + id + '&lang=' + lang);
-    });
-  }
-
-  payWithCard(payment): void {
-    this.user$.pipe(take(1)).subscribe((user: User) => {
-      const userToOrder = user ? { userId: user.id } : {};
-      const addresses = [{
-        name: this.orderForm.value.name,
-        city: this.orderForm.value.city,
-        country: this.orderForm.value.country,
-        line1: this.orderForm.value.address,
-        line2: '',
-        zip: this.orderForm.value.zip,
-      }]
-      const paymentRequest = { ...payment, ...this.orderForm.value, ...userToOrder, addresses };
-      this.store.makeOrderWithPayment(paymentRequest);
-    })
-  }
-
   scrollToTop(): void {
     this.store.updatePosition({ cartComponent: 0 });
   }
 
-  submit(currency: string): void {
-    this.user$.pipe(take(1)).subscribe((user: User) => {
-      const userToOrder = user ? { userId: user.id } : {};
-      const addresses = [{
-        name: this.orderForm.value.name,
-        city: this.orderForm.value.city,
-        country: this.orderForm.value.country,
-        line1: this.orderForm.value.address,
-        line2: '',
-        zip: this.orderForm.value.zip,
-      }];
+  // ─── PHẦN 9: TIẾN HÀNH ĐẶT HÀNG (CHECKOUT CHỈ GỬI SẢN PHẨM ĐÃ CHỌN) ───
 
-      const orderRequest = { ...this.orderForm.value, ...userToOrder, currency, addresses };
+  private buildOrderPayload(user: User | null, currency?: string, cart?: Cart) {
+    const formValue = this.orderForm.getRawValue();
+    const userToOrder = user ? { userId: user.id || (user as any)._id } : {};
+
+    const provinceName = formValue.provinceName || '';
+    const districtName = formValue.districtName || '';
+    const wardName = formValue.wardName || '';
+    const addressDetail = (formValue.addressDetail || '').trim();
+    const fullAddress = [addressDetail, wardName, districtName, provinceName].filter(Boolean).join(', ');
+
+    const shippingAddress = {
+      fullName: (formValue.name || '').trim(),
+      phone: (formValue.phone || '').trim(),
+      address: fullAddress,
+      addressDetail,
+      provinceCode: String(formValue.provinceCode || ''),
+      provinceName,
+      province: provinceName,
+      districtCode: String(formValue.districtCode || ''),
+      districtName,
+      district: districtName,
+      wardCode: String(formValue.wardCode || ''),
+      wardName,
+      ward: wardName,
+    };
+
+    const addresses = [{
+      name: shippingAddress.fullName,
+      phone: shippingAddress.phone,
+      city: provinceName,
+      country: 'Việt Nam',
+      line1: addressDetail,
+      line2: [wardName, districtName].filter(Boolean).join(', '),
+      zip: String(formValue.districtCode || '700000'),
+      province: provinceName,
+      district: districtName,
+      ward: wardName,
+    }];
+
+    // Lọc danh sách ID các sản phẩm đã được chọn
+    const selectedIds = Array.from(this.selectedItemIds);
+    const subtotal = cart ? this.getSelectedSubtotal(cart) : 0;
+    const discountAmount = cart ? this.getDiscountAmount(cart) : 0;
+    const shippingMethod = this.getSelectedShippingMethod();
+    const shippingFee = cart ? this.getShippingFee(cart) : (shippingMethod?.fee || 25000);
+
+    return {
+      ...userToOrder,
+      name: shippingAddress.fullName,
+      email: (formValue.email || '').trim(),
+      phone: shippingAddress.phone,
+      customerPhone: shippingAddress.phone,
+      notes: (formValue.notes || '').trim(),
+      shippingAddress,
+      addresses,
+      selectedItemIds: selectedIds,
+      couponCode: this.appliedCoupon ? this.appliedCoupon.code : '',
+      couponDiscount: discountAmount,
+      shippingMethodId: shippingMethod?.id || 'standard',
+      shippingMethodName: shippingMethod?.name || 'Giao hàng tiêu chuẩn',
+      shippingFee,
+      currency: currency || 'VND',
+    };
+  }
+
+  payWithCard(payment: any): void {
+    if (this.selectedItemIds.size === 0) {
+      this.snackBar.open('Vui lòng chọn ít nhất 1 sản phẩm để thanh toán', 'Đóng', { duration: 3000 });
+      return;
+    }
+
+    if (this.orderForm.invalid) {
+      this.orderForm.markAllAsTouched();
+      return;
+    }
+
+    this.user$.pipe(take(1)).subscribe((user: User) => {
+      const orderPayload = this.buildOrderPayload(user, undefined, this.latestCart || undefined);
+      const paymentRequest = { ...payment, ...orderPayload };
+      this.store.makeOrderWithPayment(paymentRequest);
+    });
+  }
+
+  submit(currency: string): void {
+    if (this.selectedItemIds.size === 0) {
+      this.snackBar.open('Vui lòng chọn ít nhất 1 sản phẩm để thanh toán', 'Đóng', { duration: 3000 });
+      return;
+    }
+
+    if (this.orderForm.invalid) {
+      this.orderForm.markAllAsTouched();
+      return;
+    }
+
+    this.user$.pipe(take(1)).subscribe((user: User) => {
+      const orderRequest = this.buildOrderPayload(user, currency, this.latestCart || undefined);
       this.store.makeOrder(orderRequest);
       this.toggleCard = false;
       this.scrollToTop();
-    })
-
+    });
   }
 }

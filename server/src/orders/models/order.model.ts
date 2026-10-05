@@ -32,6 +32,13 @@ export interface ShippingAddress {
   ward?: string;
   district?: string;
   province?: string;
+  provinceCode?: string;
+  provinceName?: string;
+  districtCode?: string;
+  districtName?: string;
+  wardCode?: string;
+  wardName?: string;
+  addressDetail?: string;
 }
 
 export interface ShippingMethodSnapshot {

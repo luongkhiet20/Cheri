@@ -16,6 +16,12 @@ export const stripe = new Stripe(secret, { apiVersion: '2020-08-27' });
 export class OrdersService {
   private logger = new Logger('OrdersService');
 
+  private addressCache = {
+    provinces: null as any[] | null,
+    districts: new Map<string, any[]>(),
+    wards: new Map<string, any[]>(),
+  };
+
   constructor(
     @InjectModel('Order') private orderModel: Model<Order>,
     @InjectModel('Translation') private translationModel: Model<Translation>,
@@ -24,7 +30,166 @@ export class OrdersService {
     @InjectModel('ShippingMethod') private shippingMethodModel: Model<any>,
     @InjectModel('PaymentMethod') private paymentMethodModel: Model<any>,
     @InjectModel('User') private userModel: Model<any>,
+    @InjectModel('Coupon') private couponModel: Model<any>,
   ) {}
+
+  async validateCoupon(code: string, subtotal: number): Promise<{
+    valid: boolean;
+    code?: string;
+    description?: string;
+    discountType?: string;
+    discountValue?: number;
+    discountAmount?: number;
+    message: string;
+  }> {
+    if (!code || !code.trim()) {
+      return { valid: false, message: 'Vui lòng nhập mã giảm giá' };
+    }
+
+    const cleanCode = code.trim().toUpperCase();
+    await this.ensureDefaultCoupons();
+
+    const coupon = await this.couponModel.findOne({
+      code: cleanCode,
+      isActive: true,
+    });
+
+    if (!coupon) {
+      return { valid: false, message: 'Mã giảm giá không hợp lệ hoặc đã hết hạn' };
+    }
+
+    const now = new Date();
+    if (coupon.startDate && new Date(coupon.startDate) > now) {
+      return { valid: false, message: 'Chương trình ưu đãi chưa bắt đầu' };
+    }
+    if (coupon.endDate && new Date(coupon.endDate) < now) {
+      return { valid: false, message: 'Mã giảm giá đã hết hạn sử dụng' };
+    }
+    if (coupon.usageLimit > 0 && coupon.usedCount >= coupon.usageLimit) {
+      return { valid: false, message: 'Mã giảm giá đã hết lượt sử dụng' };
+    }
+    if (coupon.minOrderValue > 0 && subtotal < coupon.minOrderValue) {
+      const minFormatted = coupon.minOrderValue.toLocaleString('vi-VN');
+      return {
+        valid: false,
+        message: `Mã ${cleanCode} chỉ áp dụng cho đơn hàng từ ${minFormatted} ₫ trở lên`,
+      };
+    }
+
+    let discountAmount = 0;
+    if (coupon.discountType === 'PERCENTAGE') {
+      discountAmount = Math.round((subtotal * coupon.discountValue) / 100);
+      if (coupon.maxDiscount > 0 && discountAmount > coupon.maxDiscount) {
+        discountAmount = coupon.maxDiscount;
+      }
+    } else {
+      discountAmount = coupon.discountValue;
+    }
+
+    if (discountAmount > subtotal) {
+      discountAmount = subtotal;
+    }
+
+    return {
+      valid: true,
+      code: coupon.code,
+      description: coupon.description,
+      discountType: coupon.discountType,
+      discountValue: coupon.discountValue,
+      discountAmount,
+      message: 'Áp dụng mã giảm giá thành công!',
+    };
+  }
+
+  private async ensureDefaultCoupons(): Promise<void> {
+    try {
+      const count = await this.couponModel.countDocuments();
+      if (count === 0) {
+        await this.couponModel.insertMany([
+          {
+            code: 'CHERI10',
+            description: 'Giảm 10% tối đa 100.000₫ cho đơn hàng từ 200.000₫',
+            discountType: 'PERCENTAGE',
+            discountValue: 10,
+            maxDiscount: 100000,
+            minOrderValue: 200000,
+            isActive: true,
+          },
+          {
+            code: 'CHERI50K',
+            description: 'Giảm ngay 50.000₫ cho đơn hàng từ 300.000₫',
+            discountType: 'FIXED',
+            discountValue: 50000,
+            minOrderValue: 300000,
+            isActive: true,
+          },
+          {
+            code: 'WELCOME',
+            description: 'Ưu đãi khách hàng mới giảm 20.000₫ từ 100.000₫',
+            discountType: 'FIXED',
+            discountValue: 20000,
+            minOrderValue: 100000,
+            isActive: true,
+          },
+        ]);
+        this.logger.log('Default coupons initialized successfully');
+      }
+    } catch (e) {
+      this.logger.warn('Could not initialize default coupons: ' + e.message);
+    }
+  }
+
+  async getProvinces(): Promise<any[]> {
+    if (this.addressCache.provinces && this.addressCache.provinces.length > 0) {
+      return this.addressCache.provinces;
+    }
+    try {
+      const res = await fetch('https://provinces.open-api.vn/api/v1/p/');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      this.addressCache.provinces = data;
+      return data;
+    } catch (err) {
+      this.logger.error('Error fetching provinces: ' + err.message);
+      return [];
+    }
+  }
+
+  async getDistricts(provinceCode: string): Promise<any[]> {
+    const key = String(provinceCode);
+    if (this.addressCache.districts.has(key)) {
+      return this.addressCache.districts.get(key) || [];
+    }
+    try {
+      const res = await fetch(`https://provinces.open-api.vn/api/v1/p/${key}?depth=2`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const districts = (data && data.districts) ? data.districts : [];
+      this.addressCache.districts.set(key, districts);
+      return districts;
+    } catch (err) {
+      this.logger.error(`Error fetching districts for province ${key}: ` + err.message);
+      return [];
+    }
+  }
+
+  async getWards(districtCode: string): Promise<any[]> {
+    const key = String(districtCode);
+    if (this.addressCache.wards.has(key)) {
+      return this.addressCache.wards.get(key) || [];
+    }
+    try {
+      const res = await fetch(`https://provinces.open-api.vn/api/v1/d/${key}?depth=2`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const wards = (data && data.wards) ? data.wards : [];
+      this.addressCache.wards.set(key, wards);
+      return wards;
+    } catch (err) {
+      this.logger.error(`Error fetching wards for district ${key}: ` + err.message);
+      return [];
+    }
+  }
 
   // ─── Lấy orders của user ──────────────────────────────────────────────────
   async getOrders(user: User): Promise<Order[]> {
@@ -338,14 +503,34 @@ export class OrdersService {
       const newOrder = new this.orderModel(orderData);
       await newOrder.save();
 
-      // Trừ tồn kho
-      await this.decreaseStock(newOrder.items);
-
-      // Xóa giỏ hàng của user sau khi đặt hàng thành công
+      // Xóa các sản phẩm đã đặt khỏi giỏ hàng của user
       if (user) {
-        await this.userModel.findByIdAndUpdate(user._id, {
-          'cart.items': [],
-        });
+        if (orderDto.selectedItemIds && orderDto.selectedItemIds.length > 0) {
+          const selectedObjIds = orderDto.selectedItemIds.filter(isValidObjectId).map(id => new Types.ObjectId(id));
+          const selectedStrIds = orderDto.selectedItemIds.map(id => String(id));
+          await this.userModel.findByIdAndUpdate(user._id, {
+            $pull: {
+              'cart.items': {
+                $or: [
+                  { productId: { $in: selectedObjIds } },
+                  { _id: { $in: selectedObjIds } },
+                  { id: { $in: selectedStrIds } },
+                ],
+              },
+            },
+          });
+        } else {
+          await this.userModel.findByIdAndUpdate(user._id, {
+            'cart.items': [],
+          });
+        }
+      }
+
+      if (newOrder.couponCode) {
+        await this.couponModel.updateOne(
+          { code: newOrder.couponCode },
+          { $inc: { usedCount: 1 } }
+        );
       }
 
       await this.sendOrderEmail(newOrder, lang);
@@ -388,9 +573,32 @@ export class OrdersService {
         await this.decreaseStock(newOrder.items);
 
         if (user) {
-          await this.userModel.findByIdAndUpdate(user._id, {
-            'cart.items': [],
-          });
+          if (body.selectedItemIds && body.selectedItemIds.length > 0) {
+            const selectedObjIds = body.selectedItemIds.filter(isValidObjectId).map(id => new Types.ObjectId(id));
+            const selectedStrIds = body.selectedItemIds.map(id => String(id));
+            await this.userModel.findByIdAndUpdate(user._id, {
+              $pull: {
+                'cart.items': {
+                  $or: [
+                    { productId: { $in: selectedObjIds } },
+                    { _id: { $in: selectedObjIds } },
+                    { id: { $in: selectedStrIds } },
+                  ],
+                },
+              },
+            });
+          } else {
+            await this.userModel.findByIdAndUpdate(user._id, {
+              'cart.items': [],
+            });
+          }
+        }
+
+        if (newOrder.couponCode) {
+          await this.couponModel.updateOne(
+            { code: newOrder.couponCode },
+            { $inc: { usedCount: 1 } }
+          );
         }
 
         await this.sendOrderEmail(newOrder, lang);
@@ -405,15 +613,28 @@ export class OrdersService {
 
   // ─── Build order data từ cart của user ────────────────────────────────────
   private async buildOrderData(orderDto: OrderDto, user: User | null, type: string) {
-    // Lấy cart items từ DB user hoặc từ body (guest checkout)
+    // Lấy cart items từ DB user hoặc fallback từ body
     let cartItems: any[] = [];
     if (user) {
       const freshUser = await this.userModel.findById(user._id).lean() as any;
       cartItems = freshUser?.cart?.items || [];
     }
 
+    if (!cartItems.length && (orderDto as any).items && Array.isArray((orderDto as any).items)) {
+      cartItems = (orderDto as any).items;
+    }
+
+    // Lọc theo selectedItemIds nếu có
+    if (orderDto.selectedItemIds && Array.isArray(orderDto.selectedItemIds) && orderDto.selectedItemIds.length > 0) {
+      const selectedSet = new Set(orderDto.selectedItemIds.map(id => String(id)));
+      cartItems = cartItems.filter(item => {
+        const pId = String(item.productId || item.id || item.item?._id || item.item?.id || '');
+        return selectedSet.has(pId);
+      });
+    }
+
     if (!cartItems.length) {
-      throw new Error('Giỏ hàng trống, không thể đặt hàng');
+      throw new Error('Vui lòng chọn ít nhất 1 sản phẩm để đặt hàng');
     }
 
     // Build items với snapshot
@@ -485,18 +706,52 @@ export class OrdersService {
       }
     }
 
-    const totalAmount = subtotal + shippingFee + paymentFee;
+    let couponDiscount = 0;
+    let appliedCouponCode = '';
+    if (orderDto.couponCode) {
+      const couponCheck = await this.validateCoupon(orderDto.couponCode, subtotal);
+      if (couponCheck.valid) {
+        couponDiscount = couponCheck.discountAmount || 0;
+        appliedCouponCode = couponCheck.code || orderDto.couponCode.toUpperCase();
+      }
+    }
+
+    const totalAmount = Math.max(0, subtotal + shippingFee + paymentFee - couponDiscount);
     const orderId = `CHE${Date.now()}${Math.floor(Math.random() * 1000)}`;
+
+    // Chuẩn hóa shippingAddress đảm bảo lưu đầy đủ code + name + addressDetail
+    const rawAddr = (orderDto as any).shippingAddress || (orderDto as any).addresses?.[0] || {};
+    const normalizedShippingAddress = {
+      fullName: rawAddr.fullName || rawAddr.name || (orderDto as any).name || (user as any)?.fullName || (user as any)?.name || '',
+      phone: rawAddr.phone || orderDto.customerPhone || (orderDto as any).phone || (user as any)?.phoneNumber || '',
+      address: rawAddr.addressDetail || rawAddr.address || rawAddr.line1 || '',
+      addressDetail: rawAddr.addressDetail || rawAddr.address || rawAddr.line1 || '',
+      provinceCode: String(rawAddr.provinceCode || ''),
+      provinceName: rawAddr.provinceName || rawAddr.province || rawAddr.city || '',
+      province: rawAddr.provinceName || rawAddr.province || rawAddr.city || '',
+      districtCode: String(rawAddr.districtCode || ''),
+      districtName: rawAddr.districtName || rawAddr.district || '',
+      district: rawAddr.districtName || rawAddr.district || '',
+      wardCode: String(rawAddr.wardCode || ''),
+      wardName: rawAddr.wardName || rawAddr.ward || '',
+      ward: rawAddr.wardName || rawAddr.ward || '',
+    };
 
     return {
       orderId,
       _user: user ? new Types.ObjectId(user._id as string) : null,
       customerEmail: orderDto.email,
-      customerPhone: orderDto.customerPhone || '',
+      customerPhone: orderDto.customerPhone || normalizedShippingAddress.phone || '',
       status: OrderStatus.PENDING,
       notes: orderDto.notes || '',
       items: orderItems,
-      shippingAddress: orderDto.shippingAddress,
+      shippingAddress: normalizedShippingAddress,
+      addresses: [normalizedShippingAddress],
+      customer: {
+        name: normalizedShippingAddress.fullName,
+        email: orderDto.email,
+        phone: normalizedShippingAddress.phone,
+      },
       shippingMethodId,
       shippingMethodSnapshot,
       shippingFee,
@@ -507,8 +762,8 @@ export class OrdersService {
       subtotal,
       discountAmount: 0,
       taxAmount: 0,
-      couponCode: orderDto.couponCode || '',
-      couponDiscount: 0,
+      couponCode: appliedCouponCode,
+      couponDiscount,
       totalAmount,
       currency: orderDto.currency || 'VND',
       statusHistory: [

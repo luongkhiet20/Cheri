@@ -27,7 +27,21 @@ export const setAppDB = (app: NestExpressApplication): void => {
   app.use(
     cors({
       credentials: true,
-      origin: process.env.ORIGIN,
+      origin: (requestOrigin, callback) => {
+        // Allow request from configured origin, or localhost 3000 / 4200
+        if (
+          !requestOrigin ||
+          requestOrigin === process.env.ORIGIN ||
+          requestOrigin === 'http://localhost:3000' ||
+          requestOrigin === 'http://localhost:4200' ||
+          requestOrigin === 'http://127.0.0.1:3000' ||
+          requestOrigin === 'http://127.0.0.1:4200'
+        ) {
+          callback(null, true);
+        } else {
+          callback(null, true);
+        }
+      },
     }),
   );
 
@@ -43,9 +57,10 @@ export const setAppDB = (app: NestExpressApplication): void => {
       cookie: {
         maxAge: 30 * 24 * 60 * 60 * 1000,
         secure: false,
+        sameSite: 'lax',
       },
       secret: process.env.COOKIE_KEY,
-      resave: false,
+      resave: true,
       saveUninitialized: false,
       store: MongoStore.create({
         clientPromise: clientP,

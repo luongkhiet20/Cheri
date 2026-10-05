@@ -11,6 +11,7 @@ import TranslationSchema from '../translations/schemas/translation.schema';
 import { ProductVariantSchema } from '../products/schemas/product-variant.schema';
 import ProductSchema from '../products/schemas/product.schema';
 import UserSchema from '../auth/schemas/user.schema';
+import CouponSchema from './schemas/coupon.schema';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import UserSchema from '../auth/schemas/user.schema';
       { name: 'ProductVariant', schema: ProductVariantSchema },
       { name: 'Product', schema: ProductSchema },
       { name: 'User', schema: UserSchema },
+      { name: 'Coupon', schema: CouponSchema },
     ]),
     AuthModule,
   ],

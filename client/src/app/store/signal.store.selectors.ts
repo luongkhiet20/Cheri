@@ -140,6 +140,8 @@ export class SignalStoreSelectors {
   public readonly position = computed(() => this.productState().position);
   public readonly shippingMethods = computed(() => this.productState().shippingMethods);
   public readonly paymentMethods = computed(() => this.productState().paymentMethods);
+  public readonly loading = computed(() => this.productState().loading);
+  public readonly error = computed(() => this.productState().error);
 
   public readonly orders = computed(() => this.dashboardState().orders);
   public readonly dashboardOrder = computed(() => this.dashboardState().order);

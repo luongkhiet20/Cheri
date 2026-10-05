@@ -25,6 +25,34 @@ export class ShippingAddressDto {
   @IsOptional()
   @IsString()
   province?: string;
+
+  @IsOptional()
+  @IsString()
+  provinceCode?: string;
+
+  @IsOptional()
+  @IsString()
+  provinceName?: string;
+
+  @IsOptional()
+  @IsString()
+  districtCode?: string;
+
+  @IsOptional()
+  @IsString()
+  districtName?: string;
+
+  @IsOptional()
+  @IsString()
+  wardCode?: string;
+
+  @IsOptional()
+  @IsString()
+  wardName?: string;
+
+  @IsOptional()
+  @IsString()
+  addressDetail?: string;
 }
 
 export class OrderDto {
@@ -56,6 +84,10 @@ export class OrderDto {
   @IsOptional()
   @IsString()
   couponCode?: string;
+
+  @IsOptional()
+  @IsArray()
+  selectedItemIds?: string[];
 
   @IsOptional()
   @IsString()

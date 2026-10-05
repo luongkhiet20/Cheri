@@ -1,6 +1,6 @@
 <div>
   <form #paymentForm (submit)="handleForm($event)" class="checkout">
-    <label for="card-info">Card</label>
+    <label for="card-info" class="card-info-label">Thông tin thẻ thanh toán</label>
     <div id="form-field">
       <div id="card-info" #cardElement></div>
       <button
@@ -11,7 +11,7 @@
         id="submit-button"
         type="submit"
       >
-        {{ 'MakeOrder' | translate | async }} {{ 'and' | translate | async }} {{ 'Pay' | translate | async }} {{ price }} {{ currency }}
+        Đặt hàng và thanh toán {{ price }} {{ currency }}
       </button>
       @if (loading) {
       <mat-progress-bar mode="indeterminate"></mat-progress-bar>

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, PLATFORM_ID, Inject, ChangeDetectorRef, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, PLATFORM_ID, Inject, ChangeDetectorRef, effect, Signal } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -6,6 +6,7 @@ import { take } from 'rxjs/operators';
 import { ApiService } from '../../../services/api.service';
 import { TranslateService } from '../../../services/translate.service';
 import { SignalStore } from '../../../store/signal.store';
+import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
 import { Product } from '../../shared/models';
 import { WishlistService } from '../../../services/wishlist.service';
 import { WishlistButtonComponent } from '../../shared/wishlist-button/wishlist-button.component';
@@ -20,6 +21,7 @@ import { WishlistButtonComponent } from '../../shared/wishlist-button/wishlist-b
 export class Wishlist implements OnInit, OnDestroy {
   products: any[] = [];
   currentLang = 'vi';
+  user: Signal<any>;
   private _storageListener?: (e: StorageEvent) => void;
 
   get wishlist(): string[] {
@@ -31,11 +33,14 @@ export class Wishlist implements OnInit, OnDestroy {
     private apiService: ApiService,
     private translateService: TranslateService,
     private store: SignalStore,
+    private selectors: SignalStoreSelectors,
     private router: Router,
     private snackBar: MatSnackBar,
     private cdr: ChangeDetectorRef,
     private wishlistService: WishlistService
   ) {
+    this.user = this.selectors.user;
+
     // Automatically trigger change detection when wishlist state changes
     effect(() => {
       this.wishlistService.wishlistIds();

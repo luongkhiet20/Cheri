@@ -343,13 +343,52 @@
   text-decoration: line-through;
 }
 
-/* ── Empty state ── */
+/* ── Empty state: Căn giữa không khung ── */
+.wishlist-empty-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 16px 64px;
+  margin: 0 auto;
+  margin-top: 80px;
+  /* tăng hoặc giảm tùy ý */
+  width: 100%;
+  max-width: 600px;
+}
+
+.wishlist-auth-header {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+  color: #74070e;
+}
+
+.wishlist-user-svg {
+  flex-shrink: 0;
+}
+
+.wishlist-auth-greeting {
+  font-size: 14px;
+  color: #374151;
+  margin: 0;
+}
+
+.wishlist-auth-greeting strong {
+  color: #74070e;
+  font-weight: 600;
+}
+
+.wishlist-empty-state,
 .wishlist-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 32px 16px 24px;
+  padding: 0;
   gap: 12px;
   text-align: center;
 }
@@ -361,6 +400,7 @@
 }
 
 .wishlist-empty-title,
+.wishlist-empty-state p,
 .wishlist-empty p {
   font-size: 14px;
   color: #4b5563;

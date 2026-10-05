@@ -81,18 +81,19 @@
                 <div class="cart-item-actions-row">
                   <div class="cart-qty-control">
                     <button type="button" class="qty-btn qty-btn-minus"
-                      [disabled]="cartItem.qty <= 1 || isItemOutOfStock(cartItem) || updatingItemId === cartItem.id"
-                      (click)="decreaseQuantity(cartItem)" title="Giảm số lượng">
+                      [disabled]="isItemOutOfStock(cartItem) || updatingItemId === cartItem.id"
+                      (click)="decreaseQuantity(cartItem); $event.stopPropagation()" title="Giảm số lượng">
                       −
                     </button>
                     <input type="number" class="qty-input" [value]="cartItem.qty" [min]="1"
                       [max]="getItemStock(cartItem)"
                       [disabled]="isItemOutOfStock(cartItem) || updatingItemId === cartItem.id"
                       (blur)="onQuantityInputChange(cartItem, $event)"
-                      (keyup.enter)="onQuantityInputChange(cartItem, $event)" />
+                      (keyup.enter)="onQuantityInputChange(cartItem, $event)"
+                      (click)="$event.stopPropagation()" />
                     <button type="button" class="qty-btn qty-btn-plus"
                       [disabled]="cartItem.qty >= getItemStock(cartItem) || isItemOutOfStock(cartItem) || updatingItemId === cartItem.id"
-                      (click)="increaseQuantity(cartItem)" title="Tăng số lượng">
+                      (click)="increaseQuantity(cartItem); $event.stopPropagation()" title="Tăng số lượng">
                       +
                     </button>
                   </div>
@@ -141,9 +142,10 @@
             @if (!appliedCoupon) {
             <div class="coupon-form">
               <input type="text" class="coupon-input" placeholder="Nhập mã (VD: CHERI10, CHERI50K)"
-                [(ngModel)]="couponInput" (keyup.enter)="applyCoupon(cart)" />
-              <button type="button" class="coupon-btn" [disabled]="isApplyingCoupon || !couponInput.trim()"
-                (click)="applyCoupon(cart)">
+                [(ngModel)]="couponInput" (keyup.enter)="applyCoupon(cart)"
+                autocomplete="off" (click)="$event.stopPropagation()" />
+              <button type="button" class="coupon-btn" [disabled]="isApplyingCoupon"
+                (click)="applyCoupon(cart); $event.stopPropagation()">
                 {{ isApplyingCoupon ? 'Đang kiểm tra...' : 'Áp dụng' }}
               </button>
             </div>
@@ -181,15 +183,16 @@
               }
 
               @for (method of shippingMethods; track method.id) {
-              <div class="shipping-method-card" [class.is-selected]="selectedShippingMethodId === method.id"
-                role="radio" tabindex="0" [attr.aria-checked]="selectedShippingMethodId === method.id"
-                (click)="selectShippingMethod(method)"
+              <div class="shipping-method-card" [class.is-selected]="isSelectedShippingMethod(method)"
+                role="radio" tabindex="0" [attr.aria-checked]="isSelectedShippingMethod(method)"
+                (click)="selectShippingMethod(method); $event.stopPropagation()"
                 (keydown.space)="selectShippingMethod(method); $event.preventDefault()"
                 (keydown.enter)="selectShippingMethod(method); $event.preventDefault()">
 
                 <div class="shipping-card-left">
-                  <div class="shipping-radio-circle" [class.is-checked]="selectedShippingMethodId === method.id">
-                    @if (selectedShippingMethodId === method.id) {
+                  <div class="shipping-radio-circle" [class.is-checked]="isSelectedShippingMethod(method)"
+                    (click)="selectShippingMethod(method); $event.stopPropagation()">
+                    @if (isSelectedShippingMethod(method)) {
                     <div class="shipping-radio-inner"></div>
                     }
                   </div>

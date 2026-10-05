@@ -727,22 +727,37 @@ export class CartComponent implements OnInit, OnDestroy {
   // ─── PHẦN 3: TĂNG / GIẢM / NHẬP SỐ LƯỢNG ───
 
   getItemStock(cartItem: any): number {
-    if (cartItem?.stock !== undefined && cartItem.stock !== null) {
-      return Math.max(0, Number(cartItem.stock) || 0);
+    if (cartItem?.stock !== undefined && cartItem.stock !== null && !isNaN(Number(cartItem.stock))) {
+      const s = Number(cartItem.stock);
+      if (s > 0) return s;
     }
-    if (cartItem?.variant?.stock !== undefined) {
-      return Math.max(0, Number(cartItem.variant.stock) || 0);
+    if (cartItem?.variant?.stock !== undefined && cartItem.variant.stock !== null && !isNaN(Number(cartItem.variant.stock))) {
+      const s = Number(cartItem.variant.stock);
+      if (s > 0) return s;
     }
-    if (cartItem?.item?.quantity !== undefined) {
-      return Math.max(0, Number(cartItem.item.quantity) || 0);
+    if (cartItem?.item?.quantity !== undefined && cartItem.item.quantity !== null && !isNaN(Number(cartItem.item.quantity))) {
+      const s = Number(cartItem.item.quantity);
+      if (s > 0) return s;
+    }
+    if (cartItem?.item?.vi?.quantity !== undefined && !isNaN(Number(cartItem.item.vi.quantity))) {
+      const s = Number(cartItem.item.vi.quantity);
+      if (s > 0) return s;
     }
     return 999;
   }
 
   isItemOutOfStock(cartItem: any): boolean {
-    const stock = this.getItemStock(cartItem);
     const stockStatus = cartItem?.item?.stock;
-    return stock <= 0 || stockStatus === 'out' || stockStatus === 'outOfStock';
+    if (stockStatus === 'out' || stockStatus === 'outOfStock' || stockStatus === 'unavailable') {
+      return true;
+    }
+    if (cartItem?.variant && cartItem.variant.stock !== undefined && Number(cartItem.variant.stock) === 0) {
+      return true;
+    }
+    if (cartItem?.stock !== undefined && Number(cartItem.stock) === 0 && (cartItem?.item?.quantity === 0 || cartItem?.item?.vi?.quantity === 0)) {
+      return true;
+    }
+    return false;
   }
 
   increaseQuantity(cartItem: any): void {
@@ -776,7 +791,10 @@ export class CartComponent implements OnInit, OnDestroy {
 
   decreaseQuantity(cartItem: any): void {
     if (this.updatingItemId) return;
-    if (cartItem.qty <= 1) return;
+    if (cartItem.qty <= 1) {
+      this.snackBar.open('Số lượng sản phẩm tối thiểu là 1', 'Đóng', { duration: 1500 });
+      return;
+    }
 
     this.updatingItemId = cartItem.id;
     this.lang$.pipe(take(1)).subscribe((lang) => {
@@ -972,18 +990,26 @@ export class CartComponent implements OnInit, OnDestroy {
     }
   }
 
+  isSelectedShippingMethod(method: ShippingOption): boolean {
+    if (!method || !this.selectedShippingMethodId) return false;
+    return (
+      this.selectedShippingMethodId === method.id ||
+      this.selectedShippingMethodId === method._id ||
+      this.selectedShippingMethodId === method.code
+    );
+  }
+
   selectShippingMethod(method: ShippingOption): void {
     if (!method) return;
-    this.selectedShippingMethodId = method.id;
+    this.selectedShippingMethodId = method.id || method._id || method.code || '';
     this.saveShippingMethodToStorage();
   }
 
   getSelectedShippingMethod(): ShippingOption | undefined {
     if (!this.shippingMethods.length) return undefined;
     return (
-      this.shippingMethods.find(
-        (m) => m.id === this.selectedShippingMethodId || m._id === this.selectedShippingMethodId || m.code === this.selectedShippingMethodId,
-      ) || this.shippingMethods[0]
+      this.shippingMethods.find((m) => this.isSelectedShippingMethod(m)) ||
+      this.shippingMethods[0]
     );
   }
 

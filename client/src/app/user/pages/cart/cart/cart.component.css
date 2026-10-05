@@ -484,6 +484,9 @@
   background: #ffffff;
   height: 28px;
   flex-shrink: 0;
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 2;
 }
 
 :host .qty-btn {
@@ -503,6 +506,7 @@
   padding: 0;
   line-height: 1;
   outline: none;
+  pointer-events: auto !important;
 }
 
 :host .qty-btn:hover:not(:disabled) {
@@ -540,6 +544,8 @@
   padding: 0;
   box-sizing: border-box;
   background: #ffffff;
+  pointer-events: auto !important;
+  cursor: text;
 }
 
 :host .qty-input::-webkit-outer-spin-button,
@@ -733,6 +739,11 @@
   outline: none;
   transition: border-color 0.2s;
   background: #ffffff;
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 2;
+  cursor: text;
+  user-select: text;
 }
 
 :host .coupon-input:focus {
@@ -751,6 +762,9 @@
   cursor: pointer;
   transition: background-color 0.2s;
   white-space: nowrap;
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 2;
 }
 
 :host .coupon-btn:hover:not(:disabled) {
@@ -879,6 +893,13 @@
   user-select: none;
   box-sizing: border-box;
   outline: none;
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 1;
+}
+
+:host .shipping-method-card * {
+  cursor: pointer;
 }
 
 :host .shipping-method-card:hover {
@@ -918,6 +939,8 @@
   margin-top: 2px;
   transition: all 180ms ease;
   box-sizing: border-box;
+  pointer-events: auto !important;
+  cursor: pointer;
 }
 
 :host .shipping-method-card:hover .shipping-radio-circle,
@@ -979,8 +1002,8 @@
 
 :host .free-badge {
   display: inline-block;
-  color: #166534;
-  background-color: #DCFCE7;
+  color: #570101;
+  background-color: #f0dddd;
   font-size: 12px;
   font-weight: 600;
   padding: 2px 6px;

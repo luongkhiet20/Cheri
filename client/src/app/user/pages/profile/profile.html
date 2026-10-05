@@ -1,7 +1,7 @@
 <div class="profile-page-wrapper">
   <div class="profile-container">
 
-    <!-- Header Section: Greeting & Avatar -->
+    <!-- ── HERO CARD: Avatar + Name + Member ID + Logout ── -->
     <div class="profile-hero-card">
       <div class="profile-avatar-wrap">
         <div class="profile-avatar-circle">
@@ -9,151 +9,233 @@
         </div>
       </div>
       <div class="profile-hero-info">
-        <div class="profile-badge-tier">
-          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-          </svg>
-          <span>{{ getRoleLabel() }}</span>
+        <div class="profile-member-badges">
+          <span class="profile-member-id">{{ getMemberCode() }}</span>
+          <span class="profile-member-tier">{{ getRoleLabel() }}</span>
         </div>
         <h2 class="profile-hero-name">{{ getDisplayName() }}</h2>
         <p class="profile-hero-email">{{ user$()?.email }}</p>
       </div>
       <div class="profile-hero-action">
         <button type="button" class="profile-logout-btn" (click)="onLogout()" title="Đăng xuất khỏi tài khoản">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-            <polyline points="16 17 21 12 16 7"></polyline>
-            <line x1="21" y1="12" x2="9" y2="12"></line>
-          </svg>
           <span>Đăng xuất</span>
         </button>
       </div>
     </div>
 
-    <!-- Main Grid: Info + Quick Links -->
-    <div class="profile-grid">
+    <!-- ── MAIN GRID: Orders (left) + Profile Sidebar (right) ── -->
+    <div class="profile-main-grid">
 
-      <!-- Left Column: Personal Information -->
-      <div class="profile-card profile-info-card">
-        <div class="profile-card-header">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#74070E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-            <circle cx="12" cy="7" r="4"></circle>
-          </svg>
-          <h3 class="profile-card-title">Thông tin tài khoản</h3>
+      <!-- LEFT: Orders Section -->
+      <section class="profile-orders-section">
+
+        <!-- Header -->
+        <div class="orders-head">
+          <h2 class="orders-title">Đơn hàng của bạn</h2>
+          <span class="orders-sync-time" *ngIf="lastSyncTime">
+            Dữ liệu đồng bộ lúc: {{ lastSyncTime }}
+          </span>
         </div>
 
-        <div class="profile-details-list">
-          <div class="profile-detail-item">
-            <span class="detail-label">Họ và tên</span>
-            <span class="detail-value">{{ user$()?.fullName || user$()?.name || 'Chưa cập nhật' }}</span>
-          </div>
-
-          <div class="profile-detail-item">
-            <span class="detail-label">Địa chỉ Email</span>
-            <span class="detail-value">{{ user$()?.email || '—' }}</span>
-          </div>
-
-          <div class="profile-detail-item">
-            <span class="detail-label">Số điện thoại</span>
-            <span class="detail-value">{{ user$()?.phoneNumber || 'Chưa cập nhật SĐT' }}</span>
-          </div>
-
-          <div class="profile-detail-item">
-            <span class="detail-label">Vai trò tài khoản</span>
-            <span class="detail-value tag-role">{{ getRoleLabel() }}</span>
-          </div>
-
-          <div class="profile-detail-item">
-            <span class="detail-label">Trạng thái</span>
-            <span class="detail-value status-active">
-              <span class="status-dot"></span> Đang hoạt động
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Right Column: Quick Shortcuts -->
-      <div class="profile-card profile-shortcuts-card">
-        <div class="profile-card-header">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#74070E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
-          </svg>
-          <h3 class="profile-card-title">Tiện ích nhanh</h3>
+        <!-- Filter tabs -->
+        <div class="orders-tabs">
+          <button type="button" *ngFor="let tab of orderTabs"
+            class="order-tab-btn"
+            [class.active]="activeTab === tab.key"
+            (click)="setTab(tab.key)">
+            <span class="tab-label">{{ tab.label }}</span>
+            <span class="tab-badge">{{ getTabCount(tab.key) }}</span>
+          </button>
         </div>
 
-        <div class="profile-shortcuts-list">
-          <a class="profile-shortcut-link" [routerLink]="['/' + (lang$ | async) + '/orders']">
-            <div class="shortcut-icon-box">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#74070E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-                <line x1="16" y1="13" x2="8" y2="13"></line>
-                <line x1="16" y1="17" x2="8" y2="17"></line>
-                <polyline points="10 9 9 9 8 9"></polyline>
-              </svg>
-            </div>
-            <div class="shortcut-text">
-              <span class="shortcut-title">Đơn hàng của tôi</span>
-              <span class="shortcut-desc">Theo dõi trạng thái & lịch sử mua sắm</span>
-            </div>
-            <svg class="shortcut-arrow" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-          </a>
+        <!-- Loading indicator -->
+        <div class="orders-loading" *ngIf="userOrders$() === null">
+          <div class="orders-loading-bar"></div>
+        </div>
 
-          <a class="profile-shortcut-link" [routerLink]="['/' + (lang$ | async) + '/wishlist']">
-            <div class="shortcut-icon-box">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#74070E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-              </svg>
-            </div>
-            <div class="shortcut-text">
-              <span class="shortcut-title">Danh sách yêu thích</span>
-              <span class="shortcut-desc">Các sản phẩm bạn đang quan tâm</span>
-            </div>
-            <svg class="shortcut-arrow" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-          </a>
-
-          <a class="profile-shortcut-link" [routerLink]="['/' + (lang$ | async) + '/cart']">
-            <div class="shortcut-icon-box">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#74070E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
-                <line x1="3" y1="6" x2="21" y2="6"></line>
-                <path d="M16 10a4 4 0 0 1-8 0"></path>
-              </svg>
-            </div>
-            <div class="shortcut-text">
-              <span class="shortcut-title">Giỏ hàng Chéri</span>
-              <span class="shortcut-desc">Xem và thanh toán sản phẩm đã chọn</span>
-            </div>
-            <svg class="shortcut-arrow" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-          </a>
-
-          <a class="profile-shortcut-link" [routerLink]="['/' + (lang$ | async) + '/product/all']">
-            <div class="shortcut-icon-box">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#74070E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="9" cy="21" r="1"></circle>
-                <circle cx="20" cy="21" r="1"></circle>
-                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-              </svg>
-            </div>
-            <div class="shortcut-text">
-              <span class="shortcut-title">Tiếp tục mua sắm</span>
-              <span class="shortcut-desc">Khám phá bộ sưu tập mới nhất</span>
-            </div>
-            <svg class="shortcut-arrow" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
+        <!-- Empty state (No icons) -->
+        <div class="orders-empty-box" *ngIf="userOrders$() !== null && getFilteredOrders().length === 0">
+          <p class="empty-text">Quý cô chưa có đơn hàng nào ở danh mục này.</p>
+          <a class="empty-shop-btn" [routerLink]="['/' + (lang$ | async) + '/product/all']">
+            Khám phá BST mới
           </a>
         </div>
-      </div>
 
-    </div>
+        <!-- Orders list with Detailed Design Cards -->
+        <div class="orders-list-box" *ngIf="userOrders$() !== null && getFilteredOrders().length > 0">
+          <article class="order-card" *ngFor="let order of getFilteredOrders()">
+
+            <!-- 1. Card Header: ID, Created Date & Status Pill (No icons) -->
+            <header class="order-card-header">
+              <div class="order-header-left">
+                <div class="order-code-title">Mã số đơn hàng: {{ order.orderId }}</div>
+                <div class="order-created-date">Ngày khởi tạo: {{ formatOrderDate(order) }}</div>
+              </div>
+              <div class="order-header-right">
+                <span class="status-pill" [ngClass]="getStatusClass(order.status)">
+                  <span>{{ getStatusLabel(order.status) }}</span>
+                </span>
+              </div>
+            </header>
+
+            <div class="order-card-divider"></div>
+
+            <!-- 2. Products List (Items) -->
+            <div class="order-items-wrap" *ngIf="order.items && order.items.length > 0; else fallbackOrderItem">
+              <div class="order-product-row" *ngFor="let item of order.items">
+                <div class="product-thumb-box">
+                  <img [src]="getItemImage(item)" [alt]="item.productSnapshot?.title || 'Sản phẩm'" class="product-thumb-img" />
+                </div>
+                <div class="product-details-box">
+                  <h4 class="product-name">{{ item.productSnapshot?.title || 'Sản phẩm Cheri' }}</h4>
+                  <div class="product-variants-row">
+                    <span *ngIf="item.productSnapshot?.variant?.size">
+                      Kích thước: <strong>{{ item.productSnapshot?.variant?.size }}</strong>
+                    </span>
+                    <span class="variant-separator" *ngIf="item.productSnapshot?.variant?.size && (item.productSnapshot?.variant?.color || item.productSnapshot?.variant?.classification)">|</span>
+                    <span *ngIf="item.productSnapshot?.variant?.color">
+                      Màu: <strong>{{ item.productSnapshot?.variant?.color }}</strong>
+                    </span>
+                    <span class="variant-separator" *ngIf="item.productSnapshot?.variant?.color || item.productSnapshot?.variant?.size">|</span>
+                    <span>
+                      Số lượng: <strong>x{{ item.quantity || 1 }}</strong>
+                    </span>
+                  </div>
+                </div>
+                <div class="product-price-box">
+                  <span class="product-price">{{ formatItemPrice(item) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Fallback if order has no items array -->
+            <ng-template #fallbackOrderItem>
+              <div class="order-product-row">
+                <div class="product-details-box">
+                  <h4 class="product-name">{{ order.description || ('Đơn hàng #' + order.orderId) }}</h4>
+                  <div class="product-variants-row">
+                    <span>Số lượng: <strong>x1</strong></span>
+                  </div>
+                </div>
+                <div class="product-price-box">
+                  <span class="product-price">{{ formatAmount(order) }}</span>
+                </div>
+              </div>
+            </ng-template>
+
+            <div class="order-card-divider"></div>
+
+            <!-- 3. Summary & Action Buttons Row (No icons) -->
+            <div class="order-action-summary-row">
+              <div class="summary-left-info">
+                <div class="total-vat-line">
+                  <span class="vat-label">Thành tiền (đã gồm VAT):</span>
+                  <span class="vat-amount">{{ formatAmount(order) }}</span>
+                </div>
+                <div class="review-deadline-text" *ngIf="normalizeStatus(order.status) === 'DELIVERED'">
+                  Nhận xét đơn hàng trước {{ getReviewDeadline(order) }}
+                </div>
+              </div>
+              <div class="action-buttons-group">
+                <button type="button" class="btn-action-primary" *ngIf="normalizeStatus(order.status) === 'DELIVERED'">
+                  Đánh giá
+                </button>
+                <button type="button" class="btn-action-outline" *ngIf="normalizeStatus(order.status) === 'DELIVERED'">
+                  Trả hàng / Hoàn tiền
+                </button>
+                <a class="btn-action-more" [routerLink]="['/' + (lang$ | async) + '/orders/' + order.orderId]">
+                  <span>Thêm</span>
+                </a>
+              </div>
+            </div>
+
+            <!-- 4. Shipping Address Strip (No icons) -->
+            <div class="order-shipping-strip">
+              <div class="shipping-strip-text">
+                Giao đến: Sđt <strong>{{ getOrderPhone(order) }}</strong> | Địa chỉ: {{ getOrderAddress(order) }}
+              </div>
+            </div>
+
+            <!-- 5. Bottom Tracking & Final Total Bar (No icons) -->
+            <div class="order-card-footer">
+              <a class="btn-track-route" [routerLink]="['/' + (lang$ | async) + '/tracking']" [queryParams]="{ orderId: order.orderId }">
+                <span>Theo dõi vận trình</span>
+              </a>
+
+              <div class="footer-final-total">
+                <span class="final-total-label">Thành tiền:</span>
+                <span class="final-total-val">{{ formatAmount(order) }}</span>
+              </div>
+            </div>
+
+          </article>
+        </div>
+
+      </section>
+
+      <!-- RIGHT: Profile Form Card -->
+      <aside class="profile-sidebar-card">
+
+        <!-- Title with red bar -->
+        <div class="profile-card-heading">
+          <span class="heading-bar"></span>
+          <h3 class="heading-text">Hồ sơ</h3>
+        </div>
+
+        <!-- Basic info form -->
+        <div class="profile-form-body">
+
+          <div class="form-field-group">
+            <label class="field-label">Họ và tên</label>
+            <input type="text" class="field-input" [(ngModel)]="formName" placeholder="Nhập họ và tên" />
+          </div>
+
+          <div class="form-field-group">
+            <label class="field-label">Email liên lạc</label>
+            <input type="email" class="field-input" [(ngModel)]="formEmail" placeholder="Nhập email" />
+          </div>
+
+          <div class="form-field-group">
+            <label class="field-label">Điện thoại liên hệ</label>
+            <input type="tel" class="field-input" [(ngModel)]="formPhone" placeholder="Nhập số điện thoại" />
+          </div>
+
+          <div class="form-field-group">
+            <label class="field-label">Địa chỉ giao hàng mặc định</label>
+            <textarea class="field-input field-textarea" [(ngModel)]="formAddress" rows="2"
+              placeholder="Nhập địa chỉ giao hàng"></textarea>
+          </div>
+
+          <!-- Password change section -->
+          <div class="password-sub-heading">Đổi mật khẩu</div>
+
+          <div class="form-field-group">
+            <label class="field-label-sub">Mật khẩu mới</label>
+            <input type="password" class="field-input" [(ngModel)]="formNewPassword"
+              placeholder="Để trống nếu không muốn đổi" />
+          </div>
+
+          <div class="form-field-group">
+            <label class="field-label-sub">Nhập lại mật khẩu mới</label>
+            <input type="password" class="field-input" [(ngModel)]="formConfirmPassword"
+              placeholder="Để trống nếu không muốn đổi" />
+          </div>
+
+          <!-- Feedback messages -->
+          <div class="profile-feedback-box success" *ngIf="saveSuccess">✓ Đã lưu thông tin thành công.</div>
+          <div class="profile-feedback-box error" *ngIf="saveError">✗ {{ saveError }}</div>
+
+          <!-- Submit button -->
+          <button type="button" class="profile-submit-btn" (click)="onSave()" [disabled]="isSaving">
+            <span *ngIf="!isSaving">Lưu</span>
+            <span *ngIf="isSaving">Đang lưu...</span>
+          </button>
+
+        </div>
+
+      </aside>
+
+    </div><!-- /profile-main-grid -->
+
   </div>
 </div>

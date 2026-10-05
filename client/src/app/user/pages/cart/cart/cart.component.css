@@ -962,6 +962,36 @@
   white-space: nowrap;
   margin-left: 12px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+:host .shipping-loading-hint {
+  font-size: 13px;
+  color: #6B7280;
+  padding: 10px 14px;
+  font-style: italic;
+  background: #F9FAFB;
+  border-radius: 6px;
+  border: 1px dashed #E5E7EB;
+}
+
+:host .free-badge {
+  display: inline-block;
+  color: #166534;
+  background-color: #DCFCE7;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+:host .strikethrough-fee {
+  text-decoration: line-through;
+  color: #9CA3AF;
+  font-size: 12px;
+  font-weight: 400;
 }
 
 /* ── TỔNG KẾT & TẠM TÍNH (THEO SẢN PHẨM ĐÃ CHỌN) ── */

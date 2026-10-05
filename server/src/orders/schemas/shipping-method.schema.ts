@@ -15,15 +15,18 @@ const ShippingMethodSchema = new Schema(
   {
     name: { type: String, required: true, trim: true },
     code: { type: String, required: true, unique: true, trim: true, index: true },
-    baseFee: { type: Number, required: true, min: 0, default: 0 },
-    estimatedDeliveryTime: { type: String, required: true, default: '' },
+    baseFee: { type: Number, min: 0, default: 0 },
+    baseCost: { type: Number, min: 0, default: 0 },
+    estimatedDeliveryTime: { type: String, default: '' },
+    estimatedDays: { type: String, default: '' },
     deliveryScope: {
       type: String,
-      required: true,
       enum: Object.values(DeliveryScope),
       default: DeliveryScope.NATIONWIDE,
     },
+    coverageArea: { type: String, default: 'national' },
     deliveryAreas: { type: [String], default: [] },
+    freeShippingThreshold: { type: Number, default: 0 },
     freeShippingCondition: {
       enabled: { type: Boolean, default: false },
       minimumOrderValue: { type: Number, min: 0, default: 0 },
@@ -31,15 +34,15 @@ const ShippingMethodSchema = new Schema(
     },
     status: {
       type: String,
-      required: true,
       enum: Object.values(ShippingMethodStatus),
       default: ShippingMethodStatus.ACTIVE,
     },
+    isActive: { type: Boolean, default: true },
     description: { type: String, default: '' },
   },
   {
     timestamps: true,
-    collection: 'shipping_methods',
+    collection: 'shippingmethods',
   },
 );
 

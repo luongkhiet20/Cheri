@@ -453,7 +453,32 @@ export class OrdersService {
 
   // ─── Shipping Methods CRUD ─────────────────────────────────────────────────
   async getActiveShippingMethods(): Promise<any[]> {
-    return this.shippingMethodModel.find({ status: 'ACTIVE' }).sort('name').lean();
+    const rawMethods = await this.shippingMethodModel
+      .find({
+        $or: [
+          { status: 'ACTIVE' },
+          { isActive: true },
+        ],
+      })
+      .sort('baseFee baseCost')
+      .lean();
+
+    return rawMethods.map((m: any) => ({
+      _id: m._id ? m._id.toString() : m.id,
+      name: m.name,
+      code: m.code,
+      baseFee: m.baseFee !== undefined ? m.baseFee : (m.baseCost !== undefined ? m.baseCost : 25000),
+      estimatedDeliveryTime: m.estimatedDeliveryTime || m.estimatedDays || '1–3 ngày làm việc',
+      freeShippingCondition: m.freeShippingCondition || {
+        enabled: (m.freeShippingThreshold || 0) > 0,
+        minimumOrderValue: m.freeShippingThreshold || 0,
+        description: (m.freeShippingThreshold || 0) > 0
+          ? `Miễn phí vận chuyển cho đơn hàng từ ${(m.freeShippingThreshold).toLocaleString('vi-VN')} đ`
+          : '',
+      },
+      status: m.status || (m.isActive !== false ? 'ACTIVE' : 'INACTIVE'),
+      description: m.description || '',
+    })).filter((m: any) => m.status === 'ACTIVE');
   }
 
   async getAllShippingMethods(): Promise<any[]> {
@@ -537,7 +562,7 @@ export class OrdersService {
       return { error: '', result: newOrder };
     } catch (err) {
       this.logger.error(err.stack || err.message);
-      return { error: 'ORDER_CREATION_FAIL', result: null };
+      return { error: err.message || 'ORDER_CREATION_FAIL', result: null };
     }
   }
 
@@ -647,34 +672,56 @@ export class OrdersService {
     // Tính subtotal
     const subtotal = orderItems.reduce((sum, item) => sum + item.subtotal, 0);
 
-    // Lấy thông tin shipping method
+    // Lấy thông tin shipping method từ DB và tính toán server-authoritative
     let shippingFee = 0;
     let shippingMethodId = null;
     let shippingMethodSnapshot = null;
 
+    let shippingMethod: any = null;
     if (orderDto.shippingMethodId) {
-      const shippingMethod = await this.shippingMethodModel
-        .findById(orderDto.shippingMethodId)
-        .lean() as any;
-      if (shippingMethod) {
-        shippingMethodId = shippingMethod._id;
-        shippingFee = shippingMethod.baseFee;
-
-        // Kiểm tra điều kiện miễn phí ship
-        if (
-          shippingMethod.freeShippingCondition?.enabled &&
-          subtotal >= shippingMethod.freeShippingCondition.minimumOrderValue
-        ) {
-          shippingFee = 0;
-        }
-
-        shippingMethodSnapshot = {
-          name: shippingMethod.name,
-          code: shippingMethod.code,
-          fee: shippingMethod.baseFee,
-          estimatedDeliveryTime: shippingMethod.estimatedDeliveryTime,
-        };
+      if (isValidObjectId(orderDto.shippingMethodId)) {
+        shippingMethod = await this.shippingMethodModel.findById(orderDto.shippingMethodId).lean();
       }
+      if (!shippingMethod) {
+        shippingMethod = await this.shippingMethodModel.findOne({
+          code: orderDto.shippingMethodId,
+          $or: [{ status: 'ACTIVE' }, { isActive: true }],
+        }).lean();
+      }
+    }
+
+    // Fallback: nếu không tìm thấy hoặc user không gửi, chọn method ACTIVE đầu tiên từ DB
+    if (!shippingMethod) {
+      shippingMethod = await this.shippingMethodModel
+        .findOne({ $or: [{ status: 'ACTIVE' }, { isActive: true }] })
+        .sort('baseFee baseCost')
+        .lean();
+    }
+
+    if (shippingMethod) {
+      shippingMethodId = shippingMethod._id;
+      const baseFee = shippingMethod.baseFee !== undefined
+        ? shippingMethod.baseFee
+        : (shippingMethod.baseCost !== undefined ? shippingMethod.baseCost : 25000);
+      shippingFee = baseFee;
+
+      // Kiểm tra điều kiện miễn phí ship từ DB
+      const freeThreshold =
+        shippingMethod.freeShippingCondition?.minimumOrderValue ||
+        shippingMethod.freeShippingThreshold ||
+        0;
+      const isFreeEnabled =
+        shippingMethod.freeShippingCondition?.enabled || freeThreshold > 0;
+      if (isFreeEnabled && freeThreshold > 0 && subtotal >= freeThreshold) {
+        shippingFee = 0;
+      }
+
+      shippingMethodSnapshot = {
+        name: shippingMethod.name,
+        code: shippingMethod.code,
+        fee: baseFee,
+        estimatedDeliveryTime: shippingMethod.estimatedDeliveryTime || shippingMethod.estimatedDays || '1–3 ngày làm việc',
+      };
     }
 
     // Lấy thông tin payment method
@@ -796,11 +843,11 @@ export class OrdersService {
 
       let availableQty = product.quantity !== undefined ? product.quantity : (product.vi?.quantity || 0);
 
-      let unitPrice = product.salePrice || product.regularPrice || 0;
+      let unitPrice = product.salePrice || product.regularPrice || product.price || 0;
       const snapshot: any = {
-        title: product.title || '',
-        sku: product.sku || '',
-        image: product.mainImage?.url || '',
+        title: product.title || product.name || product.vi?.title || 'Sản phẩm Chéri',
+        sku: product.sku || product.vi?.sku || (product.code ? String(product.code) : `SKU-${product._id}`),
+        image: product.mainImage?.url || product.image || (Array.isArray(product.images) && (product.images[0]?.url || product.images[0])) || '',
       };
 
       if (variantId) {

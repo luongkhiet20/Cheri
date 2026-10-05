@@ -176,6 +176,10 @@
             </div>
 
             <div class="shipping-methods-list" role="radiogroup" aria-label="Phương thức vận chuyển">
+              @if (isLoadingShippingMethods && (!shippingMethods || !shippingMethods.length)) {
+              <div class="shipping-loading-hint">Đang tải danh sách phương thức vận chuyển...</div>
+              }
+
               @for (method of shippingMethods; track method.id) {
               <div class="shipping-method-card" [class.is-selected]="selectedShippingMethodId === method.id"
                 role="radio" tabindex="0" [attr.aria-checked]="selectedShippingMethodId === method.id"
@@ -196,7 +200,12 @@
                 </div>
 
                 <div class="shipping-method-fee">
+                  @if (method.freeShippingCondition?.enabled && method.freeShippingCondition.minimumOrderValue > 0 && getSelectedSubtotal(cart) >= method.freeShippingCondition.minimumOrderValue) {
+                  <span class="free-badge">Miễn phí</span>
+                  <span class="strikethrough-fee">{{ method.fee | priceFormat }} {{ currency$ | async }}</span>
+                  } @else {
                   {{ method.fee | priceFormat }} {{ currency$ | async }}
+                  }
                 </div>
               </div>
               }
@@ -223,6 +232,8 @@
               <span class="summary-line-val">
                 @if (getSelectedSubtotal(cart) === 0 || !cart?.items?.length) {
                 0 {{ currency$ | async }}
+                } @else if (getShippingFee(cart) === 0) {
+                <span class="free-badge">Miễn phí</span>
                 } @else {
                 {{ getShippingFee(cart) | priceFormat }} {{ currency$ | async }}
                 }

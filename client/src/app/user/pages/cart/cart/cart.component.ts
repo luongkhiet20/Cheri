@@ -23,10 +23,19 @@ export interface AppliedCoupon {
 }
 
 export interface ShippingOption {
+  _id?: string;
   id: string;
   name: string;
+  code?: string;
   description: string;
   fee: number;
+  baseFee?: number;
+  estimatedDeliveryTime?: string;
+  freeShippingCondition?: {
+    enabled: boolean;
+    minimumOrderValue: number;
+    description: string;
+  };
 }
 
 @Component({
@@ -90,23 +99,11 @@ export class CartComponent implements OnInit, OnDestroy {
   modalError = '';
   isModalSubmitting = false;
 
-  // ─── 8. PHƯƠNG THỨC VẬN CHUYỂN ───
-  shippingMethods: ShippingOption[] = [
-    {
-      id: 'standard',
-      name: 'Giao hàng tiêu chuẩn',
-      description: 'Dự kiến nhận hàng: 3 - 5 ngày',
-      fee: 25000
-    },
-    {
-      id: 'express',
-      name: 'Giao hàng nhanh',
-      description: 'Dự kiến nhận hàng: 1 - 2 ngày',
-      fee: 40000
-    }
-  ];
+  // ─── 8. PHƯƠNG THỨC VẬN CHUYỂN (TỪ DATABASE QUA API) ───
+  shippingMethods: ShippingOption[] = [];
+  isLoadingShippingMethods = false;
   private readonly shippingStorageKey = 'cheri_cart_shipping_method';
-  selectedShippingMethodId = 'standard';
+  selectedShippingMethodId = '';
 
   readonly component = 'cartComponent';
 
@@ -171,7 +168,7 @@ export class CartComponent implements OnInit, OnDestroy {
     this.loadProvinces();
     this.autoFillUserData();
     this.restoreSelectionFromStorage();
-    this.restoreShippingMethodFromStorage();
+    this.loadShippingMethods();
 
     // Theo dõi giỏ hàng để cập nhật trạng thái chọn
     this.cartSub = this.cart$.subscribe((cart) => {
@@ -179,8 +176,9 @@ export class CartComponent implements OnInit, OnDestroy {
       if (cart && cart.items && cart.items.length > 0) {
         this.syncSelectionWithCart(cart);
         // Ưu tiên phương thức vận chuyển từ backend nếu có lưu
-        if ((cart as any)?.shippingMethodId && this.shippingMethods.some(m => m.id === (cart as any).shippingMethodId)) {
-          this.selectedShippingMethodId = (cart as any).shippingMethodId;
+        if ((cart as any)?.shippingMethodId && this.shippingMethods.some(m => m.id === (cart as any).shippingMethodId || m._id === (cart as any).shippingMethodId)) {
+          const matched = this.shippingMethods.find(m => m.id === (cart as any).shippingMethodId || m._id === (cart as any).shippingMethodId);
+          if (matched) this.selectedShippingMethodId = matched.id;
         }
         // Tự động kiểm tra lại mã giảm giá nếu subtotal thay đổi
         if (this.appliedCoupon) {
@@ -912,22 +910,63 @@ export class CartComponent implements OnInit, OnDestroy {
       .reduce((sum: number, item: any) => sum + item.qty, 0);
   }
 
-  // ─── PHẦN 8: PHƯƠNG THỨC VẬN CHUYỂN LOGIC ───
+  // ─── PHẦN 8: PHƯƠNG THỨC VẬN CHUYỂN LOGIC (DATABASE API) ───
+
+  loadShippingMethods(): void {
+    this.isLoadingShippingMethods = true;
+    this.apiService.getShippingMethods().subscribe({
+      next: (res: any) => {
+        this.isLoadingShippingMethods = false;
+        const methods = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+        if (methods.length > 0) {
+          this.shippingMethods = methods.map((m: any) => ({
+            _id: m._id ? m._id.toString() : m.id,
+            id: m._id ? m._id.toString() : (m.id || m.code),
+            name: m.name,
+            code: m.code,
+            description: m.estimatedDeliveryTime || m.estimatedDays || m.description || '',
+            fee: m.baseFee !== undefined ? m.baseFee : (m.baseCost !== undefined ? m.baseCost : 25000),
+            baseFee: m.baseFee !== undefined ? m.baseFee : (m.baseCost !== undefined ? m.baseCost : 25000),
+            estimatedDeliveryTime: m.estimatedDeliveryTime || m.estimatedDays || '',
+            freeShippingCondition: m.freeShippingCondition || null,
+          }));
+          this.syncSelectedShippingMethod();
+        }
+      },
+      error: () => {
+        this.isLoadingShippingMethods = false;
+      }
+    });
+  }
+
+  private syncSelectedShippingMethod(): void {
+    const saved = localStorage.getItem(this.shippingStorageKey);
+    const hasSaved =
+      saved &&
+      this.shippingMethods.some(
+        (m) => m.id === saved || m._id === saved || m.code === saved,
+      );
+
+    if (hasSaved) {
+      const matched = this.shippingMethods.find(
+        (m) => m.id === saved || m._id === saved || m.code === saved,
+      );
+      this.selectedShippingMethodId = matched ? matched.id : saved;
+    } else if (this.shippingMethods.length > 0) {
+      this.selectedShippingMethodId = this.shippingMethods[0].id;
+    }
+    this.saveShippingMethodToStorage();
+  }
 
   private restoreShippingMethodFromStorage(): void {
-    try {
-      const saved = localStorage.getItem(this.shippingStorageKey);
-      if (saved && this.shippingMethods.some(m => m.id === saved)) {
-        this.selectedShippingMethodId = saved;
-      }
-    } catch {
-      // Bỏ qua lỗi storage
-    }
+    this.syncSelectedShippingMethod();
   }
 
   private saveShippingMethodToStorage(): void {
     try {
-      localStorage.setItem(this.shippingStorageKey, this.selectedShippingMethodId);
+      if (this.selectedShippingMethodId) {
+        localStorage.setItem(this.shippingStorageKey, this.selectedShippingMethodId);
+      }
     } catch {
       // Bỏ qua lỗi storage
     }
@@ -937,20 +976,33 @@ export class CartComponent implements OnInit, OnDestroy {
     if (!method) return;
     this.selectedShippingMethodId = method.id;
     this.saveShippingMethodToStorage();
-    // Ghi chú API: Hiện tại backend chưa có API chuyên biệt để lưu riêng shipping method vào Cart session/DB.
-    // Khi backend hỗ trợ (vd: PUT /api/cart/shipping-method), hãy gọi apiService ở đây:
-    // this.apiService.updateCartShippingMethod(method.id).subscribe(...)
   }
 
   getSelectedShippingMethod(): ShippingOption | undefined {
-    return this.shippingMethods.find(m => m.id === this.selectedShippingMethodId) || this.shippingMethods[0];
+    if (!this.shippingMethods.length) return undefined;
+    return (
+      this.shippingMethods.find(
+        (m) => m.id === this.selectedShippingMethodId || m._id === this.selectedShippingMethodId || m.code === this.selectedShippingMethodId,
+      ) || this.shippingMethods[0]
+    );
   }
 
   getShippingFee(cart: Cart): number {
     const subtotal = this.getSelectedSubtotal(cart);
     if (subtotal === 0 || !cart?.items?.length) return 0;
     const method = this.getSelectedShippingMethod();
-    return method ? method.fee : 25000;
+    if (!method) return 0;
+
+    // Kiểm tra điều kiện miễn phí ship nếu đơn hàng đạt hạn mức
+    if (
+      method.freeShippingCondition?.enabled &&
+      method.freeShippingCondition.minimumOrderValue > 0 &&
+      subtotal >= method.freeShippingCondition.minimumOrderValue
+    ) {
+      return 0;
+    }
+
+    return method.fee;
   }
 
   getDiscountAmount(cart: Cart): number {
@@ -1226,7 +1278,7 @@ export class CartComponent implements OnInit, OnDestroy {
     const subtotal = cart ? this.getSelectedSubtotal(cart) : 0;
     const discountAmount = cart ? this.getDiscountAmount(cart) : 0;
     const shippingMethod = this.getSelectedShippingMethod();
-    const shippingFee = cart ? this.getShippingFee(cart) : (shippingMethod?.fee || 25000);
+    const shippingFee = cart ? this.getShippingFee(cart) : (shippingMethod?.fee || 0);
 
     return {
       ...userToOrder,
@@ -1240,8 +1292,8 @@ export class CartComponent implements OnInit, OnDestroy {
       selectedItemIds: selectedIds,
       couponCode: this.appliedCoupon ? this.appliedCoupon.code : '',
       couponDiscount: discountAmount,
-      shippingMethodId: shippingMethod?.id || 'standard',
-      shippingMethodName: shippingMethod?.name || 'Giao hàng tiêu chuẩn',
+      shippingMethodId: shippingMethod?._id || shippingMethod?.id || '',
+      shippingMethodName: shippingMethod?.name || '',
       shippingFee,
       currency: currency || 'VND',
     };

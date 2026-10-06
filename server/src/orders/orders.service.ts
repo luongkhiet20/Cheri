@@ -298,6 +298,9 @@ export class OrdersService {
       }
 
       const isEmail = inputAuthContact.includes('@');
+      if (!isEmail && !/\d/.test(inputAuthContact)) {
+        return { error: 'Không tìm thấy đơn hàng hoặc thông tin xác thực không chính xác.' };
+      }
       const escapedCode = inputTrackingCode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const codeRegex = new RegExp(`^${escapedCode}$`, 'i');
 

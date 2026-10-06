@@ -7,13 +7,14 @@ require('ts-node/register/transpile-only');
 const { OrdersService } = require('../src/orders/orders.service.ts');
 
 function serviceReturningNoOrder() {
+  let queries = 0;
   const service = Object.create(OrdersService.prototype);
-  service.orderModel = { findOne: () => ({ lean: async () => null }) };
-  return service;
+  service.orderModel = { findOne: () => { queries += 1; return { lean: async () => null }; } };
+  return { service, getQueryCount: () => queries };
 }
 
 test('missing identifier, missing verification, and incorrect lookup share one generic message', async () => {
-  const service = serviceReturningNoOrder();
+  const { service } = serviceReturningNoOrder();
   const [missingIdentifier, missingContact, wrongPair] = await Promise.all([
     service.trackOrder({ authContact: 'buyer@example.test' }),
     service.trackOrder({ trackingCode: 'ORDER-1' }),
@@ -23,4 +24,12 @@ test('missing identifier, missing verification, and incorrect lookup share one g
   assert.equal(missingIdentifier.error, missingContact.error);
   assert.equal(missingContact.error, wrongPair.error);
   assert.equal(missingIdentifier.error, 'Không tìm thấy đơn hàng hoặc thông tin xác thực không chính xác.');
+});
+
+test('punctuation-only verification is rejected before querying default-empty phone fields', async () => {
+  const { service, getQueryCount } = serviceReturningNoOrder();
+  const result = await service.trackOrder({ trackingCode: 'ORDER-1', authContact: '---()' });
+
+  assert.equal(result.error, 'Không tìm thấy đơn hàng hoặc thông tin xác thực không chính xác.');
+  assert.equal(getQueryCount(), 0);
 });

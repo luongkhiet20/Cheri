@@ -270,8 +270,8 @@ export class OrderTrackingComponent implements OnInit {
     return {
       orderId: rawOrder.orderId,
       status: rawOrder.status || rawOrder.shipping?.status,
-      trackingNumber: rawOrder.shipping?.trackingNumber || rawOrder.trackingNumber || null,
-      trackingUrl: rawOrder.shipping?.trackingUrl || rawOrder.trackingUrl || null,
+      trackingNumber: rawOrder.trackingNumber || rawOrder.shipping?.trackingNumber || null,
+      trackingUrl: rawOrder.trackingUrl || rawOrder.shipping?.trackingUrl || null,
       carrierName: rawOrder.shipping?.carrierName || rawOrder.shippingProvider || rawOrder.shippingMethodSnapshot?.name || null,
       estimatedDelivery: rawOrder.shipping?.estimatedDelivery || rawOrder.estimatedDeliveryDate || null,
       dateAdded: rawOrder.dateAdded || rawOrder.createdAt || null,

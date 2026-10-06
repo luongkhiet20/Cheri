@@ -38,8 +38,8 @@ function buildPublicTrackingResponse(order) {
   return {
     orderId: String(firstValue(order.orderId, order._id, '')),
     status: firstValue(order.status, order.shipping?.status, 'PENDING'),
-    trackingNumber: firstValue(order.shipping?.trackingNumber, order.trackingNumber, null),
-    trackingUrl: firstValue(order.shipping?.trackingUrl, order.trackingUrl, null),
+    trackingNumber: firstValue(order.trackingNumber, order.shipping?.trackingNumber, null),
+    trackingUrl: firstValue(order.trackingUrl, order.shipping?.trackingUrl, null),
     carrierName: firstValue(order.shipping?.carrierName, order.shippingProvider, order.shippingMethodSnapshot?.name, null),
     estimatedDelivery: firstValue(order.shipping?.estimatedDelivery, order.estimatedDeliveryDate, null),
     dateAdded: firstValue(order.dateAdded, order.createdAt, null),

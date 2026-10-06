@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
+const { trackingNumberUpdateFields } = require('./src/orders/tracking-update.cjs');
 
 const app = express();
 const PORT = process.env.ADMIN_PORT || process.env.PORT_ADMIN || 5000;
@@ -3360,8 +3361,11 @@ app.patch('/api/admin/orders/:id', async (req, res) => {
     }
 
     const updateFields = { updatedAt: new Date() };
-    for (const key of ['notes', 'customerEmail', 'customerPhone', 'shippingProvider', 'trackingNumber']) {
+    for (const key of ['notes', 'customerEmail', 'customerPhone', 'shippingProvider']) {
       if (hasOwn(body, key)) updateFields[key] = body[key].trim();
+    }
+    if (hasOwn(body, 'trackingNumber')) {
+      Object.assign(updateFields, trackingNumberUpdateFields(body.trackingNumber));
     }
     if (hasOwn(body, 'shippingAddress')) {
       updateFields.shippingAddress = Object.fromEntries(

@@ -51,7 +51,9 @@ export class CartService {
 
       const variants = Array.isArray(product.variants) ? product.variants : [];
       let variant: any = null;
-      const rawVarId = raw.variantId ? raw.variantId.toString() : null;
+      const rawVarId = (raw.variantId !== undefined && raw.variantId !== null && raw.variantId !== '')
+        ? raw.variantId.toString().trim()
+        : null;
 
       if (rawVarId && variants.length > 0) {
         variant = variants.find(
@@ -65,34 +67,65 @@ export class CartService {
       const targetVarId = variant
         ? (variant._id?.toString() || variant.id || variant.sku)
         : rawVarId;
-      const cartItemId = targetVarId ? `${prodId}_${targetVarId}` : prodId;
+      const normalizedTargetVarId = targetVarId ? String(targetVarId).trim() : null;
+      const cartItemId = normalizedTargetVarId ? `${prodId}_${normalizedTargetVarId}` : prodId;
+      const quantityToAdd = Math.max(1, Number(raw.quantity) || 1);
 
-      cartItems.push({
-        item: product,
-        id: cartItemId,
-        qty: Math.max(1, Number(raw.quantity) || 1),
-        isSelected: raw.isSelected !== false,
-        variantId: targetVarId,
-        selectedClassification: variant?.classification || raw.selectedClassification || null,
-        selectedColor: variant?.color || raw.selectedColor || null,
-        selectedSize: variant?.size || raw.selectedSize || null,
-        variant: variant || null,
+      // Deduplicate: gộp số lượng nếu đã tồn tại cùng productId + cùng variantId
+      const existing = cartItems.find((ci: any) => {
+        const ciProdId = this.extractProductId(ci.id, ci);
+        const ciVarId = (ci.variantId !== undefined && ci.variantId !== null && ci.variantId !== '')
+          ? String(ci.variantId).trim()
+          : null;
+        return ciProdId === prodId && ciVarId === normalizedTargetVarId;
       });
+
+      if (existing) {
+        existing.qty = (Number(existing.qty) || 0) + quantityToAdd;
+      } else {
+        cartItems.push({
+          item: product,
+          id: cartItemId,
+          qty: quantityToAdd,
+          isSelected: raw.isSelected !== false,
+          variantId: normalizedTargetVarId,
+          selectedClassification: variant?.classification || raw.selectedClassification || null,
+          selectedColor: variant?.color || raw.selectedColor || null,
+          selectedSize: variant?.size || raw.selectedSize || null,
+          variant: variant || null,
+        });
+      }
     }
 
     return new Cart({ items: cartItems });
   }
 
   private async saveUserCart(user: User, cart: Cart): Promise<void> {
-    const dbItems = (cart.items || []).map((ci: any) => {
+    const dbItems: any[] = [];
+    for (const ci of (cart.items || [])) {
       const prodId = this.extractProductId(ci.id, ci);
-      const varId = ci.variantId ? ci.variantId.toString() : null;
-      return {
-        productId: isValidObjectId(prodId) ? new Types.ObjectId(prodId) : prodId,
-        variantId: (varId && isValidObjectId(varId)) ? new Types.ObjectId(varId) : null,
-        quantity: Math.max(1, Number(ci.qty) || 1),
-      };
-    });
+      const varId = (ci.variantId !== undefined && ci.variantId !== null && ci.variantId !== '')
+        ? String(ci.variantId).trim()
+        : null;
+      const qty = Math.max(1, Number(ci.qty) || 1);
+
+      const existing = dbItems.find(
+        (di: any) => {
+          const diProdId = di.productId?.toString();
+          const diVarId = di.variantId ? di.variantId.toString().trim() : null;
+          return diProdId === prodId && diVarId === varId;
+        },
+      );
+      if (existing) {
+        existing.quantity += qty;
+      } else {
+        dbItems.push({
+          productId: isValidObjectId(prodId) ? new Types.ObjectId(prodId) : prodId,
+          variantId: (varId && isValidObjectId(varId)) ? new Types.ObjectId(varId) : null,
+          quantity: qty,
+        });
+      }
+    }
 
     await this.userModel.findByIdAndUpdate(user._id, {
       $set: { 'cart.items': dbItems },
@@ -214,9 +247,11 @@ export class CartService {
       throw new BadRequestException('Sản phẩm đã hết hàng, không thể thêm vào giỏ hàng');
     }
 
+    const qtyToAdd = Math.max(1, Math.floor(Number(getCartChangeDto.qty) || 1));
     const targetVarId = resolvedVariant
       ? (resolvedVariant._id?.toString() || resolvedVariant.id || resolvedVariant.sku)
       : null;
+    const normalizedTargetVarId = targetVarId ? String(targetVarId).trim() : null;
 
     // Load active cart based on user identity
     let activeCart: Cart;
@@ -228,24 +263,28 @@ export class CartService {
       activeCart = this.getGuestCart(session, guestCartId);
     }
 
-    // Check existing quantity
+    // Check existing quantity using strict productId + variantId identity
     const existingItem = (activeCart.items || []).find((ci: any) => {
       const pId = this.extractProductId(ci.id, ci);
-      return pId === productId && (targetVarId ? ci.variantId === targetVarId : true);
+      const ciVarId = (ci.variantId !== undefined && ci.variantId !== null && ci.variantId !== '')
+        ? String(ci.variantId).trim()
+        : null;
+      return pId === productId && ciVarId === normalizedTargetVarId;
     });
-    const currentQty = existingItem ? existingItem.qty : 0;
-    if (currentQty + 1 > maxStock) {
+    const currentQty = existingItem ? (Number(existingItem.qty) || 0) : 0;
+    if (currentQty + qtyToAdd > maxStock) {
       throw new BadRequestException(`Số lượng trong giỏ hàng đã đạt giới hạn tồn kho (${maxStock})`);
     }
 
-    const cartItemId = targetVarId ? `${productId}_${targetVarId}` : productId;
+    const cartItemId = normalizedTargetVarId ? `${productId}_${normalizedTargetVarId}` : productId;
 
     activeCart.add(product, cartItemId, {
-      variantId: targetVarId,
+      variantId: normalizedTargetVarId,
       selectedClassification: resolvedVariant?.classification || classification || null,
       selectedColor: resolvedVariant?.color || color || null,
       selectedSize: resolvedVariant?.size || size || null,
       variant: resolvedVariant,
+      qty: qtyToAdd,
     });
 
     // Save cart to respective storage

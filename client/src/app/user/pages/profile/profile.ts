@@ -26,14 +26,15 @@ export class Profile implements OnInit {
   activeTab: string = 'all';
 
   readonly orderTabs = [
-    { key: 'all',        label: 'Tất cả' },
-    { key: 'PENDING',    label: 'Chờ xác nhận' },
-    { key: 'CONFIRMED',  label: 'Đã xác nhận' },
-    { key: 'PROCESSING', label: 'Đang xử lý' },
-    { key: 'SHIPPING',   label: 'Đang giao' },
-    { key: 'DELIVERED',  label: 'Đã giao' },
-    { key: 'CANCELLED',  label: 'Đã hủy' },
-    { key: 'RETURNED',   label: 'Đã hoàn trả' },
+    { key: 'all',             label: 'Tất cả' },
+    { key: 'PENDING',         label: 'Chờ xác nhận' },
+    { key: 'CONFIRMED',       label: 'Đã xác nhận' },
+    { key: 'PROCESSING',      label: 'Đang xử lý' },
+    { key: 'SHIPPING',        label: 'Đang giao' },
+    { key: 'DELIVERY_FAILED', label: 'Giao không thành công' },
+    { key: 'DELIVERED',       label: 'Đã giao' },
+    { key: 'CANCELLED',       label: 'Đã hủy' },
+    { key: 'RETURNED',        label: 'Đã hoàn trả' },
   ];
 
   // Form fields
@@ -228,6 +229,7 @@ export class Profile implements OnInit {
     if (s === 'CONFIRMED') return 'CONFIRMED';
     if (s === 'PROCESSING') return 'PROCESSING';
     if (s === 'SHIPPING' || s === 'SHIPPED') return 'SHIPPING';
+    if (s === 'DELIVERY_FAILED') return 'DELIVERY_FAILED';
     if (s === 'DELIVERED' || s === 'COMPLETED') return 'DELIVERED';
     if (s === 'CANCELLED' || s === 'CANCELED') return 'CANCELLED';
     if (s === 'RETURNED' || s === 'REFUNDED') return 'RETURNED';
@@ -322,27 +324,29 @@ export class Profile implements OnInit {
 
   getStatusClass(status: string | undefined): string {
     switch (this.normalizeStatus(status)) {
-      case 'PENDING':    return 'status-pending';
-      case 'CONFIRMED':  return 'status-confirmed';
-      case 'PROCESSING': return 'status-processing';
-      case 'SHIPPING':   return 'status-shipping';
-      case 'DELIVERED':  return 'status-delivered';
-      case 'CANCELLED':  return 'status-cancelled';
-      case 'RETURNED':   return 'status-returned';
-      default:           return 'status-pending';
+      case 'PENDING':         return 'status-pending';
+      case 'CONFIRMED':       return 'status-confirmed';
+      case 'PROCESSING':      return 'status-processing';
+      case 'SHIPPING':        return 'status-shipping';
+      case 'DELIVERY_FAILED': return 'status-cancelled';
+      case 'DELIVERED':       return 'status-delivered';
+      case 'CANCELLED':       return 'status-cancelled';
+      case 'RETURNED':        return 'status-returned';
+      default:                return 'status-pending';
     }
   }
 
   getStatusLabel(status: string | undefined): string {
     switch (this.normalizeStatus(status)) {
-      case 'PENDING':    return 'Chờ xác nhận';
-      case 'CONFIRMED':  return 'Đã xác nhận';
-      case 'PROCESSING': return 'Đang xử lý';
-      case 'SHIPPING':   return 'Đang giao hàng';
-      case 'DELIVERED':  return 'Đã giao hàng thành công';
-      case 'CANCELLED':  return 'Đã hủy';
-      case 'RETURNED':   return 'Đã hoàn trả';
-      default:           return status ? status : 'Chờ xác nhận';
+      case 'PENDING':         return 'Chờ xác nhận';
+      case 'CONFIRMED':       return 'Đã xác nhận';
+      case 'PROCESSING':      return 'Đang xử lý';
+      case 'SHIPPING':        return 'Đang giao hàng';
+      case 'DELIVERY_FAILED': return 'Giao hàng không thành công';
+      case 'DELIVERED':       return 'Đã giao hàng thành công';
+      case 'CANCELLED':       return 'Đã hủy';
+      case 'RETURNED':        return 'Đã hoàn trả';
+      default:                return status ? status : 'Chờ xác nhận';
     }
   }
 

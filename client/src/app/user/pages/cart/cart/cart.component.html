@@ -11,8 +11,19 @@
         <!-- ═══════════════════════════════════════════════════
              KHỐI 1: GIỎ HÀNG (BÊN TRÁI)
         ═══════════════════════════════════════════════════ -->
-        @if (cart?.items?.length) {
-        <div class="cart-wrap">
+        <div class="cart-wrap" [class.cart-wrap--empty]="!cart?.items?.length">
+          @if (!cart?.items?.length) {
+          <!-- Trạng thái khi giỏ hàng trống ngay trong Khối 1 -->
+          <div class="cart-empty-block">
+            <h2 class="cart-main-title">Giỏ hàng</h2>
+            <div class="cart-empty-inner">
+              <p class="cart-empty-text">Giỏ hàng bạn chưa có sản phẩm</p>
+              <a [routerLink]="['/' + (lang$ | async) + '/product']" class="btn-explore-store">
+                Khám phá cửa hàng
+              </a>
+            </div>
+          </div>
+          } @else {
           <!-- Tiêu đề & Chọn tất cả toolbar -->
           <div class="cart-header-box">
             <h2 class="cart-main-title">
@@ -89,8 +100,7 @@
                       [max]="getItemStock(cartItem)"
                       [disabled]="isItemOutOfStock(cartItem) || updatingItemId === cartItem.id"
                       (blur)="onQuantityInputChange(cartItem, $event)"
-                      (keyup.enter)="onQuantityInputChange(cartItem, $event)"
-                      (click)="$event.stopPropagation()" />
+                      (keyup.enter)="onQuantityInputChange(cartItem, $event)" (click)="$event.stopPropagation()" />
                     <button type="button" class="qty-btn qty-btn-plus"
                       [disabled]="cartItem.qty >= getItemStock(cartItem) || isItemOutOfStock(cartItem) || updatingItemId === cartItem.id"
                       (click)="increaseQuantity(cartItem); $event.stopPropagation()" title="Tăng số lượng">
@@ -142,8 +152,8 @@
             @if (!appliedCoupon) {
             <div class="coupon-form">
               <input type="text" class="coupon-input" placeholder="Nhập mã (VD: CHERI10, CHERI50K)"
-                [(ngModel)]="couponInput" (keyup.enter)="applyCoupon(cart)"
-                autocomplete="off" (click)="$event.stopPropagation()" />
+                [(ngModel)]="couponInput" (keyup.enter)="applyCoupon(cart)" autocomplete="off"
+                (click)="$event.stopPropagation()" />
               <button type="button" class="coupon-btn" [disabled]="isApplyingCoupon"
                 (click)="applyCoupon(cart); $event.stopPropagation()">
                 {{ isApplyingCoupon ? 'Đang kiểm tra...' : 'Áp dụng' }}
@@ -183,8 +193,8 @@
               }
 
               @for (method of shippingMethods; track method.id) {
-              <div class="shipping-method-card" [class.is-selected]="isSelectedShippingMethod(method)"
-                role="radio" tabindex="0" [attr.aria-checked]="isSelectedShippingMethod(method)"
+              <div class="shipping-method-card" [class.is-selected]="isSelectedShippingMethod(method)" role="radio"
+                tabindex="0" [attr.aria-checked]="isSelectedShippingMethod(method)"
                 (click)="selectShippingMethod(method); $event.stopPropagation()"
                 (keydown.space)="selectShippingMethod(method); $event.preventDefault()"
                 (keydown.enter)="selectShippingMethod(method); $event.preventDefault()">
@@ -203,7 +213,8 @@
                 </div>
 
                 <div class="shipping-method-fee">
-                  @if (method.freeShippingCondition?.enabled && method.freeShippingCondition.minimumOrderValue > 0 && getSelectedSubtotal(cart) >= method.freeShippingCondition.minimumOrderValue) {
+                  @if (method.freeShippingCondition?.enabled && method.freeShippingCondition.minimumOrderValue > 0 &&
+                  getSelectedSubtotal(cart) >= method.freeShippingCondition.minimumOrderValue) {
                   <span class="free-badge">Miễn phí</span>
                   <span class="strikethrough-fee">{{ method.fee | priceFormat }} {{ currency$ | async }}</span>
                   } @else {
@@ -257,21 +268,8 @@
             </div>
             }
           </div>
+          }
         </div>
-        } @else {
-        <!-- Empty State giỏ hàng -->
-        <div class="cart-wrap cart-empty-card">
-          <div class="empty-icon-box">
-            <i class="material-icons empty-icon">shopping_bag</i>
-          </div>
-          <h3 class="empty-title">Giỏ hàng của bạn đang trống</h3>
-          <p class="empty-desc">Không có sản phẩm nào trong giỏ hàng. Hãy khám phá các bộ sưu tập mới nhất của Chéri!
-          </p>
-          <a [routerLink]="['/' + (lang$ | async) + '/product']" class="btn-continue-shopping">
-            Tiếp tục mua sắm
-          </a>
-        </div>
-        }
 
         <!-- ═══════════════════════════════════════════════════
              KHỐI 2: THÔNG TIN ĐẶT HÀNG (BÊN PHẢI)
@@ -425,59 +423,61 @@
             <mat-step [stepControl]="paymentMethodControl">
               <ng-template matStepLabel>Phương thức thanh toán</ng-template>
               @if (orderForm.valid) {
-                @if (isLoadingPaymentMethods) {
-                  <div class="payment-methods-loading">
-                    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-                    <span>Đang tải danh sách phương thức thanh toán...</span>
-                  </div>
-                } @else if (paymentMethods.length === 0) {
-                  <div class="payment-methods-empty">
-                    <mat-icon color="warn">error_outline</mat-icon>
-                    <p>Hiện chưa có phương thức thanh toán khả dụng. Vui lòng thử lại sau.</p>
-                  </div>
-                } @else {
-                  <mat-radio-group class="delivery-button" [(ngModel)]="selectedPaymentMethodId" (change)="onPaymentMethodRadioChange($event.value)">
-                    @for (method of paymentMethods; track method._id || method.code) {
-                      <mat-radio-button
-                        class="payment-choice"
-                        [class.payment-choice--active]="isSelectedPaymentMethod(method)"
-                        [value]="method._id || method.code">
-                        <span class="flex items-center payment-choice-inner">
-                          @if (method.logo) {
-                            <img [src]="method.logo" [alt]="method.name" class="payment-choice-logo" />
-                          } @else {
-                            <mat-icon>{{ getPaymentMethodIcon(method) }}</mat-icon>
-                          }
-                          <span class="margin-left-small payment-choice-text">
-                            <span class="payment-choice-name">
-                              {{ method.name }}
-                              <b>
-                                ({{ getFinalTotalForMethod(method, cart) | priceFormat }} {{ currency$ | async }})
-                              </b>
-                            </span>
-                            @if (method.description) {
-                              <span class="payment-choice-desc">{{ method.description }}</span>
-                            }
-                            @if (method.transactionFee?.enabled && method.transactionFee.value > 0) {
-                              <span class="payment-choice-fee">
-                                Phí giao dịch: {{ method.transactionFee.type === 'PERCENTAGE' ? (method.transactionFee.value + '%') : ((method.transactionFee.value | priceFormat) + ' ' + (currency$ | async)) }}
-                              </span>
-                            }
-                          </span>
-                        </span>
-                      </mat-radio-button>
+              @if (isLoadingPaymentMethods) {
+              <div class="payment-methods-loading">
+                <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+                <span>Đang tải danh sách phương thức thanh toán...</span>
+              </div>
+              } @else if (paymentMethods.length === 0) {
+              <div class="payment-methods-empty">
+                <mat-icon color="warn">error_outline</mat-icon>
+                <p>Hiện chưa có phương thức thanh toán khả dụng. Vui lòng thử lại sau.</p>
+              </div>
+              } @else {
+              <mat-radio-group class="delivery-button" [(ngModel)]="selectedPaymentMethodId"
+                (change)="onPaymentMethodRadioChange($event.value)">
+                @for (method of paymentMethods; track method._id || method.code) {
+                <mat-radio-button class="payment-choice"
+                  [class.payment-choice--active]="isSelectedPaymentMethod(method)" [value]="method._id || method.code">
+                  <span class="flex items-center payment-choice-inner">
+                    @if (method.logo) {
+                    <img [src]="method.logo" [alt]="method.name" class="payment-choice-logo" />
+                    } @else {
+                    <mat-icon>{{ getPaymentMethodIcon(method) }}</mat-icon>
                     }
-                  </mat-radio-group>
+                    <span class="margin-left-small payment-choice-text">
+                      <span class="payment-choice-name">
+                        {{ method.name }}
+                        <b>
+                          ({{ getFinalTotalForMethod(method, cart) | priceFormat }} {{ currency$ | async }})
+                        </b>
+                      </span>
+                      @if (method.description) {
+                      <span class="payment-choice-desc">{{ method.description }}</span>
+                      }
+                      @if (method.transactionFee?.enabled && method.transactionFee.value > 0) {
+                      <span class="payment-choice-fee">
+                        Phí giao dịch: {{ method.transactionFee.type === 'PERCENTAGE' ? (method.transactionFee.value +
+                        '%') : ((method.transactionFee.value | priceFormat) + ' ' + (currency$ | async)) }}
+                      </span>
+                      }
+                    </span>
+                  </span>
+                </mat-radio-button>
                 }
+              </mat-radio-group>
+              }
               }
               <div>
+                <button class="cart-navigation-button" mat-stroked-button matStepperPrevious>
+                  Quay lại
+                </button>
+
                 <button class="cart-navigation-button" mat-stroked-button matStepperNext
                   [disabled]="paymentMethodControl.invalid || paymentMethods.length === 0">
                   Tiếp tục
                 </button>
-                <button class="cart-navigation-button" mat-stroked-button matStepperPrevious>
-                  Quay lại
-                </button>
+
               </div>
             </mat-step>
 
@@ -513,9 +513,11 @@
                   <div>Phí vận chuyển: <strong>{{ getShippingFee(cart) === 0 ? 'Miễn phí' : (getShippingFee(cart) |
                       priceFormat) + ' ' + (currency$ | async) }}</strong></div>
                   @if (getPaymentFee(cart) > 0) {
-                  <div>Phí thanh toán: <strong>{{ getPaymentFee(cart) | priceFormat }} {{ currency$ | async }}</strong></div>
+                  <div>Phí thanh toán: <strong>{{ getPaymentFee(cart) | priceFormat }} {{ currency$ | async }}</strong>
+                  </div>
                   }
-                  <div>Phương thức thanh toán: <strong>{{ getSelectedPaymentMethod()?.name || 'Chưa chọn' }}</strong></div>
+                  <div>Phương thức thanh toán: <strong>{{ getSelectedPaymentMethod()?.name || 'Chưa chọn' }}</strong>
+                  </div>
                   <div class="recap-total">Tổng tiền: <strong class="color-primary">{{ getFinalTotal(cart) | priceFormat
                       }} {{ currency$ | async }}</strong></div>
                 </div>
@@ -527,7 +529,8 @@
               </app-card>
               } @else if ((currency$ | async); as currency) {
               <button mat-raised-button color="primary" type="submit" class="submit-order-button"
-                [disabled]="orderForm.invalid || selectedItemIds.size === 0 || paymentMethodControl.invalid" (click)="submit(currency)">
+                [disabled]="orderForm.invalid || selectedItemIds.size === 0 || paymentMethodControl.invalid"
+                (click)="submit(currency)">
                 Hoàn tất đặt hàng ({{ getFinalTotal(cart) | priceFormat }} {{ currency$ | async }})
               </button>
               }

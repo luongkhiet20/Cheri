@@ -1,25 +1,37 @@
 :host {
   display: block;
   font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  --cheri-header-height: 70px;
+}
+
+@media screen and (max-width: 600px) {
+  :host {
+    --cheri-header-height: 58px;
+  }
 }
 
 /* ── MODAL CHỌN LẠI BIẾN THỂ (POPUP) ── */
 .cheri-modal-wrapper {
   position: fixed;
-  inset: 0;
-  z-index: 99999;
+  top: var(--cheri-header-height, 70px);
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 990;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 16px;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .cheri-modal-backdrop {
-  position: fixed;
+  position: absolute;
   inset: 0;
   background-color: rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   animation: modalFadeIn 0.2s ease-out;
   z-index: 1;
 }
@@ -32,11 +44,12 @@
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25);
   width: 100%;
   max-width: 480px;
-  max-height: calc(100vh - 40px);
+  max-height: calc(100vh - var(--cheri-header-height, 70px) - 32px);
   display: flex;
   flex-direction: column;
   animation: modalSlideUp 0.22s ease-out;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .cheri-modal-header {
@@ -83,6 +96,10 @@
 .cheri-modal-body {
   padding: 16px 18px;
   overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -528,5 +545,31 @@
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+/* ── RESPONSIVE MOBILE / TABLET ── */
+@media screen and (max-width: 600px) {
+  .cheri-modal-wrapper {
+    padding: 12px 10px;
+  }
+
+  .cheri-modal-dialog {
+    max-height: calc(100vh - var(--cheri-header-height, 58px) - 20px);
+    width: 100%;
+    border-radius: 8px;
+  }
+
+  .cheri-modal-header {
+    padding: 12px 14px;
+  }
+
+  .cheri-modal-body {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .cheri-modal-footer {
+    padding: 10px 14px;
   }
 }

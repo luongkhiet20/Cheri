@@ -201,6 +201,8 @@ export class UsersDetailComponent implements OnInit {
         return 'warning';
       case 'CANCELLED':
       case 'ĐÃ HỦY':
+      case 'DELIVERY_FAILED':
+      case 'GIAO HÀNG KHÔNG THÀNH CÔNG':
       case 'DANGER':
         return 'danger';
       default:

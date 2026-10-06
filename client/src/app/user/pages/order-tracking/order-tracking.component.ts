@@ -314,7 +314,7 @@ export class OrderTrackingComponent implements OnInit {
       case 'PENDING':
         return true;
       case 'CONFIRMED':
-        return ['CONFIRMED', 'PROCESSING', 'SHIPPING', 'DELIVERED'].includes(currentStatus);
+        return ['CONFIRMED', 'PROCESSING', 'SHIPPING', 'DELIVERY_FAILED', 'DELIVERED'].includes(currentStatus);
       case 'SHIPPING':
         return ['SHIPPING', 'DELIVERED'].includes(currentStatus);
       case 'DELIVERED':
@@ -332,7 +332,7 @@ export class OrderTrackingComponent implements OnInit {
       case 'CONFIRMED':
         return currentStatus === 'CONFIRMED' || currentStatus === 'PROCESSING';
       case 'SHIPPING':
-        return currentStatus === 'SHIPPING';
+        return currentStatus === 'SHIPPING' || currentStatus === 'DELIVERY_FAILED';
       case 'DELIVERED':
         return currentStatus === 'DELIVERED';
       default:
@@ -381,6 +381,10 @@ export class OrderTrackingComponent implements OnInit {
     return status === 'CANCELLED' || status === 'RETURNED';
   }
 
+  isDeliveryFailed(status: string): boolean {
+    return status === 'DELIVERY_FAILED';
+  }
+
   // ─── THỨ TỰ QUY TRÌNH NGHIỆP VỤ ──────────────────────────────────────────
   readonly trackingStageOrder: { [key: string]: number } = {
     PICKED_UP: 1,        // Bước 1: Đã lấy hàng
@@ -394,6 +398,7 @@ export class OrderTrackingComponent implements OnInit {
     CONFIRMED: 2,        // 2. Đã xác nhận
     PROCESSING: 3,       // 3. Đang chuẩn bị / Đang xử lý
     SHIPPING: 4,         // 4. Đang vận chuyển
+    DELIVERY_FAILED: 4,  // 4. Giao hàng không thành công (trong quá trình giao)
     DELIVERED: 5,        // 5. Đã giao hàng
     CANCELLED: 99,
     RETURNED: 99,
@@ -693,6 +698,7 @@ export class OrderTrackingComponent implements OnInit {
       CONFIRMED: 'Đã xác nhận',
       PROCESSING: 'Đang chuẩn bị',
       SHIPPING: 'Đang vận chuyển',
+      DELIVERY_FAILED: 'Giao hàng không thành công',
       DELIVERED: 'Đã giao hàng',
       CANCELLED: 'Đã huỷ',
       RETURNED: 'Hoàn hàng',

@@ -531,18 +531,16 @@ export class OrdersService {
       // Xóa các sản phẩm đã đặt khỏi giỏ hàng của user
       if (user) {
         if (orderDto.selectedItemIds && orderDto.selectedItemIds.length > 0) {
-          const selectedObjIds = orderDto.selectedItemIds.filter(isValidObjectId).map(id => new Types.ObjectId(id));
-          const selectedStrIds = orderDto.selectedItemIds.map(id => String(id));
+          const selectedSet = new Set(orderDto.selectedItemIds.map(id => String(id)));
+          const freshUser: any = await this.userModel.findById(user._id).lean();
+          const remainingItems = (freshUser?.cart?.items || []).filter((item: any) => {
+            const pId = String(item.productId || item.id || item.item?._id || item.item?.id || '');
+            const vId = item.variantId ? String(item.variantId) : null;
+            const compoundId = vId ? `${pId}_${vId}` : pId;
+            return !selectedSet.has(compoundId) && !selectedSet.has(pId) && (!item.id || !selectedSet.has(String(item.id)));
+          });
           await this.userModel.findByIdAndUpdate(user._id, {
-            $pull: {
-              'cart.items': {
-                $or: [
-                  { productId: { $in: selectedObjIds } },
-                  { _id: { $in: selectedObjIds } },
-                  { id: { $in: selectedStrIds } },
-                ],
-              },
-            },
+            $set: { 'cart.items': remainingItems },
           });
         } else {
           await this.userModel.findByIdAndUpdate(user._id, {
@@ -599,18 +597,16 @@ export class OrdersService {
 
         if (user) {
           if (body.selectedItemIds && body.selectedItemIds.length > 0) {
-            const selectedObjIds = body.selectedItemIds.filter(isValidObjectId).map(id => new Types.ObjectId(id));
-            const selectedStrIds = body.selectedItemIds.map(id => String(id));
+            const selectedSet = new Set(body.selectedItemIds.map(id => String(id)));
+            const freshUser: any = await this.userModel.findById(user._id).lean();
+            const remainingItems = (freshUser?.cart?.items || []).filter((item: any) => {
+              const pId = String(item.productId || item.id || item.item?._id || item.item?.id || '');
+              const vId = item.variantId ? String(item.variantId) : null;
+              const compoundId = vId ? `${pId}_${vId}` : pId;
+              return !selectedSet.has(compoundId) && !selectedSet.has(pId) && (!item.id || !selectedSet.has(String(item.id)));
+            });
             await this.userModel.findByIdAndUpdate(user._id, {
-              $pull: {
-                'cart.items': {
-                  $or: [
-                    { productId: { $in: selectedObjIds } },
-                    { _id: { $in: selectedObjIds } },
-                    { id: { $in: selectedStrIds } },
-                  ],
-                },
-              },
+              $set: { 'cart.items': remainingItems },
             });
           } else {
             await this.userModel.findByIdAndUpdate(user._id, {
@@ -654,7 +650,9 @@ export class OrdersService {
       const selectedSet = new Set(orderDto.selectedItemIds.map(id => String(id)));
       cartItems = cartItems.filter(item => {
         const pId = String(item.productId || item.id || item.item?._id || item.item?.id || '');
-        return selectedSet.has(pId);
+        const vId = item.variantId ? String(item.variantId) : null;
+        const compoundId = vId ? `${pId}_${vId}` : pId;
+        return selectedSet.has(compoundId) || selectedSet.has(pId) || (item.id && selectedSet.has(String(item.id)));
       });
     }
 

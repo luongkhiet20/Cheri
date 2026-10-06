@@ -1,20 +1,305 @@
-<div class="main">
-  <div class="container">
-    <button
-      (click)="goBack()"
-      mat-raised-button
-      color="primary">
-      <i class="material-icons left">arrow_back</i>
-      Quay lại
-    </button>
+<div class="bill-page-wrapper">
+  <div class="bill-container">
 
-    <h2 class="summary-success-title">
-      Đặt hàng thành công
-    </h2>
-    <app-order-info
-      [order]="order$()"
-      [lang]="lang$ | async">
-    </app-order-info>
+    <!-- ─── TRẠNG THÁI ĐANG TẢI ─── -->
+    @if (isLoading) {
+      <div class="bill-card bill-state-card">
+        <mat-progress-bar mode="indeterminate" class="bill-progress"></mat-progress-bar>
+        <p class="bill-state-text">Đang tải thông tin đơn hàng...</p>
+      </div>
+    }
+
+    <!-- ─── TRẠNG THÁI KHÔNG TÌM THẤY ĐƠN HÀNG ─── -->
+    @if (!isLoading && (!currentOrder || errorMessage)) {
+      <div class="bill-card bill-state-card">
+        <div class="bill-empty-icon-wrap">
+          <mat-icon class="bill-empty-icon">search_off</mat-icon>
+        </div>
+        <h2 class="bill-empty-title">Không tìm thấy thông tin đơn hàng</h2>
+        <p class="bill-empty-desc">
+          {{ errorMessage || 'Rất tiếc, thông tin đơn hàng không khả dụng hoặc đã hết phiên làm việc.' }}
+        </p>
+        <div class="bill-empty-actions">
+          <button type="button" class="btn-cheri-primary" [routerLink]="['/' + (lang$ | async) + '/product']">
+            Tiếp tục mua sắm
+          </button>
+          <button type="button" class="btn-cheri-secondary" (click)="goToTracking()">
+            Tra cứu đơn hàng
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- ─── GIAO DIỆN BILL CHI TIẾT ─── -->
+    @if (!isLoading && currentOrder) {
+      <div class="bill-card printable-bill bill-print-area">
+
+        <!-- 1. HEADER / SUCCESS BANNER -->
+        <header class="bill-header">
+          <div class="bill-success-badge">
+            <mat-icon class="bill-success-icon">check</mat-icon>
+          </div>
+          <h1 class="bill-main-title">Đặt hàng thành công</h1>
+          <p class="bill-thankyou-text">Cảm ơn bạn đã mua sắm tại Chéri.</p>
+          <div class="bill-order-id-tag">
+            <span class="order-id-label">Mã đơn hàng:</span>
+            <span class="order-id-value">{{ currentOrder.orderId }}</span>
+          </div>
+        </header>
+
+        <!-- 2. THÔNG TIN CHUNG / SUMMARY METADATA -->
+        <section class="bill-meta-grid">
+          <div class="meta-item">
+            <span class="meta-label">Ngày đặt hàng</span>
+            <span class="meta-value">
+              {{ (currentOrder.createdAt || currentOrder.dateAdded) | date: 'HH:mm, dd/MM/yyyy' }}
+            </span>
+          </div>
+
+          <div class="meta-item">
+            <span class="meta-label">Trạng thái đơn hàng</span>
+            <div class="meta-value">
+              <span class="badge-status" [ngClass]="getOrderStatusClass(currentOrder.status)">
+                {{ getOrderStatusText(currentOrder.status) }}
+              </span>
+            </div>
+          </div>
+
+          <div class="meta-item">
+            <span class="meta-label">Phương thức thanh toán</span>
+            <span class="meta-value">
+              {{ currentOrder.paymentMethodSnapshot?.name || currentOrder.payment?.provider || currentOrder.payment?.method || 'Thanh toán khi nhận hàng (COD)' }}
+            </span>
+            @if (currentOrder.paymentStatus || currentOrder.payment?.status) {
+              <div class="meta-sub-badge">
+                <span class="badge-payment" [ngClass]="getPaymentStatusClass(currentOrder.paymentStatus || currentOrder.payment?.status)">
+                  {{ getPaymentStatusText(currentOrder.paymentStatus || currentOrder.payment?.status) }}
+                </span>
+              </div>
+            }
+          </div>
+
+          <div class="meta-item">
+            <span class="meta-label">Phương thức vận chuyển</span>
+            <span class="meta-value">
+              {{ currentOrder.shippingMethodSnapshot?.name || currentOrder.shipping?.provider || 'Giao hàng tiêu chuẩn' }}
+            </span>
+            @if (currentOrder.trackingNumber || currentOrder.shipping?.trackingNumber) {
+              <div class="meta-tracking-number">
+                Mã vận đơn: <strong>{{ currentOrder.trackingNumber || currentOrder.shipping?.trackingNumber }}</strong>
+              </div>
+            }
+          </div>
+        </section>
+
+        <!-- 3. THÔNG TIN KHÁCH HÀNG & NHẬN HÀNG -->
+        <section class="bill-section">
+          <h2 class="bill-section-title">Thông tin nhận hàng</h2>
+          <div class="customer-info-box">
+            <div class="customer-row">
+              <span class="customer-label">Người nhận:</span>
+              <span class="customer-value customer-name">
+                {{ currentOrder.shippingAddress?.fullName || currentOrder.customer?.name || currentOrder.name || 'Khách hàng' }}
+              </span>
+            </div>
+
+            @if (currentOrder.shippingAddress?.phone || currentOrder.customerPhone || currentOrder.phone) {
+              <div class="customer-row">
+                <span class="customer-label">Số điện thoại:</span>
+                <span class="customer-value">
+                  {{ currentOrder.shippingAddress?.phone || currentOrder.customerPhone || currentOrder.phone }}
+                </span>
+              </div>
+            }
+
+            @if (currentOrder.customerEmail || currentOrder.email || currentOrder.customer?.email) {
+              <div class="customer-row">
+                <span class="customer-label">Email:</span>
+                <span class="customer-value">
+                  {{ currentOrder.customerEmail || currentOrder.email || currentOrder.customer?.email }}
+                </span>
+              </div>
+            }
+
+            <div class="customer-row">
+              <span class="customer-label">Địa chỉ nhận:</span>
+              <span class="customer-value">
+                {{ getFormattedAddress(currentOrder) }}
+              </span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. GHI CHÚ ĐƠN HÀNG (NẾU CÓ) -->
+        @if (currentOrder.notes && currentOrder.notes.trim()) {
+          <section class="bill-section">
+            <h2 class="bill-section-title">Ghi chú đơn hàng</h2>
+            <div class="order-notes-box">
+              <p class="notes-content">{{ currentOrder.notes }}</p>
+            </div>
+          </section>
+        }
+
+        <!-- 5. DANH SÁCH SẢN PHẨM ĐÃ ĐẶT -->
+        <section class="bill-section">
+          <div class="items-header-bar">
+            <h2 class="bill-section-title">Sản phẩm đã đặt</h2>
+            <span class="items-count-badge">{{ getTotalQuantity(currentOrder) }} sản phẩm</span>
+          </div>
+
+          <div class="bill-items-list">
+            @for (item of (currentOrder.items || currentOrder.cart?.items || []); track $index) {
+              <div class="bill-item-row">
+                <!-- Ảnh sản phẩm snapshot -->
+                <div class="item-img-wrap">
+                  <img
+                    [src]="item.productSnapshot?.image || item.item?.mainImage?.url || item.item?.images?.[0] || 'assets/placeholder.png'"
+                    [alt]="item.productSnapshot?.title || item.item?.title || 'Sản phẩm'"
+                    class="item-img"
+                    loading="lazy"
+                  />
+                </div>
+
+                <!-- Thông tin chi tiết sản phẩm -->
+                <div class="item-details">
+                  <div class="item-name">
+                    {{ item.productSnapshot?.title || item.item?.title || 'Sản phẩm Chéri' }}
+                  </div>
+
+                  @if (item.productSnapshot?.sku || item.item?.sku) {
+                    <div class="item-sku">
+                      Mã SKU: {{ item.productSnapshot?.sku || item.item?.sku }}
+                    </div>
+                  }
+
+                  @if (getVariantDescription(item)) {
+                    <div class="item-variant">
+                      {{ getVariantDescription(item) }}
+                    </div>
+                  }
+
+                  <div class="item-calc-mobile">
+                    <span class="item-price">{{ (item.unitPrice || item.price || 0) | priceFormat }} đ</span>
+                    <span class="item-qty">× {{ item.quantity || item.qty || 1 }}</span>
+                  </div>
+                </div>
+
+                <!-- Đơn giá & Số lượng (Desktop) -->
+                <div class="item-pricing-desktop">
+                  <span class="item-unit-price">{{ (item.unitPrice || item.price || 0) | priceFormat }} đ</span>
+                  <span class="item-quantity-tag">× {{ item.quantity || item.qty || 1 }}</span>
+                </div>
+
+                <!-- Thành tiền -->
+                <div class="item-subtotal">
+                  {{ (item.subtotal || ((item.unitPrice || item.price || 0) * (item.quantity || item.qty || 1))) | priceFormat }} đ
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+
+        <!-- 6. KHU VỰC TỔNG TIỀN THANH TOÁN -->
+        <section class="bill-pricing-section">
+          <div class="pricing-summary-box">
+            <div class="pricing-row">
+              <span class="pricing-label">Tạm tính:</span>
+              <span class="pricing-value">{{ currentOrder.subtotal | priceFormat }} đ</span>
+            </div>
+
+            @if (currentOrder.discountAmount && currentOrder.discountAmount > 0) {
+              <div class="pricing-row discount-row">
+                <span class="pricing-label">Giảm giá:</span>
+                <span class="pricing-value">-{{ currentOrder.discountAmount | priceFormat }} đ</span>
+              </div>
+            }
+
+            @if (currentOrder.couponDiscount && currentOrder.couponDiscount > 0) {
+              <div class="pricing-row discount-row">
+                <span class="pricing-label">
+                  Mã giảm giá
+                  @if (currentOrder.couponCode) {
+                    <strong class="coupon-code-text">({{ currentOrder.couponCode }})</strong>
+                  }:
+                </span>
+                <span class="pricing-value">-{{ currentOrder.couponDiscount | priceFormat }} đ</span>
+              </div>
+            }
+
+            <div class="pricing-row">
+              <span class="pricing-label">Phí vận chuyển:</span>
+              <span class="pricing-value">
+                @if (currentOrder.shippingFee === 0) {
+                  <span class="free-shipping-text">Miễn phí</span>
+                } @else {
+                  {{ currentOrder.shippingFee | priceFormat }} đ
+                }
+              </span>
+            </div>
+
+            @if (currentOrder.paymentFee && currentOrder.paymentFee > 0) {
+              <div class="pricing-row">
+                <span class="pricing-label">Phí thanh toán:</span>
+                <span class="pricing-value">{{ currentOrder.paymentFee | priceFormat }} đ</span>
+              </div>
+            }
+
+            @if (currentOrder.taxAmount && currentOrder.taxAmount > 0) {
+              <div class="pricing-row">
+                <span class="pricing-label">Thuế:</span>
+                <span class="pricing-value">{{ currentOrder.taxAmount | priceFormat }} đ</span>
+              </div>
+            }
+
+            <div class="pricing-divider"></div>
+
+            <div class="pricing-row grand-total-row">
+              <span class="grand-total-label">Tổng thanh toán:</span>
+              <span class="grand-total-value">{{ currentOrder.totalAmount | priceFormat }} đ</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 7. LỊCH SỬ TRẠNG THÁI ĐƠN HÀNG (TIMELINE - NẾU CÓ DỮ LIỆU) -->
+        @if (currentOrder.statusHistory && currentOrder.statusHistory.length > 0) {
+          <section class="bill-section no-print">
+            <h2 class="bill-section-title">Lịch sử trạng thái</h2>
+            <div class="timeline-container">
+              @for (entry of currentOrder.statusHistory; track $index) {
+                <div class="timeline-step">
+                  <div class="timeline-marker"></div>
+                  <div class="timeline-content">
+                    <div class="timeline-status-name">
+                      {{ getOrderStatusText(entry.status) }}
+                    </div>
+                    @if (entry.note) {
+                      <div class="timeline-note">{{ entry.note }}</div>
+                    }
+                    <div class="timeline-date">
+                      {{ (entry.updatedAt || entry.timestamp) | date: 'HH:mm, dd/MM/yyyy' }}
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        <!-- 8. ACTION BUTTONS -->
+        <footer class="bill-actions-footer no-print">
+          <button type="button" class="btn-cheri-primary" [routerLink]="['/' + (lang$ | async) + '/product']">
+            Tiếp tục mua sắm
+          </button>
+          <button type="button" class="btn-cheri-secondary" (click)="goToTracking()">
+            Tra cứu đơn hàng
+          </button>
+          <button type="button" class="btn-cheri-outline" (click)="printBill()">
+            In hóa đơn
+          </button>
+        </footer>
+
+      </div>
+    }
 
   </div>
 </div>

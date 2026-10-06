@@ -9,27 +9,51 @@ export class Cart {
   }
 
   add = function (item: Product, id: string, options?: any): void {
-    const variantId = options?.variantId || null;
+    const qtyToAdd = Math.max(1, Math.floor(Number(options?.qty) || 1));
+    const targetVarId = (options?.variantId !== undefined && options?.variantId !== null && options?.variantId !== '')
+      ? String(options.variantId).trim()
+      : null;
+    const targetProdId = (item?._id || item?.id || (typeof id === 'string' ? id.split('_')[0] : '')).toString();
+
     const existingItem = this.items.find((cartItem: any) => {
-      const matchId = cartItem.id === id;
-      const matchVariant = variantId ? cartItem.variantId === variantId : true;
-      return matchId || (cartItem.item?._id?.toString() === item?._id?.toString() && cartItem.variantId === variantId);
+      const itemProdId = (cartItem.item?._id || cartItem.item?.id || (typeof cartItem.id === 'string' ? cartItem.id.split('_')[0] : '')).toString();
+      const itemVarId = (cartItem.variantId !== undefined && cartItem.variantId !== null && cartItem.variantId !== '')
+        ? String(cartItem.variantId).trim()
+        : null;
+
+      // Identity chuẩn: Cùng productId VÀ Cùng variantId (bao gồm cả khi cả 2 cùng không có variant = null)
+      const isSameProduct = Boolean(itemProdId && targetProdId && itemProdId === targetProdId);
+      const isSameVariant = itemVarId === targetVarId;
+
+      return (cartItem.id === id) || (isSameProduct && isSameVariant);
     });
 
     if (!existingItem) {
       this.items.push({
         item,
         id,
-        qty: 1,
+        qty: qtyToAdd,
         isSelected: true,
-        variantId,
+        variantId: targetVarId,
         selectedClassification: options?.selectedClassification || null,
         selectedColor: options?.selectedColor || null,
         selectedSize: options?.selectedSize || null,
         variant: options?.variant || null,
       });
     } else {
-      existingItem.qty++;
+      existingItem.qty = (Number(existingItem.qty) || 0) + qtyToAdd;
+      if (options?.variant && !existingItem.variant) {
+        existingItem.variant = options.variant;
+      }
+      if (options?.selectedClassification && !existingItem.selectedClassification) {
+        existingItem.selectedClassification = options.selectedClassification;
+      }
+      if (options?.selectedColor && !existingItem.selectedColor) {
+        existingItem.selectedColor = options.selectedColor;
+      }
+      if (options?.selectedSize && !existingItem.selectedSize) {
+        existingItem.selectedSize = options.selectedSize;
+      }
     }
   };
 

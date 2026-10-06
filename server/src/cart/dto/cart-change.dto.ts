@@ -1,4 +1,5 @@
 import { IsNotEmpty, IsOptional } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class GetCartChangeDto {
   @IsNotEmpty()
@@ -20,6 +21,7 @@ export class GetCartChangeDto {
   size?: string;
 
   @IsOptional()
+  @Type(() => Number)
   qty?: number;
 }
 

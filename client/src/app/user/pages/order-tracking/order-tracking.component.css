@@ -189,6 +189,7 @@ title {
 
 .otp-order-status[data-status="DELIVERED"] { background: #e8f5e9; color: #2e7d32; }
 .otp-order-status[data-status="SHIPPING"]  { background: #e3f2fd; color: #1565c0; }
+.otp-order-status[data-status="DELIVERY_FAILED"] { background: #fee2e2; color: #b91c1c; }
 .otp-order-status[data-status="CANCELLED"] { background: #ffebee; color: #c62828; }
 .otp-order-status[data-status="PROCESSING"]{ background: #fff3e0; color: #d97706; }
 .otp-order-status[data-status="CONFIRMED"] { background: #f3e8ff; color: #7e22ce; }
@@ -515,13 +516,14 @@ title {
   align-self: flex-start;
 }
 
-.otp-status-badge[data-status="DELIVERED"] { background: #e8f5e9; color: #2e7d32; }
-.otp-status-badge[data-status="SHIPPING"]  { background: #e3f2fd; color: #1565c0; }
-.otp-status-badge[data-status="CONFIRMED"] { background: #f3e5f5; color: #7b1fa2; }
-.otp-status-badge[data-status="PROCESSING"]{ background: #fff3e0; color: #e65100; }
-.otp-status-badge[data-status="CANCELLED"] { background: #ffebee; color: #c62828; }
-.otp-status-badge[data-status="RETURNED"]  { background: #fafafa; color: #616161; }
-.otp-status-badge[data-status="PENDING"]   { background: #faf7f7; color: #9a9a9a; }
+.otp-status-badge[data-status="DELIVERED"]       { background: #e8f5e9; color: #2e7d32; }
+.otp-status-badge[data-status="SHIPPING"]        { background: #e3f2fd; color: #1565c0; }
+.otp-status-badge[data-status="DELIVERY_FAILED"] { background: #fee2e2; color: #b91c1c; }
+.otp-status-badge[data-status="CONFIRMED"]       { background: #f3e5f5; color: #7b1fa2; }
+.otp-status-badge[data-status="PROCESSING"]      { background: #fff3e0; color: #e65100; }
+.otp-status-badge[data-status="CANCELLED"]       { background: #ffebee; color: #c62828; }
+.otp-status-badge[data-status="RETURNED"]        { background: #fafafa; color: #616161; }
+.otp-status-badge[data-status="PENDING"]         { background: #faf7f7; color: #9a9a9a; }
 
 /* ─── Phần 3: Stepper ───────────────────────────────────────────── */
 .otp-stepper {

@@ -36,10 +36,11 @@ export class OrderDetailComponent implements OnInit {
   // Business state transitions rule
   readonly VALID_TRANSITIONS: Record<string, string[]> = {
     PENDING: ['PROCESSING', 'CANCELLED'],
-    CONFIRMED: [],
+    CONFIRMED: ['PROCESSING', 'CANCELLED'],
     PROCESSING: ['SHIPPING', 'CANCELLED'],
-    SHIPPING: ['DELIVERED', 'CANCELLED'],
-    DELIVERED: [],
+    SHIPPING: ['DELIVERY_FAILED', 'DELIVERED', 'CANCELLED'],
+    DELIVERY_FAILED: ['SHIPPING', 'CANCELLED', 'RETURNED'],
+    DELIVERED: ['RETURNED'],
     CANCELLED: [],
     RETURNED: []
   };
@@ -49,6 +50,7 @@ export class OrderDetailComponent implements OnInit {
     { code: 'CONFIRMED', label: 'Đã xác nhận', variant: 'primary' },
     { code: 'PROCESSING', label: 'Đang xử lý', variant: 'warning' },
     { code: 'SHIPPING', label: 'Đang giao', variant: 'primary' },
+    { code: 'DELIVERY_FAILED', label: 'Giao hàng không thành công', variant: 'danger' },
     { code: 'DELIVERED', label: 'Đã giao', variant: 'success' },
     { code: 'CANCELLED', label: 'Đã hủy', variant: 'danger' },
     { code: 'RETURNED', label: 'Đã hoàn trả', variant: 'warning' }

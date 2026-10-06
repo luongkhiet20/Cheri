@@ -222,7 +222,7 @@ export class OrderFormComponent implements OnInit {
           return;
         }
         this.order = res.data;
-        const knownStatuses = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPING', 'DELIVERED', 'CANCELLED', 'RETURNED'];
+        const knownStatuses = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPING', 'DELIVERY_FAILED', 'DELIVERED', 'CANCELLED', 'RETURNED'];
         const rawStatusCode = typeof this.order.raw?.status === 'string'
           ? this.order.raw.status.trim().toUpperCase()
           : '';

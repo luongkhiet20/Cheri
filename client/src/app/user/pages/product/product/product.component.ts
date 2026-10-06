@@ -370,6 +370,25 @@ export class ProductComponent implements OnDestroy {
     this.quantity++;
   }
 
+  private buildAddToCartParams(product: any): string {
+    const qty = Math.max(1, Math.floor(Number(this.quantity) || 1));
+    let params = `?id=${product._id}&qty=${qty}`;
+    if (this.selectedVariant) {
+      const vId = this.selectedVariant._id || (this.selectedVariant as any).id || this.selectedVariant.sku;
+      if (vId) params += `&variantId=${encodeURIComponent(vId)}`;
+    }
+    if (this.selectedClassification) {
+      params += `&classification=${encodeURIComponent(this.selectedClassification)}`;
+    }
+    if (this.selectedColor) {
+      params += `&color=${encodeURIComponent(this.selectedColor)}`;
+    }
+    if (this.selectedSize) {
+      params += `&size=${encodeURIComponent(this.selectedSize)}`;
+    }
+    return params;
+  }
+
   handleAddToCart(): void {
     const product = this.product$();
     if (!product || this.isOutOfStock) return;
@@ -379,9 +398,8 @@ export class ProductComponent implements OnDestroy {
       return;
     }
 
-    for (let i = 0; i < this.quantity; i++) {
-      this.store.addToCart('?id=' + product._id);
-    }
+    const params = this.buildAddToCartParams(product);
+    this.store.addToCart(params);
 
     const snackBarRef = this.snackBar.open('Đã thêm vào giỏ hàng', 'Xem giỏ hàng', { duration: 3000 });
     snackBarRef.onAction().pipe(take(1)).subscribe(() => {
@@ -398,9 +416,8 @@ export class ProductComponent implements OnDestroy {
       return;
     }
 
-    for (let i = 0; i < this.quantity; i++) {
-      this.store.addToCart('?id=' + product._id);
-    }
+    const params = this.buildAddToCartParams(product);
+    this.store.addToCart(params);
 
     this.router.navigate(['/' + this.currentLang + '/cart']);
   }

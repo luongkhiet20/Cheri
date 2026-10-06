@@ -166,7 +166,14 @@ export class CartComponent implements OnInit, OnDestroy {
       withLatestFrom(this.lang$),
       take(1)
     ).subscribe(([order, lang]) => {
-      this.router.navigate(['/' + lang + '/cart/summary']);
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        try {
+          window.sessionStorage.setItem('cheri_last_order', JSON.stringify(order));
+        } catch (_) {}
+      }
+      this.router.navigate(['/' + lang + '/cart/summary'], {
+        queryParams: { orderId: order.orderId }
+      });
     });
 
     this.error$.pipe(filter((err) => !!err)).subscribe((err) => {

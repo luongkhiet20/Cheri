@@ -204,7 +204,7 @@
           <div class="pricing-summary-box">
             <div class="pricing-row">
               <span class="pricing-label">Tạm tính:</span>
-              <span class="pricing-value">{{ currentOrder.subtotal | priceFormat }} đ</span>
+              <span class="pricing-value">{{ (currentOrder.subtotal ?? currentOrder.cart?.totalPrice ?? 0) | priceFormat }} đ</span>
             </div>
 
             @if (currentOrder.discountAmount && currentOrder.discountAmount > 0) {
@@ -229,10 +229,10 @@
             <div class="pricing-row">
               <span class="pricing-label">Phí vận chuyển:</span>
               <span class="pricing-value">
-                @if (currentOrder.shippingFee === 0) {
+                @if ((currentOrder.shippingFee ?? currentOrder.cart?.shippingCost ?? 0) === 0) {
                   <span class="free-shipping-text">Miễn phí</span>
                 } @else {
-                  {{ currentOrder.shippingFee | priceFormat }} đ
+                  {{ (currentOrder.shippingFee ?? currentOrder.cart?.shippingCost ?? 0) | priceFormat }} đ
                 }
               </span>
             </div>
@@ -255,7 +255,7 @@
 
             <div class="pricing-row grand-total-row">
               <span class="grand-total-label">Tổng thanh toán:</span>
-              <span class="grand-total-value">{{ currentOrder.totalAmount | priceFormat }} đ</span>
+              <span class="grand-total-value">{{ (currentOrder.totalAmount ?? currentOrder.amount ?? 0) | priceFormat }} đ</span>
             </div>
           </div>
         </section>

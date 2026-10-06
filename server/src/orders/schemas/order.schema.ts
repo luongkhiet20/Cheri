@@ -41,7 +41,7 @@ const ProductSnapshotSchema = new Schema(
 const OrderItemSchema = new Schema(
   {
     productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
-    variantId: { type: Schema.Types.ObjectId, ref: 'ProductVariant', default: null },
+    variantId: { type: Schema.Types.Mixed, ref: 'ProductVariant', default: null },
     productSnapshot: { type: ProductSnapshotSchema, required: true },
     quantity: { type: Number, required: true, min: 1 },
     unitPrice: { type: Number, required: true, min: 0 },

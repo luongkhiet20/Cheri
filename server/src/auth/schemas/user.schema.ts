@@ -4,8 +4,11 @@ const { Schema } = mongoose;
 const CartItemSchema = new Schema(
   {
     productId: { type: Schema.Types.ObjectId, ref: 'Product' },
-    variantId: { type: Schema.Types.ObjectId, ref: 'ProductVariant' },
+    variantId: { type: Schema.Types.Mixed, default: null },
     quantity: { type: Number, default: 1 },
+    selectedClassification: { type: String, default: null },
+    selectedColor: { type: String, default: null },
+    selectedSize: { type: String, default: null },
   },
   { _id: false },
 );

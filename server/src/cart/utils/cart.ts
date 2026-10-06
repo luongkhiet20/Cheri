@@ -42,6 +42,10 @@ export class Cart {
       });
     } else {
       existingItem.qty = (Number(existingItem.qty) || 0) + qtyToAdd;
+      existingItem.id = id;
+      if (targetVarId) {
+        existingItem.variantId = targetVarId;
+      }
       if (options?.variant && !existingItem.variant) {
         existingItem.variant = options.variant;
       }

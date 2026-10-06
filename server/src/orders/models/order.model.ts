@@ -18,7 +18,7 @@ export interface ProductSnapshot {
 
 export interface OrderItem {
   productId: Types.ObjectId;
-  variantId?: Types.ObjectId;
+  variantId?: Types.ObjectId | string | null;
   productSnapshot: ProductSnapshot;
   quantity: number;
   unitPrice: number;

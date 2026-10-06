@@ -39,12 +39,12 @@
           @if (cart?.items?.length) {
           <!-- Danh sách sản phẩm trong giỏ -->
           <ul class="cart-list">
-            @for (cartItem of cart?.items; track cartItem.id; let last = $last) {
+            @for (cartItem of cart?.items; track getCartItemId(cartItem); let last = $last) {
             <li class="cart-items" [class.cart-last-item]="last" [class.is-out-of-stock]="isItemOutOfStock(cartItem)">
 
               <!-- Checkbox chọn sản phẩm -->
               <div class="cart-item-checkbox">
-                <mat-checkbox [checked]="isSelected(cartItem.id)" [disabled]="isItemOutOfStock(cartItem)"
+                <mat-checkbox [checked]="isSelected(getCartItemId(cartItem))" [disabled]="isItemOutOfStock(cartItem)"
                   (change)="toggleSelectItem(cartItem)" color="primary">
                 </mat-checkbox>
               </div>
@@ -83,23 +83,23 @@
                 <div class="cart-item-actions-row">
                   <div class="cart-qty-control">
                     <button type="button" class="qty-btn qty-btn-minus"
-                      [disabled]="isItemOutOfStock(cartItem) || updatingItemId === cartItem.id"
+                      [disabled]="isItemOutOfStock(cartItem) || updatingItemId === getCartItemId(cartItem)"
                       (click)="decreaseQuantity(cartItem); $event.stopPropagation()" title="Giảm số lượng">
                       −
                     </button>
                     <input type="number" class="qty-input" [value]="cartItem.qty" [min]="1"
                       [max]="getItemStock(cartItem)"
-                      [disabled]="isItemOutOfStock(cartItem) || updatingItemId === cartItem.id"
+                      [disabled]="isItemOutOfStock(cartItem) || updatingItemId === getCartItemId(cartItem)"
                       (blur)="onQuantityInputChange(cartItem, $event)"
                       (keyup.enter)="onQuantityInputChange(cartItem, $event)" (click)="$event.stopPropagation()" />
                     <button type="button" class="qty-btn qty-btn-plus"
-                      [disabled]="cartItem.qty >= getItemStock(cartItem) || isItemOutOfStock(cartItem) || updatingItemId === cartItem.id"
+                      [disabled]="cartItem.qty >= getItemStock(cartItem) || isItemOutOfStock(cartItem) || updatingItemId === getCartItemId(cartItem)"
                       (click)="increaseQuantity(cartItem); $event.stopPropagation()" title="Tăng số lượng">
                       +
                     </button>
                   </div>
 
-                  <button type="button" class="cart-remove-btn" [disabled]="updatingItemId === cartItem.id"
+                  <button type="button" class="cart-remove-btn" [disabled]="updatingItemId === getCartItemId(cartItem)"
                     (click)="removeSingleItem(cartItem); $event.stopPropagation()" title="Xóa khỏi giỏ hàng">
                     <span>Xóa</span>
                   </button>
@@ -272,7 +272,7 @@
             </div>
             <h3 class="cart-empty-heading">Giỏ hàng đang trống</h3>
             <p class="cart-empty-subtext">Bạn chưa có sản phẩm nào trong giỏ hàng.</p>
-            <a [routerLink]="['/' + (lang$ | async) + '/product/all']" class="btn-continue-shopping">
+            <a [routerLink]="['/' + (lang$ | async) + '/product/all']" (click)="goToProducts($event)" class="btn-continue-shopping">
               Tiếp tục mua sắm
             </a>
           </div>
@@ -536,11 +536,11 @@
               <app-card [price]="getFinalTotal(cart) | priceFormat" [currency]="currency$ | async"
                 [loading]="loading$ | async" (scrollToTop)="scrollToTop()" (payWithCardEmit)="payWithCard($event)">
               </app-card>
-              } @else if ((currency$ | async); as currency) {
+              } @else {
               <button mat-raised-button color="primary" type="submit" class="submit-order-button"
                 [disabled]="orderForm.invalid || selectedItemIds.size === 0 || paymentMethodControl.invalid"
-                (click)="submit(currency)">
-                Hoàn tất đặt hàng ({{ getFinalTotal(cart) | priceFormat }} {{ currency$ | async }})
+                (click)="submit()">
+                Hoàn tất đặt hàng ({{ getFinalTotal(cart) | priceFormat }} {{ (currency$ | async) || 'đ' }})
               </button>
               }
               <div>

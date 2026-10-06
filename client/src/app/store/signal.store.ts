@@ -319,7 +319,7 @@ export class SignalStore {
     );
   };
 
-  makeOrder = (payload) => {
+  makeOrder = (payload: any, callback?: (response: any) => void) => {
     this.selectors.productState.update((state) => ({ ...state, loading: true }));
     this.apiService.makeOrder(payload).subscribe((response: any) => {
       const errorMsg = response?.error || (!response ? 'ORDER_SUBMIT_ERROR' : '');
@@ -330,6 +330,7 @@ export class SignalStore {
           error: typeof errorMsg === 'string' ? errorMsg : (errorMsg.message || 'ORDER_SUBMIT_ERROR'),
           loading: false,
         }));
+        if (callback) callback(response);
         return;
       }
       this.selectors.productState.update((state) => ({
@@ -339,10 +340,11 @@ export class SignalStore {
         error: '',
         loading: false,
       }));
+      if (callback) callback(response);
     });
   };
 
-  makeOrderWithPayment = (payload) => {
+  makeOrderWithPayment = (payload: any, callback?: (response: any) => void) => {
     this.selectors.productState.update((state) => ({ ...state, loading: true }));
     this.apiService.handleToken(payload).subscribe((response: any) => {
       const errorMsg = response?.error || (!response ? 'ORDER_SUBMIT_ERROR' : '');
@@ -353,6 +355,7 @@ export class SignalStore {
           error: typeof errorMsg === 'string' ? errorMsg : (errorMsg.message || 'ORDER_SUBMIT_ERROR'),
           loading: false,
         }));
+        if (callback) callback(response);
         return;
       }
       this.selectors.productState.update((state) => ({
@@ -362,6 +365,7 @@ export class SignalStore {
         error: '',
         loading: false,
       }));
+      if (callback) callback(response);
     });
   };
 

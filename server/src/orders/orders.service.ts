@@ -792,11 +792,19 @@ export class OrdersService {
 
     // Chuẩn hóa shippingAddress đảm bảo lưu đầy đủ code + name + addressDetail
     const rawAddr = (orderDto as any).shippingAddress || (orderDto as any).addresses?.[0] || {};
+    const fullAddrString = [
+      rawAddr.addressDetail || rawAddr.address || rawAddr.line1,
+      rawAddr.wardName || rawAddr.ward,
+      rawAddr.districtName || rawAddr.district,
+      rawAddr.provinceName || rawAddr.province || rawAddr.city
+    ].filter(Boolean).join(', ');
+
     const normalizedShippingAddress = {
       fullName: rawAddr.fullName || rawAddr.name || (orderDto as any).name || (user as any)?.fullName || (user as any)?.name || '',
       phone: rawAddr.phone || orderDto.customerPhone || (orderDto as any).phone || (user as any)?.phoneNumber || '',
-      address: rawAddr.addressDetail || rawAddr.address || rawAddr.line1 || '',
+      address: rawAddr.fullAddress || fullAddrString || rawAddr.addressDetail || rawAddr.address || '',
       addressDetail: rawAddr.addressDetail || rawAddr.address || rawAddr.line1 || '',
+      fullAddress: rawAddr.fullAddress || fullAddrString,
       provinceCode: String(rawAddr.provinceCode || ''),
       provinceName: rawAddr.provinceName || rawAddr.province || rawAddr.city || '',
       province: rawAddr.provinceName || rawAddr.province || rawAddr.city || '',
@@ -881,10 +889,45 @@ export class OrdersService {
         image: product.mainImage?.url || product.image || (Array.isArray(product.images) && (product.images[0]?.url || product.images[0])) || '',
       };
 
+      let matchedVariantDocId: Types.ObjectId | null = null;
       if (variantId) {
-        const variant = await this.variantModel.findById(variantId).lean() as any;
+        const vIdStr = String(variantId).trim();
+        const isObjectId = isValidObjectId(vIdStr);
+        let variant: any = null;
+
+        // 1. Thử tìm theo _id nếu là ObjectId hợp lệ
+        if (isObjectId) {
+          variant = await this.variantModel.findById(vIdStr).lean() as any;
+        }
+
+        // 2. Thử tìm theo SKU (hoặc _id) trong ProductVariant collection
+        if (!variant) {
+          variant = await this.variantModel.findOne({
+            $or: [
+              { sku: vIdStr },
+              ...(isObjectId ? [{ _id: new Types.ObjectId(vIdStr) }] : []),
+            ],
+            ...(product?._id ? { productId: product._id } : {}),
+          }).lean() as any;
+        }
+        if (!variant) {
+          variant = await this.variantModel.findOne({ sku: vIdStr }).lean() as any;
+        }
+
+        // 3. Fallback: tìm trong mảng variants nhúng của product
+        if (!variant && Array.isArray(product.variants) && product.variants.length > 0) {
+          variant = product.variants.find((v: any) =>
+            (v._id && String(v._id) === vIdStr) ||
+            (v.id && String(v.id) === vIdStr) ||
+            (v.sku && String(v.sku) === vIdStr)
+          );
+        }
+
         if (variant) {
-          availableQty = variant.stock !== undefined ? variant.stock : 0;
+          if (variant._id && isValidObjectId(String(variant._id))) {
+            matchedVariantDocId = new Types.ObjectId(String(variant._id));
+          }
+          availableQty = variant.stock !== undefined ? variant.stock : (variant.quantity || 0);
           unitPrice = variant.discountPrice || variant.price || unitPrice;
           snapshot.variant = {
             color: variant.color || '',
@@ -903,9 +946,12 @@ export class OrdersService {
         throw new Error(`Sản phẩm "${snapshot.title || 'Sản phẩm'}" chỉ còn ${availableQty} sản phẩm trong kho.`);
       }
 
+      const finalVariantId = matchedVariantDocId
+        || (variantId && isValidObjectId(String(variantId)) ? new Types.ObjectId(String(variantId)) : (variantId ? String(variantId) : null));
+
       orderItems.push({
         productId: new Types.ObjectId(productId.toString()),
-        variantId: variantId ? new Types.ObjectId(variantId.toString()) : null,
+        variantId: finalVariantId,
         productSnapshot: snapshot,
         quantity,
         unitPrice,
@@ -920,9 +966,29 @@ export class OrdersService {
   private async decreaseStock(items: any[]) {
     for (const item of items) {
       if (item.variantId) {
-        await this.variantModel.findByIdAndUpdate(item.variantId, {
-          $inc: { stock: -item.quantity },
-        });
+        const vIdStr = String(item.variantId).trim();
+        let updated = false;
+
+        if (isValidObjectId(vIdStr)) {
+          const res = await this.variantModel.findByIdAndUpdate(vIdStr, {
+            $inc: { stock: -item.quantity },
+          });
+          if (res) updated = true;
+        }
+
+        if (!updated) {
+          const res = await this.variantModel.findOneAndUpdate(
+            { sku: vIdStr },
+            { $inc: { stock: -item.quantity } },
+          );
+          if (res) updated = true;
+        }
+
+        if (item.productId) {
+          await this.productModel.findByIdAndUpdate(item.productId, {
+            $inc: { quantity: -item.quantity },
+          });
+        }
       } else if (item.productId) {
         await this.productModel.findByIdAndUpdate(item.productId, {
           $inc: { quantity: -item.quantity },

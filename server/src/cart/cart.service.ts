@@ -64,6 +64,19 @@ export class CartService {
         );
       }
 
+      if (!variant && (raw.selectedClassification || raw.selectedColor || raw.selectedSize)) {
+        variant = variants.find((v: any) => {
+          const mClass = !raw.selectedClassification || v.classification === raw.selectedClassification;
+          const mColor = !raw.selectedColor || v.color === raw.selectedColor;
+          const mSize = !raw.selectedSize || v.size === raw.selectedSize;
+          return mClass && mColor && mSize;
+        });
+      }
+
+      if (!variant && variants.length > 0 && !rawVarId) {
+        variant = variants[0];
+      }
+
       const targetVarId = variant
         ? (variant._id?.toString() || variant.id || variant.sku)
         : rawVarId;
@@ -77,7 +90,7 @@ export class CartService {
         const ciVarId = (ci.variantId !== undefined && ci.variantId !== null && ci.variantId !== '')
           ? String(ci.variantId).trim()
           : null;
-        return ciProdId === prodId && ciVarId === normalizedTargetVarId;
+        return (ci.id === cartItemId) || (ciProdId === prodId && ciVarId === normalizedTargetVarId);
       });
 
       if (existing) {
@@ -112,7 +125,9 @@ export class CartService {
       const existing = dbItems.find(
         (di: any) => {
           const diProdId = di.productId?.toString();
-          const diVarId = di.variantId ? di.variantId.toString().trim() : null;
+          const diVarId = (di.variantId !== undefined && di.variantId !== null && di.variantId !== '')
+            ? String(di.variantId).trim()
+            : null;
           return diProdId === prodId && diVarId === varId;
         },
       );
@@ -121,8 +136,11 @@ export class CartService {
       } else {
         dbItems.push({
           productId: isValidObjectId(prodId) ? new Types.ObjectId(prodId) : prodId,
-          variantId: (varId && isValidObjectId(varId)) ? new Types.ObjectId(varId) : null,
+          variantId: varId,
           quantity: qty,
+          selectedClassification: ci.selectedClassification || null,
+          selectedColor: ci.selectedColor || null,
+          selectedSize: ci.selectedSize || null,
         });
       }
     }
@@ -263,20 +281,20 @@ export class CartService {
       activeCart = this.getGuestCart(session, guestCartId);
     }
 
+    const cartItemId = normalizedTargetVarId ? `${productId}_${normalizedTargetVarId}` : productId;
+
     // Check existing quantity using strict productId + variantId identity
     const existingItem = (activeCart.items || []).find((ci: any) => {
       const pId = this.extractProductId(ci.id, ci);
       const ciVarId = (ci.variantId !== undefined && ci.variantId !== null && ci.variantId !== '')
         ? String(ci.variantId).trim()
         : null;
-      return pId === productId && ciVarId === normalizedTargetVarId;
+      return (ci.id === cartItemId) || (pId === productId && ciVarId === normalizedTargetVarId);
     });
     const currentQty = existingItem ? (Number(existingItem.qty) || 0) : 0;
     if (currentQty + qtyToAdd > maxStock) {
       throw new BadRequestException(`Số lượng trong giỏ hàng đã đạt giới hạn tồn kho (${maxStock})`);
     }
-
-    const cartItemId = normalizedTargetVarId ? `${productId}_${normalizedTargetVarId}` : productId;
 
     activeCart.add(product, cartItemId, {
       variantId: normalizedTargetVarId,

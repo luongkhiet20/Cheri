@@ -39,12 +39,6 @@
   box-sizing: border-box;
 }
 
-/* Khi giỏ hàng trống, căn giữa đơn lẻ */
-:host .cart-with-order.is-empty {
-  display: flex;
-  justify-content: center;
-}
-
 /* ── KHỐI 1: GIỎ HÀNG (BÊN TRÁI) ── */
 :host .cart-wrap {
   background: #ffffff;
@@ -1105,58 +1099,85 @@
 
 /* ── TRẠNG THÁI GIỎ HÀNG TRỐNG TRONG KHỐI 1 ── */
 :host .cart-wrap.cart-wrap--empty {
-  max-width: 580px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
 }
 
-:host .cart-empty-block {
-  padding: 8px 0 16px;
-  text-align: center;
-}
-
-:host .cart-empty-block .cart-main-title {
-  margin-bottom: 24px;
+:host .cart-header-box.cart-header-box--empty {
+  margin-bottom: 0;
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--cheri-border, #E5E0E0);
 }
 
-:host .cart-empty-inner {
+:host .cart-empty-inside {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 24px 16px 20px;
-}
-
-:host .cart-empty-text {
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 500;
-  color: #374151;
-  margin: 0 0 20px 0;
-  line-height: 1.5;
   text-align: center;
+  padding: 44px 20px 36px;
+  box-sizing: border-box;
 }
 
+:host .cart-empty-icon-wrap {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: #FFF5F5;
+  border: 1px solid #FEE2E2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+:host .cart-empty-svg {
+  width: 36px;
+  height: 36px;
+  color: #74070E;
+}
+
+:host .cart-empty-heading {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 600;
+  color: #1F2937;
+  margin: 0 0 6px 0;
+  line-height: 1.4;
+}
+
+:host .cart-empty-subtext {
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  color: #6B7280;
+  margin: 0 0 24px 0;
+  line-height: 1.5;
+}
+
+:host .btn-continue-shopping,
 :host .btn-explore-store {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background-color: var(--cheri-primary, #74070E);
   color: #ffffff;
   text-decoration: none;
-  padding: 10px 24px;
-  border-radius: 4px;
+  padding: 10px 28px;
+  border-radius: 6px;
   font-family: inherit;
   font-weight: 500;
   font-size: 13.5px;
   line-height: 1.4;
-  text-transform: none;
-  transition: background-color 0.2s ease;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
   box-sizing: border-box;
-  text-align: center;
 }
 
+:host .btn-continue-shopping:hover,
 :host .btn-explore-store:hover {
   background-color: var(--cheri-primary-hover, #5C050B);
+  box-shadow: 0 2px 6px rgba(116, 7, 14, 0.2);
 }
 
 

@@ -6,30 +6,20 @@
     @if (cart$ | async; as cart) {
 
     <div class="cart">
-      <div class="cart-with-order" [class.is-empty]="!cart?.items?.length">
+      <div class="cart-with-order">
 
         <!-- ═══════════════════════════════════════════════════
              KHỐI 1: GIỎ HÀNG (BÊN TRÁI)
         ═══════════════════════════════════════════════════ -->
         <div class="cart-wrap" [class.cart-wrap--empty]="!cart?.items?.length">
-          @if (!cart?.items?.length) {
-          <!-- Trạng thái khi giỏ hàng trống ngay trong Khối 1 -->
-          <div class="cart-empty-block">
-            <h2 class="cart-main-title">Giỏ hàng</h2>
-            <div class="cart-empty-inner">
-              <p class="cart-empty-text">Giỏ hàng bạn chưa có sản phẩm</p>
-              <a [routerLink]="['/' + (lang$ | async) + '/product']" class="btn-explore-store">
-                Khám phá cửa hàng
-              </a>
-            </div>
-          </div>
-          } @else {
+
           <!-- Tiêu đề & Chọn tất cả toolbar -->
-          <div class="cart-header-box">
+          <div class="cart-header-box" [class.cart-header-box--empty]="!cart?.items?.length">
             <h2 class="cart-main-title">
-              Giỏ hàng <span class="cart-badge-count">({{ cart.items.length }} sản phẩm)</span>
+              Giỏ hàng <span class="cart-badge-count">({{ cart?.items?.length || 0 }} sản phẩm)</span>
             </h2>
 
+            @if (cart?.items?.length) {
             <div class="cart-toolbar">
               <mat-checkbox [checked]="isAllSelected(cart)" [indeterminate]="isIndeterminate(cart)"
                 (change)="toggleSelectAll(cart)" color="primary">
@@ -43,9 +33,10 @@
                 <span>Xóa đã chọn</span>
               </button>
             </div>
+            }
           </div>
 
-          <!-- Danh sách sản phẩm trong giỏ -->
+          @if (cart?.items?.length) {
           <!-- Danh sách sản phẩm trong giỏ -->
           <ul class="cart-list">
             @for (cartItem of cart?.items; track cartItem.id; let last = $last) {
@@ -268,13 +259,30 @@
             </div>
             }
           </div>
+          } @else {
+          <!-- Trạng thái khi giỏ hàng trống (0 sản phẩm) -->
+          <div class="cart-empty-inside">
+            <div class="cart-empty-icon-wrap">
+              <svg class="cart-empty-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="9" cy="21" r="1"></circle>
+                <circle cx="20" cy="21" r="1"></circle>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+              </svg>
+            </div>
+            <h3 class="cart-empty-heading">Giỏ hàng đang trống</h3>
+            <p class="cart-empty-subtext">Bạn chưa có sản phẩm nào trong giỏ hàng.</p>
+            <a [routerLink]="['/' + (lang$ | async) + '/product']" class="btn-continue-shopping">
+              Tiếp tục mua sắm
+            </a>
+          </div>
           }
+
         </div>
 
         <!-- ═══════════════════════════════════════════════════
              KHỐI 2: THÔNG TIN ĐẶT HÀNG (BÊN PHẢI)
         ═══════════════════════════════════════════════════ -->
-        @if (!!cart?.items?.length && !(loading$ | async)) {
+        @if (!(loading$ | async)) {
         <div class="order-form-wrap">
           <h2 class="cart-order-title">Thông tin đặt hàng</h2>
           <mat-horizontal-stepper [linear]="true" #stepper>
@@ -546,20 +554,6 @@
 
         @if ((loading$ | async)) {
         <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-        }
-
-        @if (!cart?.items?.length && order$ | async; as order) {
-        <div class="order-form-wrap">
-          @if (order.outcome.seller_message) { @if (order.outcome.seller_message === 'WITH_PAYMENT') {
-          <div class="pay-success">
-            Thanh toán đơn hàng thành công!
-          </div>
-          } @if (order.outcome.seller_message === 'PAYMENT_ON_DELIVERY') {
-          <div class="pay-success">
-            Đặt hàng thành công!
-          </div>
-          } }
-        </div>
         }
 
       </div>

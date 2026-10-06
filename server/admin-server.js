@@ -3662,6 +3662,82 @@ app.get('/api/users/:id', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản người dùng' });
     }
 
+    // Enrich cart items with Product & ProductVariant info (presentation only, not altering DB)
+    if (user.cart && Array.isArray(user.cart.items) && user.cart.items.length > 0) {
+      const productIds = [];
+      const variantIds = [];
+      for (const item of user.cart.items) {
+        if (item.productId && ObjectId.isValid(item.productId)) {
+          productIds.push(new ObjectId(item.productId));
+        }
+        if (item.variantId && ObjectId.isValid(item.variantId)) {
+          variantIds.push(new ObjectId(item.variantId));
+        }
+      }
+
+      const [products, variants] = await Promise.all([
+        productIds.length > 0
+          ? db.collection('products').find({ _id: { $in: productIds } }).toArray()
+          : [],
+        variantIds.length > 0
+          ? db.collection('product_variants').find({ _id: { $in: variantIds } }).toArray()
+          : [],
+      ]);
+
+      const prodMap = new Map(products.map(p => [p._id.toString(), p]));
+      const varMap = new Map(variants.map(v => [v._id.toString(), v]));
+
+      user.cart.items = user.cart.items.map(item => {
+        const pIdStr = item.productId ? item.productId.toString() : '';
+        const vIdStr = item.variantId ? item.variantId.toString() : '';
+        const product = prodMap.get(pIdStr);
+
+        let variant = varMap.get(vIdStr);
+        if (!variant && product && Array.isArray(product.variants) && product.variants.length > 0) {
+          if (vIdStr) {
+            variant = product.variants.find(v =>
+              (v._id && v._id.toString() === vIdStr) ||
+              v.id === vIdStr ||
+              v.sku === vIdStr
+            );
+          }
+          if (!variant && (item.selectedClassification || item.selectedColor || item.selectedSize)) {
+            variant = product.variants.find(v => {
+              const mClass = !item.selectedClassification || v.classification === item.selectedClassification;
+              const mColor = !item.selectedColor || v.color === item.selectedColor;
+              const mSize = !item.selectedSize || v.size === item.selectedSize;
+              return mClass && mColor && mSize;
+            });
+          }
+        }
+
+        const variantParts = [
+          variant?.classification || item.selectedClassification,
+          variant?.color || item.selectedColor,
+          variant?.size || item.selectedSize,
+        ].filter(Boolean);
+        const variantText = variantParts.length > 0 ? variantParts.join(' - ') : (variant?.sku || '');
+
+        const regularPrice = Number(variant?.price || product?.salePrice || product?.regularPrice || product?.vi?.salePrice || product?.vi?.regularPrice || 0);
+        const discountPrice = Number(variant?.discountPrice || product?.salePrice || product?.vi?.salePrice || 0);
+        const finalPrice = discountPrice > 0 ? discountPrice : regularPrice;
+
+        return {
+          productId: pIdStr,
+          variantId: vIdStr || null,
+          quantity: Math.max(1, Number(item.quantity || item.qty) || 1),
+          title: product ? (product.title || product.vi?.title || product.mainImage?.name || 'Sản phẩm') : 'Sản phẩm không còn tồn tại',
+          image: product ? (product.mainImage?.url || (Array.isArray(product.images) && product.images[0]) || '') : '',
+          sku: variant?.sku || product?.sku || '',
+          variantText: variantText,
+          price: finalPrice,
+          regularPrice: regularPrice,
+          productExists: !!product,
+          variantExists: !vIdStr || !!variant,
+        };
+      });
+    }
+
     res.json({
       success: true,
       data: formatUserResponse(user)

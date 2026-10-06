@@ -463,6 +463,18 @@
             <span class="otp-meta-label">Hình thức thanh toán</span>
             <span class="otp-meta-val otp-meta-val--badge">{{ trackingResult.paymentMethod || 'COD' }}</span>
           </div>
+          @if (trackingResult.paymentStatus) {
+          <div class="otp-meta-row">
+            <span class="otp-meta-label">Trạng thái thanh toán</span>
+            <span class="otp-meta-val">{{ trackingResult.paymentStatus }}</span>
+          </div>
+          }
+          @if (trackingResult.refundedAmount) {
+          <div class="otp-meta-row">
+            <span class="otp-meta-label">Số tiền đã hoàn</span>
+            <span class="otp-meta-val">{{ trackingResult.refundedAmount | priceFormat }} {{ trackingResult.currency || 'VND' }}</span>
+          </div>
+          }
           @if (trackingResult.dateAdded) {
           <div class="otp-meta-row">
             <span class="otp-meta-label">Thời gian tạo đơn</span>

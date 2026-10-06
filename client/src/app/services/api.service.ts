@@ -454,7 +454,7 @@ export class ApiService {
     );
   }
 
-  trackOrder(payload: { orderId?: string; trackingNumber?: string; email?: string; phone?: string }) {
+  trackOrder(payload: { trackingCode?: string; authContact?: string; orderId?: string; trackingNumber?: string; email?: string; phone?: string }) {
     const trackUrl = this.apiUrl + '/api/orders/track';
     return this.http.post(trackUrl, payload, this.getRequestOptions()).pipe(
       map((response: any) => response),

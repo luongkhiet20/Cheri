@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
+import { paymentStatusLabel } from '../orders-report-csv.cjs';
 
 interface StatusOption {
   code: string;
@@ -124,6 +125,10 @@ export class OrderDetailComponent implements OnInit {
   getStatusLabel(code: unknown): string {
     const rawCode = typeof code === 'string' ? code.trim().toUpperCase() : '';
     return this.getStatusMeta(rawCode)?.label || rawCode || '—';
+  }
+
+  getPaymentStatusLabel(status: unknown): string {
+    return paymentStatusLabel(status);
   }
 
   isTransitionAllowed(targetStatus: string): boolean {

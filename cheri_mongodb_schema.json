@@ -1,0 +1,494 @@
+{
+  "database": "cheri",
+  "collections": [
+    {
+      "name": "users",
+      "model": "User",
+      "schemaFile": "server/src/auth/schemas/user.schema.ts",
+      "timestamps": true,
+      "fields": [
+        { "name": "_id", "type": "ObjectId", "description": "Primary Key" },
+        { "name": "googleId", "type": "String", "optional": true },
+        { "name": "email", "type": "String", "required": true, "unique": true, "trim": true, "lowercase": true },
+        { "name": "password", "type": "String", "required": true },
+        { "name": "name", "type": "String", "required": true, "trim": true },
+        { "name": "salt", "type": "String", "required": true },
+        { "name": "fullName", "type": "String", "default": "" },
+        { "name": "phoneNumber", "type": "String", "default": "" },
+        { "name": "gender", "type": "String", "default": "" },
+        { "name": "dateOfBirth", "type": "String", "default": "" },
+        { "name": "address", "type": "String", "default": "" },
+        { "name": "avatar", "type": "String", "default": "" },
+        { "name": "images", "type": "[String]" },
+        { "name": "description", "type": "String", "default": "" },
+        { "name": "roles", "type": "[String]", "required": true, "default": ["user"] },
+        { "name": "status", "type": "Boolean", "required": true, "default": true },
+        {
+          "name": "cart",
+          "type": "Object",
+          "fields": [
+            {
+              "name": "items",
+              "type": "[Object]",
+              "fields": [
+                { "name": "productId", "type": "ObjectId", "ref": "Product" },
+                { "name": "variantId", "type": "ObjectId", "ref": "ProductVariant" },
+                { "name": "quantity", "type": "Number", "default": 1 }
+              ]
+            }
+          ]
+        },
+        { "name": "dateAdded", "type": "Date", "default": "Date.now" },
+        { "name": "createdAt", "type": "Date" },
+        { "name": "updatedAt", "type": "Date" }
+      ]
+    },
+    {
+      "name": "products",
+      "model": "Product",
+      "schemaFile": "server/src/products/schemas/product.schema.ts",
+      "timestamps": true,
+      "fields": [
+        { "name": "_id", "type": "ObjectId" },
+        { "name": "id", "type": "String", "optional": true },
+        { "name": "sku", "type": "String", "unique": true, "sparse": true, "index": true },
+        { "name": "title", "type": "String", "trim": true },
+        { "name": "titleUrl", "type": "String", "required": true, "unique": true, "trim": true, "index": true },
+        { "name": "description", "type": "String", "default": "" },
+        { "name": "descriptionFull", "type": "Array" },
+        { "name": "tags", "type": "[String]" },
+        { "name": "categoryLevel1", "type": "[String]" },
+        { "name": "images", "type": "[String]" },
+        {
+          "name": "mainImage",
+          "type": "Object",
+          "fields": [
+            { "name": "url", "type": "String", "required": true, "trim": true },
+            { "name": "name", "type": "String", "trim": true }
+          ]
+        },
+        { "name": "hasColors", "type": "Boolean", "default": false },
+        { "name": "hasSizes", "type": "Boolean", "default": false },
+        { "name": "hasClassification", "type": "Boolean", "default": false },
+        { "name": "colors", "type": "Array" },
+        { "name": "sizes", "type": "[String]" },
+        { "name": "regularPrice", "type": "Number", "default": 0 },
+        { "name": "salePrice", "type": "Number", "default": 0 },
+        { "name": "quantity", "type": "Number", "default": 0 },
+        { "name": "visibility", "type": "Boolean", "default": true },
+        { "name": "_user", "type": "ObjectId", "ref": "User" },
+        { "name": "rating", "type": "Number", "default": 5 },
+        { "name": "dateAdded", "type": "Date", "default": "Date.now" },
+        {
+          "name": "vi",
+          "type": "Object",
+          "description": "Dynamic language fields for 'vi'",
+          "fields": [
+            { "name": "title", "type": "String" },
+            { "name": "description", "type": "String" },
+            { "name": "descriptionFull", "type": "Array" },
+            { "name": "regularPrice", "type": "Number" },
+            { "name": "salePrice", "type": "Number" },
+            { "name": "onSale", "type": "Boolean" },
+            { "name": "stock", "type": "String" },
+            { "name": "stockDate", "type": "String" },
+            { "name": "visibility", "type": "Boolean" },
+            { "name": "shipping", "type": "String" },
+            { "name": "shippingCost", "type": "Number" },
+            { "name": "productType", "type": "String" },
+            { "name": "hasColors", "type": "Boolean" },
+            { "name": "colors", "type": "Array" },
+            { "name": "hasSizes", "type": "Boolean" },
+            { "name": "sizes", "type": "Array" },
+            { "name": "hasClassification", "type": "Boolean" },
+            { "name": "categoryLevel1", "type": "Mixed" },
+            { "name": "categoryLevel2", "type": "String" },
+            { "name": "quantity", "type": "Number" }
+          ]
+        },
+        { "name": "createdAt", "type": "Date" },
+        { "name": "updatedAt", "type": "Date" }
+      ]
+    },
+    {
+      "name": "product_variants",
+      "model": "ProductVariant",
+      "schemaFile": "server/src/products/schemas/product-variant.schema.ts",
+      "timestamps": true,
+      "fields": [
+        { "name": "_id", "type": "ObjectId" },
+        { "name": "productId", "type": "ObjectId", "required": true, "ref": "Product", "index": true },
+        { "name": "sku", "type": "String", "required": true, "unique": true, "index": true },
+        { "name": "color", "type": "String", "default": "" },
+        { "name": "size", "type": "String", "default": "" },
+        { "name": "classification", "type": "String", "default": "" },
+        { "name": "price", "type": "Number", "required": true, "min": 0, "default": 0 },
+        { "name": "discountPrice", "type": "Number", "min": 0, "default": 0 },
+        { "name": "stock", "type": "Number", "required": true, "min": 0, "default": 0 },
+        { "name": "isActive", "type": "Boolean", "required": true, "default": true },
+        { "name": "createdAt", "type": "Date" },
+        { "name": "updatedAt", "type": "Date" }
+      ]
+    },
+    {
+      "name": "categories",
+      "model": "Category",
+      "schemaFile": "server/src/products/schemas/category.schema.ts",
+      "fields": [
+        { "name": "_id", "type": "ObjectId" },
+        { "name": "titleUrl", "type": "String" },
+        {
+          "name": "mainImage",
+          "type": "Object",
+          "fields": [
+            { "name": "url", "type": "String" },
+            { "name": "name", "type": "String" },
+            { "name": "type", "type": "Boolean" }
+          ]
+        },
+        { "name": "subCategories", "type": "Array" },
+        { "name": "_user", "type": "ObjectId", "ref": "user" },
+        { "name": "dateAdded", "type": "Date" },
+        {
+          "name": "vi",
+          "type": "Object",
+          "fields": [
+            { "name": "title", "type": "String" },
+            { "name": "description", "type": "String" },
+            { "name": "position", "type": "Number" },
+            { "name": "visibility", "type": "Boolean" },
+            { "name": "menuHidden", "type": "Boolean" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "orders",
+      "model": "Order",
+      "schemaFile": "server/src/orders/schemas/order.schema.ts",
+      "timestamps": true,
+      "fields": [
+        { "name": "_id", "type": "ObjectId" },
+        { "name": "orderId", "type": "String", "required": true, "unique": true, "index": true },
+        { "name": "userId", "type": "ObjectId", "ref": "User", "index": true, "default": null },
+        { "name": "_user", "type": "ObjectId", "ref": "User", "default": null },
+        {
+          "name": "customer",
+          "type": "Object",
+          "fields": [
+            { "name": "name", "type": "String", "default": "" },
+            { "name": "email", "type": "String", "default": "" },
+            { "name": "phone", "type": "String", "default": "" }
+          ]
+        },
+        { "name": "customerEmail", "type": "String", "required": true },
+        { "name": "customerPhone", "type": "String", "default": "" },
+        { "name": "status", "type": "String", "enum": ["PENDING", "CONFIRMED", "PROCESSING", "SHIPPING", "DELIVERED", "CANCELLED", "RETURNED"], "default": "PENDING" },
+        { "name": "notes", "type": "String", "default": "" },
+        {
+          "name": "items",
+          "type": "[Object]",
+          "fields": [
+            { "name": "productId", "type": "ObjectId", "required": true, "ref": "Product" },
+            { "name": "variantId", "type": "ObjectId", "ref": "ProductVariant", "default": null },
+            {
+              "name": "productSnapshot",
+              "type": "Object",
+              "fields": [
+                { "name": "title", "type": "String", "required": true },
+                { "name": "sku", "type": "String", "required": true },
+                { "name": "image", "type": "String", "default": "" },
+                {
+                  "name": "variant",
+                  "type": "Object",
+                  "fields": [
+                    { "name": "color", "type": "String", "default": "" },
+                    { "name": "size", "type": "String", "default": "" },
+                    { "name": "classification", "type": "String", "default": "" }
+                  ]
+                }
+              ]
+            },
+            { "name": "quantity", "type": "Number", "required": true, "min": 1 },
+            { "name": "unitPrice", "type": "Number", "required": true, "min": 0 },
+            { "name": "subtotal", "type": "Number", "required": true, "min": 0 }
+          ]
+        },
+        {
+          "name": "shippingAddress",
+          "type": "Object",
+          "fields": [
+            { "name": "fullName", "type": "String", "required": true },
+            { "name": "phone", "type": "String", "required": true },
+            { "name": "address", "type": "String", "required": true },
+            { "name": "ward", "type": "String", "default": "" },
+            { "name": "district", "type": "String", "default": "" },
+            { "name": "province", "type": "String", "default": "" },
+            { "name": "provinceCode", "type": "String", "default": "" },
+            { "name": "provinceName", "type": "String", "default": "" },
+            { "name": "districtCode", "type": "String", "default": "" },
+            { "name": "districtName", "type": "String", "default": "" },
+            { "name": "wardCode", "type": "String", "default": "" },
+            { "name": "wardName", "type": "String", "default": "" },
+            { "name": "addressDetail", "type": "String", "default": "" }
+          ]
+        },
+        {
+          "name": "shipping",
+          "type": "Object",
+          "fields": [
+            { "name": "method", "type": "String", "default": "STANDARD" },
+            { "name": "provider", "type": "String", "default": "" },
+            { "name": "trackingNumber", "type": "String", "default": "" },
+            { "name": "estimatedDeliveryDate", "type": "Date", "default": null },
+            { "name": "shippedAt", "type": "Date", "default": null },
+            { "name": "deliveredAt", "type": "Date", "default": null }
+          ]
+        },
+        { "name": "shippingMethodId", "type": "ObjectId", "ref": "ShippingMethod", "default": null },
+        {
+          "name": "shippingMethodSnapshot",
+          "type": "Object",
+          "fields": [
+            { "name": "name", "type": "String", "required": true },
+            { "name": "code", "type": "String", "required": true },
+            { "name": "fee", "type": "Number", "required": true },
+            { "name": "estimatedDeliveryTime", "type": "String", "default": "" }
+          ]
+        },
+        { "name": "shippingFee", "type": "Number", "default": 0 },
+        { "name": "shippingProvider", "type": "String", "default": "" },
+        { "name": "trackingNumber", "type": "String", "default": "" },
+        { "name": "trackingUrl", "type": "String", "default": "" },
+        { "name": "estimatedDeliveryDate", "type": "Date", "default": null },
+        { "name": "shippedAt", "type": "Date", "default": null },
+        { "name": "deliveredAt", "type": "Date", "default": null },
+        {
+          "name": "payment",
+          "type": "Object",
+          "fields": [
+            { "name": "method", "type": "String", "default": "COD" },
+            { "name": "status", "type": "String", "default": "PENDING" },
+            { "name": "provider", "type": "String", "default": null },
+            { "name": "transactionId", "type": "String", "default": null },
+            { "name": "paidAt", "type": "Date", "default": null },
+            { "name": "refundedAmount", "type": "Number", "default": 0 },
+            { "name": "refundedAt", "type": "Date", "default": null }
+          ]
+        },
+        { "name": "paymentMethodId", "type": "ObjectId", "ref": "PaymentMethod", "default": null },
+        {
+          "name": "paymentMethodSnapshot",
+          "type": "Object",
+          "fields": [
+            { "name": "name", "type": "String", "required": true },
+            { "name": "code", "type": "String", "required": true },
+            { "name": "paymentType", "type": "String", "required": true },
+            { "name": "paymentFee", "type": "Number", "default": 0 }
+          ]
+        },
+        { "name": "paymentStatus", "type": "String", "enum": ["PENDING", "PAID", "FAILED", "REFUNDED", "PARTIALLY_REFUNDED"], "default": "PENDING" },
+        { "name": "transactionId", "type": "String", "default": "" },
+        { "name": "paymentProvider", "type": "String", "default": "" },
+        { "name": "paymentFee", "type": "Number", "default": 0 },
+        { "name": "paidAt", "type": "Date", "default": null },
+        { "name": "refundedAmount", "type": "Number", "default": 0 },
+        { "name": "refundedAt", "type": "Date", "default": null },
+        { "name": "subtotal", "type": "Number", "required": true, "default": 0 },
+        { "name": "discountAmount", "type": "Number", "default": 0 },
+        { "name": "taxAmount", "type": "Number", "default": 0 },
+        { "name": "couponCode", "type": "String", "default": "" },
+        { "name": "couponDiscount", "type": "Number", "default": 0 },
+        { "name": "totalAmount", "type": "Number", "required": true, "default": 0 },
+        { "name": "currency", "type": "String", "default": "VND" },
+        { "name": "amount", "type": "Number", "default": null, "description": "Legacy" },
+        { "name": "cart", "type": "Mixed", "default": null, "description": "Legacy" },
+        { "name": "addresses", "type": "[Mixed]", "default": [], "description": "Legacy" },
+        { "name": "outcome", "type": "Mixed", "default": null, "description": "Legacy" },
+        { "name": "dateAdded", "type": "Date", "default": null, "description": "Legacy" },
+        {
+          "name": "statusHistory",
+          "type": "[Object]",
+          "fields": [
+            { "name": "status", "type": "String" },
+            { "name": "updatedAt", "type": "Date", "default": "Date.now" },
+            { "name": "updatedBy", "type": "ObjectId", "ref": "User" },
+            { "name": "note", "type": "String", "default": "" }
+          ]
+        },
+        {
+          "name": "shippingLogs",
+          "type": "[Object]",
+          "fields": [
+            { "name": "status", "type": "String" },
+            { "name": "location", "type": "String", "default": "" },
+            { "name": "description", "type": "String", "default": "" },
+            { "name": "timestamp", "type": "Date", "default": "Date.now" }
+          ]
+        },
+        { "name": "createdAt", "type": "Date" },
+        { "name": "updatedAt", "type": "Date" }
+      ]
+    },
+    {
+      "name": "shippingmethods",
+      "seedAlias": "shipping_methods",
+      "model": "ShippingMethod",
+      "schemaFile": "server/src/orders/schemas/shipping-method.schema.ts",
+      "timestamps": true,
+      "fields": [
+        { "name": "_id", "type": "ObjectId" },
+        { "name": "name", "type": "String", "required": true, "trim": true },
+        { "name": "code", "type": "String", "required": true, "unique": true, "index": true },
+        { "name": "baseFee", "type": "Number", "default": 0 },
+        { "name": "baseCost", "type": "Number", "default": 0 },
+        { "name": "estimatedDeliveryTime", "type": "String", "default": "" },
+        { "name": "estimatedDays", "type": "String", "default": "" },
+        { "name": "deliveryScope", "type": "String", "enum": ["NATIONWIDE", "SPECIFIC_AREAS"], "default": "NATIONWIDE" },
+        { "name": "coverageArea", "type": "String", "default": "national" },
+        { "name": "deliveryAreas", "type": "[String]", "default": [] },
+        { "name": "freeShippingThreshold", "type": "Number", "default": 0 },
+        {
+          "name": "freeShippingCondition",
+          "type": "Object",
+          "fields": [
+            { "name": "enabled", "type": "Boolean", "default": false },
+            { "name": "minimumOrderValue", "type": "Number", "default": 0 },
+            { "name": "description", "type": "String", "default": "" }
+          ]
+        },
+        { "name": "status", "type": "String", "enum": ["ACTIVE", "INACTIVE"], "default": "ACTIVE" },
+        { "name": "isActive", "type": "Boolean", "default": true },
+        { "name": "description", "type": "String", "default": "" },
+        { "name": "createdAt", "type": "Date" },
+        { "name": "updatedAt", "type": "Date" }
+      ]
+    },
+    {
+      "name": "payment_methods",
+      "model": "PaymentMethod",
+      "schemaFile": "server/src/orders/schemas/payment-method.schema.ts",
+      "timestamps": true,
+      "fields": [
+        { "name": "_id", "type": "ObjectId" },
+        { "name": "name", "type": "String", "required": true, "trim": true },
+        { "name": "code", "type": "String", "required": true, "unique": true, "index": true },
+        { "name": "paymentType", "type": "String", "enum": ["CASH", "E_WALLET", "PAYMENT_GATEWAY", "BANK_TRANSFER"], "default": "CASH" },
+        { "name": "description", "type": "String", "default": "" },
+        {
+          "name": "transactionFee",
+          "type": "Object",
+          "fields": [
+            { "name": "enabled", "type": "Boolean", "default": false },
+            { "name": "type", "type": "String", "enum": ["FIXED", "PERCENTAGE"], "default": "FIXED" },
+            { "name": "value", "type": "Number", "default": 0 }
+          ]
+        },
+        { "name": "logo", "type": "String", "default": "" },
+        { "name": "paymentProofImage", "type": "String", "default": "" },
+        { "name": "status", "type": "String", "enum": ["ACTIVE", "INACTIVE"], "default": "ACTIVE" },
+        { "name": "createdAt", "type": "Date" },
+        { "name": "updatedAt", "type": "Date" }
+      ]
+    },
+    {
+      "name": "coupons",
+      "model": "Coupon",
+      "schemaFile": "server/src/orders/schemas/coupon.schema.ts",
+      "timestamps": true,
+      "fields": [
+        { "name": "_id", "type": "ObjectId" },
+        { "name": "code", "type": "String", "required": true, "unique": true, "uppercase": true },
+        { "name": "description", "type": "String", "default": "" },
+        { "name": "discountType", "type": "String", "enum": ["PERCENTAGE", "FIXED"], "default": "PERCENTAGE" },
+        { "name": "discountValue", "type": "Number", "required": true },
+        { "name": "maxDiscount", "type": "Number", "default": 0 },
+        { "name": "minOrderValue", "type": "Number", "default": 0 },
+        { "name": "startDate", "type": "Date", "default": "Date.now" },
+        { "name": "endDate", "type": "Date", "default": null },
+        { "name": "usageLimit", "type": "Number", "default": 0 },
+        { "name": "usedCount", "type": "Number", "default": 0 },
+        { "name": "isActive", "type": "Boolean", "default": true },
+        { "name": "createdAt", "type": "Date" },
+        { "name": "updatedAt", "type": "Date" }
+      ]
+    },
+    {
+      "name": "translations",
+      "model": "Translation",
+      "schemaFile": "server/src/translations/schemas/translation.schema.ts",
+      "timestamps": true,
+      "fields": [
+        { "name": "_id", "type": "ObjectId" },
+        { "name": "lang", "type": "String", "required": true, "unique": true, "enum": ["vi"], "default": "vi" },
+        { "name": "keys", "type": "Mixed", "default": {} },
+        { "name": "createdAt", "type": "Date" },
+        { "name": "updatedAt", "type": "Date" }
+      ]
+    },
+    {
+      "name": "themes",
+      "model": "Theme",
+      "schemaFile": "server/src/cheri/schemas/theme.schema.ts",
+      "fields": [
+        { "name": "_id", "type": "ObjectId" },
+        { "name": "titleUrl", "type": "String" },
+        { "name": "dateAdded", "type": "Date" },
+        { "name": "active", "type": "Boolean" },
+        { "name": "styles", "type": "Mixed" }
+      ]
+    },
+    {
+      "name": "pages",
+      "model": "Page",
+      "schemaFile": "server/src/cheri/schemas/page.schema.ts",
+      "fields": [
+        { "name": "_id", "type": "ObjectId" },
+        { "name": "titleUrl", "type": "String" },
+        { "name": "dateAdded", "type": "Date" },
+        {
+          "name": "vi",
+          "type": "Object",
+          "fields": [
+            { "name": "title", "type": "String" },
+            { "name": "contentHTML", "type": "String" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "configs",
+      "model": "Config",
+      "schemaFile": "server/src/cheri/schemas/config.schema.ts",
+      "fields": [
+        { "name": "_id", "type": "ObjectId" },
+        { "name": "titleUrl", "type": "String" },
+        { "name": "dateAdded", "type": "Date" },
+        { "name": "active", "type": "Boolean" },
+        {
+          "name": "vi",
+          "type": "Object",
+          "fields": [
+            {
+              "name": "shippingCost",
+              "type": "Object",
+              "fields": [
+                { "name": "basic", "type": "{ cost: Number, limit: Number }" },
+                { "name": "extended", "type": "{ cost: Number, limit: Number }" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "session",
+      "source": "connect-mongo (setAppDB.ts)",
+      "fields": [
+        { "name": "_id", "type": "String", "description": "Session ID (connect.sid)" },
+        { "name": "session", "type": "String/JSON", "description": "Passport auth, session data" },
+        { "name": "expires", "type": "Date", "description": "Expiry time (30 days)" }
+      ]
+    }
+  ]
+}

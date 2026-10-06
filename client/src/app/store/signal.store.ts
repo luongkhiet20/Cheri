@@ -45,15 +45,57 @@ export class SignalStore {
     this.selectors.userState.update((state) => ({ ...state, user: payload, loading: false }));
   };
 
+  mergeGuestCartIfAny = (lang: string = 'vi', callback?: (cart: any) => void) => {
+    const guestItems = this.apiService.getGuestCartLocal();
+    if (guestItems && guestItems.length > 0) {
+      console.log('[Cart] Login detected with guest items. Merging guest cart into user:', guestItems);
+      this.apiService.mergeCart(guestItems, lang).subscribe({
+        next: (res: any) => {
+          const mergedCart = res?.cart || res;
+          if (mergedCart && !mergedCart.error) {
+            this.selectors.productState.update((state) => ({ ...state, cart: mergedCart }));
+          }
+          // XÓA NGAY LẬP TỨC guest cart sau khi merge
+          this.apiService.clearGuestCartLocal();
+          console.log('[Cart] Merge complete. Guest cart cleared.');
+          if (callback) callback(mergedCart);
+        },
+        error: (err) => {
+          console.error('[Cart] Merge error:', err);
+          this.apiService.clearGuestCartLocal();
+          this.getCart(lang);
+          if (callback) callback(null);
+        },
+      });
+    } else {
+      console.log('[Cart] Login with no guest items. Loading user cart from DB.');
+      this.getCart(lang);
+      if (callback) callback(null);
+    }
+  };
+
   signOut = (callback?: () => void) => {
+    console.log('[Cart] signOut triggered: Clearing user and cart state');
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('accessToken');
+        sessionStorage.removeItem('accessToken');
+      } catch {}
+    }
     this.storeUser(null);
-    this.selectors.productState.update((state) => ({ ...state, userOrders: null, order: null }));
+    // Reset ngay lập tức cart trong state bộ nhớ của client để không bị lộ cho user khác hay guest
+    this.selectors.productState.update((state) => ({ ...state, cart: null, userOrders: null, order: null }));
     this.selectors.dashboardState.update((state) => ({ ...state, orders: null, order: null, allProducts: [], allCategories: [] }));
+    this.apiService.clearGuestCartLocal();
+
     this.apiService.signOut().subscribe({
       next: () => {
+        // Tải lại giỏ hàng cho Guest mới (giỏ rỗng)
+        this.getCart('vi');
         if (callback) callback();
       },
       error: () => {
+        this.getCart('vi');
         if (callback) callback();
       }
     });
@@ -182,18 +224,21 @@ export class SignalStore {
   getCart = (payload) => {
     this.apiService.getCart(payload).subscribe((response: any) => {
       this.selectors.productState.update((state) => ({ ...state, cart: response }));
+      this.apiService.saveGuestCartLocal(response);
     });
   };
 
   addToCart = (payload) => {
     this.apiService.addToCart(payload).subscribe((response: any) => {
       this.selectors.productState.update((state) => ({ ...state, cart: response }));
+      this.apiService.saveGuestCartLocal(response);
     });
   };
 
   removeFromCart = (payload) => {
     this.apiService.removeFromCart(payload).subscribe((response: any) => {
       this.selectors.productState.update((state) => ({ ...state, cart: response }));
+      this.apiService.saveGuestCartLocal(response);
     });
   };
 
@@ -202,6 +247,7 @@ export class SignalStore {
       map((response: any) => {
         if (response && !response.error) {
           this.selectors.productState.update((state) => ({ ...state, cart: response }));
+          this.apiService.saveGuestCartLocal(response);
         }
         return response;
       })
@@ -213,6 +259,7 @@ export class SignalStore {
       map((response: any) => {
         if (response && !response.error) {
           this.selectors.productState.update((state) => ({ ...state, cart: response }));
+          this.apiService.saveGuestCartLocal(response);
         }
         return response;
       })
@@ -224,6 +271,7 @@ export class SignalStore {
       map((response: any) => {
         if (response && !response.error) {
           this.selectors.productState.update((state) => ({ ...state, cart: response }));
+          this.apiService.saveGuestCartLocal(response);
         }
         return response;
       })
@@ -240,6 +288,7 @@ export class SignalStore {
         if (response && !response.error) {
           const cartData = response.cart || response;
           this.selectors.productState.update((state) => ({ ...state, cart: cartData }));
+          this.apiService.saveGuestCartLocal(cartData);
         }
         return response;
       }),
@@ -251,6 +300,7 @@ export class SignalStore {
       map((response: any) => {
         if (response && !response.error) {
           this.selectors.productState.update((state) => ({ ...state, cart: response }));
+          this.apiService.saveGuestCartLocal(response);
         }
         return response;
       }),
@@ -262,6 +312,7 @@ export class SignalStore {
       map((response: any) => {
         if (response && !response.error) {
           this.selectors.productState.update((state) => ({ ...state, cart: response }));
+          this.apiService.saveGuestCartLocal(response);
         }
         return response;
       }),
@@ -271,19 +322,21 @@ export class SignalStore {
   makeOrder = (payload) => {
     this.selectors.productState.update((state) => ({ ...state, loading: true }));
     this.apiService.makeOrder(payload).subscribe((response: any) => {
-      if (response.error || !response) {
+      const errorMsg = response?.error || (!response ? 'ORDER_SUBMIT_ERROR' : '');
+      if (errorMsg) {
         this.selectors.productState.update((state) => ({
           ...state,
           order: null,
-          error: 'ORDER_SUBMIT_ERROR',
+          error: typeof errorMsg === 'string' ? errorMsg : (errorMsg.message || 'ORDER_SUBMIT_ERROR'),
           loading: false,
         }));
+        return;
       }
       this.selectors.productState.update((state) => ({
         ...state,
         order: response.result,
         cart: response.cart,
-        error: response.error,
+        error: '',
         loading: false,
       }));
     });
@@ -292,19 +345,21 @@ export class SignalStore {
   makeOrderWithPayment = (payload) => {
     this.selectors.productState.update((state) => ({ ...state, loading: true }));
     this.apiService.handleToken(payload).subscribe((response: any) => {
-      if (response.error || !response) {
+      const errorMsg = response?.error || (!response ? 'ORDER_SUBMIT_ERROR' : '');
+      if (errorMsg) {
         this.selectors.productState.update((state) => ({
           ...state,
           order: null,
-          error: 'ORDER_SUBMIT_ERROR',
+          error: typeof errorMsg === 'string' ? errorMsg : (errorMsg.message || 'ORDER_SUBMIT_ERROR'),
           loading: false,
         }));
+        return;
       }
       this.selectors.productState.update((state) => ({
         ...state,
         order: response.result,
         cart: response.cart,
-        error: response.error,
+        error: '',
         loading: false,
       }));
     });

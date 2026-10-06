@@ -422,33 +422,57 @@
             </mat-step>
 
             <!-- BƯỚC 2: PHƯƠNG THỨC THANH TOÁN -->
-            <mat-step [stepControl]="toggleCard">
+            <mat-step [stepControl]="paymentMethodControl">
               <ng-template matStepLabel>Phương thức thanh toán</ng-template>
               @if (orderForm.valid) {
-              <mat-radio-group class="delivery-button" [(ngModel)]="toggleCard">
-                <mat-radio-button class="payment-choice" [class.payment-choice--active]="toggleCard" [value]="true">
-                  <span class="flex">
-                    <mat-icon>credit_card</mat-icon>
-                    <span class="margin-left-small">
-                      Thanh toán online qua thẻ
-                      <b>
-                        ({{ getFinalTotal(cart) | priceFormat }} {{ currency$ | async }})
-                      </b>
-                    </span>
-                  </span>
-                </mat-radio-button>
-                <mat-radio-button class="payment-choice" [class.payment-choice--active]="!toggleCard" [value]="false">
-                  <span class="flex">
-                    <mat-icon>local_atm</mat-icon>
-                    <span class="margin-left-small">
-                      Thanh toán khi nhận hàng (COD)
-                    </span>
-                  </span>
-                </mat-radio-button>
-              </mat-radio-group>
+                @if (isLoadingPaymentMethods) {
+                  <div class="payment-methods-loading">
+                    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+                    <span>Đang tải danh sách phương thức thanh toán...</span>
+                  </div>
+                } @else if (paymentMethods.length === 0) {
+                  <div class="payment-methods-empty">
+                    <mat-icon color="warn">error_outline</mat-icon>
+                    <p>Hiện chưa có phương thức thanh toán khả dụng. Vui lòng thử lại sau.</p>
+                  </div>
+                } @else {
+                  <mat-radio-group class="delivery-button" [(ngModel)]="selectedPaymentMethodId" (change)="onPaymentMethodRadioChange($event.value)">
+                    @for (method of paymentMethods; track method._id || method.code) {
+                      <mat-radio-button
+                        class="payment-choice"
+                        [class.payment-choice--active]="isSelectedPaymentMethod(method)"
+                        [value]="method._id || method.code">
+                        <span class="flex items-center payment-choice-inner">
+                          @if (method.logo) {
+                            <img [src]="method.logo" [alt]="method.name" class="payment-choice-logo" />
+                          } @else {
+                            <mat-icon>{{ getPaymentMethodIcon(method) }}</mat-icon>
+                          }
+                          <span class="margin-left-small payment-choice-text">
+                            <span class="payment-choice-name">
+                              {{ method.name }}
+                              <b>
+                                ({{ getFinalTotalForMethod(method, cart) | priceFormat }} {{ currency$ | async }})
+                              </b>
+                            </span>
+                            @if (method.description) {
+                              <span class="payment-choice-desc">{{ method.description }}</span>
+                            }
+                            @if (method.transactionFee?.enabled && method.transactionFee.value > 0) {
+                              <span class="payment-choice-fee">
+                                Phí giao dịch: {{ method.transactionFee.type === 'PERCENTAGE' ? (method.transactionFee.value + '%') : ((method.transactionFee.value | priceFormat) + ' ' + (currency$ | async)) }}
+                              </span>
+                            }
+                          </span>
+                        </span>
+                      </mat-radio-button>
+                    }
+                  </mat-radio-group>
+                }
               }
               <div>
-                <button class="cart-navigation-button" mat-stroked-button matStepperNext>
+                <button class="cart-navigation-button" mat-stroked-button matStepperNext
+                  [disabled]="paymentMethodControl.invalid || paymentMethods.length === 0">
                   Tiếp tục
                 </button>
                 <button class="cart-navigation-button" mat-stroked-button matStepperPrevious>
@@ -488,18 +512,22 @@
                   }
                   <div>Phí vận chuyển: <strong>{{ getShippingFee(cart) === 0 ? 'Miễn phí' : (getShippingFee(cart) |
                       priceFormat) + ' ' + (currency$ | async) }}</strong></div>
+                  @if (getPaymentFee(cart) > 0) {
+                  <div>Phí thanh toán: <strong>{{ getPaymentFee(cart) | priceFormat }} {{ currency$ | async }}</strong></div>
+                  }
+                  <div>Phương thức thanh toán: <strong>{{ getSelectedPaymentMethod()?.name || 'Chưa chọn' }}</strong></div>
                   <div class="recap-total">Tổng tiền: <strong class="color-primary">{{ getFinalTotal(cart) | priceFormat
                       }} {{ currency$ | async }}</strong></div>
                 </div>
               </div>
 
-              @if (toggleCard) {
+              @if (isCardPaymentSelected()) {
               <app-card [price]="getFinalTotal(cart) | priceFormat" [currency]="currency$ | async"
                 [loading]="loading$ | async" (scrollToTop)="scrollToTop()" (payWithCardEmit)="payWithCard($event)">
               </app-card>
-              } @if (!toggleCard && (currency$ | async); as currency) {
+              } @else if ((currency$ | async); as currency) {
               <button mat-raised-button color="primary" type="submit" class="submit-order-button"
-                [disabled]="orderForm.invalid || selectedItemIds.size === 0" (click)="submit(currency)">
+                [disabled]="orderForm.invalid || selectedItemIds.size === 0 || paymentMethodControl.invalid" (click)="submit(currency)">
                 Hoàn tất đặt hàng ({{ getFinalTotal(cart) | priceFormat }} {{ currency$ | async }})
               </button>
               }

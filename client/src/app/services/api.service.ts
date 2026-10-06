@@ -40,12 +40,73 @@ export class ApiService {
     }
   }
 
+  public getOrCreateGuestCartId(): string {
+    if (!isPlatformBrowser(this.platformId)) return '';
+    try {
+      let guestId = localStorage.getItem('cheri_guest_cart_id');
+      if (!guestId) {
+        guestId = 'guest_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
+        localStorage.setItem('cheri_guest_cart_id', guestId);
+      }
+      return guestId;
+    } catch {
+      return '';
+    }
+  }
+
+  public getGuestCartLocal(): any[] {
+    if (!isPlatformBrowser(this.platformId)) return [];
+    try {
+      const saved = localStorage.getItem('cheri_guest_cart');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {}
+    return [];
+  }
+
+  public saveGuestCartLocal(cartData: any): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    try {
+      const token = localStorage.getItem(accessTokenKey);
+      // Chỉ lưu vào guest storage khi người dùng CHƯA đăng nhập
+      if (token && token !== 'null' && token !== 'undefined' && token.trim() !== '') {
+        return;
+      }
+      if (cartData && Array.isArray(cartData.items)) {
+        const items = cartData.items.map((ci: any) => ({
+          productId: ci.item?._id || ci.item?.id || (ci.id && ci.id.includes('_') ? ci.id.split('_')[0] : ci.id),
+          variantId: ci.variantId || null,
+          quantity: ci.qty || 1,
+          selectedClassification: ci.selectedClassification || null,
+          selectedColor: ci.selectedColor || null,
+          selectedSize: ci.selectedSize || null,
+        }));
+        localStorage.setItem('cheri_guest_cart', JSON.stringify(items));
+      }
+    } catch {}
+  }
+
+  public clearGuestCartLocal(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    try {
+      localStorage.removeItem('cheri_guest_cart');
+      localStorage.removeItem('cheri_guest_cart_id');
+    } catch {}
+  }
+
   public getRequestOptions() {
     let headers = new HttpHeaders();
     if (isPlatformBrowser(this.platformId)) {
       const accessToken = localStorage.getItem(accessTokenKey);
       if (accessToken && accessToken !== 'null' && accessToken !== 'undefined' && accessToken.trim() !== '') {
         headers = headers.set('Authorization', 'Bearer ' + accessToken);
+      } else {
+        const guestId = this.getOrCreateGuestCartId();
+        if (guestId) {
+          headers = headers.set('x-guest-cart-id', guestId);
+        }
       }
     }
     headers = headers.set('lang', this.currentLang || 'vi');
@@ -588,6 +649,14 @@ export class ApiService {
     const randomNum = '&random=' + this.ranNumber;
     const url = `${this.apiUrl}/api/cart/select-all?selected=${selected}&lang=${lang}${randomNum}`;
     return this.http.get(url, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  mergeCart(guestItems: any[], lang = 'vi') {
+    const url = `${this.apiUrl}/api/cart/merge?lang=${lang}`;
+    return this.http.post(url, { items: guestItems }, this.getRequestOptions()).pipe(
       map((response: any) => response),
       catchError((error: Error) => of({ error })),
     );

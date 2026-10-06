@@ -3,12 +3,12 @@ import { Router } from '@angular/router';
 import { filter, take, withLatestFrom } from 'rxjs/operators';
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Location } from '@angular/common';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, FormControl, Validators } from '@angular/forms';
 import { Observable, Subscription } from 'rxjs';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { TranslateService } from '../../../../services/translate.service';
-import { Cart, User, Order } from '../../../shared/models';
+import { Cart, User, Order, PaymentMethod } from '../../../shared/models';
 import { SignalStore } from '../../../../store/signal.store';
 import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
 import { ApiService } from '../../../../services/api.service';
@@ -51,8 +51,14 @@ export class CartComponent implements OnInit, OnDestroy {
   user$: Observable<User>;
   orderForm: FormGroup;
   currency$: Observable<string>;
-  toggleCard = false;
   productUrl: string;
+
+  // ─── 9. PHƯƠNG THỨC THANH TOÁN (TỪ DATABASE QUA API) ───
+  paymentMethods: PaymentMethod[] = [];
+  isLoadingPaymentMethods = false;
+  selectedPaymentMethodId = '';
+  paymentMethodControl = new FormControl<string>('', { nonNullable: true, validators: [Validators.required] });
+  private readonly paymentStorageKey = 'cheri_cart_payment_method';
   loading$: Observable<boolean>;
   error$: Observable<string>;
 
@@ -162,13 +168,23 @@ export class CartComponent implements OnInit, OnDestroy {
     ).subscribe(([order, lang]) => {
       this.router.navigate(['/' + lang + '/cart/summary']);
     });
+
+    this.error$.pipe(filter((err) => !!err)).subscribe((err) => {
+      const msg = typeof err === 'string' ? err : 'Đặt hàng thất bại. Vui lòng thử lại.';
+      if (typeof window !== 'undefined') {
+        this.snackBar.open(msg, 'Đóng', { duration: 4000 });
+      }
+    });
   }
 
   ngOnInit(): void {
-    this.loadProvinces();
+    this.loadProvinces(() => {
+      this.autoFillUserData();
+    });
     this.autoFillUserData();
     this.restoreSelectionFromStorage();
     this.loadShippingMethods();
+    this.loadPaymentMethods();
 
     // Theo dõi giỏ hàng để cập nhật trạng thái chọn
     this.cartSub = this.cart$.subscribe((cart) => {
@@ -196,11 +212,40 @@ export class CartComponent implements OnInit, OnDestroy {
     }
   }
 
+  // ─── SAFE STORAGE HELPERS (SSR-FRIENDLY) ───
+
+  private getStorageItem(key: string): string | null {
+    if (typeof localStorage === 'undefined') return null;
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  }
+
+  private setStorageItem(key: string, value: string): void {
+    if (typeof localStorage === 'undefined') return;
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // Bỏ qua lỗi storage
+    }
+  }
+
+  private removeStorageItem(key: string): void {
+    if (typeof localStorage === 'undefined') return;
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // Bỏ qua lỗi storage
+    }
+  }
+
   // ─── PHẦN 1: CHỌN SẢN PHẨM & CHECKBOX SELECTION ───
 
   private restoreSelectionFromStorage(): void {
     try {
-      const saved = localStorage.getItem(this.storageKey);
+      const saved = this.getStorageItem(this.storageKey);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
@@ -214,7 +259,7 @@ export class CartComponent implements OnInit, OnDestroy {
 
   private saveSelectionToStorage(): void {
     try {
-      localStorage.setItem(this.storageKey, JSON.stringify(Array.from(this.selectedItemIds)));
+      this.setStorageItem(this.storageKey, JSON.stringify(Array.from(this.selectedItemIds)));
     } catch {
       // Bỏ qua lỗi storage
     }
@@ -958,7 +1003,7 @@ export class CartComponent implements OnInit, OnDestroy {
   }
 
   private syncSelectedShippingMethod(): void {
-    const saved = localStorage.getItem(this.shippingStorageKey);
+    const saved = this.getStorageItem(this.shippingStorageKey);
     const hasSaved =
       saved &&
       this.shippingMethods.some(
@@ -983,7 +1028,7 @@ export class CartComponent implements OnInit, OnDestroy {
   private saveShippingMethodToStorage(): void {
     try {
       if (this.selectedShippingMethodId) {
-        localStorage.setItem(this.shippingStorageKey, this.selectedShippingMethodId);
+        this.setStorageItem(this.shippingStorageKey, this.selectedShippingMethodId);
       }
     } catch {
       // Bỏ qua lỗi storage
@@ -1048,12 +1093,148 @@ export class CartComponent implements OnInit, OnDestroy {
     return Math.min(discount, subtotal);
   }
 
+  // ─── PHẦN 9: PHƯƠNG THỨC THANH TOÁN LOGIC (DATABASE API) ───
+
+  loadPaymentMethods(): void {
+    this.isLoadingPaymentMethods = true;
+    this.apiService.getPaymentMethods().subscribe({
+      next: (res: any) => {
+        this.isLoadingPaymentMethods = false;
+        const methods = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+        // CHỈ hiển thị các phương thức có status === 'ACTIVE'
+        this.paymentMethods = methods.filter((m: any) => m.status === 'ACTIVE');
+        this.syncSelectedPaymentMethod();
+      },
+      error: () => {
+        this.isLoadingPaymentMethods = false;
+        this.paymentMethods = [];
+        this.syncSelectedPaymentMethod();
+      },
+    });
+  }
+
+  private syncSelectedPaymentMethod(): void {
+    const saved = this.getStorageItem(this.paymentStorageKey);
+    const hasSaved =
+      saved &&
+      this.paymentMethods.some(
+        (m) => m._id === saved || m.code === saved,
+      );
+
+    if (hasSaved) {
+      const matched = this.paymentMethods.find(
+        (m) => m._id === saved || m.code === saved,
+      );
+      this.selectedPaymentMethodId = matched ? (matched._id || matched.code) : saved;
+    } else if (this.paymentMethods.length > 0) {
+      // Ưu tiên chọn COD nếu có trong danh sách active, nếu không chọn phương thức đầu tiên
+      const cod = this.paymentMethods.find((m) => m.code === 'COD');
+      this.selectedPaymentMethodId = cod ? (cod._id || cod.code) : (this.paymentMethods[0]._id || this.paymentMethods[0].code);
+    } else {
+      this.selectedPaymentMethodId = '';
+    }
+
+    this.paymentMethodControl.setValue(this.selectedPaymentMethodId);
+    if (this.selectedPaymentMethodId) {
+      this.savePaymentMethodToStorage();
+    }
+  }
+
+  private savePaymentMethodToStorage(): void {
+    try {
+      if (this.selectedPaymentMethodId) {
+        this.setStorageItem(this.paymentStorageKey, this.selectedPaymentMethodId);
+      }
+    } catch {
+      // Bỏ qua lỗi storage
+    }
+  }
+
+  isSelectedPaymentMethod(method: PaymentMethod): boolean {
+    if (!method || !this.selectedPaymentMethodId) return false;
+    return (
+      this.selectedPaymentMethodId === method._id ||
+      this.selectedPaymentMethodId === method.code
+    );
+  }
+
+  selectPaymentMethod(method: PaymentMethod): void {
+    if (!method) return;
+    this.selectedPaymentMethodId = method._id || method.code;
+    this.paymentMethodControl.setValue(this.selectedPaymentMethodId);
+    this.savePaymentMethodToStorage();
+  }
+
+  onPaymentMethodRadioChange(value: string): void {
+    this.selectedPaymentMethodId = value;
+    this.paymentMethodControl.setValue(value);
+    this.savePaymentMethodToStorage();
+  }
+
+  getSelectedPaymentMethod(): PaymentMethod | undefined {
+    if (!this.paymentMethods.length) return undefined;
+    return (
+      this.paymentMethods.find((m) => this.isSelectedPaymentMethod(m)) ||
+      this.paymentMethods[0]
+    );
+  }
+
+  getPaymentMethodIcon(method: PaymentMethod): string {
+    if (!method) return 'payment';
+    switch (method.paymentType) {
+      case 'CASH':
+        return 'local_atm';
+      case 'PAYMENT_GATEWAY':
+        return 'credit_card';
+      case 'BANK_TRANSFER':
+        return 'account_balance';
+      case 'E_WALLET':
+        return 'account_balance_wallet';
+      default:
+        return 'payment';
+    }
+  }
+
+  calculateMethodFee(method: PaymentMethod | undefined, cart: Cart): number {
+    if (!method?.transactionFee?.enabled) return 0;
+    const subtotal = this.getSelectedSubtotal(cart);
+    if (method.transactionFee.type === 'PERCENTAGE') {
+      return Math.round((subtotal * method.transactionFee.value) / 100);
+    }
+    return method.transactionFee.value || 0;
+  }
+
+  getPaymentFee(cart: Cart): number {
+    const method = this.getSelectedPaymentMethod();
+    return this.calculateMethodFee(method, cart);
+  }
+
+  getFinalTotalForMethod(method: PaymentMethod, cart: Cart): number {
+    const subtotal = this.getSelectedSubtotal(cart);
+    if (subtotal === 0 || !cart?.items?.length) return 0;
+    const shipping = this.getShippingFee(cart);
+    const paymentFee = this.calculateMethodFee(method, cart);
+    const discount = this.getDiscountAmount(cart);
+    return Math.max(0, subtotal + shipping + paymentFee - discount);
+  }
+
   getFinalTotal(cart: Cart): number {
     const subtotal = this.getSelectedSubtotal(cart);
     if (subtotal === 0 || !cart?.items?.length) return 0;
     const shipping = this.getShippingFee(cart);
+    const paymentFee = this.getPaymentFee(cart);
     const discount = this.getDiscountAmount(cart);
-    return Math.max(0, subtotal + shipping - discount);
+    return Math.max(0, subtotal + shipping + paymentFee - discount);
+  }
+
+  isCardPaymentSelected(): boolean {
+    const method = this.getSelectedPaymentMethod();
+    if (!method) return false;
+    return (
+      method.code === 'STRIPE' ||
+      method.code === 'CARD' ||
+      method.paymentType === 'PAYMENT_GATEWAY'
+    );
   }
 
   // ─── PHẦN 6: MÃ GIẢM GIÁ (COUPON) ───
@@ -1137,6 +1318,16 @@ export class CartComponent implements OnInit, OnDestroy {
 
   // ─── ĐỊA CHỈ & THÔNG TIN ĐẶT HÀNG ───
 
+  private hasResolvedUserAddress = false;
+
+  private cleanUnitName(name: string): string {
+    if (!name) return '';
+    return name
+      .toLowerCase()
+      .replace(/^(thành phố|tỉnh|quận|huyện|thị xã|phường|xã|thị trấn|tp\.|tp|tx\.|q\.|h\.|p\.|x\.|tt\.)\s+/i, '')
+      .trim();
+  }
+
   private autoFillUserData(): void {
     this.user$.pipe(take(1)).subscribe((user: User) => {
       if (user) {
@@ -1153,17 +1344,240 @@ export class CartComponent implements OnInit, OnDestroy {
         if (Object.keys(patchData).length > 0) {
           this.orderForm.patchValue(patchData);
         }
+
+        // Pre-fill an toàn từ users.address nếu người dùng đã lưu địa chỉ mặc định
+        const rawAddress = (user.address || '').trim();
+        if (rawAddress && !this.hasResolvedUserAddress) {
+          this.resolveAndPrefillUserAddress(rawAddress);
+        }
       }
     });
   }
 
-  loadProvinces(): void {
+  private resolveAndPrefillUserAddress(rawAddress: string): void {
+    if (!rawAddress) return;
+    this.hasResolvedUserAddress = true;
+
+    if (this.provinces && this.provinces.length > 0) {
+      this.executeAddressParsing(rawAddress, this.provinces);
+    } else {
+      this.addressService.getProvinces().pipe(take(1)).subscribe({
+        next: (provincesList) => {
+          if (provincesList && provincesList.length > 0) {
+            this.provinces = provincesList;
+            this.executeAddressParsing(rawAddress, provincesList);
+          } else {
+            // Không tải được danh mục tỉnh: giữ nguyên rawAddress trong addressDetail
+            if (!this.orderForm.get('addressDetail')?.value) {
+              this.orderForm.patchValue({ addressDetail: rawAddress });
+            }
+          }
+        },
+        error: () => {
+          if (!this.orderForm.get('addressDetail')?.value) {
+            this.orderForm.patchValue({ addressDetail: rawAddress });
+          }
+        }
+      });
+    }
+  }
+
+  private executeAddressParsing(rawAddress: string, provincesList: AdministrativeUnit[]): void {
+    const trimmed = (rawAddress || '').trim();
+    if (!trimmed || !provincesList || provincesList.length === 0) return;
+
+    // Không can thiệp nếu người dùng đã tự tay chọn tỉnh khác
+    if (this.orderForm.get('provinceCode')?.value) return;
+
+    const lowerAddr = trimmed.toLowerCase();
+
+    // 1. Đối chiếu Tỉnh / Thành phố
+    let matchedProvince: AdministrativeUnit | null = null;
+    let matchedProvIdx = -1;
+    let matchedProvLen = 0;
+
+    for (const p of provincesList) {
+      const full = p.name.toLowerCase();
+      const clean = this.cleanUnitName(p.name);
+
+      const aliases = [full, clean];
+      if (clean === 'hồ chí minh') {
+        aliases.push('tp.hcm', 'tphcm', 'tp hcm', 'sài gòn', 'sai gon');
+      } else if (clean === 'thừa thiên huế') {
+        aliases.push('huế');
+      } else if (clean === 'bà rịa - vũng tàu') {
+        aliases.push('bà rịa vũng tàu', 'vũng tàu');
+      }
+
+      for (const alias of aliases) {
+        if (!alias || alias.length < 2) continue;
+        const idx = lowerAddr.lastIndexOf(alias);
+        if (idx !== -1) {
+          const len = alias.length;
+          if (idx > matchedProvIdx || (idx === matchedProvIdx && len > matchedProvLen)) {
+            matchedProvIdx = idx;
+            matchedProvLen = len;
+            matchedProvince = p;
+          }
+        }
+      }
+    }
+
+    // Nếu không khớp được Tỉnh/Thành phố:
+    // KHÔNG đoán mò, giữ nguyên rawAddress trong addressDetail để user tham khảo, select để trống
+    if (!matchedProvince || matchedProvIdx === -1) {
+      if (!this.orderForm.get('addressDetail')?.value) {
+        this.orderForm.patchValue({ addressDetail: trimmed });
+      }
+      return;
+    }
+
+    // Gán Tỉnh / Thành phố vào form
+    this.orderForm.patchValue({
+      provinceCode: matchedProvince.code,
+      provinceName: matchedProvince.name,
+    });
+
+    // Phần chuỗi địa chỉ nằm trước Tỉnh/Thành phố
+    const remainingAfterProv = trimmed.substring(0, matchedProvIdx).replace(/[,;\s\-]+$/, '').trim();
+
+    this.isDistrictsLoading = true;
+    this.addressService.getDistricts(matchedProvince.code).pipe(take(1)).subscribe({
+      next: (districtsList) => {
+        this.districts = districtsList || [];
+        this.isDistrictsLoading = false;
+        this.orderForm.get('districtCode')?.enable();
+
+        if (!remainingAfterProv || this.districts.length === 0) {
+          if (remainingAfterProv && !this.orderForm.get('addressDetail')?.value) {
+            this.orderForm.patchValue({ addressDetail: remainingAfterProv });
+          }
+          return;
+        }
+
+        const lowerRemProv = remainingAfterProv.toLowerCase();
+        let matchedDistrict: AdministrativeUnit | null = null;
+        let matchedDistIdx = -1;
+        let matchedDistLen = 0;
+
+        for (const d of this.districts) {
+          const fullD = d.name.toLowerCase();
+          const cleanD = this.cleanUnitName(d.name);
+          const aliasesD = [fullD, cleanD];
+
+          for (const alias of aliasesD) {
+            if (!alias || alias.length < 2) continue;
+            const idx = lowerRemProv.lastIndexOf(alias);
+            if (idx !== -1) {
+              const len = alias.length;
+              if (idx > matchedDistIdx || (idx === matchedDistIdx && len > matchedDistLen)) {
+                matchedDistIdx = idx;
+                matchedDistLen = len;
+                matchedDistrict = d;
+              }
+            }
+          }
+        }
+
+        // Nếu không khớp được Quận/Huyện:
+        // Đưa phần còn lại vào addressDetail, để dropdown Quận/Huyện cho user chọn lại
+        if (!matchedDistrict || matchedDistIdx === -1) {
+          if (!this.orderForm.get('addressDetail')?.value) {
+            this.orderForm.patchValue({ addressDetail: remainingAfterProv });
+          }
+          return;
+        }
+
+        // Gán Quận / Huyện vào form
+        this.orderForm.patchValue({
+          districtCode: matchedDistrict.code,
+          districtName: matchedDistrict.name,
+        });
+
+        // Phần chuỗi địa chỉ nằm trước Quận/Huyện
+        const remainingAfterDist = remainingAfterProv.substring(0, matchedDistIdx).replace(/[,;\s\-]+$/, '').trim();
+
+        this.isWardsLoading = true;
+        this.addressService.getWards(matchedDistrict.code).pipe(take(1)).subscribe({
+          next: (wardsList) => {
+            this.wards = wardsList || [];
+            this.isWardsLoading = false;
+            this.orderForm.get('wardCode')?.enable();
+
+            if (!remainingAfterDist || this.wards.length === 0) {
+              if (remainingAfterDist && !this.orderForm.get('addressDetail')?.value) {
+                this.orderForm.patchValue({ addressDetail: remainingAfterDist });
+              }
+              return;
+            }
+
+            const lowerRemDist = remainingAfterDist.toLowerCase();
+            let matchedWard: AdministrativeUnit | null = null;
+            let matchedWardIdx = -1;
+            let matchedWardLen = 0;
+
+            for (const w of this.wards) {
+              const fullW = w.name.toLowerCase();
+              const cleanW = this.cleanUnitName(w.name);
+              const aliasesW = [fullW, cleanW];
+
+              for (const alias of aliasesW) {
+                if (!alias || alias.length < 2) continue;
+                const idx = lowerRemDist.lastIndexOf(alias);
+                if (idx !== -1) {
+                  const len = alias.length;
+                  if (idx > matchedWardIdx || (idx === matchedWardIdx && len > matchedWardLen)) {
+                    matchedWardIdx = idx;
+                    matchedWardLen = len;
+                    matchedWard = w;
+                  }
+                }
+              }
+            }
+
+            if (matchedWard && matchedWardIdx !== -1) {
+              this.orderForm.patchValue({
+                wardCode: matchedWard.code,
+                wardName: matchedWard.name,
+              });
+
+              // Phần còn lại trước Phường/Xã chính là số nhà, tên đường
+              const detail = remainingAfterDist.substring(0, matchedWardIdx).replace(/[,;\s\-]+$/, '').trim();
+              if (detail && !this.orderForm.get('addressDetail')?.value) {
+                this.orderForm.patchValue({ addressDetail: detail });
+              }
+            } else {
+              // Không khớp được Phường/Xã: đưa phần còn lại vào addressDetail để user chọn Phường/Xã
+              if (!this.orderForm.get('addressDetail')?.value) {
+                this.orderForm.patchValue({ addressDetail: remainingAfterDist });
+              }
+            }
+          },
+          error: () => {
+            this.isWardsLoading = false;
+            if (remainingAfterDist && !this.orderForm.get('addressDetail')?.value) {
+              this.orderForm.patchValue({ addressDetail: remainingAfterDist });
+            }
+          }
+        });
+      },
+      error: () => {
+        this.isDistrictsLoading = false;
+        if (remainingAfterProv && !this.orderForm.get('addressDetail')?.value) {
+          this.orderForm.patchValue({ addressDetail: remainingAfterProv });
+        }
+      }
+    });
+  }
+
+  loadProvinces(callback?: () => void): void {
     this.isProvincesLoading = true;
     this.provincesError = '';
     this.addressService.getProvinces().subscribe({
       next: (data) => {
         this.provinces = data || [];
         this.isProvincesLoading = false;
+        if (callback) callback();
       },
       error: () => {
         this.provincesError = 'Không thể tải danh sách Tỉnh/Thành phố. Vui lòng thử lại.';
@@ -1305,6 +1719,8 @@ export class CartComponent implements OnInit, OnDestroy {
     const discountAmount = cart ? this.getDiscountAmount(cart) : 0;
     const shippingMethod = this.getSelectedShippingMethod();
     const shippingFee = cart ? this.getShippingFee(cart) : (shippingMethod?.fee || 0);
+    const paymentMethod = this.getSelectedPaymentMethod();
+    const paymentFee = cart ? this.getPaymentFee(cart) : (this.calculateMethodFee(paymentMethod, cart) || 0);
 
     return {
       ...userToOrder,
@@ -1321,6 +1737,9 @@ export class CartComponent implements OnInit, OnDestroy {
       shippingMethodId: shippingMethod?._id || shippingMethod?.id || '',
       shippingMethodName: shippingMethod?.name || '',
       shippingFee,
+      paymentMethodId: paymentMethod?._id || paymentMethod?.code || '',
+      paymentMethodName: paymentMethod?.name || '',
+      paymentFee,
       currency: currency || 'VND',
     };
   }
@@ -1336,9 +1755,19 @@ export class CartComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (this.paymentMethodControl.invalid || !this.selectedPaymentMethodId) {
+      this.snackBar.open('Vui lòng chọn phương thức thanh toán', 'Đóng', { duration: 3000 });
+      return;
+    }
+
+    const selectedMethod = this.getSelectedPaymentMethod();
     this.user$.pipe(take(1)).subscribe((user: User) => {
       const orderPayload = this.buildOrderPayload(user, undefined, this.latestCart || undefined);
-      const paymentRequest = { ...payment, ...orderPayload };
+      const paymentRequest = {
+        ...payment,
+        ...orderPayload,
+        paymentMethodId: selectedMethod?._id || selectedMethod?.code || '',
+      };
       this.store.makeOrderWithPayment(paymentRequest);
     });
   }
@@ -1354,10 +1783,16 @@ export class CartComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (this.paymentMethodControl.invalid || !this.selectedPaymentMethodId) {
+      this.snackBar.open('Vui lòng chọn phương thức thanh toán', 'Đóng', { duration: 3000 });
+      return;
+    }
+
+    const selectedMethod = this.getSelectedPaymentMethod();
     this.user$.pipe(take(1)).subscribe((user: User) => {
       const orderRequest = this.buildOrderPayload(user, currency, this.latestCart || undefined);
+      orderRequest.paymentMethodId = selectedMethod?._id || selectedMethod?.code || '';
       this.store.makeOrder(orderRequest);
-      this.toggleCard = false;
       this.scrollToTop();
     });
   }

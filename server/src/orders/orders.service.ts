@@ -1,4 +1,4 @@
-import { Logger, Injectable, NotFoundException } from '@nestjs/common';
+import { Logger, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types, isValidObjectId } from 'mongoose';
 import Stripe from 'stripe';
@@ -724,34 +724,60 @@ export class OrdersService {
       };
     }
 
-    // Lấy thông tin payment method
+    // Lấy thông tin payment method từ DB và kiểm tra hợp lệ
     let paymentFee = 0;
     let paymentMethodId = null;
     let paymentMethodSnapshot = null;
 
+    let paymentMethod: any = null;
     if (orderDto.paymentMethodId) {
-      const paymentMethod = await this.paymentMethodModel
-        .findById(orderDto.paymentMethodId)
-        .lean() as any;
-      if (paymentMethod) {
-        paymentMethodId = paymentMethod._id;
-
-        if (paymentMethod.transactionFee?.enabled) {
-          if (paymentMethod.transactionFee.type === 'PERCENTAGE') {
-            paymentFee = Math.round((subtotal * paymentMethod.transactionFee.value) / 100);
-          } else {
-            paymentFee = paymentMethod.transactionFee.value;
-          }
-        }
-
-        paymentMethodSnapshot = {
-          name: paymentMethod.name,
-          code: paymentMethod.code,
-          paymentType: paymentMethod.paymentType,
-          paymentFee,
-        };
+      if (isValidObjectId(orderDto.paymentMethodId)) {
+        paymentMethod = await this.paymentMethodModel.findById(orderDto.paymentMethodId).lean();
+      }
+      if (!paymentMethod) {
+        paymentMethod = await this.paymentMethodModel.findOne({
+          code: orderDto.paymentMethodId,
+        }).lean();
+      }
+      if (!paymentMethod) {
+        throw new BadRequestException('Phương thức thanh toán đã chọn không tồn tại trong hệ thống.');
+      }
+      if (paymentMethod.status !== 'ACTIVE') {
+        throw new BadRequestException(
+          `Phương thức thanh toán "${paymentMethod.name}" hiện không khả dụng. Vui lòng chọn phương thức khác.`
+        );
+      }
+    } else {
+      // Fallback nếu client cũ chưa truyền paymentMethodId: tìm phương thức ACTIVE tương ứng
+      const targetCode = type === 'STRIPE' ? 'STRIPE' : 'COD';
+      paymentMethod = await this.paymentMethodModel.findOne({
+        code: targetCode,
+        status: 'ACTIVE',
+      }).lean();
+      if (!paymentMethod) {
+        paymentMethod = await this.paymentMethodModel.findOne({ status: 'ACTIVE' }).lean();
+      }
+      if (!paymentMethod) {
+        throw new BadRequestException('Hiện tại không có phương thức thanh toán nào khả dụng.');
       }
     }
+
+    paymentMethodId = paymentMethod._id;
+
+    if (paymentMethod.transactionFee?.enabled) {
+      if (paymentMethod.transactionFee.type === 'PERCENTAGE') {
+        paymentFee = Math.round((subtotal * paymentMethod.transactionFee.value) / 100);
+      } else {
+        paymentFee = paymentMethod.transactionFee.value || 0;
+      }
+    }
+
+    paymentMethodSnapshot = {
+      name: paymentMethod.name,
+      code: paymentMethod.code,
+      paymentType: paymentMethod.paymentType,
+      paymentFee,
+    };
 
     let couponDiscount = 0;
     let appliedCouponCode = '';
@@ -802,6 +828,13 @@ export class OrdersService {
       shippingMethodId,
       shippingMethodSnapshot,
       shippingFee,
+      payment: {
+        method: paymentMethodSnapshot?.code || (type === 'STRIPE' ? 'STRIPE' : 'COD'),
+        status: PaymentStatus.PENDING,
+        provider: paymentMethodSnapshot?.name || (type === 'STRIPE' ? 'Stripe' : 'COD'),
+        transactionId: null,
+        paidAt: null,
+      },
       paymentMethodId,
       paymentMethodSnapshot,
       paymentStatus: type === 'STRIPE' ? PaymentStatus.PENDING : PaymentStatus.PENDING,

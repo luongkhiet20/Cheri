@@ -36,6 +36,7 @@ export const prepareProduct = (
     // Derive price from variants (lowest effective sale price)
     let minPriceVariant = activeVariants[0];
     let minEffectivePrice = Infinity;
+    let hasVariantStockField = false;
 
     for (const v of activeVariants) {
       const vRegular = Number(v.price) || 0;
@@ -45,7 +46,11 @@ export const prepareProduct = (
         minEffectivePrice = vEff;
         minPriceVariant = v;
       }
-      quantity += Math.max(0, Number(v.stock) || 0);
+      const vRawStock = v.stock !== undefined ? v.stock : v.quantity;
+      if (vRawStock !== undefined && vRawStock !== null && vRawStock !== '') {
+        hasVariantStockField = true;
+        quantity += Math.max(0, Number(vRawStock) || 0);
+      }
       if (vDiscount > 0 && vDiscount < vRegular) {
         onSale = true;
       }
@@ -62,6 +67,9 @@ export const prepareProduct = (
         regularPrice = vReg;
       }
     }
+    if (!hasVariantStockField) {
+      quantity = 999;
+    }
     stock = quantity > 0 ? 'onStock' : 'out';
   } else {
     // No variants: use language data or root document
@@ -73,8 +81,27 @@ export const prepareProduct = (
         ? langData.onSale
         : (salePrice > 0 && regularPrice > 0 && salePrice < regularPrice)
     );
-    quantity = Number(langData.quantity !== undefined ? langData.quantity : p.quantity) || 0;
-    stock = langData.stock || (quantity > 0 ? 'onStock' : 'out');
+
+    const rawStock = langData.stock !== undefined ? langData.stock : p.stock;
+    const rawQty = langData.quantity !== undefined ? langData.quantity : p.quantity;
+
+    if (rawQty !== undefined && rawQty !== null && rawQty !== '') {
+      quantity = Math.max(0, Number(rawQty) || 0);
+    } else if (rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) && rawStock !== '') {
+      quantity = Math.max(0, Number(rawStock) || 0);
+    } else {
+      if (rawStock === 'out' || rawStock === 'outOfStock' || rawStock === 'unavailable' || rawStock === '0') {
+        quantity = 0;
+      } else {
+        quantity = 999;
+      }
+    }
+
+    if (rawStock === 'out' || rawStock === 'outOfStock' || rawStock === 'unavailable' || rawStock === '0') {
+      stock = 'out';
+    } else {
+      stock = quantity > 0 ? 'onStock' : 'out';
+    }
   }
 
   // Main image fallback

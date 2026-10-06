@@ -163,41 +163,20 @@
               @for (r of selectedRatings(); track r) {
               <button type="button" class="products-filter-chip" (click)="removeRatingFilter(r)">
                 <span>{{ r }}★</span>
-                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
+
               </button>
               }
-              @if (filterStock() !== 'all') {
-              <button type="button" class="products-filter-chip" (click)="changeStock('all')">
-                <span>{{ filterStock() === 'onStock' ? 'Còn hàng' : 'Hết hàng' }}</span>
-                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
-              }
+
               @if (filterPrice() > 0 && filterPrice() < (maxPrice() || 999999999)) { <button type="button"
                 class="products-filter-chip" (click)="priceRange(0)">
                 <span>Giá max: {{ filterPrice() | priceFormat }} {{ currency() }}</span>
-                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
+
                 </button>
                 }
                 @if (filterMinPrice() > 0) {
                 <button type="button" class="products-filter-chip" (click)="changeMinPrice(0)">
                   <span>Giá min: {{ filterMinPrice() | priceFormat }} {{ currency() }}</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
+
                 </button>
                 }
 
@@ -333,9 +312,7 @@
                 Chéri chưa tìm thấy sản phẩm nào khớp với bộ lọc của bạn.
                 Hãy thử lại với danh mục khác nhé.
               </p>
-              <button type="button" class="products-empty-btn" (click)="clearSearch()">
-                Xem toàn bộ sản phẩm
-              </button>
+
               }
             </div>
             }

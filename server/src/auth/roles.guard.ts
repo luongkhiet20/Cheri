@@ -7,6 +7,18 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 
 @Injectable()
+export class OptionalJwtAuthGuard extends AuthGuard('jwt') {
+  handleRequest(err: any, user: any, info: any, context: ExecutionContext) {
+    // Nếu token hợp lệ và tài khoản active -> trả về user
+    // Nếu không có token hoặc token lỗi/hết hạn -> trả về null (coi là khách vãng lai, không ném 401)
+    if (err || !user || user.status === false) {
+      return null;
+    }
+    return user;
+  }
+}
+
+@Injectable()
 export class AdminJwtAuthGuard extends AuthGuard('jwt') {
   handleRequest(err: any, user: any, info: any, context: ExecutionContext) {
     if (user && user.status !== false) {

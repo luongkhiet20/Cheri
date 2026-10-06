@@ -103,6 +103,8 @@ export class SignInComponent implements OnInit {
       next: ({ user, lang }) => {
         if (user && !user.error && (user.accessToken || user.email)) {
           this.signInForm.reset();
+          // Hợp nhất giỏ hàng khách vãng lai (nếu có) vào tài khoản User và xóa guest cart
+          this.store.mergeGuestCartIfAny(lang || 'vi');
           if (checkIsAdmin(user)) {
             this.router.navigate(['/admin']);
           } else {

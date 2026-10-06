@@ -192,6 +192,10 @@ export class SignUpComponent {
         }
 
         this.signUpForm.reset();
+        // Hợp nhất giỏ hàng khách vãng lai (nếu có) vào tài khoản User và xóa guest cart
+        const targetLang = lang || 'vi';
+        this.store.mergeGuestCartIfAny(targetLang);
+
         this.snackBar.open('Đăng ký tài khoản thành công!', 'Đóng', {
           duration: 3000,
           horizontalPosition: 'center',
@@ -199,7 +203,6 @@ export class SignUpComponent {
         });
 
         // 4. Navigate to Home after auth state is established
-        const targetLang = lang || 'vi';
         this.router.navigate(['/' + targetLang]);
       },
       error: (err: any) => {

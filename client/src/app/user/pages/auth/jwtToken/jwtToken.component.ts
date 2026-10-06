@@ -8,6 +8,8 @@ import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
 import { ApiService } from '../../../../services/api.service';
 import { checkIsAdmin } from '../../../../services/auth.guard';
 
+import { SignalStore } from '../../../../store/signal.store';
+
 @Component({
   standalone: true,
   templateUrl: './jwtToken.component.html',
@@ -17,6 +19,7 @@ export class JwtTokenComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private selectors: SignalStoreSelectors,
+    private store: SignalStore,
     private apiService: ApiService,
     private router: Router,
     @Inject(PLATFORM_ID)
@@ -37,6 +40,8 @@ export class JwtTokenComponent implements OnInit {
       .subscribe((user: any) => {
         if (user && !user.error && (user.email || user.accessToken)) {
           this.selectors.userState.update((state) => ({ ...state, user }));
+          // Hợp nhất giỏ hàng khách vãng lai (nếu có) vào tài khoản User và xóa guest cart
+          this.store.mergeGuestCartIfAny('vi');
           if (checkIsAdmin(user)) {
             this.router.navigate(['/admin']);
             return;

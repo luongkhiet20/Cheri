@@ -20,7 +20,7 @@
           {{ errorMessage || 'Rất tiếc, thông tin đơn hàng không khả dụng hoặc đã hết phiên làm việc.' }}
         </p>
         <div class="bill-empty-actions">
-          <button type="button" class="btn-cheri-primary" [routerLink]="['/' + (lang$ | async) + '/product']">
+          <button type="button" class="btn-cheri-primary" [routerLink]="['/' + (lang$ | async) + '/product/all']">
             Tiếp tục mua sắm
           </button>
           <button type="button" class="btn-cheri-secondary" (click)="goToTracking()">
@@ -287,7 +287,7 @@
 
         <!-- 8. ACTION BUTTONS -->
         <footer class="bill-actions-footer no-print">
-          <button type="button" class="btn-cheri-primary" [routerLink]="['/' + (lang$ | async) + '/product']">
+          <button type="button" class="btn-cheri-primary" [routerLink]="['/' + (lang$ | async) + '/product/all']">
             Tiếp tục mua sắm
           </button>
           <button type="button" class="btn-cheri-secondary" (click)="goToTracking()">

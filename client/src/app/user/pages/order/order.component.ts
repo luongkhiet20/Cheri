@@ -2,18 +2,18 @@ import { Component, OnInit, OnDestroy, Signal } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Location } from '@angular/common';
 import { Observable, Subscription } from 'rxjs';
-import { TranslateService } from '../../../../services/translate.service';
-import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
-import { ApiService } from '../../../../services/api.service';
-import { Order } from '../../../shared/models';
+import { TranslateService } from '../../../services/translate.service';
+import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
+import { ApiService } from '../../../services/api.service';
+import { Order } from '../../shared/models';
 
 @Component({
-  selector: 'app-summary',
-  templateUrl: './summary.component.html',
-  styleUrls: ['./summary.component.css'],
+  selector: 'app-order',
+  templateUrl: './order.component.html',
+  styleUrls: ['./order.component.css'],
   standalone: false
 })
-export class SummaryComponent implements OnInit, OnDestroy {
+export class OrderComponent implements OnInit, OnDestroy {
   orderSignal: Signal<Order>;
   lang$: Observable<string>;
   currentLang = 'vi';
@@ -23,7 +23,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   private sub = new Subscription();
 
-  readonly component = 'summaryComponent';
+  readonly component = 'orderComponent';
 
   constructor(
     private router: Router,
@@ -55,12 +55,12 @@ export class SummaryComponent implements OnInit, OnDestroy {
    * Khôi phục dữ liệu đơn hàng:
    * 1. Ưu tiên order trực tiếp từ store (sau khi đặt hàng thành công)
    * 2. Nếu store rỗng (F5/reload): đọc từ sessionStorage ('cheri_last_order')
-   * 3. Nếu có queryParam orderId: đối chiếu khớp orderId
+   * 3. Đối chiếu queryParam orderId hoặc route param :id
    * 4. Nếu user đăng nhập: tìm trong danh sách đơn hàng của user qua getUserOrders()
    */
   resolveOrderData(): void {
     const storeOrder = this.orderSignal();
-    const queryOrderId = this.route.snapshot.queryParamMap.get('orderId');
+    const queryOrderId = this.route.snapshot.queryParamMap.get('orderId') || this.route.snapshot.paramMap.get('id');
 
     // 1. Kiểm tra store
     if (storeOrder && (!queryOrderId || storeOrder.orderId === queryOrderId)) {
@@ -240,7 +240,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
   // ─── ACTION BUTTONS ────────────────────────────────────────────────────────
 
   continueShopping(): void {
-    this.router.navigate(['/' + this.currentLang + '/product']);
+    this.router.navigate(['/' + this.currentLang + '/product/all']);
   }
 
   goToTracking(): void {

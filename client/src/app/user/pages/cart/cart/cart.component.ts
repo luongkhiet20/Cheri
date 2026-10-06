@@ -171,7 +171,7 @@ export class CartComponent implements OnInit, OnDestroy {
           window.sessionStorage.setItem('cheri_last_order', JSON.stringify(order));
         } catch (_) {}
       }
-      this.router.navigate(['/' + lang + '/cart/summary'], {
+      this.router.navigate(['/' + lang + '/order'], {
         queryParams: { orderId: order.orderId }
       });
     });

@@ -1,41 +1,36 @@
 import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { ReactiveFormsModule } from '@angular/forms';
+import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 
-import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
-import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSelectModule } from '@angular/material/select';
+import { MatIconModule } from '@angular/material/icon';
 
-import { OrdersComponent } from './orders.component';
-import { OrderComponent } from './order/order.component';
-import { OrderComponentsModule } from './components/order-components.module';
+import { OrderComponent } from './order.component';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { PriceFormatPipe } from '../../../pipes/price.pipe';
 
 @NgModule({
   declarations: [
-    OrdersComponent,
     OrderComponent
   ],
   imports: [
     CommonModule,
-    OrderComponentsModule,
+    FormsModule,
     ReactiveFormsModule,
     TranslatePipe,
     PriceFormatPipe,
-    MatCardModule,
     MatButtonModule,
-    MatChipsModule,
     MatProgressBarModule,
-    MatSelectModule,
+    MatIconModule,
     RouterModule.forChild([
-      { path: ':id', component: OrderComponent },
-      { path: '', component: OrdersComponent }
+      { path: '', component: OrderComponent },
+      { path: ':id', component: OrderComponent }
     ]),
   ],
-  providers: []
+  exports: [
+    OrderComponent
+  ]
 })
 export class OrderModule { }

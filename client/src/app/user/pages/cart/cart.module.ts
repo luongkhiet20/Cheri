@@ -15,7 +15,6 @@ import { MatSnackBarModule } from '@angular/material/snack-bar';
 
 import { CartComponent } from './cart/cart.component';
 import { CardComponent } from './card/card.component';
-import { SummaryComponent } from './summary/summary.component';
 import { CartVariantPopupComponent } from './cart-variant-popup/cart-variant-popup.component';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { PriceFormatPipe } from '../../../pipes/price.pipe';
@@ -25,7 +24,6 @@ import { OrderInfoComponent } from '../../shared/order-info/order-info.component
   declarations: [
     CartComponent,
     CardComponent,
-    SummaryComponent,
     CartVariantPopupComponent
   ],
   imports: [
@@ -45,8 +43,7 @@ import { OrderInfoComponent } from '../../shared/order-info/order-info.component
     MatSnackBarModule,
     OrderInfoComponent,
     RouterModule.forChild([
-      { path: '', component: CartComponent },
-      { path: 'summary', component: SummaryComponent }
+      { path: '', component: CartComponent }
     ]),
   ],
   providers: []

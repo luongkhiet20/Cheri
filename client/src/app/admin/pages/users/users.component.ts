@@ -36,6 +36,10 @@ export class UsersComponent implements OnInit {
   pagination: PaginationConfig = { page: 1, pageSize: 20, total: 0 };
   isLoading = false;
 
+  searchQuery = '';
+  selectedRole = '';
+  selectedStatus = '';
+
   selectedIds: Set<any> = new Set();
   get selectedCount(): number { return this.selectedIds.size; }
   get allSelected(): boolean { return this.data.length > 0 && this.data.every((r: any) => this.selectedIds.has(r.id)); }
@@ -67,7 +71,14 @@ export class UsersComponent implements OnInit {
 
   loadUsers(): void {
     this.isLoading = true;
-    this.apiService.getUsers().subscribe({
+    this.apiService.getUsers({
+      page: this.pagination.page,
+      limit: this.pagination.pageSize,
+      pageSize: this.pagination.pageSize,
+      search: this.searchQuery || undefined,
+      role: this.selectedRole || undefined,
+      status: this.selectedStatus || undefined
+    }).subscribe({
       next: (res) => {
         this.isLoading = false;
         if (res.success) {
@@ -95,7 +106,8 @@ export class UsersComponent implements OnInit {
             };
           });
           this.data = [...this.allUsers];
-          this.pagination = { ...this.pagination, total: this.data.length };
+          const totalFromApi = Number(res.pagination?.total ?? res.total ?? this.data.length);
+          this.pagination = { ...this.pagination, total: totalFromApi };
           this.selectedIds.clear();
         }
         this.cdr.markForCheck();
@@ -202,51 +214,40 @@ export class UsersComponent implements OnInit {
   }
 
   onSearch(v: string): void {
-    if (!v) {
-      this.data = [...this.allUsers];
-      this.pagination = { ...this.pagination, total: this.data.length };
-      this.cdr.markForCheck();
-      return;
-    }
-    const q = v.toLowerCase();
-    this.data = this.allUsers.filter(u =>
-      (u.name && u.name.toLowerCase().includes(q)) ||
-      (u.email && u.email.toLowerCase().includes(q)) ||
-      (u.phone && u.phone.toLowerCase().includes(q))
-    );
-    this.pagination = { ...this.pagination, total: this.data.length };
-    this.cdr.markForCheck();
+    this.searchQuery = (v || '').trim();
+    this.pagination.page = 1;
+    this.loadUsers();
   }
 
   onFilter(v: Record<string, any>): void {
-    let filtered = [...this.allUsers];
-    if (v['role']) {
-      const targetRole = String(v['role']).toLowerCase();
-      filtered = filtered.filter(u => {
-        const uRole = String(u.role).toLowerCase();
-        const rawRoles = Array.isArray(u.roles) ? u.roles.map((r: any) => String(r).toLowerCase()) : [];
-        if (targetRole === 'admin') {
-          return uRole.includes('admin') || rawRoles.includes('admin');
-        } else if (targetRole === 'user' || targetRole === 'customer') {
-          return uRole.includes('khách') || uRole.includes('user') || rawRoles.includes('user');
-        }
-        return uRole === targetRole;
-      });
-    }
-    if (v['status']) {
-      const st = String(v['status']).toLowerCase();
-      if (st === 'active' || st === 'hoạt động') {
-        filtered = filtered.filter(u => u.status === 'Hoạt động' || u.statusVariant === 'success');
-      } else if (st === 'inactive' || st === 'đã khóa') {
-        filtered = filtered.filter(u => u.status === 'Đã khóa' || u.statusVariant === 'danger');
-      }
-    }
-    this.data = filtered;
-    this.pagination = { ...this.pagination, total: this.data.length };
-    this.cdr.markForCheck();
+    this.selectedRole = (v && v['role']) ? String(v['role']).trim() : '';
+    this.selectedStatus = (v && v['status']) ? String(v['status']).trim() : '';
+    this.pagination.page = 1;
+    this.loadUsers();
   }
 
-  onRefresh(): void { this.loadUsers(); }
-  onPageChange(p: number): void { this.pagination = { ...this.pagination, page: p }; this.cdr.markForCheck(); }
-  onPageSizeChange(s: number): void { this.pagination = { ...this.pagination, pageSize: s, page: 1 }; this.cdr.markForCheck(); }
+  onFilterReset(): void {
+    this.selectedRole = '';
+    this.selectedStatus = '';
+    this.pagination.page = 1;
+    this.loadUsers();
+  }
+
+  onRefresh(): void {
+    this.searchQuery = '';
+    this.selectedRole = '';
+    this.selectedStatus = '';
+    this.pagination.page = 1;
+    this.loadUsers();
+  }
+
+  onPageChange(p: number): void {
+    this.pagination = { ...this.pagination, page: p };
+    this.loadUsers();
+  }
+
+  onPageSizeChange(s: number): void {
+    this.pagination = { ...this.pagination, pageSize: s, page: 1 };
+    this.loadUsers();
+  }
 }

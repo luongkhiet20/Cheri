@@ -151,7 +151,10 @@ export class AdminService {
     if (params) {
       if (params.page) httpParams = httpParams.set('page', params.page.toString());
       if (params.limit) httpParams = httpParams.set('limit', params.limit.toString());
-      if (params.pageSize) httpParams = httpParams.set('limit', params.pageSize.toString());
+      if (params.pageSize) {
+        httpParams = httpParams.set('limit', params.pageSize.toString());
+        httpParams = httpParams.set('pageSize', params.pageSize.toString());
+      }
       if (params.search) httpParams = httpParams.set('search', params.search);
       if (params.role) httpParams = httpParams.set('role', params.role);
       if (params.status !== undefined && params.status !== '') httpParams = httpParams.set('status', params.status);

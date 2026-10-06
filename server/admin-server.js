@@ -3619,7 +3619,7 @@ app.get('/api/users', async (req, res) => {
     const total = await db.collection('users').countDocuments(query);
     const usersRaw = await db.collection('users')
       .find(query, { projection: { password: 0, salt: 0 } })
-      .sort({ updatedAt: -1, _id: -1 })
+      .sort({ createdAt: -1, dateAdded: -1, updatedAt: -1, _id: -1 })
       .skip(skip)
       .limit(limit)
       .toArray();

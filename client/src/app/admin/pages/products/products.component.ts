@@ -117,6 +117,12 @@ export class ProductsComponent implements OnInit {
         this.filteredCategoryId = newCatId;
         this.pagination.page = 1;
       }
+      if (params['status']) {
+        const s = String(params['status']).trim();
+        this.selectedStatus = s;
+        const statusField = this.filterFields.find(f => f.key === 'status');
+        if (statusField) statusField.value = s;
+      }
       this.loadProducts();
     });
     this.loadCategoriesForFilter();

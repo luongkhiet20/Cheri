@@ -8,6 +8,7 @@ import {
   Body,
   Param,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard, AdminJwtAuthGuard } from '../auth/roles.guard';
@@ -75,10 +76,16 @@ export class OrdersController {
     return this.ordersService.deletePaymentMethod(id);
   }
 
-  // ─── Lấy orders của user hiện tại ────────────────────────────────────────
+  // ─── Lấy orders (user lấy đơn của mình, admin lấy toàn bộ với bộ lọc) ────
   @UseGuards(AuthGuard('jwt'))
   @Get()
-  getOrders(@GetUser() user: User) {
+  getOrders(@GetUser() user: User, @Query() query: any) {
+    const userRoles = (user as any)?.roles || (user as any)?.role || [];
+    const roles = Array.isArray(userRoles) ? userRoles : [userRoles];
+    const isAdmin = roles.some((r: any) => typeof r === 'string' && r.toLowerCase().includes('admin'));
+    if (isAdmin || query?.page || query?.status || query?.search) {
+      return this.ordersService.getAdminOrders(query);
+    }
     return this.ordersService.getOrders(user);
   }
 
@@ -130,6 +137,20 @@ export class OrdersController {
     @GetUser() user: User,
   ): Promise<{ error: string; result: Order }> {
     return this.ordersService.orderWithStripe(body, user);
+  }
+
+  // ─── Admin: thông báo ──────────────────────────────────────────────────
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @Get('/notifications')
+  getNotifications() {
+    return this.ordersService.getNotifications();
+  }
+
+  // ─── Admin: thống kê dashboard ───────────────────────────────────────────
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @Get('/stats')
+  getOrderStats(@Query('period') period: 'week' | 'month') {
+    return this.ordersService.getOrderStats(period || 'week');
   }
 
   // ─── Admin: lấy tất cả orders ────────────────────────────────────────────

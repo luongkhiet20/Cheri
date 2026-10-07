@@ -1,7 +1,7 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, isValidObjectId, Types } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
 import {
   BadRequestException,
@@ -287,6 +287,48 @@ export class AuthService {
 
   async deleteUser(id: string): Promise<any> {
     return this.userModel.findByIdAndDelete(id).exec();
+  }
+
+  async getUserById(id: string): Promise<any> {
+    return this.userModel.findById(id).exec();
+  }
+
+  async bulkDeleteUsers(ids: string[]): Promise<any> {
+    return this.userModel.deleteMany({ _id: { $in: ids } }).exec();
+  }
+
+  async getUserOrders(userId: string): Promise<any[]> {
+    const user = await this.userModel.findById(userId).lean();
+    if (!user) {
+      throw new NotFoundException('Không tìm thấy người dùng');
+    }
+
+    const conditions: any[] = [];
+    if (isValidObjectId(userId)) {
+      const objId = new Types.ObjectId(userId);
+      conditions.push({ _user: objId }, { userId: objId });
+    }
+    conditions.push({ _user: userId }, { userId });
+
+    if (user.email) {
+      conditions.push({ customerEmail: user.email }, { 'customer.email': user.email });
+    }
+
+    const orders = await this.userModel.db
+      .collection('orders')
+      .find({ $or: conditions })
+      .sort({ createdAt: -1, dateAdded: -1 })
+      .toArray();
+
+    return orders.map((o: any) => ({
+      ...o,
+      id: o._id?.toString() || o.id,
+      code: o.orderId || ('#' + String(o._id).slice(-6).toUpperCase()),
+      totalAmount: o.totalAmount ?? o.amount ?? o.subtotal ?? o.total ?? 0,
+      payment: o.paymentMethodSnapshot?.name || o.payment?.provider || o.payment?.method || o.type || 'COD',
+      status: o.status,
+      createdAt: o.createdAt || o.dateAdded,
+    }));
   }
 
   async uploadAvatar(user: User, file: any): Promise<any> {

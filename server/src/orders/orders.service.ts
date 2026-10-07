@@ -238,7 +238,7 @@ export class OrdersService {
         mappedStatus = OrderStatus.CANCELLED;
       } else if (mappedStatus === 'PAID') {
         updateData.paymentStatus = PaymentStatus.PAID;
-        mappedStatus = OrderStatus.CONFIRMED;
+        mappedStatus = OrderStatus.PROCESSING;
       }
 
       const validStatuses = Object.values(OrderStatus) as string[];

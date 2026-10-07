@@ -113,7 +113,6 @@ const LOW_STOCK_THRESHOLD = 5;
 
 const ORDER_STATUS_CONFIG = [
   { code: 'PENDING', label: 'Chờ xác nhận', queryParam: 'Chờ xác nhận', variant: 'neutral' },
-  { code: 'CONFIRMED', label: 'Đã xác nhận', queryParam: 'Đã xác nhận', variant: 'primary' },
   { code: 'PROCESSING', label: 'Đang xử lý', queryParam: 'Đang xử lý', variant: 'warning' },
   { code: 'SHIPPING', label: 'Đang giao', queryParam: 'Đang giao', variant: 'primary' },
   { code: 'DELIVERED', label: 'Đã giao', queryParam: 'Đã giao', variant: 'success' },
@@ -2371,7 +2370,6 @@ app.post('/api/categories/bulk-delete', async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 const VALID_ORDER_TRANSITIONS = {
   PENDING: ['PROCESSING', 'CANCELLED'],
-  CONFIRMED: [],
   PROCESSING: ['SHIPPING', 'CANCELLED'],
   SHIPPING: ['DELIVERED', 'CANCELLED'],
   DELIVERED: [], // final state
@@ -3235,7 +3233,7 @@ const ADMIN_ORDER_FULFILLMENT_EDIT_KEYS = new Set([
   'shippingProvider', 'trackingNumber', 'estimatedDeliveryDate'
 ]);
 const ADMIN_ORDER_FULFILLMENT_EDIT_STATUSES = new Set([
-  'PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPING'
+  'PENDING', 'PROCESSING', 'SHIPPING'
 ]);
 
 function getAdminOrderEditStatus(order) {

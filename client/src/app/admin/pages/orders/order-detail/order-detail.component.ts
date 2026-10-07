@@ -37,7 +37,6 @@ export class OrderDetailComponent implements OnInit {
   // Business state transitions rule
   readonly VALID_TRANSITIONS: Record<string, string[]> = {
     PENDING: ['PROCESSING', 'CANCELLED'],
-    CONFIRMED: ['PROCESSING', 'CANCELLED'],
     PROCESSING: ['SHIPPING', 'CANCELLED'],
     SHIPPING: ['DELIVERY_FAILED', 'DELIVERED', 'CANCELLED'],
     DELIVERY_FAILED: ['SHIPPING', 'CANCELLED', 'RETURNED'],

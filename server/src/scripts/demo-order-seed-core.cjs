@@ -70,7 +70,7 @@ function buildDemoOrders({ product, paymentMethods, shippingMethod }) {
     const createdAt = new Date(baseDate.getTime() + index * 60 * 60 * 1000);
     const history = [{ status: 'PENDING', updatedAt: createdAt, updatedBy: null, note: 'Đơn mẫu được tạo để kiểm thử.' }];
     if (entry.status !== 'PENDING') {
-      history.push({ status: 'CONFIRMED', updatedAt: createdAt, updatedBy: null, note: 'Đơn mẫu được xác nhận.' });
+      history.push({ status: 'PROCESSING', updatedAt: createdAt, updatedBy: null, note: 'Đơn mẫu được xử lý.' });
       history.push({ status: entry.status, updatedAt: createdAt, updatedBy: null, note: 'Trạng thái mẫu phục vụ kiểm thử.' });
     }
 

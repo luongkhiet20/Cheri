@@ -30,10 +30,10 @@ export class OrdersComponent implements OnInit {
       key: 'status', label: 'Trạng thái', type: 'select', value: '', options: [
         { value: 'DELIVERED', label: 'Đã giao' },
         { value: 'SHIPPING', label: 'Đang giao' },
-        { value: 'DELIVERY_FAILED', label: 'Giao hàng không thành công' },
+
         { value: 'PROCESSING', label: 'Đang xử lý' },
         { value: 'PENDING', label: 'Chờ xác nhận' },
-        { value: 'CONFIRMED', label: 'Đã xác nhận' },
+
         { value: 'CANCELLED', label: 'Đã hủy' },
         { value: 'RETURNED', label: 'Đã hoàn trả' },
       ]
@@ -59,7 +59,7 @@ export class OrdersComponent implements OnInit {
   private skipNextResetFilterLoad = false;
   private ordersRequestId = 0;
   private readonly orderStatusCodes = new Set([
-    'PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPING', 'DELIVERY_FAILED', 'DELIVERED', 'CANCELLED', 'RETURNED'
+    'PENDING', 'PROCESSING', 'SHIPPING', 'DELIVERY_FAILED', 'DELIVERED', 'CANCELLED', 'RETURNED'
   ]);
 
   selectedIds: Set<any> = new Set();

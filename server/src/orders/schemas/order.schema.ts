@@ -5,7 +5,6 @@ const { Schema } = mongoose;
 
 export enum OrderStatus {
   PENDING = 'PENDING',
-  CONFIRMED = 'CONFIRMED',
   PROCESSING = 'PROCESSING',
   SHIPPING = 'SHIPPING',
   DELIVERY_FAILED = 'DELIVERY_FAILED',
@@ -101,7 +100,7 @@ const StatusHistorySchema = new Schema(
 
 // ─── Shipping Log Schema (tracking timeline từ carrier) ───────────────────────
 // Phân biệt với statusHistory: statusHistory theo dõi trạng thái xử lý đơn của
-// hệ thống Chéri (PENDING → CONFIRMED → SHIPPING → DELIVERED), còn shippingLogs
+// hệ thống Chéri (PENDING → PROCESSING → SHIPPING → DELIVERED), còn shippingLogs
 // theo dõi hành trình vật lý của kiện hàng từ carrier (PICKED_UP → IN_TRANSIT → DELIVERED).
 
 const ShippingLogSchema = new Schema(
@@ -203,7 +202,7 @@ const OrderSchema = new Schema(
     outcome: { type: Schema.Types.Mixed, default: null },
     dateAdded: { type: Date, default: null },
 
-    // Lịch sử trạng thái đơn hàng (PENDING → CONFIRMED → SHIPPING → DELIVERED)
+    // Lịch sử trạng thái đơn hàng (PENDING → PROCESSING → SHIPPING → DELIVERED)
     statusHistory: { type: [StatusHistorySchema], default: [] },
 
     // Lịch sử vận trình của carrier (PICKED_UP → IN_TRANSIT → OUT_FOR_DELIVERY → DELIVERED)

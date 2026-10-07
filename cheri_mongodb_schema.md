@@ -188,7 +188,7 @@
 | | `customer.phone` | String | default: `''` | Số điện thoại người đặt |
 | | `customerEmail` | String | required | Email nhận thông báo đơn hàng |
 | | `customerPhone` | String | default: `''` | Số điện thoại khách hàng |
-| | `status` | String | required, default: `'PENDING'` | Trạng thái: `PENDING`, `CONFIRMED`, `PROCESSING`, `SHIPPING`, `DELIVERED`, `CANCELLED`, `RETURNED` |
+| | `status` | String | required, default: `'PENDING'` | Trạng thái: `PENDING`, `PROCESSING`, `SHIPPING`, `DELIVERED`, `CANCELLED`, `RETURNED` |
 | | `notes` | String | default: `''` | Ghi chú đơn hàng của khách |
 | **Sản phẩm** | `items` | [Sub-document] | required, default: `[]` | Danh sách sản phẩm mua |
 | | `items[].productId` | ObjectId | required, ref: `'Product'` | ID sản phẩm gốc |

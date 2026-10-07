@@ -24,3 +24,11 @@ Loại bỏ nội dung mô tả rỗng hoặc rập khuôn khỏi phần hiển 
 - Nội dung sản phẩm thật vẫn hiển thị nguyên văn và theo thứ tự.
 - Không có thay đổi write/API/database đối với sản phẩm.
 - Khối mô tả rỗng sau lọc được ẩn gọn.
+
+## Ghi nhận triển khai — 2026-10-07
+
+- Phạm vi được người dùng xác nhận: chỉ sửa nội dung hiển thị, không sửa logic biến thể và không commit cấu hình MongoDB local.
+- Formatter frontend bỏ bullet không phải chuỗi, chuỗi chỉ có khoảng trắng và bullet trùng sau chuẩn hóa Unicode/khoảng trắng. Câu được giữ lại vẫn nguyên văn, theo thứ tự; dữ liệu nguồn không bị sửa.
+- Giữ ưu tiên dữ liệu `vi.descriptionFull` hiện có. Nếu mảng tiếng Việt đã chọn bị lọc hết, khối chi tiết được ẩn; không đưa nội dung root cũ trở lại.
+- Không thay đổi template/layout, metadata, API, schema, dữ liệu sản phẩm hoặc hành vi mua hàng. Bỏ biến mô tả ngắn không được template sử dụng.
+- Chưa có mẫu câu filler từ dữ liệu sản phẩm thực tế trong repo. Chưa thêm blacklist hay nhận diện AI dựa trên từ khóa chung; cần ví dụ xác nhận để lọc riêng mà không xóa nhầm thông tin hữu ích.

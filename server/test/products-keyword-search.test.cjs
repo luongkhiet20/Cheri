@@ -41,3 +41,39 @@ test('empty keyword intentionally creates an unfiltered product query', async ()
 
   assert.equal(Object.prototype.hasOwnProperty.call(getQuery(), '$or'), false);
 });
+
+function matchesQuery(document, query) {
+  return Object.entries(query).every(([field, condition]) => {
+    if (field === '$and') return condition.every((part) => matchesQuery(document, part));
+    if (field === '$or') return condition.some((part) => matchesQuery(document, part));
+    const value = field.split('.').reduce((current, key) => current?.[key], document);
+    if (condition instanceof RegExp) return condition.test(String(value ?? ''));
+    if (condition === null || typeof condition !== 'object') return value === condition;
+    return Object.entries(condition).every(([operator, expected]) => {
+      if (operator === '$ne') return value !== expected;
+      if (operator === '$gte') return value >= expected;
+      if (operator === '$lt') return value < expected;
+      throw new Error(`Unsupported fixture operator: ${operator}`);
+    });
+  });
+}
+
+for (const [name, filters] of [
+  ['stock', { stock: 'onStock' }],
+  ['multiple categories', { category: 'dresses,shirts' }],
+  ['multiple rating tiers', { rating: '4,5' }],
+  ['all filters together', { stock: 'onStock', category: 'dresses,shirts', rating: '4,5' }],
+]) {
+  test(`keyword remains required alongside ${name}`, async () => {
+    const { service, getQuery } = createSearchService();
+    await service.getProducts({ search: 'dam do', page: '1', ...filters }, 'vi');
+    const matching = { vi: { title: 'Đầm đỏ', stock: 'onStock' }, tags: 'dresses', rating: 4.5 };
+    const unrelated = { ...matching, vi: { ...matching.vi, title: 'Áo xanh' } };
+
+    assert.equal(matchesQuery(matching, getQuery()), true);
+    assert.equal(matchesQuery(unrelated, getQuery()), false, 'filters must not replace the keyword');
+    if (filters.stock) assert.equal(matchesQuery({ ...matching, vi: { ...matching.vi, stock: 'out' } }, getQuery()), false);
+    if (filters.category) assert.equal(matchesQuery({ ...matching, tags: 'accessories' }, getQuery()), false);
+    if (filters.rating) assert.equal(matchesQuery({ ...matching, rating: 2 }, getQuery()), false);
+  });
+}

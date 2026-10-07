@@ -59,3 +59,12 @@
 5. Confirm no product stock, non-demo order, payment method or email changed; report manual checks that could not be performed without local credentials.
 
 **Acceptance:** Seeded records are visible in admin; all listed admin checks are evidenced; seed remains repeatable; no unrelated records or external systems are changed.
+
+## Progress checkpoint — 2026-10-07
+
+- Task 1: Seed command and guards are implemented. Five focused tests cover explicit development-target authorization, synthetic fixtures, idempotent synchronization, and collision protection using doubles. No live database has been connected or seeded.
+- Task 2: Code audit and targeted fixes are implemented. Payment filters load configured methods across API pages and retain historical values. Existing return/refund fields are present; refund labels and detail display are covered by the changes. CSV export uses `.csv` and `text/csv;charset=utf-8`; three focused tests cover escaping, formula-safe text, and refund labels.
+- Toggle audit: No order-specific enable/disable action or `isActive` field was found in the order UI/API/schema. No speculative toggle was added; `isActive` usage in the form belongs to product variants/payment methods.
+- Task 3: Pending live MongoDB/admin validation, explicitly deferred by the user. Seed twice/count comparison, actual CRUD/filter/detail checks, and browser CSV download still need a named development database and a working session.
+- Verification at this checkpoint: focused seed/CSV tests pass 8/8; `node --check server/admin-server.js` passes. Build results are recorded in the GitHub handoff.
+- This checkpoint is on `feature/admin-orders`; order tracking and storefront search remain in their separate worktrees/branches.

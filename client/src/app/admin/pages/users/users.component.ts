@@ -1,5 +1,5 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
 import { NotificationService } from '../../shared/notification/notification.service';
@@ -54,12 +54,15 @@ export class UsersComponent implements OnInit {
   constructor(
     private apiService: AdminService,
     private router: Router,
+    private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
     private notificationService: NotificationService
   ) { }
 
   ngOnInit(): void {
-    this.loadUsers();
+    this.route.queryParams.subscribe(params => {
+      this.loadUsers(params['status']);
+    });
   }
 
   getUserInitial(user: any): string {
@@ -69,7 +72,7 @@ export class UsersComponent implements OnInit {
     return String(Array.from(raw)[0] || 'U').toUpperCase();
   }
 
-  loadUsers(): void {
+  loadUsers(statusParam?: string): void {
     this.isLoading = true;
     this.apiService.getUsers({
       page: this.pagination.page,
@@ -81,34 +84,41 @@ export class UsersComponent implements OnInit {
     }).subscribe({
       next: (res) => {
         this.isLoading = false;
-        if (res.success) {
-          this.allUsers = (res.data || []).map((u: any) => {
-            const isActive = u.status !== false;
-            const avatarUrl = (u.avatar && typeof u.avatar === 'string' && u.avatar.trim() !== '')
-              ? u.avatar.trim()
-              : ((u.image && typeof u.image === 'string' && !u.image.startsWith('data:image')) ? u.image.trim() : '');
-            const initial = this.getUserInitial(u);
-            const displayName = u.fullName || u.name || u.email?.split('@')[0] || 'Người dùng';
+        const rawList = (res && res.success && Array.isArray(res.data))
+          ? res.data
+          : (Array.isArray(res) ? res : (res?.data || []));
 
-            return {
-              ...u,
-              id: u.id || u._id,
-              avatar: avatarUrl,
-              image: avatarUrl,
-              initial,
-              userInitial: initial,
-              avatarAlt: displayName,
-              name: displayName,
-              phone: u.phoneNumber || u.phone || '—',
-              role: u.roleText || (Array.isArray(u.roles) ? (u.roles.includes('admin') || u.roles.includes('superadmin') ? 'Admin' : 'Khách hàng') : u.role) || 'Khách hàng',
-              status: u.statusText || (isActive ? 'Hoạt động' : 'Đã khóa'),
-              statusVariant: u.statusVariant || (isActive ? 'success' : 'danger')
-            };
-          });
-          this.data = [...this.allUsers];
-          const totalFromApi = Number(res.pagination?.total ?? res.total ?? this.data.length);
-          this.pagination = { ...this.pagination, total: totalFromApi };
-          this.selectedIds.clear();
+        this.allUsers = rawList.map((u: any) => {
+          const isActive = u.status !== false && u.status !== 'inactive' && u.status !== 'locked';
+          const avatarUrl = (u.avatar && typeof u.avatar === 'string' && u.avatar.trim() !== '')
+            ? u.avatar.trim()
+            : ((u.image && typeof u.image === 'string' && !u.image.startsWith('data:image')) ? u.image.trim() : '');
+          const initial = this.getUserInitial(u);
+          const displayName = u.fullName || u.name || u.email?.split('@')[0] || 'Người dùng';
+
+          return {
+            ...u,
+            id: u.id || u._id,
+            avatar: avatarUrl,
+            image: avatarUrl,
+            initial,
+            userInitial: initial,
+            avatarAlt: displayName,
+            name: displayName,
+            phone: u.phoneNumber || u.phone || '—',
+            role: u.roleText || (Array.isArray(u.roles) ? (u.roles.includes('admin') || u.roles.includes('superadmin') ? 'Admin' : 'Khách hàng') : u.role) || 'Khách hàng',
+            status: u.statusText || (isActive ? 'Hoạt động' : 'Đã khóa'),
+            statusVariant: u.statusVariant || (isActive ? 'success' : 'danger')
+          };
+        });
+        this.data = [...this.allUsers];
+        const totalFromApi = Number(res?.pagination?.total ?? res?.total ?? this.data.length);
+        this.pagination = { ...this.pagination, total: totalFromApi };
+        this.selectedIds.clear();
+
+        if (statusParam) {
+          const statusField = this.filterFields.find(f => f.key === 'status');
+          if (statusField) statusField.value = statusParam;
         }
         this.cdr.markForCheck();
       },

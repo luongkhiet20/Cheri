@@ -13,6 +13,9 @@ import ProductSchema from '../products/schemas/product.schema';
 import UserSchema from '../auth/schemas/user.schema';
 import CouponSchema from './schemas/coupon.schema';
 
+import CategorySchema from '../products/schemas/category.schema';
+import { DashboardController } from './dashboard.controller';
+
 @Module({
   imports: [
     ConfigModule.forRoot(),
@@ -23,12 +26,13 @@ import CouponSchema from './schemas/coupon.schema';
       { name: 'Translation', schema: TranslationSchema },
       { name: 'ProductVariant', schema: ProductVariantSchema },
       { name: 'Product', schema: ProductSchema },
+      { name: 'Category', schema: CategorySchema },
       { name: 'User', schema: UserSchema },
       { name: 'Coupon', schema: CouponSchema },
     ]),
     AuthModule,
   ],
-  controllers: [OrdersController],
+  controllers: [OrdersController, DashboardController],
   providers: [OrdersService],
   exports: [MongooseModule],
 })

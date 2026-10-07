@@ -21,6 +21,11 @@ export class AdminService {
     return this.http.get(`${this.baseUrl}/dashboard/stats`, { params });
   }
 
+  // ── Notifications ───────────────────────────
+  getNotifications(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/orders/notifications`);
+  }
+
   // ── Products ───────────────────────────────
   getProducts(params?: { page?: number; pageSize?: number; search?: string; category?: string; categoryId?: string; status?: string }): Observable<any> {
     let httpParams = new HttpParams();

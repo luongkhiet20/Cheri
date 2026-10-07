@@ -27,18 +27,155 @@
   </div>
 
   <div class="admin-header__actions">
-    <button
-      type="button"
-      class="admin-header__notification-btn"
-      aria-label="Thông báo"
-      title="Thông báo"
-      id="admin-notification-btn"
-    >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#74070E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-      </svg>
-    </button>
+    <!-- Notification Bell & Dropdown -->
+    <div class="admin-header__notif-wrap" (clickOutside)="closeNotificationMenu()">
+      <button
+        type="button"
+        class="admin-header__notification-btn"
+        (click)="toggleNotificationMenu()"
+        [attr.aria-expanded]="isNotificationOpen"
+        aria-label="Thông báo"
+        title="Thông báo"
+        id="admin-notification-btn"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#74070E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+        <span class="admin-header__notif-badge" *ngIf="unreadCount > 0">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+      </button>
+
+      <!-- Dropdown Panel -->
+      <div class="admin-notif-dropdown" [class.is-open]="isNotificationOpen" *ngIf="isNotificationOpen">
+        <div class="admin-notif-header">
+          <div class="admin-notif-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+            <span>Thông báo</span>
+            <span class="admin-notif-chip" *ngIf="unreadCount > 0">{{ unreadCount }}</span>
+          </div>
+          <div class="admin-notif-actions">
+            <button class="admin-notif-icon-btn" (click)="refreshNotifications()" title="Làm mới">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <polyline points="1 20 1 14 7 14"></polyline>
+                <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path>
+              </svg>
+            </button>
+            <button class="admin-notif-icon-btn" (click)="markAllNotificationsRead()" title="Đánh dấu tất cả đã đọc">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="admin-notif-loading" *ngIf="loadingNotifs">
+          <div class="admin-notif-spinner"></div>
+          <span>Đang tải thông báo...</span>
+        </div>
+
+        <div class="admin-notif-empty" *ngIf="!loadingNotifs && (!notifications || notifications.length === 0)">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <p>Không có thông báo mới nào</p>
+        </div>
+
+        <div class="admin-notif-body" *ngIf="!loadingNotifs && notifications && notifications.length > 0">
+          <div class="admin-notif-group" *ngFor="let group of notificationGroups">
+            <div class="admin-notif-group-title">{{ group.label }}</div>
+
+            <div class="admin-notif-item" *ngFor="let n of group.items"
+                 [class.is-unread]="!isNotifRead(n.id)"
+                 [ngClass]="'level-' + n.level"
+                 (click)="onNotificationItemClick(n)"
+                 role="button"
+                 tabindex="0">
+              <div class="admin-notif-icon" [ngClass]="'icon-' + n.level">
+                <ng-container [ngSwitch]="n.icon">
+                  <!-- Đơn hàng mới -->
+                  <svg *ngSwitchCase="'new-order'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line>
+                  </svg>
+                  <!-- Đã xác nhận / Cần xuất kho -->
+                  <svg *ngSwitchCase="'confirmed'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                  </svg>
+                  <!-- Thanh toán -->
+                  <svg *ngSwitchCase="'paid'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  </svg>
+                  <!-- Hủy -->
+                  <svg *ngSwitchCase="'cancel'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line>
+                  </svg>
+                  <!-- Đổi trả -->
+                  <svg *ngSwitchCase="'return'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="1 4 1 10 7 10"></polyline>
+                    <path d="M3.51 15a9 9 0 1 0 .49-3.35"></path>
+                  </svg>
+                  <!-- Hết hàng -->
+                  <svg *ngSwitchCase="'out-of-stock'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"></path>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="8" y1="12" x2="16" y2="12"></line>
+                  </svg>
+                  <!-- Sắp hết hàng -->
+                  <svg *ngSwitchCase="'low-stock'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line>
+                  </svg>
+                  <!-- Nhập kho -->
+                  <svg *ngSwitchCase="'restock'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline>
+                  </svg>
+                  <!-- Xuất kho -->
+                  <svg *ngSwitchCase="'shipped'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="1" y="3" width="15" height="13"></rect>
+                    <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                    <circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle>
+                  </svg>
+                  <!-- User mới -->
+                  <svg *ngSwitchCase="'new-user'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                    <line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line>
+                  </svg>
+                  <!-- User khóa -->
+                  <svg *ngSwitchCase="'locked-user'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  </svg>
+                  <svg *ngSwitchDefault viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line>
+                  </svg>
+                </ng-container>
+              </div>
+
+              <div class="admin-notif-info">
+                <div class="admin-notif-item-title">{{ n.title }}</div>
+                <div class="admin-notif-item-desc">{{ n.message }}</div>
+                <div class="admin-notif-tags" *ngIf="n.items && n.items.length">
+                  <span class="admin-notif-tag" *ngFor="let item of n.items">{{ item }}</span>
+                </div>
+              </div>
+
+              <span class="admin-notif-dot" *ngIf="!isNotifRead(n.id)"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div class="admin-header__user">
       <button

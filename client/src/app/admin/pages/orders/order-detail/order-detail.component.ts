@@ -48,10 +48,10 @@ export class OrderDetailComponent implements OnInit {
 
   readonly ALL_STATUSES: StatusOption[] = [
     { code: 'PENDING', label: 'Chờ xác nhận', variant: 'neutral' },
-    { code: 'CONFIRMED', label: 'Đã xác nhận', variant: 'primary' },
+
     { code: 'PROCESSING', label: 'Đang xử lý', variant: 'warning' },
     { code: 'SHIPPING', label: 'Đang giao', variant: 'primary' },
-    { code: 'DELIVERY_FAILED', label: 'Giao hàng không thành công', variant: 'danger' },
+
     { code: 'DELIVERED', label: 'Đã giao', variant: 'success' },
     { code: 'CANCELLED', label: 'Đã hủy', variant: 'danger' },
     { code: 'RETURNED', label: 'Đã hoàn trả', variant: 'warning' }

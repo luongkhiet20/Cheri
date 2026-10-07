@@ -3,6 +3,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
 import { NotificationService } from '../../shared/notification/notification.service';
+import { escapeCsvTextField, paymentStatusLabel } from './orders-report-csv.cjs';
 
 @Component({
   selector: 'app-orders',
@@ -330,7 +331,7 @@ export class OrdersComponent implements OnInit {
 
       // 4. Số điện thoại (dạng ="..." để Excel giữ nguyên số 0 đầu)
       const rawPhone = o.customerPhone || o.phone || o.shippingAddress?.phone || '';
-      const phone = rawPhone ? `="` + rawPhone.replace(/"/g, '') + `"` : '""';
+      const phone = escapeCsvTextField(rawPhone);
 
       // 5. Email
       const email = this.escapeCsvField(o.customerEmail || '');
@@ -393,7 +394,7 @@ export class OrdersComponent implements OnInit {
       const shippingProvider = this.escapeCsvField(o.shippingProvider || o.shippingMethodSnapshot?.name || '');
 
       // 18. Mã vận đơn
-      const trackingNumber = o.trackingNumber ? `="` + o.trackingNumber.replace(/"/g, '') + `"` : '""';
+      const trackingNumber = escapeCsvTextField(o.trackingNumber || '');
 
       // 19. Ghi chú
       const notes = this.escapeCsvField(o.notes || '');
@@ -459,16 +460,7 @@ export class OrdersComponent implements OnInit {
   }
 
   private getPaymentStatusLabel(status: string): string {
-    if (!status) return 'Chưa xác định';
-    const s = String(status).toUpperCase();
-    switch (s) {
-      case 'PAID': return 'Đã thanh toán';
-      case 'PENDING': return 'Chờ thanh toán';
-      case 'FAILED': return 'Thất bại';
-      case 'REFUNDED': return 'Đã hoàn tiền';
-      case 'PARTIALLY_REFUNDED': return 'Hoàn tiền một phần';
-      default: return status;
-    }
+    return paymentStatusLabel(status);
   }
 
   onToolbarSelectAll(): void {

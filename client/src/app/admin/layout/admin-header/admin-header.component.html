@@ -40,10 +40,11 @@
       </svg>
     </button>
 
-    <div class="admin-header__user" (clickOutside)="closeUserMenu()">
+    <div class="admin-header__user">
       <button
+        type="button"
         class="admin-header__user-btn"
-        (click)="toggleUserMenu()"
+        (click)="toggleUserMenu($event)"
         [attr.aria-expanded]="isUserMenuOpen"
         aria-haspopup="true"
         id="admin-user-menu-btn"
@@ -63,7 +64,7 @@
         </svg>
       </button>
 
-      <div class="admin-header__user-menu" *ngIf="isUserMenuOpen" role="menu" aria-labelledby="admin-user-menu-btn">
+      <div class="admin-header__user-menu" *ngIf="isUserMenuOpen" role="menu" aria-labelledby="admin-user-menu-btn" (click)="$event.stopPropagation()">
         <a [routerLink]="['/admin/account']" class="admin-header__menu-item" role="menuitem" (click)="navigateTo('/admin/account', $event)" id="header-menu-account">
           Thông tin tài khoản
         </a>
@@ -74,7 +75,7 @@
           Cài đặt
         </a>
         <div class="admin-header__menu-divider" role="separator"></div>
-        <button class="admin-header__menu-item admin-header__menu-item--danger" role="menuitem" (click)="onLogout()">
+        <button type="button" class="admin-header__menu-item admin-header__menu-item--danger" role="menuitem" (click)="onLogout()">
           Đăng xuất
         </button>
       </div>

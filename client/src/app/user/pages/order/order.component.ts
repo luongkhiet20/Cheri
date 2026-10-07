@@ -63,7 +63,7 @@ export class OrderComponent implements OnInit, OnDestroy {
     const queryOrderId = this.route.snapshot.queryParamMap.get('orderId') || this.route.snapshot.paramMap.get('id');
 
     // 1. Kiểm tra store
-    if (storeOrder && (!queryOrderId || storeOrder.orderId === queryOrderId)) {
+    if (storeOrder && (!queryOrderId || storeOrder.orderId === queryOrderId || (storeOrder as any)._id === queryOrderId)) {
       this.currentOrder = storeOrder;
       this.saveOrderToSession(storeOrder);
       return;
@@ -75,7 +75,7 @@ export class OrderComponent implements OnInit, OnDestroy {
         const cachedRaw = window.sessionStorage.getItem('cheri_last_order');
         if (cachedRaw) {
           const cached = JSON.parse(cachedRaw);
-          if (cached && (!queryOrderId || cached.orderId === queryOrderId)) {
+          if (cached && (!queryOrderId || cached.orderId === queryOrderId || cached._id === queryOrderId)) {
             this.currentOrder = cached;
             return;
           }
@@ -101,24 +101,48 @@ export class OrderComponent implements OnInit, OnDestroy {
               return;
             }
           }
-          if (!this.currentOrder) {
-            this.errorMessage = 'Không tìm thấy thông tin đơn hàng này trong tài khoản của bạn.';
-          }
+          // Thử tiếp qua trackOrder nếu không tìm thấy trong list
+          this.fetchViaTrackOrder(queryOrderId);
         },
         error: () => {
           this.isLoading = false;
-          if (!this.currentOrder) {
-            this.errorMessage = 'Không thể tải thông tin đơn hàng. Vui lòng thử lại sau.';
-          }
+          this.fetchViaTrackOrder(queryOrderId);
         }
       });
       return;
     }
 
-    // 4. Nếu không có order nào
+    // 4. Nếu có queryOrderId (khách vãng lai): thử nạp qua tracking
+    if (queryOrderId) {
+      this.fetchViaTrackOrder(queryOrderId);
+      return;
+    }
+
+    // 5. Nếu không có order nào
     if (!this.currentOrder) {
       this.errorMessage = 'Không tìm thấy thông tin đơn hàng.';
     }
+  }
+
+  private fetchViaTrackOrder(queryOrderId: string): void {
+    this.isLoading = true;
+    this.apiService.trackOrder({ orderId: queryOrderId }).subscribe({
+      next: (res: any) => {
+        this.isLoading = false;
+        if (res && !res.error && res.orderId) {
+          this.currentOrder = res;
+          this.saveOrderToSession(res);
+        } else if (!this.currentOrder) {
+          this.errorMessage = 'Không tìm thấy thông tin đơn hàng này.';
+        }
+      },
+      error: () => {
+        this.isLoading = false;
+        if (!this.currentOrder) {
+          this.errorMessage = 'Không thể tải thông tin đơn hàng. Vui lòng thử lại sau.';
+        }
+      }
+    });
   }
 
   private saveOrderToSession(order: any): void {
@@ -215,16 +239,23 @@ export class OrderComponent implements OnInit, OnDestroy {
   getFormattedAddress(order: any): string {
     const addr = order?.shippingAddress || (Array.isArray(order?.addresses) ? order.addresses[0] : null);
     if (!addr) return '';
-    if (addr.address && addr.address.trim()) {
-      return addr.address.trim();
-    }
+    const detail = addr.addressDetail || addr.line1;
     const parts = [
-      addr.addressDetail || addr.line1,
+      detail,
       addr.wardName || addr.ward,
       addr.districtName || addr.district,
       addr.provinceName || addr.province || addr.city
     ].filter(Boolean);
-    return parts.join(', ');
+    if (parts.length > 1) {
+      return Array.from(new Set(parts)).join(', ');
+    }
+    if (addr.fullAddress && addr.fullAddress.trim()) {
+      return addr.fullAddress.trim();
+    }
+    if (addr.address && addr.address.trim()) {
+      return addr.address.trim();
+    }
+    return '';
   }
 
   getVariantDescription(item: any): string {

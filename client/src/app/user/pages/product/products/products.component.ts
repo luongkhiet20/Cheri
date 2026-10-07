@@ -277,30 +277,52 @@ export class ProductsComponent implements OnDestroy {
   }
 
   clearSearch(): void {
-    // 1. Reset all search states
+    // 1. Reset các search states ngay lập tức để ẩn banner và nút "Xóa tìm kiếm"
     this.searchQuery.set('');
     this.isImageSearch.set(false);
     this.productIdsFilter.set('');
 
-    // 2. Reset all filter signals to default
-    this.filterMinPrice.set(0);
-    this.filterStock.set('all');
-    this.filterRating.set(0);
-    this.selectedCategories.set([]);
-    this.selectedRatings.set([]);
-    this.store.filterPrice(0);
+    // 2. GIỮ NGUYÊN bộ lọc bên trái (danh mục, khoảng giá, tình trạng hàng, đánh giá)
+    // Người dùng chỉ muốn xóa bộ lọc tìm kiếm, không xóa các bộ lọc sidebar đã chọn nếu chưa chủ động reset
 
-    // 3. Clear search/filter query parameters on URL, navigate cleanly to /product/all
+    // 3. Xóa các search query params khỏi URL (search, imageSearch, productIds), đưa page về 1
+    const currentParams = { ...this.route.snapshot.queryParams };
+    delete currentParams['search'];
+    delete currentParams['imageSearch'];
+    delete currentParams['productIds'];
+    currentParams['page'] = 1;
+
+    // 4. Điều hướng URL sạch theo category hiện tại nếu có
     const lang = this.lang() || 'vi';
-    this.router.navigate(['/' + lang + '/product/all'], {
-      queryParams: {},
+    const currentCategory = this.category();
+    const targetRoute = currentCategory && currentCategory !== 'all'
+      ? ['/' + lang + '/product/category/' + currentCategory]
+      : ['/' + lang + '/product/all'];
+
+    this.router.navigate(targetRoute, {
+      queryParams: currentParams,
     });
 
-    // 4. Call existing product load logic with default parameters to fetch all products
+    // 5. Nạp lại danh sách sản phẩm đầy đủ với các bộ lọc bên trái hiện tại còn lại
+    const catParam = this.selectedCategories().length > 0
+      ? this.selectedCategories().join(',')
+      : (currentCategory && currentCategory !== 'all' ? currentCategory : undefined);
+    const ratParam = this.selectedRatings().length > 0
+      ? this.selectedRatings().join(',')
+      : (this.filterRating() && String(this.filterRating()) !== '0' ? String(this.filterRating()) : undefined);
+
     this.store.getProducts({
       lang,
+      category: catParam,
+      maxPrice: this.filterPrice() || undefined,
+      minPrice: this.filterMinPrice() || undefined,
+      stock: this.filterStock() !== 'all' ? this.filterStock() : undefined,
+      rating: ratParam,
       page: 1,
-      sort: 'newest',
+      sort: this.sortBy() || currentParams['sort'] || 'newest',
+      search: undefined,
+      imageSearch: undefined,
+      productIds: undefined,
     });
 
     this.store.updatePosition({ productsComponent: 0 });
@@ -352,6 +374,12 @@ export class ProductsComponent implements OnDestroy {
   }
 
   clearAllFilters(): void {
+    this.filterMinPrice.set(0);
+    this.filterStock.set('all');
+    this.filterRating.set(0);
+    this.selectedCategories.set([]);
+    this.selectedRatings.set([]);
+    this.store.filterPrice(0);
     this.clearSearch();
   }
 

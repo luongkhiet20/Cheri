@@ -242,8 +242,24 @@ export const prepareCart = (cart, lang: string, config): CartModel => {
         )
     : [];
 
+  const deduplicatedItems: any[] = [];
+  for (const cItem of cartLangItems) {
+    const pId = (cItem.item?._id || cItem.item?.id || (typeof cItem.id === 'string' && cItem.id.includes('_') ? cItem.id.split('_')[0] : cItem.id))?.toString();
+    const vId = (cItem.variantId !== undefined && cItem.variantId !== null && cItem.variantId !== '') ? String(cItem.variantId).trim() : null;
+    const existing = deduplicatedItems.find((d: any) => {
+      const dPId = (d.item?._id || d.item?.id || (typeof d.id === 'string' && d.id.includes('_') ? d.id.split('_')[0] : d.id))?.toString();
+      const dVId = (d.variantId !== undefined && d.variantId !== null && d.variantId !== '') ? String(d.variantId).trim() : null;
+      return (d.id === cItem.id) || (dPId && pId && dPId === pId && dVId === vId);
+    });
+    if (existing) {
+      existing.qty = (Number(existing.qty) || 0) + (Number(cItem.qty) || 0);
+    } else {
+      deduplicatedItems.push(cItem);
+    }
+  }
+
   const { totalPrice, totalQty }: { totalPrice: number; totalQty: number } =
-    cartLangItems.reduce(
+    deduplicatedItems.reduce(
       (prev, item) => ({
         totalPrice: prev.totalPrice + item.price * item.qty,
         totalQty: prev.totalQty + item.qty,
@@ -251,7 +267,7 @@ export const prepareCart = (cart, lang: string, config): CartModel => {
       { totalPrice: 0, totalQty: 0 },
     );
 
-  const shippingTypeCheck = cartLangItems.find(
+  const shippingTypeCheck = deduplicatedItems.find(
     (item) => item.shipingCostType === shippingTypes[1],
   );
   const shippingType = shippingTypeCheck ? shippingTypes[1] : shippingTypes[0];
@@ -266,7 +282,7 @@ export const prepareCart = (cart, lang: string, config): CartModel => {
     totalPrice >= shippingByLang.limit ? 0 : shippingByLang.cost;
 
   return {
-    items: cartLangItems,
+    items: deduplicatedItems,
     shippingCost: totalPrice ? shippingTypeCost : 0,
     shippingLimit: shippingByLang.limit,
     shippingType: totalPrice ? (shippingTypeCost ? shippingType : 'free') : '',

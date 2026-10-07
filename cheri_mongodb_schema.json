@@ -183,7 +183,7 @@
         },
         { "name": "customerEmail", "type": "String", "required": true },
         { "name": "customerPhone", "type": "String", "default": "" },
-        { "name": "status", "type": "String", "enum": ["PENDING", "CONFIRMED", "PROCESSING", "SHIPPING", "DELIVERED", "CANCELLED", "RETURNED"], "default": "PENDING" },
+        { "name": "status", "type": "String", "enum": ["PENDING", "PROCESSING", "SHIPPING", "DELIVERED", "CANCELLED", "RETURNED"], "default": "PENDING" },
         { "name": "notes", "type": "String", "default": "" },
         {
           "name": "items",

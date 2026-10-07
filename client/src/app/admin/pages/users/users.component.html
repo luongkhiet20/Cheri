@@ -13,10 +13,10 @@
       </button>
     </div>
   </div>
-  <app-admin-toolbar searchPlaceholder="Tìm kiếm..." [filterFields]="filterFields" [selectable]="true"
+  <app-admin-toolbar searchPlaceholder="Tìm kiếm..." [searchValue]="searchQuery" [filterFields]="filterFields" [selectable]="true"
     [allSelected]="allSelected" [indeterminate]="isIndeterminate" [selectedCount]="selectedCount"
     [showDeleteSelected]="true" [total]="displayTotal" [isLoading]="isLoading" (searchChange)="onSearch($event)"
-    (filterChange)="onFilter($event)" (refresh)="onRefresh()" (selectAllChange)="onToolbarSelectAll()"
+    (filterChange)="onFilter($event)" (filterReset)="onFilterReset()" (refresh)="onRefresh()" (selectAllChange)="onToolbarSelectAll()"
     (deleteSelected)="onDeleteSelected()"></app-admin-toolbar>
   <app-admin-table [columns]="columns" [data]="data" [loading]="isLoading" [actions]="actions" [pagination]="pagination"
     [selectable]="true" [selectedIds]="selectedIds" totalLabel="tài khoản" (actionClick)="onAction($event)"

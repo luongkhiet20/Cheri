@@ -11,7 +11,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { RolesGuard, AdminJwtAuthGuard } from '../auth/roles.guard';
+import { RolesGuard, AdminJwtAuthGuard, OptionalJwtAuthGuard } from '../auth/roles.guard';
 import { OrdersService } from './orders.service';
 import { GetUser } from '../auth/utils/get-user.decorator';
 import { User } from '../auth/models/user.model';
@@ -119,8 +119,8 @@ export class OrdersController {
     return this.ordersService.validateCoupon(body.code, body.subtotal);
   }
 
-  // ─── Đặt hàng COD — yêu cầu đăng nhập để lấy cart từ DB ─────────────────
-  @UseGuards(AuthGuard('jwt'))
+  // ─── Đặt hàng COD — hỗ trợ cả user đăng nhập và khách vãng lai ─────────
+  @UseGuards(OptionalJwtAuthGuard)
   @Post('/add')
   async addOrder(
     @Body() orderDto: OrderDto,
@@ -129,8 +129,8 @@ export class OrdersController {
     return this.ordersService.addOrder(orderDto, user);
   }
 
-  // ─── Đặt hàng Stripe — yêu cầu đăng nhập ────────────────────────────────
-  @UseGuards(AuthGuard('jwt'))
+  // ─── Đặt hàng Stripe — hỗ trợ cả user đăng nhập và khách vãng lai ────────
+  @UseGuards(OptionalJwtAuthGuard)
   @Post('/stripe')
   async orderWithStripe(
     @Body() body,

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID, ChangeDetectorRef, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID, ChangeDetectorRef, Output, EventEmitter, HostListener } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -246,12 +246,31 @@ export class AdminHeaderComponent implements OnInit, OnDestroy {
     return name.trim().charAt(0).toUpperCase();
   }
 
-  toggleUserMenu(): void {
+  toggleUserMenu(event?: MouseEvent): void {
+    if (event) {
+      event.stopPropagation();
+    }
     this.isUserMenuOpen = !this.isUserMenuOpen;
+    this.cdr.markForCheck();
   }
 
   closeUserMenu(): void {
-    this.isUserMenuOpen = false;
+    if (this.isUserMenuOpen) {
+      this.isUserMenuOpen = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (!this.isUserMenuOpen) {
+      return;
+    }
+    const target = event.target as HTMLElement | null;
+    if (target && (target.closest('.admin-header__user-menu') || target.closest('.admin-header__user-btn'))) {
+      return;
+    }
+    this.closeUserMenu();
   }
 
   navigateTo(path: string, event?: Event): void {

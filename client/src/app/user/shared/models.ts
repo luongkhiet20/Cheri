@@ -140,7 +140,6 @@ export interface Address {
 
 export enum OrderStatus {
   PENDING = 'PENDING',
-  CONFIRMED = 'CONFIRMED',
   PROCESSING = 'PROCESSING',
   SHIPPING = 'SHIPPING',
   DELIVERY_FAILED = 'DELIVERY_FAILED',

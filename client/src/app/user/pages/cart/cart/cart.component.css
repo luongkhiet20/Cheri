@@ -13,6 +13,8 @@
 }
 
 :host .cart-container {
+  position: relative;
+  z-index: 1;
   max-width: 1200px;
   width: 100%;
   margin: 0 auto;
@@ -1156,6 +1158,8 @@
 
 :host .btn-continue-shopping,
 :host .btn-explore-store {
+  position: relative;
+  z-index: 2;
   display: inline-flex;
   align-items: center;
   justify-content: center;

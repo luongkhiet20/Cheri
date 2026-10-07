@@ -463,7 +463,7 @@
 
           <div class="summary-row" *ngIf="order.paymentStatus">
             <span class="summary-label">Trạng thái thanh toán:</span>
-            <span class="summary-val">{{ order.paymentStatus }}</span>
+            <span class="summary-val">{{ getPaymentStatusLabel(order.paymentStatus) }}</span>
           </div>
 
           <div class="summary-row" *ngIf="order.paymentProvider">

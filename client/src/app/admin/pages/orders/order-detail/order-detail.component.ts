@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
+import { paymentStatusLabel } from '../orders-report-csv.cjs';
 
 interface StatusOption {
   code: string;
@@ -36,7 +37,6 @@ export class OrderDetailComponent implements OnInit {
   // Business state transitions rule
   readonly VALID_TRANSITIONS: Record<string, string[]> = {
     PENDING: ['PROCESSING', 'CANCELLED'],
-    CONFIRMED: ['PROCESSING', 'CANCELLED'],
     PROCESSING: ['SHIPPING', 'CANCELLED'],
     SHIPPING: ['DELIVERY_FAILED', 'DELIVERED', 'CANCELLED'],
     DELIVERY_FAILED: ['SHIPPING', 'CANCELLED', 'RETURNED'],
@@ -47,10 +47,10 @@ export class OrderDetailComponent implements OnInit {
 
   readonly ALL_STATUSES: StatusOption[] = [
     { code: 'PENDING', label: 'Chờ xác nhận', variant: 'neutral' },
-    { code: 'CONFIRMED', label: 'Đã xác nhận', variant: 'primary' },
+
     { code: 'PROCESSING', label: 'Đang xử lý', variant: 'warning' },
     { code: 'SHIPPING', label: 'Đang giao', variant: 'primary' },
-    { code: 'DELIVERY_FAILED', label: 'Giao hàng không thành công', variant: 'danger' },
+
     { code: 'DELIVERED', label: 'Đã giao', variant: 'success' },
     { code: 'CANCELLED', label: 'Đã hủy', variant: 'danger' },
     { code: 'RETURNED', label: 'Đã hoàn trả', variant: 'warning' }
@@ -124,6 +124,10 @@ export class OrderDetailComponent implements OnInit {
   getStatusLabel(code: unknown): string {
     const rawCode = typeof code === 'string' ? code.trim().toUpperCase() : '';
     return this.getStatusMeta(rawCode)?.label || rawCode || '—';
+  }
+
+  getPaymentStatusLabel(status: unknown): string {
+    return paymentStatusLabel(status);
   }
 
   isTransitionAllowed(targetStatus: string): boolean {

@@ -24,10 +24,11 @@ import { SignalStoreSelectors } from './store/signal.store.selectors';
 import { SettingsService } from './admin/pages/settings/settings.service';
 import { FooterComponent } from './user/layout/footer/footer.component';
 import { HeaderComponent } from './user/layout/header/header.component';
+import { ChatWidgetComponent } from './user/shared/chat-widget/chat-widget.component';
 
 @Component({
   selector: 'cheri-app',
-  imports: [CommonModule, RouterOutlet, FooterComponent, HeaderComponent],
+  imports: [CommonModule, RouterOutlet, FooterComponent, HeaderComponent, ChatWidgetComponent],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })

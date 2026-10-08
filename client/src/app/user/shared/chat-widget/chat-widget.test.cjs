@@ -107,3 +107,51 @@ test('new messages scroll to the latest bubble after the view updates', () => {
   widget.ngAfterViewChecked();
   assert.equal(list.scrollTop, 100, 'later checks must not override manual scrolling');
 });
+
+async function renderShell(isDashboard, openMessage) {
+  const { Component, CUSTOM_ELEMENTS_SCHEMA, ViewChild, provideZonelessChangeDetection, ɵresolveComponentResources } = require('@angular/core');
+  const { CommonModule } = require('@angular/common');
+  const { bootstrapApplication } = require('@angular/platform-browser');
+  const { renderApplication, provideServerRendering } = require('@angular/platform-server');
+  const { ChatWidgetComponent } = require('./chat-widget.component.ts');
+  await ɵresolveComponentResources((url) => Promise.resolve(fs.readFileSync(path.join(__dirname, url), 'utf8')));
+  class ShellPreview {
+    isDashboard = isDashboard;
+    onScrolling() {}
+    onActivate() {}
+    onDeactivate() {}
+  }
+  ViewChild(ChatWidgetComponent)(ShellPreview.prototype, 'widget');
+  Component({
+    selector: 'chat-shell-test', standalone: true, imports: [CommonModule, ChatWidgetComponent],
+    schemas: [CUSTOM_ELEMENTS_SCHEMA],
+    template: fs.readFileSync(path.resolve(__dirname, '../../../app.component.html'), 'utf8'),
+  })(ShellPreview);
+  return renderApplication(async () => {
+    const app = await bootstrapApplication(ShellPreview, { providers: [provideZonelessChangeDetection(), provideServerRendering()] });
+    if (openMessage !== undefined) {
+      app.components[0].instance.widget.openChat();
+      app.components[0].instance.widget.draft = openMessage;
+      app.components[0].instance.widget.sendMessage();
+      app.tick();
+    }
+    return app;
+  }, { document: '<html><body><chat-shell-test></chat-shell-test></body></html>', url: 'http://localhost/' });
+}
+
+test('the real storefront shell renders the chat launcher', async () => {
+  assert.match(await renderShell(false), /aria-label="Mở trò chuyện cùng Chéri"/);
+});
+
+test('the real admin shell renders no chat widget or controls', async () => {
+  assert.doesNotMatch(await renderShell(true), /<app-chat-widget|cheri-chat-panel|Mở trò chuyện cùng Chéri/);
+});
+
+test('open chat renders accessible controls and escapes HTML-looking messages during SSR', async () => {
+  const html = await renderShell(false, '<img src=x onerror=alert(1)>');
+  assert.match(html, /role="dialog"/);
+  assert.match(html, /role="log"/);
+  assert.match(html, /aria-label="Gửi lời nhắn"/);
+  assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;/);
+  assert.doesNotMatch(html, /<img src=x onerror/);
+});

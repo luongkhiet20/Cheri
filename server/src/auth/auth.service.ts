@@ -207,6 +207,15 @@ export class AuthService {
 
     const resolvedName = (fullName || name || cleanEmail.split('@')[0] || 'User').trim();
     const cleanDateOfBirth = dateOfBirth ? String(dateOfBirth).trim() : '';
+    if (cleanDateOfBirth) {
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (cleanDateOfBirth > todayStr) {
+        throw new BadRequestException('Ngày sinh không hợp lệ: Không được chọn ngày trong tương lai');
+      }
+      if (cleanDateOfBirth < '1900-01-01') {
+        throw new BadRequestException('Ngày sinh không hợp lệ: Ngày sinh không được nhỏ hơn 01/01/1900');
+      }
+    }
 
     const resolvedRoles = Array.isArray(roles) && roles.length
       ? roles
@@ -263,7 +272,17 @@ export class AuthService {
       dataToUpdate.fullName = dataToUpdate.name;
     }
     if (dataToUpdate.dateOfBirth !== undefined) {
-      dataToUpdate.dateOfBirth = dataToUpdate.dateOfBirth ? String(dataToUpdate.dateOfBirth).trim() : '';
+      const cleanDob = dataToUpdate.dateOfBirth ? String(dataToUpdate.dateOfBirth).trim() : '';
+      if (cleanDob) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (cleanDob > todayStr) {
+          throw new BadRequestException('Ngày sinh không hợp lệ: Không được chọn ngày trong tương lai');
+        }
+        if (cleanDob < '1900-01-01') {
+          throw new BadRequestException('Ngày sinh không hợp lệ: Ngày sinh không được nhỏ hơn 01/01/1900');
+        }
+      }
+      dataToUpdate.dateOfBirth = cleanDob;
     }
     if (dataToUpdate.password && dataToUpdate.password.trim()) {
       const salt = await bcrypt.genSalt();

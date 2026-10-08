@@ -64,6 +64,7 @@ export class AuthController {
     phone?: string;
     address?: string;
     gender?: string;
+    dateOfBirth?: string;
     avatar?: string;
     avatarUrl?: string;
     images?: any[];
@@ -83,6 +84,7 @@ export class AuthController {
       phone: phone,
       address: (user as any).address || '',
       gender: (user as any).gender || '',
+      dateOfBirth: (user as any).dateOfBirth || '',
       avatar: rawAvatar,
       avatarUrl: rawAvatar,
       images,
@@ -111,6 +113,7 @@ export class AuthController {
       phoneNumber: (updated as any).phoneNumber || '',
       address: (updated as any).address || '',
       gender: (updated as any).gender || '',
+      dateOfBirth: (updated as any).dateOfBirth || '',
       avatar: rawAvatar,
       avatarUrl: rawAvatar,
       images,

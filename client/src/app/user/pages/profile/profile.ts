@@ -41,9 +41,21 @@ export class Profile implements OnInit {
   formName: string = '';
   formEmail: string = '';
   formPhone: string = '';
+  formGender: string = '';
+  formDateOfBirth: string = '';
   formAddress: string = '';
   formNewPassword: string = '';
   formConfirmPassword: string = '';
+
+  // Giới hạn ngày sinh hợp lệ (không nhỏ hơn 01/01/1900 và không trong tương lai)
+  readonly minBirthDate: string = '1900-01-01';
+  get maxBirthDate(): string {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
 
   // Save state
   isSaving: boolean = false;
@@ -83,11 +95,38 @@ export class Profile implements OnInit {
     });
   }
 
+  formatDateForInput(dob: any): string {
+    if (!dob) return '';
+    if (typeof dob === 'string') {
+      const trimmed = dob.trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+        return trimmed;
+      }
+      const date = new Date(trimmed);
+      if (!isNaN(date.getTime())) {
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+      }
+      return trimmed;
+    }
+    if (dob instanceof Date && !isNaN(dob.getTime())) {
+      const yyyy = dob.getFullYear();
+      const mm = String(dob.getMonth() + 1).padStart(2, '0');
+      const dd = String(dob.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+    return '';
+  }
+
   populateForm(user: any): void {
     if (!user) return;
     this.formName = (user.fullName || user.name || (user.email ? user.email.split('@')[0] : '')).trim();
     this.formEmail = user.email || '';
     this.formPhone = user.phoneNumber || user.phone || '';
+    this.formGender = user.gender || '';
+    this.formDateOfBirth = this.formatDateForInput(user.dateOfBirth);
     this.formAddress = user.address || (user.shippingAddress?.address ? this.getOrderAddress({ shippingAddress: user.shippingAddress } as any) : '');
     this.avatarImgError = false;
   }
@@ -397,6 +436,24 @@ export class Profile implements OnInit {
     }
   }
 
+  // ── Xem chi tiết đơn hàng (Dẫn tới trang Bill chi tiết) ──
+  onViewOrderDetail(order: Order): void {
+    if (!order) return;
+    const targetId = order._id || order.orderId;
+    if (isPlatformBrowser(this.platformId) && typeof window !== 'undefined' && window.sessionStorage) {
+      try {
+        window.sessionStorage.setItem('cheri_last_order', JSON.stringify(order));
+      } catch (_) {}
+    }
+    try {
+      this.selectors.productState.update((state: any) => ({ ...state, order }));
+    } catch (_) {}
+    const currentLang = (this.translate as any)?.lang || 'vi';
+    this.router.navigate(['/' + currentLang + '/order', targetId], {
+      queryParams: { orderId: order.orderId }
+    });
+  }
+
   // ── Save profile (Gửi API cập nhật MongoDB & đồng bộ state tức thì) ──
   onSave(): void {
     this.saveSuccess = false;
@@ -418,6 +475,18 @@ export class Profile implements OnInit {
       }
     }
 
+    // Validate ngày sinh (không cho phép ngày trong tương lai và không nhỏ hơn 01/01/1900)
+    if (this.formDateOfBirth) {
+      if (this.formDateOfBirth > this.maxBirthDate) {
+        this.saveError = 'Ngày sinh không hợp lệ: Không được chọn ngày trong tương lai.';
+        return;
+      }
+      if (this.formDateOfBirth < this.minBirthDate) {
+        this.saveError = 'Ngày sinh không hợp lệ: Ngày sinh không được nhỏ hơn 01/01/1900.';
+        return;
+      }
+    }
+
     const user = this.user$();
     if (!user) {
       this.saveError = 'Không tìm thấy phiên đăng nhập. Vui lòng đăng nhập lại.';
@@ -429,6 +498,8 @@ export class Profile implements OnInit {
       name: this.formName?.trim() || undefined,
       phoneNumber: this.formPhone?.trim() ?? '',
       phone: this.formPhone?.trim() ?? '',
+      gender: this.formGender ?? '',
+      dateOfBirth: this.formDateOfBirth ?? '',
       address: this.formAddress?.trim() ?? '',
     };
 

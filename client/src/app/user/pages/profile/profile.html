@@ -5,7 +5,8 @@
     <div class="profile-avatar-wrap">
       <div class="profile-avatar-circle" (click)="openAvatarPicker()" title="Nhấp để thay đổi ảnh đại diện"
         role="button" tabindex="0" (keydown.enter)="openAvatarPicker()" (keydown.space)="openAvatarPicker()">
-        <img *ngIf="getAvatarUrl()" [src]="getAvatarUrl()" (error)="onAvatarImgError()" alt="Ảnh đại diện" class="profile-avatar-image" />
+        <img *ngIf="getAvatarUrl()" [src]="getAvatarUrl()" (error)="onAvatarImgError()" alt="Ảnh đại diện"
+          class="profile-avatar-image" />
 
         <span *ngIf="!getAvatarUrl()">
           {{ getUserInitial() }}
@@ -71,7 +72,7 @@
         <div class="orders-empty-box" *ngIf="userOrders$() !== null && getFilteredOrders().length === 0">
           <p class="empty-text">Bạn chưa có đơn hàng nào.</p>
           <a class="empty-shop-btn" [routerLink]="['/' + (lang$ | async) + '/product/all']">
-            Khám phá BST mới
+            Khám phá cửa hàng
           </a>
         </div>
 
@@ -160,7 +161,9 @@
                 <button type="button" class="btn-action-outline" *ngIf="normalizeStatus(order.status) === 'DELIVERED'">
                   Trả hàng / Hoàn tiền
                 </button>
-
+                <button type="button" class="btn-action-outline" (click)="onViewOrderDetail(order)">
+                  Chi tiết đơn hàng
+                </button>
               </div>
             </div>
 
@@ -215,6 +218,22 @@
           <div class="form-field-group">
             <label class="field-label">Điện thoại liên hệ</label>
             <input type="tel" class="field-input" [(ngModel)]="formPhone" placeholder="Nhập số điện thoại" />
+          </div>
+
+          <div class="form-field-group">
+            <label class="field-label">Giới tính</label>
+            <select class="field-input" [(ngModel)]="formGender">
+              <option value="">Chọn giới tính</option>
+              <option value="Nam">Nam</option>
+              <option value="Nữ">Nữ</option>
+              <option value="Khác">Khác</option>
+            </select>
+          </div>
+
+          <div class="form-field-group">
+            <label class="field-label">Ngày sinh</label>
+            <input type="date" class="field-input" [(ngModel)]="formDateOfBirth" [min]="minBirthDate"
+              [max]="maxBirthDate" />
           </div>
 
           <div class="form-field-group">

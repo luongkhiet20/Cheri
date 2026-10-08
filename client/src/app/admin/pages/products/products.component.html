@@ -124,7 +124,7 @@
   <app-empty-state *ngIf="!isLoading && (!data || data.length === 0)"
     [title]="filteredCategoryId ? ('Chưa có sản phẩm thuộc danh mục ' + (filteredCategoryName || 'này')) : 'Không tìm thấy sản phẩm nào'"
     [description]="filteredCategoryId ? 'Danh mục này hiện chưa có sản phẩm nào. Bạn có thể thêm sản phẩm mới hoặc xóa bộ lọc để xem tất cả sản phẩm.' : 'Không có sản phẩm nào khớp với điều kiện tìm kiếm hoặc cơ sở dữ liệu chưa có sản phẩm.'"
-    actionLabel="+ Thêm sản phẩm mới" (action)="onAddProduct()"></app-empty-state>
+    (action)="onAddProduct()"></app-empty-state>
 
   <!-- Data Table with row checkboxes -->
   <app-admin-table *ngIf="!isLoading && data && data.length > 0" [columns]="columns" [data]="data" [actions]="actions"

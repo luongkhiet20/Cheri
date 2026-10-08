@@ -3187,6 +3187,172 @@ app.get('/api/orders', async (req, res) => {
   }
 });
 
+// 4.1b GET /api/orders/notifications (Admin notifications for orders, products, users)
+app.get('/api/orders/notifications', async (req, res) => {
+  try {
+    const since = new Date();
+    since.setDate(since.getDate() - 30);
+
+    const [orders, products, users] = await Promise.all([
+      db.collection('orders').find({
+        $or: [
+          { createdAt: { $gte: since } },
+          { dateAdded: { $gte: since } }
+        ]
+      }).sort({ createdAt: -1 }).toArray(),
+      db.collection('products').find({}, {
+        projection: { title: 1, titleUrl: 1, stock: 1, dateAdded: 1, quantity: 1 }
+      }).toArray(),
+      db.collection('users').find({
+        $or: [
+          { createdAt: { $gte: since } },
+          { dateAdded: { $gte: since } }
+        ]
+      }, {
+        projection: { email: 1, name: 1, fullName: 1, status: 1, createdAt: 1, dateAdded: 1 }
+      }).sort({ createdAt: -1 }).toArray()
+    ]);
+
+    const notifications = [];
+
+    // ── Orders notifications
+    const newOrders = orders.filter(o => o.status === 'PENDING' || o.status === 'NEW' || o.status === 'Pending');
+    if (newOrders.length) {
+      notifications.push({
+        id: 'orders-new',
+        group: 'orders',
+        icon: 'new-order',
+        title: 'Có đơn hàng mới',
+        message: `${newOrders.length} đơn hàng mới chờ xử lý`,
+        count: newOrders.length,
+        level: 'info',
+        time: newOrders[0]?.createdAt || newOrders[0]?.dateAdded,
+      });
+    }
+
+    const confirmedOrders = orders.filter(o => o.status === 'CONFIRMED' || o.status === 'PROCESSING' || o.status === 'Confirmed' || o.status === 'Processing');
+    if (confirmedOrders.length) {
+      notifications.push({
+        id: 'orders-confirmed',
+        group: 'orders',
+        icon: 'confirmed',
+        title: 'Đơn đã xác nhận cần xuất kho',
+        message: `${confirmedOrders.length} đơn đã xác nhận và cần xuất kho`,
+        count: confirmedOrders.length,
+        level: 'info',
+        time: confirmedOrders[0]?.createdAt || confirmedOrders[0]?.dateAdded,
+      });
+    }
+
+    const paidOrders = orders.filter(o => o.paymentStatus === 'PAID' || o.paymentStatus === 'Paid' || o.status === 'PAID');
+    if (paidOrders.length) {
+      notifications.push({
+        id: 'orders-paid',
+        group: 'orders',
+        icon: 'paid',
+        title: 'Đơn hàng được thanh toán',
+        message: `${paidOrders.length} đơn đã thanh toán thành công`,
+        count: paidOrders.length,
+        level: 'success',
+        time: paidOrders[0]?.createdAt || paidOrders[0]?.dateAdded,
+      });
+    }
+
+    const canceledOrders = orders.filter(o => o.status === 'CANCELLED' || o.status === 'CANCELED' || o.status === 'Cancelled');
+    if (canceledOrders.length) {
+      notifications.push({
+        id: 'orders-canceled',
+        group: 'orders',
+        icon: 'cancel',
+        title: 'Đơn hàng bị hủy',
+        message: `${canceledOrders.length} đơn hàng đã bị hủy`,
+        count: canceledOrders.length,
+        level: 'error',
+        time: canceledOrders[0]?.createdAt || canceledOrders[0]?.dateAdded,
+      });
+    }
+
+    const returnOrders = orders.filter(o => o.status === 'RETURNED' || o.type === 'RETURN' || (o.notes && /đổi|trả|refund|return/i.test(o.notes)));
+    if (returnOrders.length) {
+      notifications.push({
+        id: 'orders-return',
+        group: 'orders',
+        icon: 'return',
+        title: 'Đơn hàng yêu cầu đổi/trả',
+        message: `${returnOrders.length} đơn yêu cầu đổi/trả`,
+        count: returnOrders.length,
+        level: 'warning',
+        time: returnOrders[0]?.createdAt || returnOrders[0]?.dateAdded,
+      });
+    }
+
+    // ── Products & Inventory
+    const outOfStock = products.filter(p => p.stock === 'outOfStock' || p.stock === 'out' || p.quantity === 0);
+    if (outOfStock.length) {
+      notifications.push({
+        id: 'stock-out',
+        group: 'products',
+        icon: 'out-of-stock',
+        title: 'Sản phẩm hết hàng',
+        message: `${outOfStock.length} sản phẩm đã hết hàng`,
+        count: outOfStock.length,
+        level: 'error',
+        items: outOfStock.slice(0, 3).map(p => p.title || p.titleUrl),
+      });
+    }
+
+    const lowStock = products.filter(p => p.stock === 'lowStock' || p.stock === 'low' || (typeof p.quantity === 'number' && p.quantity > 0 && p.quantity <= 5));
+    if (lowStock.length) {
+      notifications.push({
+        id: 'stock-low',
+        group: 'products',
+        icon: 'low-stock',
+        title: 'Sản phẩm sắp hết hàng',
+        message: `${lowStock.length} sản phẩm sắp hết hàng`,
+        count: lowStock.length,
+        level: 'warning',
+        items: lowStock.slice(0, 3).map(p => p.title || p.titleUrl),
+      });
+    }
+
+    // ── Users
+    const newUsers = users.filter(u => {
+      const d = u.createdAt || u.dateAdded;
+      return d && new Date(d) >= since;
+    });
+    if (newUsers.length) {
+      notifications.push({
+        id: 'users-new',
+        group: 'users',
+        icon: 'new-user',
+        title: 'Người dùng mới đăng ký',
+        message: `${newUsers.length} tài khoản mới trong 30 ngày`,
+        count: newUsers.length,
+        level: 'info',
+        time: newUsers[0]?.createdAt || newUsers[0]?.dateAdded,
+      });
+    }
+
+    const lockedUsersCount = await db.collection('users').countDocuments({ status: false });
+    if (lockedUsersCount > 0) {
+      notifications.push({
+        id: 'users-locked',
+        group: 'users',
+        icon: 'locked-user',
+        title: 'Người dùng bị khóa/kích hoạt',
+        message: `${lockedUsersCount} tài khoản đang bị khóa`,
+        count: lockedUsersCount,
+        level: 'warning',
+      });
+    }
+
+    res.json(notifications);
+  } catch (error) {
+    console.error('Error in GET /api/orders/notifications:', error);
+    res.status(500).json({ success: false, message: 'Lỗi tải thông báo' });
+  }
+});
+
 // 4.2 GET /api/orders/:id (Get single order by MongoDB _id)
 app.get('/api/orders/:id', async (req, res) => {
   try {

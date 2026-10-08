@@ -1,0 +1,10 @@
+/* Coupons component styles (Shared layout inherited from admin-shared.css & admin/styles.css) */
+.badge-fixed {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.badge-percent {
+  background: #fef3c7;
+  color: #b45309;
+}

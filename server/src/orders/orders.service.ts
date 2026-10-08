@@ -847,7 +847,7 @@ export class OrdersService {
       paymentStatus: type === 'STRIPE' ? PaymentStatus.PENDING : PaymentStatus.PENDING,
       paymentFee,
       subtotal,
-      discountAmount: 0,
+      discountAmount: couponDiscount,
       taxAmount: 0,
       couponCode: appliedCouponCode,
       couponDiscount,

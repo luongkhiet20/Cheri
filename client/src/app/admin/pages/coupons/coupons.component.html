@@ -1,0 +1,102 @@
+<div class="page-content">
+
+  <!-- Page Header -->
+  <div class="page-top">
+    <div>
+      <h1 class="page-title">Quản lý mã giảm giá</h1>
+    </div>
+
+    <div class="page-actions">
+      <button type="button" class="btn btn-primary" id="btn-add-coupon" (click)="onAddCoupon()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Thêm mã giảm giá
+      </button>
+    </div>
+  </div>
+
+  <!-- Alert Messages -->
+  <div *ngIf="successMessage" class="alert-box alert-success">
+    <div class="alert-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    </div>
+    <div class="alert-content">
+      {{ successMessage }}
+    </div>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert-box alert-error">
+    <div class="alert-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+    </div>
+    <div class="alert-content">
+      {{ errorMessage }}
+    </div>
+  </div>
+
+  <!-- Reusable Toolbar -->
+  <app-admin-toolbar searchPlaceholder="Tìm kiếm theo mã, mô tả..." [filterFields]="filterFields"
+    [selectable]="true" [allSelected]="allSelected" [indeterminate]="isIndeterminate" [selectedCount]="selectedCount"
+    [showDeleteSelected]="true" [total]="displayTotal" [isLoading]="isLoading" (searchChange)="onSearch($event)"
+    (filterChange)="onFilter($event)" (refresh)="onRefresh()" (selectAllChange)="onToolbarSelectAll()"
+    (deleteSelected)="onDeleteSelected()">
+  </app-admin-toolbar>
+
+  <!-- Reusable Table -->
+  <app-admin-table [columns]="columns" [data]="data" [loading]="isLoading" [actions]="actions" [pagination]="pagination"
+    [selectable]="true" [selectedIds]="selectedIds" totalLabel="mã giảm giá" (actionClick)="onAction($event)"
+    (selectionChange)="onSelectionChange($event)" (pageChange)="onPageChange($event)">
+  </app-admin-table>
+
+</div>
+
+<!-- Modal xác nhận Thao tác / Xóa -->
+<div *ngIf="confirmOpen" class="dialog-backdrop" (click)="cancelDialogAction()">
+  <div class="dialog-box" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" [attr.aria-label]="confirmTitle">
+    <div class="dialog-header">
+      <div class="dialog-icon-wrap" [ngClass]="'dialog-icon--' + confirmVariant">
+        <svg *ngIf="confirmVariant === 'danger'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          <line x1="10" y1="11" x2="10" y2="17"></line>
+          <line x1="14" y1="11" x2="14" y2="17"></line>
+        </svg>
+        <svg *ngIf="confirmVariant === 'warning'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <svg *ngIf="confirmVariant === 'default'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 14 14"></polyline>
+        </svg>
+      </div>
+      <h3 class="dialog-title">{{ confirmTitle }}</h3>
+    </div>
+
+    <div class="dialog-body">
+      <p class="dialog-message">{{ confirmMessage }}</p>
+    </div>
+
+    <div class="dialog-footer">
+      <button type="button" class="btn btn-secondary" (click)="cancelDialogAction()" [disabled]="isProcessing">
+        Hủy
+      </button>
+      <button type="button" class="btn" [ngClass]="confirmVariant === 'danger' ? 'btn-danger' : (confirmVariant === 'warning' ? 'btn-warning' : 'btn-primary')"
+        (click)="confirmDialogAction()" [disabled]="isProcessing">
+        <span *ngIf="isProcessing" class="btn-spinner"></span>
+        {{ confirmLabel }}
+      </button>
+    </div>
+  </div>
+</div>

@@ -4942,6 +4942,443 @@ app.delete('/api/shipping-methods/:id', async (req, res) => {
 
 
 // ─────────────────────────────────────────────────────────────
+// 7.7 COUPONS API (Admin coupon management & checkout validation)
+// ─────────────────────────────────────────────────────────────
+
+function formatCoupon(c) {
+  if (!c) return null;
+  const id = c._id ? c._id.toString() : c.id;
+  const usageLimit = Number(c.usageLimit) || 0;
+  const usedCount = Number(c.usedCount) || 0;
+  const remainingUsage = Math.max(0, usageLimit - usedCount);
+
+  return {
+    id,
+    _id: id,
+    code: c.code ? String(c.code).trim().toUpperCase() : '',
+    description: c.description || '',
+    discountType: c.discountType === 'FIXED' ? 'FIXED' : 'PERCENTAGE',
+    discountValue: Number(c.discountValue) || 0,
+    maxDiscount: Number(c.maxDiscount) || 0,
+    minOrderValue: Number(c.minOrderValue) || 0,
+    startDate: c.startDate ? new Date(c.startDate).toISOString() : null,
+    endDate: c.endDate ? new Date(c.endDate).toISOString() : null,
+    usageLimit,
+    usedCount,
+    remainingUsage,
+    isActive: c.isActive !== false,
+    createdAt: c.createdAt,
+    updatedAt: c.updatedAt
+  };
+}
+
+// 7.7.1 GET /api/coupons (List with search, filter, pagination)
+app.get('/api/coupons', async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.max(1, Math.min(100, parseInt(req.query.limit || req.query.pageSize) || 20));
+    const skip = (page - 1) * limit;
+
+    const query = {};
+
+    if (req.query.search && String(req.query.search).trim()) {
+      const q = String(req.query.search).trim();
+      const sRegex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      query.$or = [
+        { code: sRegex },
+        { description: sRegex }
+      ];
+    }
+
+    if (req.query.discountType && req.query.discountType !== 'all') {
+      query.discountType = req.query.discountType;
+    }
+
+    if (req.query.isActive !== undefined && req.query.isActive !== '' && req.query.isActive !== 'all') {
+      query.isActive = req.query.isActive === 'true' || req.query.isActive === true;
+    } else if (req.query.status !== undefined && req.query.status !== '' && req.query.status !== 'all') {
+      query.isActive = req.query.status === 'true' || req.query.status === 'active' || req.query.status === true;
+    }
+
+    const [total, coupons] = await Promise.all([
+      db.collection('coupons').countDocuments(query),
+      db.collection('coupons').find(query).sort({ _id: -1 }).skip(skip).limit(limit).toArray()
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    res.json({
+      success: true,
+      data: coupons.map(formatCoupon),
+      pagination: {
+        page,
+        limit,
+        pageSize: limit,
+        total,
+        totalPages
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching coupons:', error);
+    res.status(500).json({ success: false, message: 'Lỗi tải danh sách mã giảm giá' });
+  }
+});
+
+// 7.7.2 GET /api/coupons/:id (Get single coupon)
+app.get('/api/coupons/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    let query;
+    if (ObjectId.isValid(id)) {
+      query = { $or: [{ _id: new ObjectId(id) }, { _id: id }] };
+    } else {
+      query = { _id: id };
+    }
+
+    const coupon = await db.collection('coupons').findOne(query);
+    if (!coupon) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy mã giảm giá' });
+    }
+
+    res.json({
+      success: true,
+      data: formatCoupon(coupon)
+    });
+  } catch (error) {
+    console.error('Error fetching coupon:', error);
+    res.status(500).json({ success: false, message: 'Lỗi tải thông tin mã giảm giá' });
+  }
+});
+
+// 7.7.3 POST /api/coupons (Create coupon)
+app.post('/api/coupons', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const code = String(body.code || '').trim().toUpperCase();
+    if (!code) {
+      return res.status(400).json({ success: false, message: 'Mã giảm giá là bắt buộc' });
+    }
+
+    // Uniqueness check
+    const existing = await db.collection('coupons').findOne({ code });
+    if (existing) {
+      return res.status(400).json({ success: false, message: 'Mã giảm giá đã tồn tại trong hệ thống' });
+    }
+
+    const discountType = body.discountType === 'FIXED' ? 'FIXED' : 'PERCENTAGE';
+    const discountValue = Number(body.discountValue);
+    if (!discountValue || discountValue <= 0) {
+      return res.status(400).json({ success: false, message: 'Giá trị giảm phải lớn hơn 0' });
+    }
+    if (discountType === 'PERCENTAGE' && discountValue > 100) {
+      return res.status(400).json({ success: false, message: 'Phần trăm giảm giá không được vượt quá 100%' });
+    }
+
+    const maxDiscount = discountType === 'PERCENTAGE' ? (Number(body.maxDiscount) || 0) : 0;
+    const minOrderValue = Number(body.minOrderValue) >= 0 ? Number(body.minOrderValue) : 0;
+
+    const startDate = body.startDate ? new Date(body.startDate) : new Date();
+    const endDate = body.endDate ? new Date(body.endDate) : null;
+    if (!endDate || isNaN(endDate.getTime())) {
+      return res.status(400).json({ success: false, message: 'Ngày hết hạn là bắt buộc và phải hợp lệ' });
+    }
+    if (startDate >= endDate) {
+      return res.status(400).json({ success: false, message: 'Ngày bắt đầu phải trước ngày hết hạn' });
+    }
+
+    const usageLimit = Number(body.usageLimit);
+    if (!usageLimit || usageLimit <= 0) {
+      return res.status(400).json({ success: false, message: 'Số lượt sử dụng tối đa phải lớn hơn 0' });
+    }
+
+    const now = new Date();
+    const newDoc = {
+      code,
+      description: String(body.description || '').trim(),
+      discountType,
+      discountValue,
+      maxDiscount,
+      minOrderValue,
+      startDate,
+      endDate,
+      usageLimit,
+      usedCount: 0, // Backend guarantees 0 on creation
+      isActive: body.isActive !== false,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    const insertResult = await db.collection('coupons').insertOne(newDoc);
+    const created = await db.collection('coupons').findOne({ _id: insertResult.insertedId });
+
+    res.status(201).json({
+      success: true,
+      message: 'Tạo mã giảm giá thành công',
+      data: formatCoupon(created)
+    });
+  } catch (error) {
+    console.error('Error creating coupon:', error);
+    res.status(500).json({ success: false, message: error.message || 'Lỗi khi tạo mã giảm giá' });
+  }
+});
+
+// 7.7.4 PUT /api/coupons/:id (Update coupon)
+app.put('/api/coupons/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    let query;
+    if (ObjectId.isValid(id)) {
+      query = { $or: [{ _id: new ObjectId(id) }, { _id: id }] };
+    } else {
+      query = { _id: id };
+    }
+
+    const existing = await db.collection('coupons').findOne(query);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy mã giảm giá cần cập nhật' });
+    }
+
+    const body = req.body || {};
+    const code = String(body.code || existing.code).trim().toUpperCase();
+    if (!code) {
+      return res.status(400).json({ success: false, message: 'Mã giảm giá không được để trống' });
+    }
+
+    if (code !== existing.code) {
+      const codeTaken = await db.collection('coupons').findOne({
+        code,
+        _id: { $ne: existing._id }
+      });
+      if (codeTaken) {
+        return res.status(400).json({ success: false, message: 'Mã giảm giá đã được sử dụng bởi mã khác' });
+      }
+    }
+
+    const discountType = body.discountType === 'FIXED' ? 'FIXED' : 'PERCENTAGE';
+    const discountValue = Number(body.discountValue !== undefined ? body.discountValue : existing.discountValue);
+    if (!discountValue || discountValue <= 0) {
+      return res.status(400).json({ success: false, message: 'Giá trị giảm phải lớn hơn 0' });
+    }
+    if (discountType === 'PERCENTAGE' && discountValue > 100) {
+      return res.status(400).json({ success: false, message: 'Phần trăm giảm giá không được vượt quá 100%' });
+    }
+
+    const maxDiscount = discountType === 'PERCENTAGE' ? (Number(body.maxDiscount !== undefined ? body.maxDiscount : existing.maxDiscount) || 0) : 0;
+    const minOrderValue = Number(body.minOrderValue !== undefined ? body.minOrderValue : existing.minOrderValue) >= 0
+      ? Number(body.minOrderValue !== undefined ? body.minOrderValue : existing.minOrderValue)
+      : 0;
+
+    const startDate = body.startDate ? new Date(body.startDate) : new Date(existing.startDate);
+    const endDate = body.endDate ? new Date(body.endDate) : new Date(existing.endDate);
+    if (!endDate || isNaN(endDate.getTime())) {
+      return res.status(400).json({ success: false, message: 'Ngày hết hạn không hợp lệ' });
+    }
+    if (startDate >= endDate) {
+      return res.status(400).json({ success: false, message: 'Ngày bắt đầu phải trước ngày hết hạn' });
+    }
+
+    const usageLimit = Number(body.usageLimit !== undefined ? body.usageLimit : existing.usageLimit);
+    if (!usageLimit || usageLimit <= 0) {
+      return res.status(400).json({ success: false, message: 'Số lượt sử dụng tối đa phải lớn hơn 0' });
+    }
+
+    const updateDoc = {
+      $set: {
+        code,
+        description: body.description !== undefined ? String(body.description).trim() : existing.description,
+        discountType,
+        discountValue,
+        maxDiscount,
+        minOrderValue,
+        startDate,
+        endDate,
+        usageLimit,
+        isActive: body.isActive !== undefined ? (body.isActive === true || body.isActive === 'true') : existing.isActive,
+        updatedAt: new Date()
+      }
+      // usedCount is NOT touched by Admin edit
+    };
+
+    await db.collection('coupons').updateOne({ _id: existing._id }, updateDoc);
+    const updated = await db.collection('coupons').findOne({ _id: existing._id });
+
+    res.json({
+      success: true,
+      message: 'Cập nhật mã giảm giá thành công',
+      data: formatCoupon(updated)
+    });
+  } catch (error) {
+    console.error('Error updating coupon:', error);
+    res.status(500).json({ success: false, message: error.message || 'Lỗi khi cập nhật mã giảm giá' });
+  }
+});
+
+// 7.7.5 PATCH /api/coupons/:id/status (Toggle isActive status)
+const handleToggleCouponStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    let query;
+    if (ObjectId.isValid(id)) {
+      query = { $or: [{ _id: new ObjectId(id) }, { _id: id }] };
+    } else {
+      query = { _id: id };
+    }
+
+    const existing = await db.collection('coupons').findOne(query);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy mã giảm giá' });
+    }
+
+    let nextActive;
+    if (req.body && req.body.isActive !== undefined) {
+      nextActive = req.body.isActive === true || req.body.isActive === 'true';
+    } else {
+      nextActive = existing.isActive === false;
+    }
+
+    await db.collection('coupons').updateOne(
+      { _id: existing._id },
+      { $set: { isActive: nextActive, updatedAt: new Date() } }
+    );
+
+    const updated = await db.collection('coupons').findOne({ _id: existing._id });
+    res.json({
+      success: true,
+      message: `Đã ${nextActive ? 'bật' : 'tắt'} mã giảm giá ${existing.code}`,
+      data: formatCoupon(updated)
+    });
+  } catch (error) {
+    console.error('Error toggling coupon status:', error);
+    res.status(500).json({ success: false, message: error.message || 'Lỗi cập nhật trạng thái mã giảm giá' });
+  }
+};
+
+app.patch('/api/coupons/:id/status', handleToggleCouponStatus);
+app.put('/api/coupons/:id/toggle', handleToggleCouponStatus);
+
+// 7.7.6 DELETE /api/coupons/:id (Delete single coupon)
+app.delete('/api/coupons/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    let query;
+    if (ObjectId.isValid(id)) {
+      query = { $or: [{ _id: new ObjectId(id) }, { _id: id }] };
+    } else {
+      query = { _id: id };
+    }
+
+    const result = await db.collection('coupons').deleteOne(query);
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: 'Mã giảm giá không tồn tại hoặc đã bị xóa' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Xóa mã giảm giá thành công'
+    });
+  } catch (error) {
+    console.error('Error deleting coupon:', error);
+    res.status(500).json({ success: false, message: error.message || 'Lỗi khi xóa mã giảm giá' });
+  }
+});
+
+// 7.7.7 POST /api/coupons/bulk-delete (Bulk delete coupons)
+app.post('/api/coupons/bulk-delete', async (req, res) => {
+  try {
+    const ids = req.body?.ids || [];
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'Danh sách ID không hợp lệ' });
+    }
+
+    const objectIds = ids.filter(ObjectId.isValid).map(id => new ObjectId(id));
+    const stringIds = ids.filter(id => !ObjectId.isValid(id));
+
+    const result = await db.collection('coupons').deleteMany({
+      $or: [
+        { _id: { $in: objectIds } },
+        { _id: { $in: stringIds } }
+      ]
+    });
+
+    res.json({
+      success: true,
+      message: `Đã xóa thành công ${result.deletedCount} mã giảm giá`,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.error('Error bulk deleting coupons:', error);
+    res.status(500).json({ success: false, message: error.message || 'Lỗi xóa nhiều mã giảm giá' });
+  }
+});
+
+// 7.7.8 POST /api/orders/coupon/validate (Checkout coupon validation endpoint on Admin Server)
+app.post(['/api/orders/coupon/validate', '/api/coupons/validate'], async (req, res) => {
+  try {
+    const { code, subtotal } = req.body || {};
+    if (!code || !String(code).trim()) {
+      return res.json({ valid: false, message: 'Vui lòng nhập mã giảm giá' });
+    }
+    const cleanCode = String(code).trim().toUpperCase();
+    const orderSubtotal = Number(subtotal) || 0;
+
+    const coupon = await db.collection('coupons').findOne({
+      code: cleanCode,
+      isActive: true
+    });
+
+    if (!coupon) {
+      return res.json({ valid: false, message: 'Mã giảm giá không hợp lệ hoặc đã hết hạn' });
+    }
+
+    const now = new Date();
+    if (coupon.startDate && new Date(coupon.startDate) > now) {
+      return res.json({ valid: false, message: 'Chương trình ưu đãi chưa bắt đầu' });
+    }
+    if (coupon.endDate && new Date(coupon.endDate) < now) {
+      return res.json({ valid: false, message: 'Mã giảm giá đã hết hạn sử dụng' });
+    }
+    if (coupon.usageLimit > 0 && coupon.usedCount >= coupon.usageLimit) {
+      return res.json({ valid: false, message: 'Mã giảm giá đã hết lượt sử dụng' });
+    }
+    if (coupon.minOrderValue > 0 && orderSubtotal < coupon.minOrderValue) {
+      const minFormatted = Number(coupon.minOrderValue).toLocaleString('vi-VN');
+      return res.json({
+        valid: false,
+        message: `Mã ${cleanCode} chỉ áp dụng cho đơn hàng từ ${minFormatted} ₫ trở lên`
+      });
+    }
+
+    let discountAmount = 0;
+    if (coupon.discountType === 'PERCENTAGE') {
+      discountAmount = Math.round((orderSubtotal * Number(coupon.discountValue)) / 100);
+      if (coupon.maxDiscount > 0 && discountAmount > coupon.maxDiscount) {
+        discountAmount = coupon.maxDiscount;
+      }
+    } else {
+      discountAmount = Number(coupon.discountValue);
+    }
+
+    if (discountAmount > orderSubtotal) {
+      discountAmount = orderSubtotal;
+    }
+
+    return res.json({
+      valid: true,
+      code: coupon.code,
+      description: coupon.description,
+      discountType: coupon.discountType,
+      discountValue: coupon.discountValue,
+      discountAmount,
+      message: 'Áp dụng mã giảm giá thành công!'
+    });
+  } catch (error) {
+    console.error('Error validating coupon:', error);
+    res.status(500).json({ valid: false, message: 'Lỗi kiểm tra mã giảm giá' });
+  }
+});
+
+
+// ─────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────
 // 8. INVENTORY API (Calculated from products and active orders)
 // ─────────────────────────────────────────────────────────────

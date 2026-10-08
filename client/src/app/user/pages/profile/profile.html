@@ -5,7 +5,7 @@
     <div class="profile-avatar-wrap">
       <div class="profile-avatar-circle" (click)="openAvatarPicker()" title="Nhấp để thay đổi ảnh đại diện"
         role="button" tabindex="0" (keydown.enter)="openAvatarPicker()" (keydown.space)="openAvatarPicker()">
-        <img *ngIf="getAvatarUrl()" [src]="getAvatarUrl()" alt="Ảnh đại diện" class="profile-avatar-image" />
+        <img *ngIf="getAvatarUrl()" [src]="getAvatarUrl()" (error)="onAvatarImgError()" alt="Ảnh đại diện" class="profile-avatar-image" />
 
         <span *ngIf="!getAvatarUrl()">
           {{ getUserInitial() }}

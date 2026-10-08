@@ -1,4 +1,4 @@
-import { Component, OnInit, Inject, PLATFORM_ID, Signal, effect, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, Inject, PLATFORM_ID, Signal, effect, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -53,6 +53,7 @@ export class Profile implements OnInit {
   // Avatar upload state
   isUploadingAvatar: boolean = false;
   avatarUploadError: string = '';
+  avatarImgError: boolean = false;
   previewAvatar: string | null = null;
   @ViewChild('avatarFileInput') avatarFileInput!: ElementRef<HTMLInputElement>;
 
@@ -65,7 +66,8 @@ export class Profile implements OnInit {
     private selectors: SignalStoreSelectors,
     private translate: TranslateService,
     private apiService: ApiService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {
     this.lang$ = this.translate.getLang$();
     this.user$ = this.selectors.user;
@@ -75,22 +77,48 @@ export class Profile implements OnInit {
     effect(() => {
       const user = this.selectors.user();
       if (user) {
-        this.formName = user.fullName || user.name || '';
-        this.formEmail = user.email || '';
-        this.formPhone = user.phoneNumber || '';
-        this.formAddress = user.address || '';
-        this.formNewPassword = '';
-        this.formConfirmPassword = '';
+        this.populateForm(user);
+        this.cdr.markForCheck();
       }
     });
+  }
+
+  populateForm(user: any): void {
+    if (!user) return;
+    this.formName = (user.fullName || user.name || (user.email ? user.email.split('@')[0] : '')).trim();
+    this.formEmail = user.email || '';
+    this.formPhone = user.phoneNumber || user.phone || '';
+    this.formAddress = user.address || (user.shippingAddress?.address ? this.getOrderAddress({ shippingAddress: user.shippingAddress } as any) : '');
+    this.avatarImgError = false;
   }
 
   ngOnInit(): void {
     this.formNewPassword = '';
     this.formConfirmPassword = '';
+
+    // Nạp ngay dữ liệu người dùng nếu store đã có sẵn
+    const existingUser = this.selectors.user();
+    if (existingUser) {
+      this.populateForm(existingUser);
+    }
+
     if (isPlatformBrowser(this.platformId)) {
-      // Tải dữ liệu người dùng và đơn hàng mới nhất từ MongoDB qua API
-      this.store.getUser();
+      // Tải dữ liệu người dùng mới nhất từ MongoDB qua API và bind trực tiếp vào form
+      this.apiService.getUser().subscribe({
+        next: (res: any) => {
+          if (res && !res.error) {
+            const userData = res.data || res;
+            this.store.storeUser(userData);
+            this.populateForm(userData);
+            this.cdr.markForCheck();
+          }
+        },
+        error: (err) => {
+          console.error('Lỗi khi tải thông tin user:', err);
+        }
+      });
+
+      // Tải đơn hàng người dùng
       this.store.getUserOrders();
       this.updateSyncTime();
     }
@@ -179,11 +207,15 @@ export class Profile implements OnInit {
   }
 
   getAvatarUrl(): string | null {
+    if (this.avatarImgError) {
+      return null;
+    }
     if (this.previewAvatar) {
       return this.previewAvatar;
     }
-    const avatar = this.user$()?.avatar;
-    if (!avatar) return null;
+    const u: any = this.user$();
+    const avatar = u?.avatar || u?.avatarUrl || (u?.images?.[0]?.url || u?.images?.[0]);
+    if (!avatar || typeof avatar !== 'string' || avatar.trim() === '') return null;
     if (avatar.startsWith('http://') || avatar.startsWith('https://') || avatar.startsWith('data:')) {
       return avatar;
     }
@@ -193,24 +225,30 @@ export class Profile implements OnInit {
     return `${this.apiService.apiUrl}/${avatar}`;
   }
 
+  onAvatarImgError(): void {
+    this.avatarImgError = true;
+    this.cdr.markForCheck();
+  }
+
   getUserInitial(): string {
     const user = this.user$();
     if (!user) return 'C';
-    const name = user.fullName || user.name || user.email || 'C';
+    const name = (user.fullName || user.name || user.email || 'C').trim();
     return name.charAt(0).toUpperCase();
   }
 
   getDisplayName(): string {
     const user = this.user$();
     if (!user) return 'Quý khách';
-    return user.fullName || user.name || (user.email ? user.email.split('@')[0] : 'Quý khách');
+    return (user.fullName || user.name || (user.email ? user.email.split('@')[0] : 'Quý khách')).trim();
   }
 
   getRoleLabel(): string {
     const user = this.user$();
     if (!user) return 'Thành viên';
-    const roles = user.roles || (user.role ? [user.role] : []);
-    if (roles.includes('admin') || roles.includes('super-admin')) return 'Quản trị viên';
+    const rawRoles = user.roles || (user.role ? [user.role] : []);
+    const roles = Array.isArray(rawRoles) ? rawRoles.flat() : [rawRoles];
+    if (roles.some((r: any) => typeof r === 'string' && (r.toLowerCase().includes('admin')))) return 'Quản trị viên';
     return 'Thành viên';
   }
 
@@ -241,16 +279,25 @@ export class Profile implements OnInit {
     this.activeTab = tab;
   }
 
+  private getRawOrders(): Order[] {
+    const raw: any = this.userOrders$();
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    if (Array.isArray(raw.data)) return raw.data;
+    if (Array.isArray(raw.orders)) return raw.orders;
+    return [];
+  }
+
   getTabCount(tab: string): number {
-    const orders = this.userOrders$();
-    if (!orders) return 0;
+    const orders = this.getRawOrders();
+    if (!orders || !orders.length) return 0;
     if (tab === 'all') return orders.length;
     return orders.filter(o => this.normalizeStatus(o.status) === tab).length;
   }
 
   getFilteredOrders(): Order[] {
-    const orders = this.userOrders$();
-    if (!orders) return [];
+    const orders = this.getRawOrders();
+    if (!orders || !orders.length) return [];
     const sorted = [...orders].sort((a, b) => {
       const da = new Date(a.createdAt || a.dateAdded || 0).getTime();
       const db = new Date(b.createdAt || b.dateAdded || 0).getTime();
@@ -381,6 +428,7 @@ export class Profile implements OnInit {
       fullName: this.formName?.trim() || undefined,
       name: this.formName?.trim() || undefined,
       phoneNumber: this.formPhone?.trim() ?? '',
+      phone: this.formPhone?.trim() ?? '',
       address: this.formAddress?.trim() ?? '',
     };
 
@@ -394,22 +442,31 @@ export class Profile implements OnInit {
         this.isSaving = false;
         if (res?.error) {
           this.saveError = res.error?.message || (typeof res.error === 'string' ? res.error : 'Có lỗi xảy ra khi lưu thông tin.');
+          this.cdr.markForCheck();
           return;
         }
 
         // Cập nhật store với dữ liệu người dùng thật vừa được lưu vào MongoDB
         const updatedUser = res.data || res;
-        this.store.storeUser({ ...user, ...updatedUser });
+        const currentUser = this.user$() || ({} as User);
+        const mergedUser = { ...currentUser, ...updatedUser };
+        this.store.storeUser(mergedUser);
+        this.populateForm(mergedUser);
 
         this.formNewPassword = '';
         this.formConfirmPassword = '';
         this.saveSuccess = true;
         this.updateSyncTime();
-        setTimeout(() => { this.saveSuccess = false; }, 4000);
+        this.cdr.markForCheck();
+        setTimeout(() => {
+          this.saveSuccess = false;
+          this.cdr.markForCheck();
+        }, 4000);
       },
       error: (err: any) => {
         this.isSaving = false;
         this.saveError = err?.error?.message || 'Có lỗi kết nối máy chủ. Vui lòng thử lại.';
+        this.cdr.markForCheck();
       }
     });
   }

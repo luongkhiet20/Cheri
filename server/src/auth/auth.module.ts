@@ -6,6 +6,7 @@ import { ConfigModule } from '@nestjs/config';
 
 import { AuthController } from './auth.controller';
 import { UsersController } from './users.controller';
+import { AccountController } from './account.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategy/jwt.strategy';
 import { GoogleStrategy } from './strategy/google.strategy';
@@ -24,7 +25,7 @@ import { SessionSerializer } from './utils/session.serializer';
       },
     }),
   ],
-  controllers: [AuthController, UsersController],
+  controllers: [AuthController, UsersController, AccountController],
   providers: [AuthService, JwtStrategy, GoogleStrategy, SessionSerializer],
   exports: [JwtStrategy, PassportModule],
 })

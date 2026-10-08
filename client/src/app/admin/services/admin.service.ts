@@ -278,6 +278,53 @@ export class AdminService {
     return this.http.delete(`${this.baseUrl}/shipping-methods/${id}`);
   }
 
+  // ── Coupons ────────────────────────────────
+  getCoupons(params?: { page?: number; limit?: number; pageSize?: number; search?: string; discountType?: string; isActive?: boolean | string; status?: string }): Observable<any> {
+    let httpParams = new HttpParams();
+    if (params) {
+      if (params.page) httpParams = httpParams.set('page', params.page.toString());
+      if (params.limit) httpParams = httpParams.set('limit', params.limit.toString());
+      if (params.pageSize) httpParams = httpParams.set('limit', params.pageSize.toString());
+      if (params.search) httpParams = httpParams.set('search', params.search);
+      if (params.discountType && params.discountType !== 'all') httpParams = httpParams.set('discountType', params.discountType);
+      if (params.isActive !== undefined && params.isActive !== '' && params.isActive !== 'all') {
+        httpParams = httpParams.set('isActive', params.isActive.toString());
+      }
+      if (params.status !== undefined && params.status !== '' && params.status !== 'all') {
+        httpParams = httpParams.set('status', params.status.toString());
+      }
+    }
+    return this.http.get(`${this.baseUrl}/coupons`, { params: httpParams });
+  }
+
+  getCouponById(id: string): Observable<any> {
+    return this.http.get(`${this.baseUrl}/coupons/${id}`);
+  }
+
+  createCoupon(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}/coupons`, data);
+  }
+
+  updateCoupon(id: string, data: any): Observable<any> {
+    return this.http.put(`${this.baseUrl}/coupons/${id}`, data);
+  }
+
+  updateCouponStatus(id: string, isActive?: boolean): Observable<any> {
+    return this.http.patch(`${this.baseUrl}/coupons/${id}/status`, isActive !== undefined ? { isActive } : {});
+  }
+
+  toggleCoupon(id: string): Observable<any> {
+    return this.http.patch(`${this.baseUrl}/coupons/${id}/status`, {});
+  }
+
+  deleteCoupon(id: string): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/coupons/${id}`);
+  }
+
+  bulkDeleteCoupons(ids: string[]): Observable<any> {
+    return this.http.post(`${this.baseUrl}/coupons/bulk-delete`, { ids });
+  }
+
   // ── Inventory ──────────────────────────────
   getInventory(): Observable<any> {
     return this.http.get(`${this.baseUrl}/inventory`);

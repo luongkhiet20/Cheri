@@ -51,6 +51,9 @@ import { PageFormComponent } from './pages/pages/page-form/page-form.component';
 import { PageDetailComponent } from './pages/pages/page-detail/page-detail.component';
 import { AccountComponent } from './pages/account/account.component';
 import { SettingsComponent } from './pages/settings/settings.component';
+import { CouponsComponent } from './pages/coupons/coupons.component';
+import { CouponFormComponent } from './pages/coupons/coupon-form/coupon-form.component';
+import { CouponDetailComponent } from './pages/coupons/coupon-detail/coupon-detail.component';
 
 const routes: Routes = [
   {
@@ -70,6 +73,14 @@ const routes: Routes = [
       { path: 'orders/add', component: OrderFormComponent },
       { path: 'orders/:id/edit', component: OrderFormComponent },
       { path: 'orders/:id', component: OrderDetailComponent },
+      { path: 'pages/coupons', component: CouponsComponent },
+      { path: 'pages/coupons/new', component: CouponFormComponent },
+      { path: 'pages/coupons/:id', component: CouponDetailComponent },
+      { path: 'pages/coupons/:id/edit', component: CouponFormComponent },
+      { path: 'coupons', redirectTo: 'pages/coupons', pathMatch: 'full' },
+      { path: 'coupons/new', redirectTo: 'pages/coupons/new', pathMatch: 'full' },
+      { path: 'coupons/:id', redirectTo: 'pages/coupons/:id', pathMatch: 'full' },
+      { path: 'coupons/:id/edit', redirectTo: 'pages/coupons/:id/edit', pathMatch: 'full' },
       { path: 'payment-methods', component: PaymentMethodsComponent },
       { path: 'payment-methods/add', component: PaymentMethodFormComponent },
       { path: 'payment-methods/:id', component: PaymentMethodDetailComponent },
@@ -127,6 +138,9 @@ const routes: Routes = [
     OrdersComponent,
     OrderFormComponent,
     OrderDetailComponent,
+    CouponsComponent,
+    CouponFormComponent,
+    CouponDetailComponent,
     PaymentMethodsComponent,
     PaymentMethodFormComponent,
     PaymentMethodDetailComponent,

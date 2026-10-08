@@ -1,0 +1,200 @@
+<div class="page-container">
+
+  <!-- Header / Action bar -->
+  <div class="detail-header">
+    <div class="detail-header-left">
+      <button type="button" class="btn btn-secondary btn-icon-only" (click)="onBack()" title="Quay lại danh sách" aria-label="Quay lại">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+      </button>
+
+      <div>
+        <div class="header-badges" *ngIf="coupon">
+          <span class="badge" [ngClass]="coupon.isActive !== false ? 'badge-success' : 'badge-neutral'">
+            {{ coupon.isActive !== false ? 'Đang kích hoạt' : 'Đang tạm dừng' }}
+          </span>
+          <span class="badge badge-type">
+            {{ discountTypeLabel }}
+          </span>
+        </div>
+        <h1 class="page-title">{{ coupon ? coupon.code : 'Chi tiết mã giảm giá' }}</h1>
+      </div>
+    </div>
+
+    <div class="detail-header-right" *ngIf="coupon && !isLoading">
+      <button type="button" class="btn btn-secondary" (click)="onToggleStatus()" [disabled]="isProcessing">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+        </svg>
+        {{ coupon.isActive !== false ? 'Tắt mã' : 'Bật mã' }}
+      </button>
+
+      <button type="button" class="btn btn-primary" (click)="onEdit()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+        </svg>
+        Chỉnh sửa
+      </button>
+
+      <button type="button" class="btn btn-danger" (click)="onDelete()" [disabled]="isProcessing">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>
+        Xóa
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading-container">
+    <div class="spinner-large"></div>
+    <p>Đang tải thông tin mã giảm giá...</p>
+  </div>
+
+  <!-- Not Found / Error State -->
+  <div *ngIf="!isLoading && isNotFound" class="not-found-card">
+    <div class="not-found-icon">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+    </div>
+    <h2>Không tìm thấy mã giảm giá</h2>
+    <p>{{ errorMessage || 'Mã giảm giá không tồn tại hoặc đã bị xóa khỏi hệ thống.' }}</p>
+    <button type="button" class="btn btn-primary" (click)="onBack()">Quay lại danh sách</button>
+  </div>
+
+  <!-- Main Content -->
+  <div *ngIf="!isLoading && coupon && !isNotFound" class="detail-content">
+
+    <!-- Card 1: Tổng quan mã -->
+    <div class="card detail-card">
+      <h2 class="card-section-title">Thông tin mã giảm giá</h2>
+
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">Mã giảm giá (Code)</span>
+          <span class="info-value coupon-code-badge">{{ coupon.code }}</span>
+        </div>
+
+        <div class="info-item">
+          <span class="info-label">Trạng thái</span>
+          <span class="info-value">
+            <span class="badge" [ngClass]="coupon.isActive !== false ? 'badge-success' : 'badge-neutral'">
+              {{ coupon.isActive !== false ? 'Đang kích hoạt' : 'Đang tạm dừng' }}
+            </span>
+          </span>
+        </div>
+
+        <div class="info-item full-width">
+          <span class="info-label">Mô tả chương trình</span>
+          <span class="info-value desc-text">{{ coupon.description || 'Chưa có mô tả' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2: Quy định giảm giá -->
+    <div class="card detail-card">
+      <h2 class="card-section-title">Cấu hình mức giảm</h2>
+
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">Loại giảm giá</span>
+          <span class="info-value">{{ discountTypeLabel }}</span>
+        </div>
+
+        <div class="info-item">
+          <span class="info-label">Giá trị giảm</span>
+          <span class="info-value text-highlight">{{ discountValueFormatted }}</span>
+        </div>
+
+        <div class="info-item" *ngIf="coupon.discountType === 'PERCENTAGE'">
+          <span class="info-label">Số tiền giảm tối đa</span>
+          <span class="info-value">{{ maxDiscountFormatted }}</span>
+        </div>
+
+        <div class="info-item">
+          <span class="info-label">Giá trị đơn hàng tối thiểu</span>
+          <span class="info-value">{{ minOrderValueFormatted }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3: Thời gian & Giới hạn sử dụng -->
+    <div class="card detail-card">
+      <h2 class="card-section-title">Thời hạn & Lượt sử dụng</h2>
+
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">Ngày bắt đầu hiệu lực</span>
+          <span class="info-value">{{ formatDate(coupon.startDate) }}</span>
+        </div>
+
+        <div class="info-item">
+          <span class="info-label">Ngày hết hạn</span>
+          <span class="info-value">{{ formatDate(coupon.endDate) }}</span>
+        </div>
+
+        <div class="info-item">
+          <span class="info-label">Số lượt sử dụng tối đa</span>
+          <span class="info-value">{{ coupon.usageLimit || 0 }} lượt</span>
+        </div>
+
+        <div class="info-item">
+          <span class="info-label">Số lượt đã sử dụng</span>
+          <span class="info-value font-semibold">{{ coupon.usedCount || 0 }} lượt</span>
+        </div>
+
+        <div class="info-item">
+          <span class="info-label">Số lượt còn lại (Tính toán)</span>
+          <span class="info-value text-highlight font-bold">{{ remainingUsage }} lượt</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal xác nhận Thao tác / Xóa -->
+<div *ngIf="confirmOpen" class="dialog-backdrop" (click)="cancelDialogAction()">
+  <div class="dialog-box" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" [attr.aria-label]="confirmTitle">
+    <div class="dialog-header">
+      <div class="dialog-icon-wrap" [ngClass]="'dialog-icon--' + confirmVariant">
+        <svg *ngIf="confirmVariant === 'danger'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>
+        <svg *ngIf="confirmVariant === 'warning'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+        </svg>
+        <svg *ngIf="confirmVariant === 'default'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 14 14"></polyline>
+        </svg>
+      </div>
+      <h3 class="dialog-title">{{ confirmTitle }}</h3>
+    </div>
+
+    <div class="dialog-body">
+      <p class="dialog-message">{{ confirmMessage }}</p>
+    </div>
+
+    <div class="dialog-footer">
+      <button type="button" class="btn btn-secondary" (click)="cancelDialogAction()" [disabled]="isProcessing">
+        Hủy
+      </button>
+      <button type="button" class="btn" [ngClass]="confirmVariant === 'danger' ? 'btn-danger' : (confirmVariant === 'warning' ? 'btn-warning' : 'btn-primary')"
+        (click)="confirmDialogAction()" [disabled]="isProcessing">
+        <span *ngIf="isProcessing" class="spinner"></span>
+        {{ confirmLabel }}
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,207 @@
+<div class="page-container">
+  <!-- Header / Action bar -->
+  <div class="form-header">
+    <div class="form-header-left">
+      <h1 class="page-title">
+        {{ isEditMode ? 'Chỉnh sửa mã giảm giá' : 'Thêm mã giảm giá' }}
+      </h1>
+    </div>
+    <div class="form-header-right">
+      <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="isSubmitting">
+        Hủy
+      </button>
+      <button type="button" class="btn btn-primary" (click)="onSubmit()" [disabled]="isSubmitting">
+        <span *ngIf="isSubmitting" class="spinner"></span>
+        {{ isEditMode ? 'Lưu thay đổi' : 'Lưu mã giảm giá' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div *ngIf="successMessage" class="alert-box alert-success">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+      stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>
+    <span>{{ successMessage }}</span>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert-box alert-error">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+      stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="12" y1="8" x2="12" y2="12"></line>
+      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+    </svg>
+    <span>{{ errorMessage }}</span>
+  </div>
+
+  <!-- Loading State (Edit mode only) -->
+  <div *ngIf="isLoading" class="loading-container">
+    <div class="spinner-large"></div>
+    <p>Đang tải thông tin mã giảm giá...</p>
+  </div>
+
+  <!-- Main Form Content -->
+  <form *ngIf="!isLoading" (ngSubmit)="onSubmit()" class="form-content" novalidate>
+
+    <!-- [Card 1]: Thông tin cơ bản -->
+    <div class="card form-card">
+      <h2 class="card-section-title">Thông tin mã giảm giá</h2>
+
+      <div class="form-grid">
+        <!-- Mã giảm giá * -->
+        <div class="form-group" id="field-code">
+          <label class="form-label" for="coupon-code">
+            Mã giảm giá <span class="required">*</span>
+          </label>
+          <input type="text" id="coupon-code" class="form-control" [class.is-invalid]="errors['code']"
+            [ngModel]="formData.code" (ngModelChange)="onCodeInput($event)" name="code"
+            placeholder="Ví dụ: SUMMER2026, CHERI50K" required />
+          <div *ngIf="errors['code']" class="error-feedback">{{ errors['code'] }}</div>
+          <span class="form-hint">Mã sẽ tự động chuyển thành chữ in hoa và không chứa khoảng trắng thừa.</span>
+        </div>
+
+        <!-- Trạng thái -->
+        <div class="form-group" id="field-is-active">
+          <label class="form-label">Trạng thái kích hoạt</label>
+          <div class="toggle-control-group">
+            <label class="switch-toggle" for="coupon-is-active">
+              <input type="checkbox" id="coupon-is-active" [(ngModel)]="formData.isActive" name="isActive" />
+              <span class="slider round"></span>
+            </label>
+            <span class="toggle-status-text" [class.active-text]="formData.isActive">
+              {{ formData.isActive ? 'Đang kích hoạt (Khách hàng có thể áp dụng)' : 'Đang tạm dừng (Khách hàng không thể áp dụng)' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Mô tả -->
+        <div class="form-group full-width" id="field-description">
+          <label class="form-label" for="coupon-desc">Mô tả mã giảm giá</label>
+          <textarea id="coupon-desc" class="form-control" [(ngModel)]="formData.description" name="description"
+            rows="2" placeholder="Ví dụ: Giảm 10% tối đa 50.000₫ cho đơn hàng từ 200.000₫ mùa hè này"></textarea>
+          <span class="form-hint">Mô tả ngắn gọn điều kiện áp dụng để quản trị viên và khách hàng dễ theo dõi.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- [Card 2]: Cấu hình giảm giá -->
+    <div class="card form-card">
+      <h2 class="card-section-title">Cấu hình giảm giá</h2>
+
+      <div class="form-grid">
+        <!-- Loại giảm giá * -->
+        <div class="form-group" id="field-discount-type">
+          <label class="form-label" for="coupon-type">
+            Loại giảm giá <span class="required">*</span>
+          </label>
+          <select id="coupon-type" class="form-control" [(ngModel)]="formData.discountType"
+            (ngModelChange)="clearFieldError('discountType')" name="discountType">
+            <option value="PERCENTAGE">Phần trăm (%)</option>
+            <option value="FIXED">Số tiền cố định (₫)</option>
+          </select>
+          <span class="form-hint">
+            {{ formData.discountType === 'PERCENTAGE' ? 'Giảm theo tỷ lệ % tổng giá trị giỏ hàng.' : 'Giảm trực tiếp một số tiền cố định vào đơn hàng.' }}
+          </span>
+        </div>
+
+        <!-- Giá trị giảm * -->
+        <div class="form-group" id="field-discount-value">
+          <label class="form-label" for="coupon-value">
+            Giá trị giảm {{ formData.discountType === 'PERCENTAGE' ? '(%)' : '(₫)' }} <span class="required">*</span>
+          </label>
+          <input type="number" id="coupon-value" class="form-control" [class.is-invalid]="errors['discountValue']"
+            [(ngModel)]="formData.discountValue" (ngModelChange)="clearFieldError('discountValue')" name="discountValue"
+            [placeholder]="formData.discountType === 'PERCENTAGE' ? '10' : '50000'" min="1" [max]="formData.discountType === 'PERCENTAGE' ? 100 : 1000000000" required />
+          <div *ngIf="errors['discountValue']" class="error-feedback">{{ errors['discountValue'] }}</div>
+          <span class="form-hint">
+            {{ formData.discountType === 'PERCENTAGE' ? 'Nhập giá trị từ 1 đến 100.' : 'Nhập số tiền VNĐ cần giảm.' }}
+          </span>
+        </div>
+
+        <!-- Giảm tối đa (Chỉ áp dụng khi discountType = PERCENTAGE) -->
+        <div class="form-group" id="field-max-discount" *ngIf="formData.discountType === 'PERCENTAGE'">
+          <label class="form-label" for="coupon-max-discount">Số tiền giảm tối đa (₫)</label>
+          <input type="number" id="coupon-max-discount" class="form-control" [class.is-invalid]="errors['maxDiscount']"
+            [(ngModel)]="formData.maxDiscount" (ngModelChange)="clearFieldError('maxDiscount')" name="maxDiscount"
+            placeholder="Ví dụ: 50000 (0 = Không giới hạn)" min="0" />
+          <div *ngIf="errors['maxDiscount']" class="error-feedback">{{ errors['maxDiscount'] }}</div>
+          <span class="form-hint">Số tiền trần tối đa được giảm khi tính % (đặt 0 nếu không giới hạn trần).</span>
+        </div>
+
+        <!-- Đơn hàng tối thiểu -->
+        <div class="form-group" id="field-min-order">
+          <label class="form-label" for="coupon-min-order">Giá trị đơn hàng tối thiểu (₫)</label>
+          <input type="number" id="coupon-min-order" class="form-control" [class.is-invalid]="errors['minOrderValue']"
+            [(ngModel)]="formData.minOrderValue" (ngModelChange)="clearFieldError('minOrderValue')" name="minOrderValue"
+            placeholder="Ví dụ: 200000 (0 = Không yêu cầu)" min="0" />
+          <div *ngIf="errors['minOrderValue']" class="error-feedback">{{ errors['minOrderValue'] }}</div>
+          <span class="form-hint">Đơn hàng phải đạt tối thiểu số tiền này mới có thể áp dụng mã.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- [Card 3]: Thời gian & Giới hạn sử dụng -->
+    <div class="card form-card">
+      <h2 class="card-section-title">Thời gian hiệu lực & Lượt sử dụng</h2>
+
+      <div class="form-grid">
+        <!-- Ngày bắt đầu * -->
+        <div class="form-group" id="field-start-date">
+          <label class="form-label" for="coupon-start">
+            Ngày bắt đầu hiệu lực <span class="required">*</span>
+          </label>
+          <input type="date" id="coupon-start" class="form-control" [class.is-invalid]="errors['startDate']"
+            [(ngModel)]="formData.startDate" (ngModelChange)="clearFieldError('startDate')" name="startDate" required />
+          <div *ngIf="errors['startDate']" class="error-feedback">{{ errors['startDate'] }}</div>
+        </div>
+
+        <!-- Ngày hết hạn * -->
+        <div class="form-group" id="field-end-date">
+          <label class="form-label" for="coupon-end">
+            Ngày hết hạn <span class="required">*</span>
+          </label>
+          <input type="date" id="coupon-end" class="form-control" [class.is-invalid]="errors['endDate']"
+            [(ngModel)]="formData.endDate" (ngModelChange)="clearFieldError('endDate')" name="endDate" required />
+          <div *ngIf="errors['endDate']" class="error-feedback">{{ errors['endDate'] }}</div>
+        </div>
+
+        <!-- Lượt sử dụng tối đa * -->
+        <div class="form-group" id="field-usage-limit">
+          <label class="form-label" for="coupon-limit">
+            Số lượt sử dụng tối đa <span class="required">*</span>
+          </label>
+          <input type="number" id="coupon-limit" class="form-control" [class.is-invalid]="errors['usageLimit']"
+            [(ngModel)]="formData.usageLimit" (ngModelChange)="clearFieldError('usageLimit')" name="usageLimit"
+            placeholder="Ví dụ: 100" min="1" required />
+          <div *ngIf="errors['usageLimit']" class="error-feedback">{{ errors['usageLimit'] }}</div>
+          <span class="form-hint">Tổng số lượt tất cả khách hàng có thể dùng mã này.</span>
+        </div>
+
+        <!-- Thông tin số lượt đã sử dụng (chỉ xem khi chỉnh sửa) -->
+        <div class="form-group" id="field-used-count" *ngIf="isEditMode">
+          <label class="form-label">Số lượt đã sử dụng thực tế</label>
+          <div class="read-only-box">
+            <span class="read-only-number">{{ usedCount }}</span> lượt
+            <span class="read-only-sub">
+              (Còn lại: {{ (formData.usageLimit || 0) > usedCount ? ((formData.usageLimit || 0) - usedCount) : 0 }} lượt)
+            </span>
+          </div>
+          <span class="form-hint">Chỉ số này do hệ thống tự động cập nhật khi khách đặt hàng thành công.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Actions -->
+    <div class="form-footer">
+      <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="isSubmitting">
+        Hủy
+      </button>
+      <button type="submit" class="btn btn-primary" [disabled]="isSubmitting">
+        <span *ngIf="isSubmitting" class="spinner"></span>
+        {{ isEditMode ? 'Lưu thay đổi' : 'Lưu mã giảm giá' }}
+      </button>
+    </div>
+  </form>
+</div>

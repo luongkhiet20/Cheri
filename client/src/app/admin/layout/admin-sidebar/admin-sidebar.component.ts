@@ -25,6 +25,7 @@ export class AdminSidebarComponent implements OnInit, OnDestroy {
     { label: 'Quản lý sản phẩm',              route: '/admin/products',           icon: 'products' },
     { label: 'Quản lý danh mục',              route: '/admin/categories',         icon: 'categories' },
     { label: 'Quản lý đơn hàng',              route: '/admin/orders',             icon: 'orders' },
+    { label: 'Mã giảm giá',                   route: '/admin/pages/coupons',      icon: 'coupons' },
     { label: 'Phương thức thanh toán',         route: '/admin/payment-methods',    icon: 'payment-methods' },
     { label: 'Đơn vị vận chuyển',             route: '/admin/shipping-methods',   icon: 'shipping-methods' },
     { label: 'Quản lý tài khoản',             route: '/admin/users',              icon: 'users' },

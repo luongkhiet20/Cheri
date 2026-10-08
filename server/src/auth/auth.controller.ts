@@ -61,28 +61,38 @@ export class AuthController {
     name?: string;
     fullName?: string;
     phoneNumber?: string;
+    phone?: string;
     address?: string;
     gender?: string;
     avatar?: string;
     avatarUrl?: string;
     images?: any[];
   } {
-    const roles = Array.isArray(user.roles) ? [...user.roles] : (user as any).role ? [(user as any).role] : ['user'];
+    const rawRoles = user.roles || (user as any).role;
+    const roles = Array.isArray(rawRoles) ? rawRoles.flat() : (rawRoles ? [rawRoles] : ['user']);
     const rawAvatar = (user as any).avatar || (user as any).avatarUrl || ((user as any).images?.[0]?.url || (user as any).images?.[0]) || '';
     const images = Array.isArray((user as any).images) && (user as any).images.length > 0 ? (user as any).images : rawAvatar ? [rawAvatar] : [];
+    const phone = (user as any).phoneNumber || (user as any).phone || '';
     return {
       id: user._id,
       email: user.email,
       roles,
       name: user.name || (user as any).fullName || user.email.split('@')[0],
       fullName: (user as any).fullName || user.name || user.email.split('@')[0],
-      phoneNumber: (user as any).phoneNumber || '',
+      phoneNumber: phone,
+      phone: phone,
       address: (user as any).address || '',
       gender: (user as any).gender || '',
       avatar: rawAvatar,
       avatarUrl: rawAvatar,
       images,
     };
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('/me')
+  getAuthMe(@GetUser() user: User) {
+    return this.getUser(user);
   }
 
   @UseGuards(AuthGuard('jwt'))

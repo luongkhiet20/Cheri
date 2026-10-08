@@ -10,7 +10,6 @@
     "start:server": "cross-env NODE_ENV=production nest start --config ./server/nest-cli.json --path ./server/tsconfig.json",
     "start:admin": "node server/admin-server.js",
     "start:dev": "cross-env NODE_ENV=development nest start --watch --config ./server/nest-cli.json --path ./server/tsconfig.json",
-    "seed:pages": "node server/src/scripts/seed-pages.cjs",
     "test:orders-csv": "node --test client/src/app/admin/pages/orders/orders-report-csv.test.cjs",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node server/dist/main",

@@ -7,7 +7,8 @@
     </div>
     <div class="page-actions">
       <button class="btn btn-primary" id="btn-add-page" routerLink="/admin/pages/new">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <line x1="12" y1="5" x2="12" y2="19"></line>
           <line x1="5" y1="12" x2="19" y2="12"></line>
         </svg>
@@ -19,7 +20,8 @@
   <!-- Alert Messages -->
   <div *ngIf="errorMessage" class="alert-box alert-error">
     <div class="alert-icon">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <circle cx="12" cy="12" r="10"></circle>
         <line x1="12" y1="8" x2="12" y2="12"></line>
         <line x1="12" y1="16" x2="12.01" y2="16"></line>
@@ -32,7 +34,8 @@
 
   <div *ngIf="successMessage" class="alert-box alert-success">
     <div class="alert-icon">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <polyline points="20 6 9 17 4 12"></polyline>
       </svg>
     </div>
@@ -40,48 +43,17 @@
   </div>
 
   <!-- Toolbar -->
-  <app-admin-toolbar
-    searchPlaceholder="Tìm theo tiêu đề, đường dẫn..."
-    [filterFields]="filterFields"
-    [selectable]="true"
-    [allSelected]="allSelected"
-    [indeterminate]="isIndeterminate"
-    [selectedCount]="selectedCount"
-    [showDeleteSelected]="true"
-    [total]="displayTotal"
-    [isLoading]="isLoading"
-    (searchChange)="onSearch($event)"
-    (filterChange)="onFilter($event)"
-    (refresh)="onRefresh()"
-    (selectAllChange)="onToolbarSelectAll()"
-    (deleteSelected)="onDeleteSelected()"
-  ></app-admin-toolbar>
+  <app-admin-toolbar searchPlaceholder="Tìm theo tiêu đề, đường dẫn..." [filterFields]="filterFields"
+    [total]="displayTotal" [isLoading]="isLoading" (searchChange)="onSearch($event)" (filterChange)="onFilter($event)"
+    (refresh)="onRefresh()"></app-admin-toolbar>
 
   <!-- Table -->
-  <app-admin-table
-    [columns]="columns"
-    [data]="data"
-    [loading]="isLoading"
-    [actions]="actions"
-    [pagination]="pagination"
-    [selectable]="true"
-    [selectedIds]="selectedIds"
-    totalLabel="trang"
-    (actionClick)="onAction($event)"
-    (selectionChange)="onSelectionChange($event)"
-    (pageChange)="onPageChange($event)"
-    (pageSizeChange)="onPageSizeChange($event)"
-  ></app-admin-table>
+  <app-admin-table [columns]="columns" [data]="data" [loading]="isLoading" [actions]="actions" [pagination]="pagination"
+    [selectable]="false" totalLabel="trang" (actionClick)="onAction($event)"
+    (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)"></app-admin-table>
 
 </div>
 
 <!-- Delete Confirmation Dialog -->
-<app-confirm-dialog
-  [isOpen]="confirmOpen"
-  title="Xác nhận xóa trang"
-  [message]="confirmMessage"
-  confirmLabel="Xóa"
-  variant="danger"
-  (confirmed)="onConfirmDelete()"
-  (cancelled)="onCancelDelete()"
-></app-confirm-dialog>
+<app-confirm-dialog [isOpen]="confirmOpen" title="Xác nhận xóa trang" [message]="confirmMessage" confirmLabel="Xóa"
+  variant="danger" (confirmed)="onConfirmDelete()" (cancelled)="onCancelDelete()"></app-confirm-dialog>

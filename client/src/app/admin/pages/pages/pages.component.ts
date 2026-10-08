@@ -4,6 +4,12 @@ import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } fr
 import { AdminService } from '../../services/admin.service';
 import { NotificationService } from '../../shared/notification/notification.service';
 
+export function isPagePublished(row: any): boolean {
+  if (!row) return false;
+  if (typeof row.isPublished === 'boolean') return row.isPublished;
+  return row.status === 'Đã xuất bản' || row.statusCode === 'published';
+}
+
 @Component({
   selector: 'app-pages',
   standalone: false,
@@ -20,8 +26,16 @@ export class PagesComponent implements OnInit {
   actions: RowAction[] = [
     { key: 'view', label: 'Xem' },
     { key: 'edit', label: 'Sửa' },
-    { key: 'toggle', label: 'Bật/Tắt' },
-    { key: 'delete', label: 'Xóa', variant: 'danger' }
+    {
+      key: 'toggle',
+      label: 'Tắt',
+      showWhen: (r: any) => isPagePublished(r)
+    },
+    {
+      key: 'toggle',
+      label: 'Bật',
+      showWhen: (r: any) => !isPagePublished(r)
+    }
   ];
   filterFields: FilterField[] = [
     {
@@ -48,6 +62,9 @@ export class PagesComponent implements OnInit {
   pendingDeleteId: any = null;
   isBulkDelete = false;
 
+  currentSearch = '';
+  currentStatusFilter = '';
+
   get selectedCount(): number { return this.selectedIds.size; }
   get allSelected(): boolean { return this.data.length > 0 && this.data.every((r: any) => this.selectedIds.has(r.id)); }
   get isIndeterminate(): boolean { return this.selectedCount > 0 && !this.allSelected; }
@@ -64,6 +81,24 @@ export class PagesComponent implements OnInit {
     this.loadPages();
   }
 
+  isPagePublished(row: any): boolean {
+    return isPagePublished(row);
+  }
+
+  applyFilters(): void {
+    let result = [...this.allData];
+    if (this.currentSearch) {
+      const q = this.currentSearch.toLowerCase();
+      result = result.filter(d => (d.title && d.title.toLowerCase().includes(q)) || (d.slug && d.slug.toLowerCase().includes(q)));
+    }
+    if (this.currentStatusFilter) {
+      result = result.filter(d => d.status === this.currentStatusFilter);
+    }
+    this.data = result;
+    this.pagination = { ...this.pagination, total: this.data.length };
+    this.cdr.markForCheck();
+  }
+
   loadPages(): void {
     this.isLoading = true;
     this.errorMessage = '';
@@ -73,8 +108,7 @@ export class PagesComponent implements OnInit {
         this.isLoading = false;
         if (res.success) {
           this.allData = res.data || [];
-          this.data = [...this.allData];
-          this.pagination = { ...this.pagination, total: this.data.length };
+          this.applyFilters();
         } else {
           this.errorMessage = res.message || 'Lỗi khi tải danh sách trang';
         }
@@ -196,15 +230,56 @@ export class PagesComponent implements OnInit {
     } else if (e.action === 'edit') {
       this.router.navigate(['/admin/pages', e.row.id, 'edit']);
     } else if (e.action === 'toggle') {
-      const newTarget = e.row.isPublished ? 'draft' : 'published';
+      const isCurrentlyPublished = this.isPagePublished(e.row);
+      const newTarget = isCurrentlyPublished ? 'draft' : 'published';
+      const nextIsPublished = !isCurrentlyPublished;
+
+      // Lưu trạng thái trước để hoàn tác nếu xảy ra lỗi
+      const prevIsPublished = e.row.isPublished;
+      const prevStatus = e.row.status;
+      const prevStatusVariant = e.row.statusVariant;
+      const prevStatusCode = e.row.statusCode;
+
+      // Cập nhật ngay trên bảng (optimistic update)
+      e.row.isPublished = nextIsPublished;
+      e.row.status = nextIsPublished ? 'Đã xuất bản' : 'Bản nháp';
+      e.row.statusVariant = nextIsPublished ? 'success' : 'neutral';
+      e.row.statusCode = nextIsPublished ? 'published' : 'draft';
+
+      const itemInAll = this.allData.find(item => item.id === e.row.id);
+      if (itemInAll && itemInAll !== e.row) {
+        itemInAll.isPublished = nextIsPublished;
+        itemInAll.status = e.row.status;
+        itemInAll.statusVariant = e.row.statusVariant;
+        itemInAll.statusCode = e.row.statusCode;
+      }
+      this.cdr.markForCheck();
+
       this.apiService.patchPageStatus(e.row.id, newTarget).subscribe({
         next: (res) => {
           if (res.success) {
-            const msg = res.message || 'Cập nhật trạng thái thành công';
+            if (res.data) {
+              Object.assign(e.row, res.data);
+              if (itemInAll) {
+                Object.assign(itemInAll, res.data);
+              }
+            }
+            const msg = res.message || `Trang đã chuyển sang trạng thái "${nextIsPublished ? 'Đã xuất bản' : 'Bản nháp'}"`;
             this.successMessage = msg;
             this.notificationService.success(msg);
             this.loadPages();
           } else {
+            // Hoàn tác nếu server trả về không thành công
+            e.row.isPublished = prevIsPublished;
+            e.row.status = prevStatus;
+            e.row.statusVariant = prevStatusVariant;
+            e.row.statusCode = prevStatusCode;
+            if (itemInAll) {
+              itemInAll.isPublished = prevIsPublished;
+              itemInAll.status = prevStatus;
+              itemInAll.statusVariant = prevStatusVariant;
+              itemInAll.statusCode = prevStatusCode;
+            }
             const msg = res.message || 'Lỗi khi đổi trạng thái';
             this.errorMessage = msg;
             this.notificationService.error(msg);
@@ -217,6 +292,17 @@ export class PagesComponent implements OnInit {
           }, 3000);
         },
         error: (err) => {
+          // Hoàn tác nếu lỗi kết nối
+          e.row.isPublished = prevIsPublished;
+          e.row.status = prevStatus;
+          e.row.statusVariant = prevStatusVariant;
+          e.row.statusCode = prevStatusCode;
+          if (itemInAll) {
+            itemInAll.isPublished = prevIsPublished;
+            itemInAll.status = prevStatus;
+            itemInAll.statusVariant = prevStatusVariant;
+            itemInAll.statusCode = prevStatusCode;
+          }
           const msg = err.error?.message || 'Lỗi kết nối khi đổi trạng thái trang';
           this.errorMessage = msg;
           this.notificationService.error(msg);
@@ -237,22 +323,15 @@ export class PagesComponent implements OnInit {
   }
 
   onSearch(v: string): void {
-    if (!v) {
-      this.data = [...this.allData];
-    } else {
-      const q = v.toLowerCase();
-      this.data = this.allData.filter(d => d.title.toLowerCase().includes(q) || d.slug.toLowerCase().includes(q));
-    }
-    this.cdr.markForCheck();
+    this.currentSearch = v || '';
+    this.pagination = { ...this.pagination, page: 1 };
+    this.applyFilters();
   }
 
   onFilter(v: Record<string, any>): void {
-    if (!v['status']) {
-      this.data = [...this.allData];
-    } else {
-      this.data = this.allData.filter(d => d.status === v['status']);
-    }
-    this.cdr.markForCheck();
+    this.currentStatusFilter = v?.['status'] || '';
+    this.pagination = { ...this.pagination, page: 1 };
+    this.applyFilters();
   }
 
   onRefresh(): void { this.loadPages(); }

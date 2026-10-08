@@ -286,10 +286,10 @@
 
 ---
 
-### 6. Collection: `shippingmethods` *(Seed script: `shipping_methods`)*
+### 6. Collection: `shippingmethods`
 - **Model:** `ShippingMethod`
 - **File:** `server/src/orders/schemas/shipping-method.schema.ts`
-- **Collection Name trong MongoDB:** `shippingmethods` (Lưu ý: trong script seed `server/src/scripts/seed-orders-config.ts` gọi trực tiếp `shipping_methods`)
+- **Collection Name trong MongoDB:** `shippingmethods`
 - **Timestamps:** `true`
 
 | Tên Field | Kiểu dữ liệu | Thuộc tính / Ràng buộc | Mô tả |

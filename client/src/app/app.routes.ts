@@ -27,6 +27,7 @@ const langRoutes = languages.map(lang => {
     { path: lang + '/warranty-policy', redirectTo: '/' + lang + '/cheri/warranty-policy', pathMatch: 'full' },
     { path: lang + '/privacy-policy', redirectTo: '/' + lang + '/cheri/privacy-policy', pathMatch: 'full' },
     { path: lang + '/shipping-policy', redirectTo: '/' + lang + '/cheri/shipping-policy', pathMatch: 'full' },
+    { path: lang + '/terms-of-service', redirectTo: '/' + lang + '/cheri/terms-of-service', pathMatch: 'full' },
     { path: lang + '/virtual-try-on', redirectTo: '/' + lang + '/product/all', pathMatch: 'full' },
     { path: lang + '/about', redirectTo: '/' + lang + '/cheri/contact', pathMatch: 'full' },
     { path: lang + '/contact', redirectTo: '/' + lang + '/cheri/contact', pathMatch: 'full' },

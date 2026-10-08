@@ -98,6 +98,7 @@ const routes: Routes = [
       { path: 'inventory/:id', component: InventoryDetailComponent },
       { path: 'inventory/:id/edit', component: InventoryImportComponent },
       { path: 'pages', component: PagesComponent },
+      { path: 'pages/new', component: PageFormComponent },
       { path: 'pages/add', component: PageFormComponent },
       { path: 'pages/:id', component: PageDetailComponent },
       { path: 'pages/:id/edit', component: PageFormComponent },

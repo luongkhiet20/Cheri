@@ -1,0 +1,486 @@
+<mat-drawer-container class="home-sidebar-container" autosize hasBackdrop>
+  <mat-drawer #sideBar [(opened)]="sidebarOpened" class="home-sidebar" mode="over">
+    <app-sidebar [class.disabled]="loadingProducts()" [categories]="categories()" [price]="filterPrice()"
+      [maxPrice]="maxPrice()" [minPrice]="minPrice()" [activeCategory]="category()" [sortOptions]="sortOptions"
+      [currency]="currency()" [lang]="lang()" [choosenSort]="sortBy()" (changePrice)="priceRange($event)"
+      (changeSort)="changeSort($event)" (changeCategory)="changeCategory()">
+    </app-sidebar>
+  </mat-drawer>
+
+  <mat-drawer-content>
+    <div class="main">
+
+      <!-- ── Promo bar ── -->
+      @if (cart(); as cart) {
+      <div class="home-promo">
+        <span class="home-promo-basic">{{ 'Home_promo' | translate | async }}</span>
+        <span class="home-promo-shipping">{{ 'Free_shipping_limit' | translate | async }} {{ cart.shippingLimit }} {{
+          currency() }}</span>
+      </div>
+      }
+
+      <!-- ══════════════════════════════════════════
+           CHẾ ĐỘ 1: RENDER DYNAMIC SECTIONS TỪ CMS ĐÃ XUẤT BẢN
+      ══════════════════════════════════════════ -->
+      @if (hasDynamicConfig) {
+        @for (section of dynamicSections; track section.id) {
+
+          <!-- 1. HERO SECTION (BANNER TĨNH HOẶC CAROUSEL ĐA ẢNH) -->
+          @if (section.type === 'hero') {
+            <!-- Sub-type Carousel -->
+            @if (section.layout?.variant === 'carousel') {
+              @if (getCarouselSlides(section).length > 0) {
+                <section class="dynamic-carousel-section" [id]="section.id" [ngStyle]="getSectionContainerStyle(section)">
+                  <div class="dynamic-carousel"
+                    (touchstart)="onTouchStart($event)"
+                    (touchend)="onTouchEnd(section, $event)">
+                    @for (slide of getCarouselSlides(section); track slide.id; let idx = $index) {
+                      <div class="dynamic-carousel-slide"
+                        [class.is-active]="idx === getCarouselActiveIndex(section.id)">
+                        <picture>
+                          <source *ngIf="slide.mobileUrl" [srcset]="slide.mobileUrl" media="(max-width: 768px)">
+                          <img [src]="slide.url" [alt]="slide.alt || slide.title || ''" class="dynamic-carousel-img" />
+                        </picture>
+                        <div class="dynamic-carousel-caption" *ngIf="slide.title || slide.description">
+                          <h2 *ngIf="slide.title" class="dynamic-carousel-title" [ngStyle]="getTypographyStyle(section, 'heading')">{{ slide.title }}</h2>
+                          <p *ngIf="slide.description" class="dynamic-carousel-desc" [ngStyle]="getTypographyStyle(section, 'body')">{{ slide.description }}</p>
+                          <a *ngIf="slide.linkUrl" [routerLink]="slide.linkUrl" class="dynamic-hero-btn" [ngStyle]="getTypographyStyle(section, 'button')">{{ section.content?.buttonText || 'Khám Phá Ngay' }}</a>
+                        </div>
+                      </div>
+                    }
+
+                    <!-- Carousel Controls: Arrows -->
+                    @if (section.layout?.carouselConfig?.showArrows !== false && getCarouselSlides(section).length > 1) {
+                      <button type="button" class="carousel-arrow carousel-arrow--prev" (click)="onPrevSlide(section, $event)" aria-label="Previous slide">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                      </button>
+                      <button type="button" class="carousel-arrow carousel-arrow--next" (click)="onNextSlide(section, $event)" aria-label="Next slide">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                      </button>
+                    }
+
+                    <!-- Carousel Controls: Dots -->
+                    @if (section.layout?.carouselConfig?.showDots !== false && getCarouselSlides(section).length > 1) {
+                      <div class="carousel-dots">
+                        @for (slide of getCarouselSlides(section); track slide.id; let idx = $index) {
+                          <button type="button" class="carousel-dot"
+                            [class.is-active]="idx === getCarouselActiveIndex(section.id)"
+                            (click)="onGoToSlide(section, idx, $event)"
+                            [attr.aria-label]="'Go to slide ' + (idx + 1)"></button>
+                        }
+                      </div>
+                    }
+                  </div>
+                </section>
+              }
+            } @else {
+              <!-- Static Hero Banner -->
+              @if (section.media?.desktop?.url || section.content?.title) {
+                <section class="dynamic-hero-section" [id]="section.id" [ngStyle]="getSectionContainerStyle(section)">
+                  <picture *ngIf="section.media?.desktop?.url">
+                    <source *ngIf="section.media?.mobile?.url" [srcset]="section.media.mobile.url" media="(max-width: 768px)">
+                    <img [src]="section.media.desktop.url"
+                      [alt]="section.content?.title || ''" class="dynamic-hero-img" />
+                  </picture>
+                  <div class="dynamic-hero-overlay" *ngIf="section.content?.title || section.content?.eyebrow">
+                    <span *ngIf="section.content?.eyebrow" class="dynamic-hero-eyebrow" [ngStyle]="getTypographyStyle(section, 'eyebrow')">
+                      {{ section.content.eyebrow }}
+                    </span>
+                    <h1 *ngIf="section.content?.title" class="dynamic-hero-title" [ngStyle]="getTypographyStyle(section, 'heading')">
+                      {{ section.content.title }}
+                    </h1>
+                    <p *ngIf="section.content?.description" class="dynamic-hero-desc" [ngStyle]="getTypographyStyle(section, 'body')">
+                      {{ section.content.description }}
+                    </p>
+                    <a *ngIf="section.content?.buttonText" [routerLink]="[section.content.buttonLink || ('/' + (lang() || 'vi') + '/product/all')]"
+                      class="dynamic-hero-btn" [ngStyle]="getTypographyStyle(section, 'button')">
+                      {{ section.content.buttonText }}
+                    </a>
+                  </div>
+                </section>
+              }
+            }
+          }
+
+          <!-- 2. PRODUCT SLIDER SECTION -->
+          @if (section.type === 'product-slider') {
+            @if (getFilteredProducts(section); as prods) {
+              @if (prods.length > 0) {
+                <section class="home-featured" [id]="section.id" [ngStyle]="getSectionContainerStyle(section)">
+                  <div class="home-featured-header">
+                    <div class="home-featured-heading" *ngIf="section.content?.title">
+                      <h3 class="home-featured-title" [ngStyle]="getTypographyStyle(section, 'heading')">
+                        {{ section.content.title }}
+                      </h3>
+                    </div>
+                    <div class="home-featured-actions">
+                      <a class="home-featured-viewall" [routerLink]="[section.content?.viewAllLink || ('/' + (lang() || 'vi') + '/product/all')]" role="button"
+                        [ngStyle]="getTypographyStyle(section, 'button')">
+                        <span>{{ section.content?.viewAllText || 'Xem Toàn Bộ Cửa Hàng' }}</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                          <polyline points="12 5 19 12 12 19" />
+                        </svg>
+                      </a>
+                      <div class="home-featured-nav">
+                        <button type="button" class="home-featured-nav-btn" (click)="scrollLane(-1)" aria-label="Previous">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="15 18 9 12 15 6" />
+                          </svg>
+                        </button>
+                        <button type="button" class="home-featured-nav-btn" (click)="scrollLane(1)" aria-label="Next">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="9 18 15 12 9 6" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="home-featured-lane" #featuredLane>
+                    @for (product of prods; track product?._id) {
+                      <div class="home-product-card" [routerLink]="['/' + (lang() || 'vi') + '/product/' + product.titleUrl]">
+                        <div class="home-product-img-wrap">
+                          <img [src]="product.mainImage?.url || (product.images && product.images[0])" [alt]="product.title" class="home-product-img" />
+                          @if (isOutOfStock(product)) {
+                            <span class="home-product-badge home-product-badge--sold">HẾT HÀNG</span>
+                          } @else if (product.onSale) {
+                            <span class="home-product-badge home-product-badge--sale">ƯU ĐÃI</span>
+                          } @else {
+                            <span class="home-product-badge home-product-badge--new">NEW</span>
+                          }
+                          <app-wishlist-button [product]="product" [lang]="lang() || 'vi'"></app-wishlist-button>
+                          <div class="home-product-overlay">
+                            @if (!isOutOfStock(product)) {
+                              <button type="button" class="home-product-add-btn" (click)="addToCart(product._id); $event.stopPropagation()" title="Thêm vào giỏ">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>
+                              </button>
+                            }
+                            <button type="button" class="pcard-overlay-btn pcard-overlay-btn--view" (click)="onOpenQuickView(product); $event.stopPropagation()" title="Xem chi tiết">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                            </button>
+                          </div>
+                        </div>
+                        <div class="home-product-info">
+                          @if (product.tags?.length) {
+                            <span class="home-product-category">{{ product.tags[0] }}</span>
+                          }
+                          <h4 class="home-product-name">{{ product.title }}</h4>
+                          <div class="home-product-prices">
+                            <span class="home-product-price">{{ product.salePrice || product.regularPrice }} {{ currency() }}</span>
+                            @if (product.onSale && product.salePrice) {
+                              <span class="home-product-original">{{ product.regularPrice }} {{ currency() }}</span>
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                </section>
+              }
+            }
+          }
+
+          <!-- 3. PRODUCT GRID SECTION -->
+          @if (section.type === 'product-grid') {
+            @if (getFilteredProducts(section); as prods) {
+              @if (prods.length > 0) {
+                <section class="home-grid-section" [id]="section.id" [ngStyle]="getSectionContainerStyle(section)">
+                  <div class="home-featured-heading text-center mb-4" *ngIf="section.content?.title || section.content?.description">
+                    <h3 *ngIf="section.content?.title" class="home-featured-title" [ngStyle]="getTypographyStyle(section, 'heading')">
+                      {{ section.content.title }}
+                    </h3>
+                    <p *ngIf="section.content?.description" class="home-grid-subtitle" [ngStyle]="getTypographyStyle(section, 'body')">
+                      {{ section.content.description }}
+                    </p>
+                  </div>
+                  <div class="home-product-grid-container">
+                    @for (product of prods; track product?._id) {
+                      <div class="home-product-card" [routerLink]="['/' + (lang() || 'vi') + '/product/' + product.titleUrl]">
+                        <div class="home-product-img-wrap">
+                          <img [src]="product.mainImage?.url || (product.images && product.images[0])" [alt]="product.title" class="home-product-img" />
+                          @if (isOutOfStock(product)) {
+                            <span class="home-product-badge home-product-badge--sold">HẾT HÀNG</span>
+                          } @else if (product.onSale) {
+                            <span class="home-product-badge home-product-badge--sale">ƯU ĐÃI</span>
+                          } @else {
+                            <span class="home-product-badge home-product-badge--new">NEW</span>
+                          }
+                          <app-wishlist-button [product]="product" [lang]="lang() || 'vi'"></app-wishlist-button>
+                          <div class="home-product-overlay">
+                            @if (!isOutOfStock(product)) {
+                              <button type="button" class="home-product-add-btn" (click)="addToCart(product._id); $event.stopPropagation()" title="Thêm vào giỏ">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>
+                              </button>
+                            }
+                            <button type="button" class="pcard-overlay-btn pcard-overlay-btn--view" (click)="onOpenQuickView(product); $event.stopPropagation()" title="Xem chi tiết">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                            </button>
+                          </div>
+                        </div>
+                        <div class="home-product-info">
+                          @if (product.tags?.length) {
+                            <span class="home-product-category">{{ product.tags[0] }}</span>
+                          }
+                          <h4 class="home-product-name">{{ product.title }}</h4>
+                          <div class="home-product-prices">
+                            <span class="home-product-price">{{ product.salePrice || product.regularPrice }} {{ currency() }}</span>
+                            @if (product.onSale && product.salePrice) {
+                              <span class="home-product-original">{{ product.regularPrice }} {{ currency() }}</span>
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                </section>
+              }
+            }
+          }
+
+          <!-- 4. EDITORIAL SECTION (NÀNG THƠ) -->
+          @if (section.type === 'editorial') {
+            @if (section.media?.desktop?.url || section.content?.title || section.content?.quote || section.content?.description) {
+              <section class="home-muse-section is-visible" [id]="section.id" [ngStyle]="getSectionContainerStyle(section)">
+                <div class="home-muse-container">
+                  <div class="home-muse-grid">
+                    <div class="home-muse-image-col" *ngIf="section.media?.desktop?.url" [routerLink]="[section.content?.buttonLink || ('/' + (lang() || 'vi') + '/product/all')]" role="button" tabindex="0">
+                      <div class="home-muse-img-wrapper">
+                        <img [src]="section.media.desktop.url"
+                          [alt]="section.content?.title || ''" referrerpolicy="no-referrer" class="home-muse-img" />
+                        <div class="home-muse-glow" *ngIf="section.settings?.enableGlow !== false"></div>
+                      </div>
+                    </div>
+                    <div class="home-muse-content-col">
+                      <div class="home-muse-heading-wrap" *ngIf="section.content?.title">
+                        <h3 class="home-muse-title" [ngStyle]="getTypographyStyle(section, 'heading')">
+                          {{ section.content.title }}
+                        </h3>
+                      </div>
+                      <div class="home-muse-quote-wrap" *ngIf="section.content?.quote || section.content?.description">
+                        <p class="home-muse-quote" [ngStyle]="getTypographyStyle(section, 'quote')">
+                          {{ section.content.quote || section.content.description }}
+                        </p>
+                      </div>
+                      <div class="home-muse-tagline-wrap" *ngIf="section.content?.tagline1 || section.content?.eyebrow">
+                        <div class="home-muse-tagline" [ngStyle]="getTypographyStyle(section, 'eyebrow')">
+                          <span>{{ section.content.tagline1 || section.content.eyebrow }}</span>
+                          <span *ngIf="section.content.tagline2">•</span>
+                          <span *ngIf="section.content.tagline2">{{ section.content.tagline2 }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            }
+          }
+
+          <!-- 5. BANNER HOẶC IMAGE-TEXT SECTION -->
+          @if (section.type === 'banner' || section.type === 'image-text') {
+            <section class="dynamic-banner-section" [id]="section.id" [ngStyle]="getBannerStyle(section)">
+              <div class="dynamic-banner-inner">
+                <picture *ngIf="section.media?.desktop?.url">
+                  <source *ngIf="section.media?.mobile?.url" [srcset]="section.media.mobile.url" media="(max-width: 768px)">
+                  <img [src]="section.media.desktop.url" [alt]="section.content?.title || 'Banner'" class="dynamic-banner-bg" />
+                </picture>
+                <div class="dynamic-banner-content" *ngIf="section.content?.title || section.content?.description">
+                  <span *ngIf="section.content?.eyebrow" class="dynamic-hero-eyebrow" [ngStyle]="getTypographyStyle(section, 'eyebrow')">
+                    {{ section.content.eyebrow }}
+                  </span>
+                  <h3 *ngIf="section.content?.title" class="dynamic-banner-title" [ngStyle]="getTypographyStyle(section, 'heading')">
+                    {{ section.content.title }}
+                  </h3>
+                  <p *ngIf="section.content?.description" class="dynamic-banner-desc" [ngStyle]="getTypographyStyle(section, 'body')">
+                    {{ section.content.description }}
+                  </p>
+                  <a *ngIf="section.content?.buttonText" [routerLink]="[section.content.buttonLink || ('/' + (lang() || 'vi') + '/product/all')]"
+                    class="dynamic-hero-btn" [ngStyle]="getTypographyStyle(section, 'button')">
+                    {{ section.content.buttonText }}
+                  </a>
+                </div>
+              </div>
+            </section>
+          }
+
+          <!-- 6. QUOTE SECTION -->
+          @if (section.type === 'quote') {
+            @if (section.content?.quote || section.content?.title) {
+              <section class="dynamic-quote-section" [id]="section.id" [ngStyle]="getSectionContainerStyle(section)">
+                <div class="container text-center">
+                  <blockquote class="dynamic-quote-text" [ngStyle]="getTypographyStyle(section, 'quote')">
+                    "{{ section.content?.quote || section.content?.title }}"
+                  </blockquote>
+                  <cite *ngIf="section.content?.author" class="dynamic-quote-author" [ngStyle]="getTypographyStyle(section, 'subheading')">
+                    — {{ section.content.author }}
+                  </cite>
+                </div>
+              </section>
+            }
+          }
+
+          <!-- 7. CTA SECTION -->
+          @if (section.type === 'cta') {
+            @if (section.content?.title || section.content?.description || section.content?.buttonText) {
+              <section class="dynamic-cta-section" [id]="section.id" [ngStyle]="getSectionContainerStyle(section)">
+                <div class="container text-center">
+                  <h3 *ngIf="section.content?.title" class="dynamic-cta-title" [ngStyle]="getTypographyStyle(section, 'heading')">
+                    {{ section.content.title }}
+                  </h3>
+                  <p *ngIf="section.content?.description" class="dynamic-cta-desc" [ngStyle]="getTypographyStyle(section, 'body')">
+                    {{ section.content.description }}
+                  </p>
+                  <a *ngIf="section.content?.buttonText" [routerLink]="[section.content.buttonLink || ('/' + (lang() || 'vi') + '/product/all')]"
+                    class="dynamic-hero-btn" [ngStyle]="getTypographyStyle(section, 'button')">
+                    {{ section.content.buttonText }}
+                  </a>
+                </div>
+              </section>
+            }
+          }
+
+          <!-- 8. SPACER SECTION -->
+          @if (section.type === 'spacer') {
+            <div class="dynamic-spacer" [style.height.px]="section.settings?.spacerHeight || 40"></div>
+          }
+
+        }
+      }
+
+      <!-- ══════════════════════════════════════════
+           CHẾ ĐỘ 2: FALLBACK AN TOÀN KHI CHƯA CÓ CẤU HÌNH XUẤT BẢN HOẶC LỖI
+      ══════════════════════════════════════════ -->
+      @if (!hasDynamicConfig) {
+        <!-- SECTION 1 – Hero Banner Fallback -->
+        <section class="home-hero">
+          <img src="https://static.wixstatic.com/media/911b80_56c8defb7ec14d90b9ebb021fa9c4a65~mv2.jpg"
+            alt="Chéri Grand Campaign" referrerpolicy="no-referrer" class="home-hero-img" />
+        </section>
+
+        <!-- SECTION 3 – Featured Best-Sellers Slider Fallback -->
+        @if (products(); as products) {
+        <section class="home-featured">
+          <div class="home-featured-header">
+            <div class="home-featured-heading">
+              <h3 class="home-featured-title">Sản phẩm tiêu biểu</h3>
+            </div>
+            <div class="home-featured-actions">
+              <a class="home-featured-viewall" [routerLink]="['/' + (lang() || 'vi') + '/product/all']" role="button">
+                <span>Xem Toàn Bộ Cửa Hàng</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points="12 5 19 12 12 19" />
+                </svg>
+              </a>
+              <div class="home-featured-nav">
+                <button type="button" class="home-featured-nav-btn" (click)="scrollLane(-1)" aria-label="Previous">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6" />
+                  </svg>
+                </button>
+                <button type="button" class="home-featured-nav-btn" (click)="scrollLane(1)" aria-label="Next">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="home-featured-lane" #featuredLane>
+            @for (product of products | slice: 0:10; track product?._id) {
+            <div class="home-product-card" [routerLink]="['/' + (lang() || 'vi') + '/product/' + product.titleUrl]">
+              <div class="home-product-img-wrap">
+                <img [src]="product.mainImage?.url || (product.images && product.images[0])" [alt]="product.title"
+                  class="home-product-img" />
+                @if (isOutOfStock(product)) {
+                <span class="home-product-badge home-product-badge--sold">HẾT HÀNG</span>
+                } @else if (product.onSale) {
+                <span class="home-product-badge home-product-badge--sale">ƯU ĐÃI</span>
+                } @else {
+                <span class="home-product-badge home-product-badge--new">NEW</span>
+                }
+                <app-wishlist-button [product]="product" [lang]="lang() || 'vi'"></app-wishlist-button>
+                <div class="home-product-overlay">
+                  @if (!isOutOfStock(product)) {
+                  <button type="button" class="home-product-add-btn"
+                    (click)="addToCart(product._id); $event.stopPropagation()" title="Thêm vào giỏ">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                      <line x1="3" y1="6" x2="21" y2="6" />
+                      <path d="M16 10a4 4 0 0 1-8 0" />
+                    </svg>
+                  </button>
+                  }
+                  <button type="button" class="pcard-overlay-btn pcard-overlay-btn--view"
+                    (click)="onOpenQuickView(product); $event.stopPropagation()" title="Xem chi tiết">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div class="home-product-info">
+                @if (product.tags?.length) {
+                <span class="home-product-category">{{ product.tags[0] }}</span>
+                }
+                <h4 class="home-product-name">{{ product.title }}</h4>
+                <div class="home-product-prices">
+                  <span class="home-product-price">{{ product.salePrice || product.regularPrice }} {{ currency() }}</span>
+                  @if (product.onSale && product.salePrice) {
+                  <span class="home-product-original">{{ product.regularPrice }} {{ currency() }}</span>
+                  }
+                </div>
+              </div>
+            </div>
+            }
+          </div>
+        </section>
+        }
+
+        <!-- SECTION 4 – Nàng Thơ Của Riêng Bạn (Editorial Fallback) -->
+        <section #museSection class="home-muse-section">
+          <div class="home-muse-container">
+            <div class="home-muse-grid">
+              <div class="home-muse-image-col" [routerLink]="['/' + (lang() || 'vi') + '/product/all']"
+                (click)="goToProducts()" role="button" tabindex="0" title="Xem tất cả sản phẩm">
+                <div class="home-muse-img-wrapper">
+                  <img src="https://static.wixstatic.com/media/911b80_c2c4f8245cbc4a1e80c6e871af920c1d~mv2.png"
+                    alt="Nàng thơ Chéri" referrerpolicy="no-referrer" class="home-muse-img" />
+                  <div class="home-muse-glow"></div>
+                </div>
+              </div>
+              <div class="home-muse-content-col">
+                <div class="home-muse-heading-wrap">
+                  <h3 class="home-muse-title">Nàng thơ của riêng bạn</h3>
+                </div>
+                <div class="home-muse-quote-wrap">
+                  <p class="home-muse-quote">
+                    Không chạy theo xu hướng nhất thời. Chúng tôi tạo nên những
+                    thiết kế mang vẻ đẹp vượt thời gian.
+                  </p>
+                </div>
+                <div class="home-muse-tagline-wrap">
+                  <div class="home-muse-tagline">
+                    <span>Atelier Chéri</span>
+                    <span>•</span>
+                    <span>Timeless</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      }
+    </div>
+  </mat-drawer-content>
+</mat-drawer-container>

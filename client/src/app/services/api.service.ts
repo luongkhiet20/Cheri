@@ -728,7 +728,7 @@ export class ApiService {
     );
   }
 
-  uploadImage({ fileToUpload, titleUrl }) {
+  uploadImage({ fileToUpload, titleUrl }: { fileToUpload: any; titleUrl?: string }) {
     if (isPlatformBrowser(this.platformId)) {
       const titleUrlQuery = titleUrl ? '?titleUrl=' + titleUrl : '';
       const accessToken = localStorage.getItem(accessTokenKey);
@@ -839,6 +839,54 @@ export class ApiService {
   removeConfig(titleUrl: string) {
     const configUrl = this.apiUrl + '/api/cheri/config/' + titleUrl;
     return this.http.delete(configUrl, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  getHomePublished(): Observable<any> {
+    const homeUrl = this.apiUrl + '/api/cheri/home';
+    return this.http.get(homeUrl, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  getHomeAdmin(): Observable<any> {
+    const homeUrl = this.apiUrl + '/api/cheri/home/admin';
+    return this.http.get(homeUrl, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  publishHome(publishReq?: { sections?: any[]; updatedBy?: string }): Observable<any> {
+    const homeUrl = this.apiUrl + '/api/cheri/home/publish';
+    return this.http.post(homeUrl, publishReq || {}, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  getAboutPublished(): Observable<any> {
+    const aboutUrl = this.apiUrl + '/api/cheri/about';
+    return this.http.get(aboutUrl, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  getAboutAdmin(): Observable<any> {
+    const aboutUrl = this.apiUrl + '/api/cheri/about/admin';
+    return this.http.get(aboutUrl, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  publishAbout(publishReq?: { sections?: any[]; updatedBy?: string }): Observable<any> {
+    const aboutUrl = this.apiUrl + '/api/cheri/about/publish';
+    return this.http.post(aboutUrl, publishReq || {}, this.getRequestOptions()).pipe(
       map((response: any) => response),
       catchError((error: Error) => of({ error })),
     );

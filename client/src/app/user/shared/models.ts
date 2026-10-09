@@ -311,7 +311,9 @@ export interface Page {
   _id?                : string;
   titleUrl            : string;
   dateAdded?          : Date;
-  [lang: string]      : any | { title?: string; contentHTML?: string };
+  status?             : string;
+  isPublished?        : boolean;
+  [lang: string]      : any | { title?: string; contentHTML?: string; visibility?: boolean };
 }
 
 export interface Theme {

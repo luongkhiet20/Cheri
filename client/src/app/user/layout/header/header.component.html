@@ -2,7 +2,7 @@
 
   <div class="nav-left">
     @for (item of leftNavItems; track item.page) {
-    <a class="nav-label" [routerLink]="item.page === 'home' ? ['/'] : ['/' + (lang$ | async) + '/' + item.page]"
+    <a class="nav-label" [routerLink]="item.page === 'home' ? ['/'] : ['/' + ((lang$ | async) || 'vi') + '/' + item.page]"
       routerLinkActive="active" [routerLinkActiveOptions]="{ exact: item.page === 'home' }">
       {{ item.label }}
     </a>
@@ -24,7 +24,7 @@
     <!-- 2. Yêu thích -->
     <div class="nav-right-links">
       @for (item of rightNavItems; track item.page) {
-      <a class="nav-label" [routerLink]="['/' + (lang$ | async) + '/' + item.page]" routerLinkActive="active">
+      <a class="nav-label" [routerLink]="['/' + ((lang$ | async) || 'vi') + '/' + item.page]" routerLinkActive="active">
         {{ item.label }}
       </a>
       }
@@ -33,11 +33,11 @@
     <!-- 3. Giỏ hàng -->
     <div class="nav-basic nav-cart-wrap">
       @if (cart$(); as cart) {
-      <a class="nav-label nav-cart-label" [routerLink]="['/' + (lang$ | async) + '/cart']" routerLinkActive="active">
+      <a class="nav-label nav-cart-label" [routerLink]="['/' + ((lang$ | async) || 'vi') + '/cart']" routerLinkActive="active">
         Giỏ hàng@if (cart?.totalQty) { ({{ cart?.totalQty }}) }
       </a>
       } @else {
-      <a class="nav-label nav-cart-label" [routerLink]="['/' + (lang$ | async) + '/cart']" routerLinkActive="active">
+      <a class="nav-label nav-cart-label" [routerLink]="['/' + ((lang$ | async) || 'vi') + '/cart']" routerLinkActive="active">
         Giỏ hàng
       </a>
       }
@@ -46,7 +46,7 @@
     <!-- 4. Quản trị (chỉ hiển thị khi isAdmin() === true) - CSS giống Giỏ hàng -->
     @if (isAdmin()) {
     <div class="nav-basic nav-admin-wrap">
-      <a class="nav-label" [routerLink]="['/admin/dashboard']" routerLinkActive="active" title="Trang quản trị">
+      <a class="nav-label" [routerLink]="['/admin']" routerLinkActive="active" title="Trang quản trị">
         Quản trị
       </a>
     </div>
@@ -89,7 +89,7 @@
 <ng-template #menuItems>
   <div class="mobile-nav-links">
     @for (item of leftNavItems; track item.page) {
-    <button mat-menu-item [routerLink]="item.page === 'home' ? ['/'] : ['/' + (lang$ | async) + '/' + item.page]"
+    <button mat-menu-item [routerLink]="item.page === 'home' ? ['/'] : ['/' + ((lang$ | async) || 'vi') + '/' + item.page]"
       routerLinkActive="active">
       <span class="nav-label">{{ item.label }}</span>
     </button>
@@ -100,18 +100,18 @@
     </button>
 
     @for (item of rightNavItems; track item.page) {
-    <button mat-menu-item [routerLink]="['/' + (lang$ | async) + '/' + item.page]" routerLinkActive="active">
+    <button mat-menu-item [routerLink]="['/' + ((lang$ | async) || 'vi') + '/' + item.page]" routerLinkActive="active">
       <span class="nav-label">{{ item.label }}</span>
     </button>
     }
 
-    <button mat-menu-item [routerLink]="['/' + (lang$ | async) + '/cart']" routerLinkActive="active">
+    <button mat-menu-item [routerLink]="['/' + ((lang$ | async) || 'vi') + '/cart']" routerLinkActive="active">
       <span class="nav-label">Giỏ hàng@if (cart$()?.totalQty) { ({{ cart$()?.totalQty }}) }</span>
     </button>
 
 
     @if (isAdmin()) {
-    <button mat-menu-item [routerLink]="['/admin/dashboard']" routerLinkActive="active">
+    <button mat-menu-item [routerLink]="['/admin']" routerLinkActive="active">
       <span class="nav-label">Quản trị</span>
     </button>
     }

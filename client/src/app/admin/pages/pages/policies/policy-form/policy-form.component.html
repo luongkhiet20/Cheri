@@ -4,14 +4,14 @@
   <div class="page-top">
     <div>
       <div class="breadcrumbs">
-        <a routerLink="/admin/pages" class="breadcrumb-link">Trang tĩnh</a>
+        <a routerLink="/admin/policies" class="breadcrumb-link">Chính sách</a>
         <span class="breadcrumb-sep">/</span>
-        <a *ngIf="isEditMode && pageId" [routerLink]="['/admin/pages', pageId]" class="breadcrumb-link">{{
+        <a *ngIf="isEditMode && pageId" [routerLink]="['/admin/policies', pageId]" class="breadcrumb-link">{{
           formData.title || 'Chi tiết' }}</a>
         <span *ngIf="isEditMode && pageId" class="breadcrumb-sep">/</span>
-        <span class="breadcrumb-current">{{ isEditMode ? 'Chỉnh sửa trang' : 'Tạo trang mới' }}</span>
+        <span class="breadcrumb-current">{{ isEditMode ? 'Chỉnh sửa chính sách' : 'Tạo chính sách mới' }}</span>
       </div>
-      <h1 class="page-title">{{ isEditMode ? 'Chỉnh sửa trang tĩnh' : 'Tạo trang mới' }}</h1>
+      <h1 class="page-title">{{ isEditMode ? 'Chỉnh sửa chính sách' : 'Tạo chính sách mới' }}</h1>
     </div>
 
     <div class="page-actions">
@@ -21,7 +21,7 @@
       <button type="button" class="btn btn-primary" (click)="onSubmit()" [disabled]="isSubmitting || isLoading"
         id="btn-save-top">
         <span *ngIf="isSubmitting" class="spinner-inline"></span>
-        {{ isSubmitting ? 'Đang lưu...' : (isEditMode ? 'Lưu thay đổi' : 'Lưu trang') }}
+        {{ isSubmitting ? 'Đang lưu...' : (isEditMode ? 'Lưu thay đổi' : 'Lưu chính sách') }}
       </button>
     </div>
   </div>
@@ -29,7 +29,7 @@
   <!-- Alert Messages -->
   <div *ngIf="errorMessage" class="alert-box alert-error">
     <div class="alert-icon">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <circle cx="12" cy="12" r="10"></circle>
         <line x1="12" y1="8" x2="12" y2="12"></line>
@@ -43,7 +43,7 @@
 
   <div *ngIf="successMessage" class="alert-box alert-success">
     <div class="alert-icon">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <polyline points="20 6 9 17 4 12"></polyline>
       </svg>
@@ -54,7 +54,7 @@
   <!-- Loading State -->
   <div *ngIf="isLoading" class="form-loading-card">
     <div class="spinner"></div>
-    <p class="loading-title">Đang tải dữ liệu trang từ MongoDB...</p>
+    <p class="loading-title">Đang tải dữ liệu chính sách từ MongoDB...</p>
   </div>
 
   <!-- Main Form Layout -->
@@ -63,20 +63,20 @@
     <!-- LEFT COLUMN -->
     <div class="form-main-col">
 
-      <!-- 1. Page Info -->
+      <!-- 1. Policy Info -->
       <div class="form-card">
         <h2 class="card-section-title">Thông tin cơ bản</h2>
 
-        <!-- Tiêu đề trang -->
+        <!-- Tiêu đề chính sách -->
         <div class="form-group">
-          <label class="form-label required" for="pageTitle">Tiêu đề trang (vi.title)</label>
+          <label class="form-label required" for="pageTitle">Tiêu đề chính sách (vi.title)</label>
           <input type="text" id="pageTitle" class="form-control" [class.is-invalid]="errors['title']"
             [(ngModel)]="formData.title" (ngModelChange)="onTitleChange()" name="title"
             placeholder="Ví dụ: Giới thiệu thương hiệu, Chính sách đổi trả..." required />
           <div *ngIf="errors['title']" class="invalid-feedback">
             {{ errors['title'] }}
           </div>
-          <span class="form-hint">Tên hiển thị chính của trang trên website</span>
+          <span class="form-hint">Tên hiển thị chính của chính sách trên website</span>
         </div>
 
         <!-- Đường dẫn Slug -->
@@ -91,7 +91,7 @@
           <div *ngIf="errors['slug']" class="invalid-feedback">
             {{ errors['slug'] }}
           </div>
-          <span class="form-hint">Đường dẫn truy cập trang tĩnh (tự động tạo từ tiêu đề nếu để trống)</span>
+          <span class="form-hint">Đường dẫn truy cập chính sách (tự động tạo từ tiêu đề nếu để trống)</span>
         </div>
 
         <!-- Meta Description -->
@@ -99,7 +99,7 @@
           <label class="form-label" for="pageMeta">Mô tả tóm tắt (SEO Meta Description)</label>
           <textarea id="pageMeta" class="form-control" rows="2" [(ngModel)]="formData.metaDescription"
             (ngModelChange)="markDirty()" name="metaDescription"
-            placeholder="Mô tả ngắn gọn về nội dung trang phục vụ tìm kiếm SEO..."></textarea>
+            placeholder="Mô tả ngắn gọn về nội dung chính sách phục vụ tìm kiếm SEO..."></textarea>
         </div>
 
       </div>
@@ -107,7 +107,7 @@
       <!-- 2. Content HTML -->
       <div class="form-card">
         <div class="card-header-flex">
-          <h2 class="card-section-title mb-0">Nội dung trang (contentHTML)</h2>
+          <h2 class="card-section-title mb-0">Nội dung chính sách (contentHTML)</h2>
         </div>
 
         <div class="form-group mb-0">
@@ -139,8 +139,7 @@
 
         <div class="status-summary-box" [class.active]="formData.isPublished">
           <div class="dot"></div>
-          <span>{{ formData.isPublished ? 'Trang đang được xuất bản công khai trên website' : 'Trang đang được lưu ở
-            dạng Bản nháp' }}</span>
+          <span>{{ formData.isPublished ? 'Chính sách đang được xuất bản công khai trên website' : 'Chính sách đang được lưu ở dạng Bản nháp' }}</span>
         </div>
       </div>
 
@@ -149,11 +148,9 @@
         <h2 class="card-section-title">Đường dẫn xem trước</h2>
         <div class="preview-url-box">
           <span class="url-label">URL truy cập:</span>
-          <code class="url-text font-mono">/pages/{{ formData.slug || 'duong-dan-trang' }}</code>
+          <code class="url-text font-mono">/pages/{{ formData.slug || 'duong-dan-chinh-sach' }}</code>
         </div>
       </div>
-
-
 
     </div>
 

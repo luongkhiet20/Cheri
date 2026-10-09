@@ -1,0 +1,510 @@
+/* ==========================================================================
+   CHÉRI USER STOREFRONT — ABOUT (GIỚI THIỆU THƯƠNG HIỆU)
+   Atelier Haute Couture Style: Sang trọng, Quý phái, Tinh tế
+   ========================================================================== */
+
+:host {
+    display: block;
+    width: 100%;
+    background-color: #FAF8F5;
+    /* Màu nền kem ngà sang trọng */
+    color: #2D2D2D;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+.about-page-main {
+    width: 100%;
+    min-height: 100vh;
+    /* Khoảng thở cân đối dưới fixed header của Cheri, giảm 54px so với trước để nội dung gần header hơn */
+    padding-top: 48px;
+    padding-bottom: 80px;
+}
+
+@media (max-width: 768px) {
+    .about-page-main {
+        /* Giảm 50px trên mobile để tối ưu không gian hiển thị màn hình nhỏ */
+        padding-top: 32px;
+        padding-bottom: 60px;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   1. HERO HEADER BANNER
+   ══════════════════════════════════════════════════════════════════════════ */
+.about-hero-header {
+    text-align: center;
+    padding: 40px 24px 60px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.about-breadcrumbs {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    color: #7A7A7A;
+    margin-bottom: 24px;
+    text-transform: uppercase;
+}
+
+.about-breadcrumb-link {
+    color: #7A7A7A;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.about-breadcrumb-link:hover {
+    color: #74070E;
+}
+
+.about-breadcrumb-sep {
+    opacity: 0.5;
+}
+
+.about-breadcrumb-current {
+    color: #74070E;
+    font-weight: 600;
+}
+
+.about-hero-tagline {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: #74070E;
+    margin-bottom: 16px;
+}
+
+.about-hero-title {
+    font-family: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
+    font-size: 48px;
+    font-weight: 400;
+    line-height: 1.2;
+    letter-spacing: -0.5px;
+    color: #1A1A1A;
+    margin: 0 0 20px;
+}
+
+@media (max-width: 768px) {
+    .about-hero-title {
+        font-size: 32px;
+    }
+}
+
+.about-hero-subtitle {
+    font-size: 17px;
+    font-weight: 300;
+    line-height: 1.7;
+    color: #555555;
+    margin: 0 auto;
+    max-width: 680px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   2. CONTAINERS & LAYOUT
+   ══════════════════════════════════════════════════════════════════════════ */
+.about-container {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 0 32px;
+}
+
+.about-container-narrow {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+@media (max-width: 768px) {
+
+    .about-container,
+    .about-container-narrow {
+        padding: 0 20px;
+    }
+}
+
+.about-sections-flow {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+@media (max-width: 768px) {
+    .about-sections-flow {
+        gap: 48px;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   3. EDITORIAL SECTION (PHÂN ĐOẠN NÀNG THƠ)
+   ══════════════════════════════════════════════════════════════════════════ */
+.about-section--editorial {
+    padding: 20px 0;
+}
+
+.about-editorial-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: center;
+}
+
+/* Variant Image Left: Ảnh ở cột 1, Chữ ở cột 2 */
+.variant-image-left .about-editorial-col-media {
+    order: 1;
+}
+
+.variant-image-left .about-editorial-col-content {
+    order: 2;
+}
+
+/* Variant Image Right: Chữ ở cột 1, Ảnh ở cột 2 */
+.variant-image-right .about-editorial-col-media {
+    order: 2;
+}
+
+.variant-image-right .about-editorial-col-content {
+    order: 1;
+}
+
+@media (max-width: 900px) {
+    .about-editorial-grid {
+        grid-template-columns: 1fr;
+        gap: 40px;
+    }
+
+    .variant-image-left .about-editorial-col-media,
+    .variant-image-right .about-editorial-col-media {
+        order: 1;
+    }
+
+    .variant-image-left .about-editorial-col-content,
+    .variant-image-right .about-editorial-col-content {
+        order: 2;
+    }
+}
+
+.about-media-frame {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.06);
+    background-color: #EEE;
+    transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+
+.about-media-frame:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 24px 50px rgba(0, 0, 0, 0.1);
+}
+
+.about-media-frame.has-glow {
+    box-shadow: 0 20px 60px rgba(116, 7, 14, 0.15), 0 0 40px rgba(212, 175, 55, 0.1);
+}
+
+.about-editorial-img {
+    width: 100%;
+    height: auto;
+    max-height: 600px;
+    object-fit: cover;
+    display: block;
+}
+
+.about-media-overlay {
+    position: absolute;
+    inset: 0;
+    background: #111111;
+    pointer-events: none;
+}
+
+/* Cột Nội dung */
+.about-editorial-col-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.about-taglines {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #74070E;
+}
+
+.about-tagline-dot {
+    opacity: 0.5;
+}
+
+.about-editorial-title {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 40px;
+    font-weight: 500;
+    line-height: 1.25;
+    color: #1A1A1A;
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    .about-editorial-title {
+        font-size: 28px;
+    }
+}
+
+.about-editorial-quote {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 24px;
+    font-style: italic;
+    font-weight: 400;
+    line-height: 1.5;
+    color: #74070E;
+    margin: 8px 0;
+    padding-left: 20px;
+    border-left: 2px solid #74070E;
+}
+
+.about-editorial-desc {
+    font-size: 16px;
+    font-weight: 300;
+    line-height: 1.75;
+    color: #4A4A4A;
+    margin: 0;
+}
+
+.about-editorial-action {
+    margin-top: 12px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   4. IMAGE + TEXT SECTION
+   ══════════════════════════════════════════════════════════════════════════ */
+.about-image-text-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 56px;
+    align-items: center;
+}
+
+@media (max-width: 900px) {
+    .about-image-text-grid {
+        grid-template-columns: 1fr;
+        gap: 36px;
+    }
+}
+
+.about-eyebrow {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #74070E;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   5. QUOTE SECTION
+   ══════════════════════════════════════════════════════════ */
+.about-section--quote {
+    padding: 40px 0;
+}
+
+.about-quote-box {
+    position: relative;
+    text-align: center;
+    padding: 56px 40px;
+    background: #FFFFFF;
+    border-radius: 12px;
+    border: 1px solid #EAE5DE;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+}
+
+.about-quote-mark {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 96px;
+    line-height: 1;
+    color: rgba(116, 7, 14, 0.08);
+    pointer-events: none;
+}
+
+.about-quote-text {
+    font-family: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
+    font-size: 28px;
+    font-style: italic;
+    font-weight: 400;
+    line-height: 1.6;
+    color: #1A1A1A;
+    margin: 0 auto 20px;
+    max-width: 720px;
+    position: relative;
+    z-index: 1;
+}
+
+@media (max-width: 768px) {
+    .about-quote-text {
+        font-size: 20px;
+    }
+}
+
+.about-quote-author {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #74070E;
+    font-style: normal;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   6. CTA SECTION
+   ══════════════════════════════════════════════════════════════════════════ */
+.about-section--cta {
+    padding: 30px 0;
+}
+
+.about-cta-card {
+    text-align: center;
+    padding: 64px 32px;
+    background: linear-gradient(145deg, #FAF4EF 0%, #F5ECE3 100%);
+    border: 1px solid #EADCCF;
+    border-radius: 16px;
+    box-shadow: 0 14px 40px rgba(116, 7, 14, 0.04);
+}
+
+.about-cta-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 36px;
+    font-weight: 500;
+    line-height: 1.25;
+    color: #1A1A1A;
+    margin: 0 0 16px;
+}
+
+.about-cta-desc {
+    font-size: 16px;
+    font-weight: 300;
+    line-height: 1.7;
+    color: #555555;
+    max-width: 580px;
+    margin: 0 auto 28px;
+}
+
+.btn-cheri-lg {
+    padding: 14px 36px !important;
+    font-size: 14px !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   7. BUTTONS & ACTIONS
+   ══════════════════════════════════════════════════════════════════════════ */
+.btn-cheri-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 28px;
+    background-color: var(--sec-btn-bg, #74070E);
+    color: var(--sec-btn-color, #FFFFFF);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    text-decoration: none;
+    border-radius: 4px;
+    border: none;
+    box-shadow: 0 4px 14px rgba(116, 7, 14, 0.25);
+    transition: all 0.25s ease;
+    cursor: pointer;
+}
+
+.btn-cheri-primary:hover {
+    background-color: var(--sec-btn-hover-bg, #59050b) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(116, 7, 14, 0.35);
+    color: var(--sec-btn-hover-color, #FFFFFF) !important;
+}
+
+.btn-arrow {
+    transition: transform 0.2s ease;
+}
+
+.btn-cheri-primary:hover .btn-arrow {
+    transform: translateX(4px);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   8. LOADING & EMPTY STATES
+   ══════════════════════════════════════════════════════════════════════════ */
+.about-loading-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    min-height: calc(100vh - 220px);
+    width: 100%;
+    padding: 60px 20px;
+    box-sizing: border-box;
+    position: relative;
+    z-index: 5;
+}
+
+.about-spinner {
+    width: 44px;
+    height: 44px;
+    box-sizing: border-box;
+    border: 3.5px solid rgba(116, 7, 14, 0.15);
+    border-top-color: #74070E;
+    border-radius: 50%;
+    animation: aboutSpin 0.8s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes aboutSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .about-spinner {
+        animation-duration: 2s;
+    }
+}
+
+.about-loading-text {
+    font-size: 15px;
+    color: #777777;
+    font-style: italic;
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    letter-spacing: 0.5px;
+    margin: 0;
+}
+
+.about-empty-state {
+    text-align: center;
+    padding: 80px 20px;
+}
+
+.about-empty-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 28px;
+    color: #1A1A1A;
+    margin: 0 0 10px;
+}
+
+.about-empty-subtitle {
+    font-size: 15px;
+    color: #777;
+    margin: 0 0 24px;
+}

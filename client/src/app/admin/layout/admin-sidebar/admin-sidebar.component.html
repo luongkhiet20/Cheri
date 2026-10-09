@@ -1,120 +1,197 @@
-<nav class="admin-sidebar" [class.is-open]="isMobileOpen" role="navigation" aria-label="Admin navigation">
-  <!-- Mobile overlay -->
+<nav class="admin-sidebar" [class.is-open]="isMobileOpen" [class.is-collapsed]="isCollapsed" role="navigation" aria-label="Admin navigation">
+  <!-- Mobile overlay backdrop -->
   <div class="admin-sidebar__overlay" *ngIf="isMobileOpen" (click)="closeMobile()" aria-hidden="true"></div>
 
-  <div class="admin-sidebar__inner">
-    <!-- Header drawer dành cho mobile/tablet -->
-    <div class="admin-sidebar__mobile-top">
-      <div class="admin-sidebar__mobile-brand">
-        <span class="admin-sidebar__mobile-title">Chéri</span>
+  <!-- Nút thu gọn / mở rộng Sidebar dạng Floating Toggle ở mép phải, gần đỉnh sidebar -->
+  <button type="button"
+          class="admin-sidebar__floating-toggle"
+          (click)="toggleCollapse()"
+          [attr.aria-label]="isCollapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'"
+          [attr.title]="isCollapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'">
+    <!-- Khi mở rộng: mũi tên hướng sang trái biểu thị thu gọn -->
+    <svg *ngIf="!isCollapsed" class="admin-sidebar__toggle-icon" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polyline points="15 18 9 12 15 6"></polyline>
+    </svg>
+    <!-- Khi thu gọn: mũi tên hướng sang phải biểu thị mở rộng -->
+    <svg *ngIf="isCollapsed" class="admin-sidebar__toggle-icon" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </button>
 
-      </div>
-      <button type="button" class="admin-sidebar__close-btn" (click)="closeMobile()" aria-label="Đóng menu quản trị"
-        title="Đóng menu">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
-          stroke-linecap="round" stroke-linejoin="round">
+  <div class="admin-sidebar__inner">
+    <!-- Header drawer dành riêng cho mobile khi mở sidebar -->
+    <div class="admin-sidebar__mobile-header">
+      <span class="admin-sidebar__mobile-title">Chéri</span>
+      <button type="button" class="admin-sidebar__mobile-close" (click)="closeMobile()" aria-label="Đóng menu">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>
         </svg>
       </button>
     </div>
 
-    <ul class="admin-sidebar__nav" role="list">
-      <li class="admin-sidebar__item" *ngFor="let item of navItems">
-        <a [routerLink]="item.route" routerLinkActive="is-active"
-          [routerLinkActiveOptions]="item.exact ? { exact: true } : { exact: false }" class="admin-sidebar__link"
-          [attr.aria-current]="isActive(item.route) ? 'page' : null" (click)="closeMobile()" [attr.title]="item.label"
-          [attr.aria-label]="item.label">
-          <span class="admin-sidebar__icon-wrap" aria-hidden="true" [ngSwitch]="item.icon">
-            <!-- Dashboard -->
-            <svg *ngSwitchCase="'dashboard'" class="admin-sidebar__icon" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="7" height="9"></rect>
-              <rect x="14" y="3" width="7" height="5"></rect>
-              <rect x="14" y="12" width="7" height="9"></rect>
-              <rect x="3" y="16" width="7" height="5"></rect>
-            </svg>
+    <!-- Vùng cuộn menu (Bắt đầu trực tiếp từ TỔNG QUAN như hình mẫu) -->
+    <div class="admin-sidebar__scroll-area">
+      <div class="admin-sidebar__nav-groups" role="list">
+        <!-- 3 Nhóm đầu: TỔNG QUAN, KINH DOANH, VẬN HÀNH -->
+        <div class="admin-sidebar__group" *ngFor="let group of navGroups">
+          <div class="admin-sidebar__group-label" *ngIf="!isCollapsed">
+            {{ group.title }}
+          </div>
+          <ul class="admin-sidebar__group-list" role="list">
+            <li class="admin-sidebar__item" *ngFor="let item of group.items">
+              <a [routerLink]="item.route"
+                 routerLinkActive="is-active"
+                 [routerLinkActiveOptions]="item.exact ? { exact: true } : { exact: false }"
+                 class="admin-sidebar__link"
+                 [attr.aria-current]="isActive(item.route) ? 'page' : null"
+                 (click)="closeMobile()"
+                 [attr.title]="item.label"
+                 [attr.aria-label]="item.label">
+                <span class="admin-sidebar__icon-wrap" aria-hidden="true" [ngSwitch]="item.icon">
+                  <!-- Dashboard -->
+                  <svg *ngSwitchCase="'dashboard'" class="admin-sidebar__icon" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="2"></rect>
+                    <rect x="14" y="3" width="7" height="7" rx="2"></rect>
+                    <rect x="14" y="14" width="7" height="7" rx="2"></rect>
+                    <rect x="3" y="14" width="7" height="7" rx="2"></rect>
+                  </svg>
 
-            <!-- Sản phẩm -->
-            <svg *ngSwitchCase="'products'" class="admin-sidebar__icon" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
-              <line x1="3" y1="6" x2="21" y2="6"></line>
-              <path d="M16 10a4 4 0 0 1-8 0"></path>
-            </svg>
+                  <!-- Quản lý sản phẩm -->
+                  <svg *ngSwitchCase="'products'" class="admin-sidebar__icon" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 8h12l-1 12a2 2 0 0 1-2 1.8H9a2 2 0 0 1-2-1.8L6 8z"></path>
+                    <path d="M9 8V6a3 3 0 0 1 6 0v2"></path>
+                  </svg>
 
-            <!-- Danh mục -->
-            <svg *ngSwitchCase="'categories'" class="admin-sidebar__icon" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-              <line x1="12" y1="11" x2="12" y2="17"></line>
-              <line x1="9" y1="14" x2="15" y2="14"></line>
-            </svg>
+                  <!-- Quản lý danh mục -->
+                  <svg *ngSwitchCase="'categories'" class="admin-sidebar__icon" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z"></path>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
 
-            <!-- Đơn hàng -->
-            <svg *ngSwitchCase="'orders'" class="admin-sidebar__icon" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path>
-              <rect x="9" y="3" width="6" height="4" rx="2"></rect>
-              <path d="M9 14l2 2 4-4"></path>
-            </svg>
+                  <!-- Quản lý đơn hàng -->
+                  <svg *ngSwitchCase="'orders'" class="admin-sidebar__icon" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                    <rect x="8" y="2" width="8" height="4" rx="1"></rect>
+                    <line x1="8" y1="11" x2="16" y2="11"></line>
+                    <line x1="8" y1="15" x2="13" y2="15"></line>
+                  </svg>
 
-            <!-- Mã giảm giá -->
-            <svg *ngSwitchCase="'coupons'" class="admin-sidebar__icon" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
-              <line x1="7" y1="7" x2="7.01" y2="7"></line>
-            </svg>
+                  <!-- Mã giảm giá -->
+                  <svg *ngSwitchCase="'coupons'" class="admin-sidebar__icon" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M2 9a3 3 0 0 1 0 6v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-4a3 3 0 0 1 0-6V5a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v4z"></path>
+                    <line x1="9" y1="12" x2="15" y2="12"></line>
+                  </svg>
 
-            <!-- Phương thức thanh toán -->
-            <svg *ngSwitchCase="'payment-methods'" class="admin-sidebar__icon" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
-              <line x1="1" y1="10" x2="23" y2="10"></line>
-            </svg>
+                  <!-- Phương thức thanh toán -->
+                  <svg *ngSwitchCase="'payment-methods'" class="admin-sidebar__icon" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                    <line x1="2" y1="10" x2="22" y2="10"></line>
+                  </svg>
 
-            <!-- Đơn vị vận chuyển -->
-            <svg *ngSwitchCase="'shipping-methods'" class="admin-sidebar__icon" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="1" y="3" width="15" height="13"></rect>
-              <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
-              <circle cx="5.5" cy="18.5" r="2.5"></circle>
-              <circle cx="18.5" cy="18.5" r="2.5"></circle>
-            </svg>
+                  <!-- Đơn vị vận chuyển -->
+                  <svg *ngSwitchCase="'shipping-methods'" class="admin-sidebar__icon" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="1" y="3" width="15" height="13" rx="1"></rect>
+                    <polygon points="16 8 20 8 23 11 23 16 16 16 8"></polygon>
+                    <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                    <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                  </svg>
 
-            <!-- Tài khoản -->
-            <svg *ngSwitchCase="'users'" class="admin-sidebar__icon" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-              <circle cx="9" cy="7" r="4"></circle>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-            </svg>
+                  <!-- Quản lý tài khoản -->
+                  <svg *ngSwitchCase="'users'" class="admin-sidebar__icon" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                  </svg>
 
-            <!-- Quản lý tồn kho -->
-            <svg *ngSwitchCase="'inventory'" class="admin-sidebar__icon" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="21 8 21 21 3 21 3 8"></polyline>
-              <rect x="1" y="3" width="22" height="5"></rect>
-              <line x1="10" y1="12" x2="14" y2="12"></line>
-            </svg>
+                  <!-- Quản lý tồn kho -->
+                  <svg *ngSwitchCase="'inventory'" class="admin-sidebar__icon" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="4" rx="1"></rect>
+                    <path d="M5 8v11a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"></path>
+                    <line x1="10" y1="12" x2="14" y2="12"></line>
+                  </svg>
+                </span>
 
+                <span class="admin-sidebar__link-text">{{ item.label }}</span>
+                <span class="admin-sidebar__tooltip" aria-hidden="true">{{ item.label }}</span>
+              </a>
+            </li>
+          </ul>
+        </div>
 
-            <!-- Quản lý trang -->
-            <svg *ngSwitchCase="'pages'" class="admin-sidebar__icon" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="16" y1="13" x2="8" y2="13"></line>
-              <line x1="16" y1="17" x2="8" y2="17"></line>
-              <line x1="10" y1="9" x2="8" y2="9"></line>
-            </svg>
-          </span>
+        <!-- Nhóm: Quản lý trang (với đường kẻ phân cách mảnh phía trên như hình mẫu) -->
+        <div class="admin-sidebar__group admin-sidebar__group--system">
+          <div class="admin-sidebar__divider" aria-hidden="true"></div>
 
-          <span class="admin-sidebar__link-text">{{ item.label }}</span>
-          <span class="admin-sidebar__tooltip" aria-hidden="true">{{ item.label }}</span>
-        </a>
-      </li>
-    </ul>
+          <ul class="admin-sidebar__group-list" role="list">
+            <!-- Menu cha: Quản lý trang -->
+            <li class="admin-sidebar__item admin-sidebar__item--pages"
+                (mouseenter)="onPagesHover(true)"
+                (mouseleave)="onPagesHover(false)">
+              <button type="button"
+                      class="admin-sidebar__link admin-sidebar__link--parent"
+                      [class.is-active]="isPagesActive()"
+                      [class.is-open]="isPagesSubmenuOpen"
+                      (click)="togglePagesMenu($event)"
+                      aria-haspopup="true"
+                      [attr.aria-expanded]="isPagesSubmenuOpen"
+                      title="Quản lý trang"
+                      aria-label="Quản lý trang">
+                <span class="admin-sidebar__icon-wrap" aria-hidden="true">
+                  <svg class="admin-sidebar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="4" y="3" width="16" height="18" rx="2"></rect>
+                    <line x1="8" y1="8" x2="16" y2="8"></line>
+                    <line x1="8" y1="12" x2="16" y2="12"></line>
+                    <line x1="8" y1="16" x2="12" y2="16"></line>
+                  </svg>
+                </span>
+
+                <span class="admin-sidebar__link-text">Quản lý trang</span>
+
+                <span class="admin-sidebar__chevron" aria-hidden="true">
+                  <svg class="admin-sidebar__chevron-icon" [class.is-rotated]="isPagesSubmenuOpen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </span>
+
+                <span class="admin-sidebar__tooltip" aria-hidden="true">Quản lý trang</span>
+              </button>
+
+              <!-- Menu con: Trang chủ, Giới thiệu, Chính sách -->
+              <ul class="admin-sidebar__subnav" *ngIf="isPagesSubmenuOpen" role="list">
+                <li class="admin-sidebar__subitem" *ngFor="let sub of pageSubItems">
+                  <a [routerLink]="sub.route"
+                     routerLinkActive="is-active"
+                     [routerLinkActiveOptions]="{ exact: sub.route === '/admin/pages/home' || sub.route === '/admin/pages/about' }"
+                     class="admin-sidebar__sublink"
+                     (click)="closeMobile()"
+                     [attr.title]="sub.label">
+                    <span class="admin-sidebar__subdot" aria-hidden="true">
+                      <svg class="admin-sidebar__subicon-dot" viewBox="0 0 24 24" fill="currentColor">
+                        <circle cx="12" cy="12" r="7.5"></circle>
+                      </svg>
+                    </span>
+                    <span class="admin-sidebar__sublink-text">{{ sub.label }}</span>
+                    <span class="admin-sidebar__tooltip" aria-hidden="true">{{ sub.label }}</span>
+                  </a>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
   </div>
 </nav>

@@ -10,8 +10,11 @@ import { accessTokenKey } from '../user/shared/constants';
 
 export const checkIsAdmin = (user: any): boolean => {
   if (!user) return false;
+  if (user.isAdmin === true) return true;
+  if (typeof user.role === 'string' && user.role.toLowerCase() === 'admin') return true;
+  if (typeof user.roles === 'string' && user.roles.toLowerCase() === 'admin') return true;
   const roles = user.roles || (user.role ? [user.role] : []);
-  if (Array.isArray(roles) && roles.some((r: string) => r && r.toLowerCase() === 'admin')) {
+  if (Array.isArray(roles) && roles.some((r: string) => typeof r === 'string' && r.toLowerCase() === 'admin')) {
     return true;
   }
   return false;

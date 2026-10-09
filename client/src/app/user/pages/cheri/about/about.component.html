@@ -1,0 +1,183 @@
+<main class="about-page-main" id="about-main-content">
+
+    <!-- ══════════════════════════════════════════════════════════
+       1. LOADING STATE
+  ══════════════════════════════════════════════════════════ -->
+    <section class="about-loading-wrapper" *ngIf="isLoading" aria-live="polite">
+        <div class="about-spinner"></div>
+        <p class="about-loading-text">Đang tải...</p>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════
+       2. NỘI DUNG CHÍNH (CHỈ HIỂN THỊ KHI CÓ DỮ LIỆU TỪ CMS)
+  ══════════════════════════════════════════════════════════ -->
+    <ng-container *ngIf="!isLoading && sections.length > 0">
+        <!-- DYNAMIC SECTIONS TỪ CMS ADMIN (pages_about) -->
+        <div class="about-sections-flow">
+
+            <ng-container *ngFor="let section of sections; let idx = index">
+
+                <!-- ── SECTION LOẠI: EDITORIAL / PHÂN ĐOẠN NÀNG THƠ ── -->
+                <section *ngIf="section.type === 'editorial'" class="about-section about-section--editorial"
+                    [id]="section.id" [ngStyle]="getSectionContainerStyle(section)"
+                    [ngClass]="['variant-' + (section.layout.variant || 'image-left'), 'align-' + (section.layout.alignment || 'center')]">
+                    <div class="about-container">
+                        <div class="about-editorial-grid">
+
+                            <!-- Cột Hình Ảnh -->
+                            <div class="about-editorial-col-media">
+                                <div class="about-media-frame" [class.has-glow]="section.settings.enableGlow">
+                                    <picture *ngIf="section.media.desktop?.url">
+                                        <source *ngIf="section.media.mobile?.url" media="(max-width: 768px)"
+                                            [srcset]="section.media.mobile?.url">
+                                        <img [src]="section.media.desktop?.url"
+                                            [alt]="section.media.desktop?.alt || section.name"
+                                            class="about-editorial-img" loading="lazy" />
+                                    </picture>
+                                    <div class="about-media-overlay" *ngIf="section.settings.overlay"
+                                        [style.opacity]="(section.media.overlayOpacity || 25) / 100"></div>
+                                </div>
+                            </div>
+
+                            <!-- Cột Nội Dung Văn Bản -->
+                            <div class="about-editorial-col-content">
+                                <!-- Taglines / Eyebrows -->
+                                <div class="about-taglines"
+                                    *ngIf="section.content.tagline1 || section.content.tagline2">
+                                    <span class="about-tagline" *ngIf="section.content.tagline1"
+                                        [ngStyle]="getTypographyStyle(section, 'eyebrow')">
+                                        {{ section.content.tagline1 }}
+                                    </span>
+                                    <span class="about-tagline-dot"
+                                        *ngIf="section.content.tagline1 && section.content.tagline2">•</span>
+                                    <span class="about-tagline" *ngIf="section.content.tagline2"
+                                        [ngStyle]="getTypographyStyle(section, 'eyebrow')">
+                                        {{ section.content.tagline2 }}
+                                    </span>
+                                </div>
+
+                                <!-- Tiêu Đề Phân Đoạn -->
+                                <h2 class="about-editorial-title" *ngIf="section.content.title"
+                                    [ngStyle]="getTypographyStyle(section, 'heading')">
+                                    {{ section.content.title }}
+                                </h2>
+
+                                <!-- Trích Dẫn Nghệ Thuật (Quote) -->
+                                <blockquote class="about-editorial-quote" *ngIf="section.content.quote"
+                                    [ngStyle]="getTypographyStyle(section, 'quote')">
+                                    "{{ section.content.quote }}"
+                                </blockquote>
+
+                                <!-- Mô Tả Chi Tiết -->
+                                <p class="about-editorial-desc" *ngIf="section.content.description"
+                                    [ngStyle]="getTypographyStyle(section, 'body')">
+                                    {{ section.content.description }}
+                                </p>
+
+                                <!-- Nút Kêu Gọi / Liên Kết -->
+                                <div class="about-editorial-action"
+                                    *ngIf="section.content.buttonText && section.content.buttonLink">
+                                    <a [routerLink]="section.content.buttonLink" class="btn-cheri-primary"
+                                        [ngStyle]="getTypographyStyle(section, 'button')">
+                                        {{ section.content.buttonText }}
+                                        <span class="btn-arrow" aria-hidden="true">→</span>
+                                    </a>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ── SECTION LOẠI: IMAGE + TEXT (HÌNH ẢNH & NỘI DUNG) ── -->
+                <section *ngIf="section.type === 'image-text'" class="about-section about-section--image-text"
+                    [id]="section.id" [ngStyle]="getSectionContainerStyle(section)"
+                    [ngClass]="['variant-' + (section.layout.variant || 'image-right')]">
+                    <div class="about-container">
+                        <div class="about-image-text-grid">
+                            <div class="about-image-text-col-media">
+                                <div class="about-media-frame">
+                                    <img *ngIf="section.media.desktop?.url" [src]="section.media.desktop?.url"
+                                        [alt]="section.media.desktop?.alt || section.name" class="about-editorial-img"
+                                        loading="lazy" />
+                                </div>
+                            </div>
+                            <div class="about-image-text-col-content">
+                                <span class="about-eyebrow" *ngIf="section.content.eyebrow"
+                                    [ngStyle]="getTypographyStyle(section, 'eyebrow')">
+                                    {{ section.content.eyebrow }}
+                                </span>
+                                <h2 class="about-editorial-title" *ngIf="section.content.title"
+                                    [ngStyle]="getTypographyStyle(section, 'heading')">
+                                    {{ section.content.title }}
+                                </h2>
+                                <p class="about-editorial-desc" *ngIf="section.content.description"
+                                    [ngStyle]="getTypographyStyle(section, 'body')">
+                                    {{ section.content.description }}
+                                </p>
+                                <div class="about-editorial-action"
+                                    *ngIf="section.content.buttonText && section.content.buttonLink">
+                                    <a [routerLink]="section.content.buttonLink" class="btn-cheri-primary"
+                                        [ngStyle]="getTypographyStyle(section, 'button')">
+                                        {{ section.content.buttonText }}
+                                        <span class="btn-arrow" aria-hidden="true">→</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ── SECTION LOẠI: QUOTE (TRÍCH DẪN NGHỆ THUẬT) ── -->
+                <section *ngIf="section.type === 'quote'" class="about-section about-section--quote" [id]="section.id"
+                    [ngStyle]="getSectionContainerStyle(section)">
+                    <div class="about-container-narrow">
+                        <div class="about-quote-box">
+                            <div class="about-quote-mark" aria-hidden="true">“</div>
+                            <blockquote class="about-quote-text" *ngIf="section.content.quote"
+                                [ngStyle]="getTypographyStyle(section, 'quote')">
+                                {{ section.content.quote }}
+                            </blockquote>
+                            <cite class="about-quote-author" *ngIf="section.content.author"
+                                [ngStyle]="getTypographyStyle(section, 'subheading')">
+                                — {{ section.content.author }}
+                            </cite>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ── SECTION LOẠI: CTA (KÊU GỌI HÀNH ĐỘNG) ── -->
+                <section *ngIf="section.type === 'cta'" class="about-section about-section--cta" [id]="section.id"
+                    [ngStyle]="getSectionContainerStyle(section)">
+                    <div class="about-container-narrow">
+                        <div class="about-cta-card">
+                            <h2 class="about-cta-title" *ngIf="section.content.title"
+                                [ngStyle]="getTypographyStyle(section, 'heading')">
+                                {{ section.content.title }}
+                            </h2>
+                            <p class="about-cta-desc" *ngIf="section.content.description"
+                                [ngStyle]="getTypographyStyle(section, 'body')">
+                                {{ section.content.description }}
+                            </p>
+                            <div class="about-cta-action"
+                                *ngIf="section.content.buttonText && section.content.buttonLink">
+                                <a [routerLink]="section.content.buttonLink" class="btn-cheri-primary btn-cheri-lg"
+                                    [ngStyle]="getTypographyStyle(section, 'button')">
+                                    {{ section.content.buttonText }}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ── SECTION LOẠI: SPACER (KHOẢNG ĐỆM) ── -->
+                <div *ngIf="section.type === 'spacer'" class="about-spacer"
+                    [style.height.px]="section.settings.spacerHeight || 48"></div>
+
+            </ng-container>
+
+        </div>
+
+    </ng-container>
+
+</main>

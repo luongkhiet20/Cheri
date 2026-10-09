@@ -1,15 +1,15 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { AdminService } from '../../../services/admin.service';
-import { NotificationService } from '../../../shared/notification/notification.service';
+import { AdminService } from '../../../../services/admin.service';
+import { NotificationService } from '../../../../shared/notification/notification.service';
 
 @Component({
-  selector: 'app-page-detail',
+  selector: 'app-policy-edit',
   standalone: false,
-  templateUrl: './page-detail.component.html',
-  styleUrls: ['./page-detail.component.css']
+  templateUrl: './policy-edit.component.html',
+  styleUrls: ['./policy-edit.component.css']
 })
-export class PageDetailComponent implements OnInit {
+export class PolicyEditComponent implements OnInit {
   pageId: string | null = null;
   page: any = null;
   isLoading = false;
@@ -31,14 +31,14 @@ export class PageDetailComponent implements OnInit {
   ngOnInit(): void {
     this.pageId = this.route.snapshot.paramMap.get('id');
     if (this.pageId) {
-      this.loadPageDetail(this.pageId);
+      this.loadPolicyDetail(this.pageId);
     } else {
-      this.errorMessage = 'ID trang không hợp lệ';
+      this.errorMessage = 'ID chính sách không hợp lệ';
       this.cdr.markForCheck();
     }
   }
 
-  loadPageDetail(id: string): void {
+  loadPolicyDetail(id: string): void {
     this.isLoading = true;
     this.errorMessage = '';
 
@@ -48,13 +48,13 @@ export class PageDetailComponent implements OnInit {
         if (res.success && res.data) {
           this.page = res.data;
         } else {
-          this.errorMessage = res.message || 'Không tìm thấy thông tin trang';
+          this.errorMessage = res.message || 'Không tìm thấy thông tin chính sách';
         }
         this.cdr.markForCheck();
       },
       error: (err) => {
         this.isLoading = false;
-        this.errorMessage = err.error?.message || 'Lỗi khi tải thông tin trang từ cơ sở dữ liệu MongoDB';
+        this.errorMessage = err.error?.message || 'Lỗi khi tải thông tin chính sách từ cơ sở dữ liệu MongoDB';
         this.cdr.markForCheck();
       }
     });
@@ -80,7 +80,7 @@ export class PageDetailComponent implements OnInit {
             this.cdr.markForCheck();
           }, 3000);
         } else {
-          const msg = res.message || 'Lỗi khi chuyển trạng thái trang';
+          const msg = res.message || 'Lỗi khi chuyển trạng thái chính sách';
           this.errorMessage = msg;
           this.notificationService.error(msg);
         }
@@ -98,7 +98,7 @@ export class PageDetailComponent implements OnInit {
 
   onEdit(): void {
     if (this.pageId) {
-      this.router.navigate(['/admin/pages', this.pageId, 'edit']);
+      this.router.navigate(['/admin/policies', this.pageId, 'edit']);
     }
   }
 
@@ -113,10 +113,10 @@ export class PageDetailComponent implements OnInit {
       next: (res) => {
         this.confirmDeleteOpen = false;
         if (res.success) {
-          this.notificationService.success('Xóa trang thành công');
-          this.router.navigate(['/admin/pages']);
+          this.notificationService.success('Xóa chính sách thành công');
+          this.router.navigate(['/admin/policies']);
         } else {
-          const msg = res.message || 'Lỗi khi xóa trang';
+          const msg = res.message || 'Lỗi khi xóa chính sách';
           this.errorMessage = msg;
           this.notificationService.error(msg);
           this.cdr.markForCheck();
@@ -124,7 +124,7 @@ export class PageDetailComponent implements OnInit {
       },
       error: (err) => {
         this.confirmDeleteOpen = false;
-        const msg = err.error?.message || 'Lỗi khi xóa trang khỏi MongoDB';
+        const msg = err.error?.message || 'Lỗi khi xóa chính sách khỏi MongoDB';
         this.errorMessage = msg;
         this.notificationService.error(msg);
         this.cdr.markForCheck();
@@ -137,3 +137,5 @@ export class PageDetailComponent implements OnInit {
     this.cdr.markForCheck();
   }
 }
+
+export { PolicyEditComponent as PageDetailComponent };

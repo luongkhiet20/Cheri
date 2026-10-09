@@ -42,12 +42,8 @@ export class JwtTokenComponent implements OnInit {
           this.selectors.userState.update((state) => ({ ...state, user }));
           // Hợp nhất giỏ hàng khách vãng lai (nếu có) vào tài khoản User và xóa guest cart
           this.store.mergeGuestCartIfAny('vi');
-          if (checkIsAdmin(user)) {
-            this.router.navigate(['/admin']);
-            return;
-          }
         }
-        this.router.navigate(['']);
+        this.router.navigate(['/']);
       });
   }
 }

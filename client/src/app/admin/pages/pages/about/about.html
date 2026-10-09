@@ -1,0 +1,1476 @@
+<div class="home-cms-page">
+
+  <!-- ══════════════════════════════════════════════════════════
+       1. TOP HEADER & ACTIONS BAR
+  ══════════════════════════════════════════════════════════ -->
+  <header class="home-cms-header">
+    <div class="home-cms-header__left">
+      <div class="home-cms-breadcrumbs">
+        <span class="home-cms-breadcrumbs__parent">Quản lý trang</span>
+        <span class="home-cms-breadcrumbs__sep">/</span>
+        <span class="home-cms-breadcrumbs__current">Giới thiệu</span>
+      </div>
+      <div class="home-cms-title-row">
+        <h1 class="home-cms-title">Quản lý Trang Giới thiệu</h1>
+        <span class="home-cms-sync-indicator" *ngIf="isLoadingDraft">
+          <span class="sync-spinner"></span> Đang tải cấu hình...
+        </span>
+        <span class="home-cms-unsaved-badge" *ngIf="!isLoadingDraft && hasUnsavedChanges">
+          • Có thay đổi chưa xuất bản
+        </span>
+      </div>
+      <div class="home-cms-meta-info" *ngIf="lastPublishedAt">
+        <span>Đã xuất bản: {{ lastPublishedAt | date:'HH:mm dd/MM/yyyy' }}</span>
+      </div>
+    </div>
+
+    <div class="home-cms-header__actions">
+      <button type="button" class="btn btn-outline" (click)="onOpenLiveSite()"
+        title="Xem trang giới thiệu thực tế của khách hàng">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+          <polyline points="15 3 21 3 21 9"></polyline>
+          <line x1="10" y1="14" x2="21" y2="3"></line>
+        </svg>
+        <span>Xem trang</span>
+      </button>
+
+      <button type="button" class="btn btn-outline" (click)="onOpenFullPreview()"
+        title="Xem toàn bộ các phân đoạn trên trang giới thiệu">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polygon points="10 8 16 12 10 16 10 8"></polygon>
+        </svg>
+        <span>Xem Preview Toàn Trang</span>
+      </button>
+
+      <button type="button" class="btn btn-primary btn-publish" (click)="onPublish()"
+        [disabled]="isPublishing || isLoadingDraft" [class.is-loading]="isPublishing"
+        title="Xuất bản giao diện mới lên trang giới thiệu khách hàng">
+        <svg *ngIf="!isPublishing" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <span *ngIf="isPublishing" class="btn-spinner"></span>
+        <span>{{ isPublishing ? 'Đang xuất bản...' : 'Xuất bản' }}</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ══════════════════════════════════════════════════════════
+       2. WORKSPACE GRID (2 COLUMNS: MASTER LIST + LIVE PREVIEW)
+  ══════════════════════════════════════════════════════════ -->
+  <div class="home-cms-workspace">
+
+    <!-- ── CỘT TRÁI: LIVE PREVIEW CONTAINER ── -->
+    <section class="home-cms-preview-panel" aria-label="Xem trước trực quan phân đoạn">
+      <div class="home-cms-preview-panel__toolbar">
+        <div class="home-cms-preview-panel__title-box">
+          <span class="home-cms-preview-panel__badge">Live Preview</span>
+          <span class="home-cms-preview-panel__active-name" *ngIf="selectedSection">
+            {{ selectedSection.name }}
+          </span>
+        </div>
+
+        <div class="home-cms-preview-panel__controls">
+          <!-- Viewport Mode: Desktop / Mobile -->
+          <div class="home-cms-device-toggle" role="group" aria-label="Chọn thiết bị xem trước">
+            <button type="button" class="home-cms-device-btn" [class.is-active]="previewViewport === 'desktop'"
+              (click)="previewViewport = 'desktop'" title="Chế độ máy tính để bàn (Desktop)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+              <span>Desktop</span>
+            </button>
+            <button type="button" class="home-cms-device-btn" [class.is-active]="previewViewport === 'mobile'"
+              (click)="previewViewport = 'mobile'" title="Chế độ điện thoại (Mobile)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                <line x1="12" y1="18" x2="12.01" y2="18"></line>
+              </svg>
+              <span>Mobile</span>
+            </button>
+          </div>
+
+          <!-- Replay Animation Button -->
+          <button type="button" class="btn btn-outline btn-sm" (click)="triggerAnimationPreview()"
+            title="Kích hoạt lại hiệu ứng chuyển động">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="1 4 1 10 7 10"></polyline>
+              <polyline points="23 20 23 14 17 14"></polyline>
+              <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+            </svg>
+            <span>Hiệu ứng</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Canvas Container -->
+      <div class="home-cms-preview-stage" [class.is-mobile]="previewViewport === 'mobile'">
+        <div class="home-cms-device-frame" [class.is-mobile-frame]="previewViewport === 'mobile'">
+
+          <!-- EMPTY STATE WHEN NO SECTION SELECTED -->
+          <div *ngIf="!selectedSection" class="preview-empty-state">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+            <h3>Chưa chọn phân đoạn nào</h3>
+            <p>Chọn một phân đoạn bên danh sách phải hoặc bấm "+ Thêm Section" để bắt đầu.</p>
+          </div>
+
+          <!-- ── RENDER PHÂN ĐOẠN ĐƯỢC CHỌN TRONG LIVE PREVIEW ── -->
+          <div *ngIf="selectedSection" class="preview-section-container"
+            [ngStyle]="getSectionContainerStyle(selectedSection)" [class.preview-anim-active]="isAnimationPlaying"
+            [attr.data-animation]="selectedSection.animation.preset">
+
+            <!-- EDITORIAL / NÀNG THƠ / PHÂN ĐOẠN CÂU CHUYỆN -->
+            <div *ngIf="selectedSection.type === 'editorial'" class="preview-editorial"
+              [ngClass]="['variant-' + (selectedSection.layout.variant || 'image-left'), 'align-' + (selectedSection.layout.alignment || 'center')]">
+              <div class="preview-editorial__col-image">
+                <div class="preview-editorial__img-wrap" [class.has-glow]="selectedSection.settings.enableGlow">
+                  <img *ngIf="selectedSection.media.desktop?.url; else noEditorialImg"
+                    [src]="(previewViewport === 'mobile' && selectedSection.media.mobile?.url) ? selectedSection.media.mobile?.url : selectedSection.media.desktop?.url"
+                    [alt]="selectedSection.media.desktop?.alt || 'Editorial Image'" />
+                  <ng-template #noEditorialImg>
+                    <div class="preview-empty-media-box">
+                      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="1.5">
+                        <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                      </svg>
+                      <span>Chưa chọn hình ảnh phân đoạn</span>
+                    </div>
+                  </ng-template>
+                </div>
+              </div>
+
+              <div class="preview-editorial__col-content">
+                <div class="preview-editorial__taglines"
+                  *ngIf="selectedSection.content.tagline1 || selectedSection.content.tagline2">
+                  <span class="preview-tagline" *ngIf="selectedSection.content.tagline1"
+                    [ngStyle]="getTypographyStyle(selectedSection, 'eyebrow')">{{ selectedSection.content.tagline1
+                    }}</span>
+                  <span class="preview-tagline-dot"
+                    *ngIf="selectedSection.content.tagline1 && selectedSection.content.tagline2">•</span>
+                  <span class="preview-tagline" *ngIf="selectedSection.content.tagline2"
+                    [ngStyle]="getTypographyStyle(selectedSection, 'eyebrow')">{{ selectedSection.content.tagline2
+                    }}</span>
+                </div>
+
+                <h2 class="preview-editorial__title" *ngIf="selectedSection.content.title; else noEditorialTitle"
+                  [ngStyle]="getTypographyStyle(selectedSection, 'heading')">
+                  {{ selectedSection.content.title }}
+                </h2>
+                <ng-template #noEditorialTitle>
+                  <h2 class="preview-editorial__title preview-placeholder-text">Chưa có tiêu đề phân đoạn</h2>
+                </ng-template>
+
+                <blockquote class="preview-editorial__quote"
+                  *ngIf="selectedSection.content.quote; else noEditorialQuote"
+                  [ngStyle]="getTypographyStyle(selectedSection, 'quote')">
+                  "{{ selectedSection.content.quote }}"
+                </blockquote>
+                <ng-template #noEditorialQuote>
+                  <blockquote class="preview-editorial__quote preview-placeholder-text">
+                    "Nhập trích dẫn hoặc câu chuyện thương hiệu để hiển thị tại đây..."
+                  </blockquote>
+                </ng-template>
+
+                <p class="preview-editorial__desc" *ngIf="selectedSection.content.description"
+                  [ngStyle]="getTypographyStyle(selectedSection, 'body')">
+                  {{ selectedSection.content.description }}
+                </p>
+
+                <div class="preview-editorial__actions" *ngIf="selectedSection.content.buttonText">
+                  <a class="btn-preview-primary" role="button"
+                    [ngStyle]="getTypographyStyle(selectedSection, 'button')">
+                    {{ selectedSection.content.buttonText }}
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <!-- IMAGE + TEXT (HÌNH ẢNH + NỘI DUNG) -->
+            <div *ngIf="selectedSection.type === 'image-text'" class="preview-editorial"
+              [ngClass]="['variant-' + (selectedSection.layout.variant || 'image-right')]">
+              <div class="preview-editorial__col-image">
+                <div class="preview-editorial__img-wrap">
+                  <img *ngIf="selectedSection.media.desktop?.url; else noImgTextMedia"
+                    [src]="(previewViewport === 'mobile' && selectedSection.media.mobile?.url) ? selectedSection.media.mobile?.url : selectedSection.media.desktop?.url"
+                    alt="Image" />
+                  <ng-template #noImgTextMedia>
+                    <div class="preview-empty-media-box">
+                      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="1.5">
+                        <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                      </svg>
+                      <span>Chưa chọn hình ảnh</span>
+                    </div>
+                  </ng-template>
+                </div>
+              </div>
+              <div class="preview-editorial__col-content">
+                <span class="preview-hero__eyebrow" *ngIf="selectedSection.content.eyebrow"
+                  [ngStyle]="getTypographyStyle(selectedSection, 'eyebrow')">{{ selectedSection.content.eyebrow
+                  }}</span>
+                <h3 class="preview-editorial__title" *ngIf="selectedSection.content.title; else noImgTextTitle"
+                  [ngStyle]="getTypographyStyle(selectedSection, 'heading')">
+                  {{ selectedSection.content.title }}
+                </h3>
+                <ng-template #noImgTextTitle>
+                  <h3 class="preview-editorial__title preview-placeholder-text">Chưa có tiêu đề</h3>
+                </ng-template>
+                <p class="preview-editorial__desc" *ngIf="selectedSection.content.description; else noImgTextDesc"
+                  [ngStyle]="getTypographyStyle(selectedSection, 'body')">
+                  {{ selectedSection.content.description }}
+                </p>
+                <ng-template #noImgTextDesc>
+                  <p class="preview-editorial__desc preview-placeholder-text">Chưa có nội dung mô tả...</p>
+                </ng-template>
+                <div class="preview-editorial__actions" *ngIf="selectedSection.content.buttonText">
+                  <a class="btn-preview-primary" role="button"
+                    [ngStyle]="getTypographyStyle(selectedSection, 'button')">
+                    {{ selectedSection.content.buttonText }}
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <!-- TRÍCH DẪN / THÔNG ĐIỆP (QUOTE) -->
+            <div *ngIf="selectedSection.type === 'quote'" class="preview-quote">
+              <blockquote class="preview-quote__text" *ngIf="selectedSection.content.quote; else noQuoteText"
+                [ngStyle]="getTypographyStyle(selectedSection, 'quote')">
+                {{ selectedSection.content.quote }}
+              </blockquote>
+              <ng-template #noQuoteText>
+                <blockquote class="preview-quote__text preview-placeholder-text">
+                  Chưa có nội dung trích dẫn
+                </blockquote>
+              </ng-template>
+              <cite class="preview-quote__author" *ngIf="selectedSection.content.author"
+                [ngStyle]="getTypographyStyle(selectedSection, 'subheading')">
+                — {{ selectedSection.content.author }}
+              </cite>
+            </div>
+
+            <!-- CTA (KÊU GỌI HÀNH ĐỘNG) -->
+            <div *ngIf="selectedSection.type === 'cta'" class="preview-cta">
+              <h3 class="preview-cta__title" *ngIf="selectedSection.content.title; else noCtaTitle"
+                [ngStyle]="getTypographyStyle(selectedSection, 'heading')">
+                {{ selectedSection.content.title }}
+              </h3>
+              <ng-template #noCtaTitle>
+                <h3 class="preview-cta__title preview-placeholder-text">Chưa có tiêu đề CTA</h3>
+              </ng-template>
+              <p class="preview-cta__desc" *ngIf="selectedSection.content.description"
+                [ngStyle]="getTypographyStyle(selectedSection, 'body')">
+                {{ selectedSection.content.description }}
+              </p>
+              <div class="preview-cta__action" *ngIf="selectedSection.content.buttonText">
+                <a class="btn-preview-primary" role="button" [ngStyle]="getTypographyStyle(selectedSection, 'button')">
+                  {{ selectedSection.content.buttonText }}
+                </a>
+              </div>
+            </div>
+
+            <!-- KHOẢNG CÁCH (SPACER) -->
+            <div *ngIf="selectedSection.type === 'spacer'" class="preview-spacer"
+              [style.height.px]="selectedSection.settings.spacerHeight || 48">
+              <div class="preview-spacer__label">Khoảng cách: {{ selectedSection.settings.spacerHeight || 48 }}px</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── CỘT PHẢI: DANH SÁCH CÁC PHÂN ĐOẠN (MASTER LIST) ── -->
+    <section class="home-cms-list-panel" aria-label="Danh sách các phân đoạn trang giới thiệu">
+      <div class="home-cms-list-panel__top">
+        <div class="home-cms-list-panel__meta">
+          <h2 class="home-cms-list-panel__title">Cấu trúc Phân Đoạn</h2>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" (click)="onOpenAddModal()" id="btn-add-section">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+            stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>Thêm Section</span>
+        </button>
+      </div>
+
+      <div class="home-cms-drag-hint">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+          stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <span>Kéo biểu tượng <strong>☰</strong> để sắp xếp lại thứ tự hiển thị trên trang Giới thiệu.</span>
+      </div>
+
+      <!-- CDK DROP LIST -->
+      <div cdkDropList (cdkDropListDropped)="onDrop($event)" class="home-cms-drop-list">
+        <div *ngFor="let section of sections; let idx = index" cdkDrag class="home-cms-item-card"
+          [class.is-active]="selectedSection?.id === section.id" [class.is-disabled]="!section.enabled"
+          (click)="onSelectSection(section)">
+
+          <!-- Drag Handle -->
+          <div cdkDragHandle class="home-cms-item-card__handle" title="Kéo thả để đổi thứ tự"
+            aria-label="Di chuyển phân đoạn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="9" cy="6" r="1.5"></circle>
+              <circle cx="15" cy="6" r="1.5"></circle>
+              <circle cx="9" cy="12" r="1.5"></circle>
+              <circle cx="15" cy="12" r="1.5"></circle>
+              <circle cx="9" cy="18" r="1.5"></circle>
+              <circle cx="15" cy="18" r="1.5"></circle>
+            </svg>
+          </div>
+
+          <!-- Section Info -->
+          <div class="home-cms-item-card__body">
+            <div class="home-cms-item-card__header-row">
+              <span class="home-cms-item-card__order">#{{ section.order }}</span>
+              <h3 class="home-cms-item-card__name">{{ section.name }}</h3>
+              <span class="badge" [ngClass]="getSectionTypeBadgeClass(section.type)">
+                {{ getSectionTypeName(section.type) }}
+              </span>
+            </div>
+
+            <div class="home-cms-item-card__meta-tags">
+              <span class="home-cms-meta-tag">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                </svg>
+                {{ section.layout.variant || 'Mặc định' }}
+              </span>
+              <span class="home-cms-meta-tag">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+                {{ section.animation.preset }}
+              </span>
+              <button type="button" class="home-cms-status-toggle" [class.is-on]="section.enabled"
+                (click)="onToggleEnabled(section, $event)"
+                [title]="section.enabled ? 'Nhấn để ẩn phân đoạn này' : 'Nhấn để hiện phân đoạn này'">
+                <span class="home-cms-status-dot"></span>
+                <span>{{ section.enabled ? 'Hiện' : 'Ẩn' }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Action Buttons -->
+          <div class="home-cms-item-card__actions">
+            <button type="button" class="btn-icon" (click)="onEditSection(section, $event)"
+              title="Chỉnh sửa nội dung & giao diện" aria-label="Sửa phân đoạn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+            </button>
+            <button type="button" class="btn-icon" (click)="onDuplicateSection(section, $event)"
+              title="Nhân bản phân đoạn này" aria-label="Nhân bản phân đoạn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+            <button type="button" class="btn-icon btn-icon--danger" (click)="onPromptDeleteSection(section, $event)"
+              title="Xóa phân đoạn này" aria-label="Xóa phân đoạn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Placeholder khi kéo -->
+          <div *cdkDragPlaceholder class="home-cms-item-card-placeholder"></div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       3. SECTION EDITOR DRAWER (BẢNG CHỈNH SỬA CHI TIẾT BÊN PHẢI)
+  ══════════════════════════════════════════════════════════ -->
+  <aside class="home-cms-editor-drawer" [class.is-open]="isEditorOpen" *ngIf="selectedSection"
+    aria-label="Bảng chỉnh sửa phân đoạn">
+    <div class="home-cms-editor-drawer__header">
+      <div class="home-cms-editor-drawer__title-box">
+        <span class="badge" [ngClass]="getSectionTypeBadgeClass(selectedSection.type)">
+          {{ getSectionTypeName(selectedSection.type) }}
+        </span>
+        <h3 class="home-cms-editor-drawer__title">{{ selectedSection.name }}</h3>
+      </div>
+      <button type="button" class="btn-icon" (click)="onCloseEditor()" title="Đóng bảng chỉnh sửa" aria-label="Đóng">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <!-- TABS NAVIGATION -->
+    <nav class="home-cms-editor-tabs" role="tablist">
+      <button type="button" class="home-cms-tab-btn" [class.is-active]="editorActiveTab === 'content'"
+        (click)="editorActiveTab = 'content'">
+        Nội dung
+      </button>
+      <button type="button" class="home-cms-tab-btn" [class.is-active]="editorActiveTab === 'media'"
+        *ngIf="selectedSection.type !== 'spacer'" (click)="editorActiveTab = 'media'">
+        Hình ảnh
+      </button>
+      <button type="button" class="home-cms-tab-btn" [class.is-active]="editorActiveTab === 'layout'"
+        (click)="editorActiveTab = 'layout'">
+        Bố cục
+      </button>
+      <button type="button" class="home-cms-tab-btn" [class.is-active]="editorActiveTab === 'typography'"
+        *ngIf="selectedSection.type !== 'spacer'" (click)="editorActiveTab = 'typography'">
+        Kiểu chữ & Màu sắc
+      </button>
+      <button type="button" class="home-cms-tab-btn" [class.is-active]="editorActiveTab === 'animation'"
+        (click)="editorActiveTab = 'animation'">
+        Hiệu ứng
+      </button>
+      <button type="button" class="home-cms-tab-btn" [class.is-active]="editorActiveTab === 'settings'"
+        (click)="editorActiveTab = 'settings'">
+        Cài đặt
+      </button>
+    </nav>
+
+    <!-- TAB CONTENTS -->
+    <div class="home-cms-editor-body">
+
+      <!-- ── TAB 1: NỘI DUNG ── -->
+      <div *ngIf="editorActiveTab === 'content'" class="home-cms-form-tab">
+        <div class="form-group">
+          <label class="form-label" for="secName">Tên hiển thị nội bộ</label>
+          <input type="text" id="secName" class="form-control" [(ngModel)]="selectedSection.name"
+            (ngModelChange)="hasUnsavedChanges = true" />
+          <span class="form-hint">Dùng để quản lý trong danh sách phân đoạn của Admin.</span>
+        </div>
+
+        <!-- DYNAMIC FIELDS FOR EDITORIAL -->
+        <ng-container *ngIf="selectedSection.type === 'editorial'">
+          <div class="form-group">
+            <label class="form-label" for="secEdTitle">Tiêu đề phân đoạn</label>
+            <input type="text" id="secEdTitle" class="form-control" [(ngModel)]="selectedSection.content.title"
+              (ngModelChange)="hasUnsavedChanges = true" placeholder="Câu chuyện thương hiệu, Nàng thơ..." />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="secEdQuote">Đoạn trích dẫn nghệ thuật (Quote)</label>
+            <textarea id="secEdQuote" class="form-control" rows="4" [(ngModel)]="selectedSection.content.quote"
+              (ngModelChange)="hasUnsavedChanges = true" placeholder="Thông điệp hoặc trích dẫn ấn tượng..."></textarea>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label" for="secTag1">Tagline 1</label>
+              <input type="text" id="secTag1" class="form-control" [(ngModel)]="selectedSection.content.tagline1"
+                (ngModelChange)="hasUnsavedChanges = true" placeholder="Atelier Chéri" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="secTag2">Tagline 2</label>
+              <input type="text" id="secTag2" class="form-control" [(ngModel)]="selectedSection.content.tagline2"
+                (ngModelChange)="hasUnsavedChanges = true" placeholder="Timeless Elegance" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="secEdDesc">Nội dung chi tiết (Mô tả thêm)</label>
+            <textarea id="secEdDesc" class="form-control" rows="3" [(ngModel)]="selectedSection.content.description"
+              (ngModelChange)="hasUnsavedChanges = true" placeholder="Đoạn văn mở rộng về câu chuyện..."></textarea>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label" for="secEdBtnText">Nút liên kết (Tùy chọn)</label>
+              <input type="text" id="secEdBtnText" class="form-control" [(ngModel)]="selectedSection.content.buttonText"
+                (ngModelChange)="hasUnsavedChanges = true" placeholder="Khám phá câu chuyện" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="secEdBtnLink">Đường dẫn liên kết</label>
+              <input type="text" id="secEdBtnLink" class="form-control" [(ngModel)]="selectedSection.content.buttonLink"
+                (ngModelChange)="hasUnsavedChanges = true" placeholder="/vi/product/all" />
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- DYNAMIC FIELDS FOR IMAGE-TEXT / HERO / BANNER -->
+        <ng-container
+          *ngIf="selectedSection.type === 'image-text' || selectedSection.type === 'hero' || selectedSection.type === 'banner'">
+          <div class="form-group">
+            <label class="form-label" for="secEyebrow">Dòng mở đầu (Eyebrow)</label>
+            <input type="text" id="secEyebrow" class="form-control" [(ngModel)]="selectedSection.content.eyebrow"
+              (ngModelChange)="hasUnsavedChanges = true" placeholder="Ví dụ: Giới thiệu thương hiệu..." />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="secTitle">Tiêu đề chính (Title)</label>
+            <input type="text" id="secTitle" class="form-control" [(ngModel)]="selectedSection.content.title"
+              (ngModelChange)="hasUnsavedChanges = true" placeholder="Tiêu đề phân đoạn..." />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="secDesc">Mô tả chi tiết (Description)</label>
+            <textarea id="secDesc" class="form-control" rows="4" [(ngModel)]="selectedSection.content.description"
+              (ngModelChange)="hasUnsavedChanges = true" placeholder="Nội dung truyền tải thông điệp..."></textarea>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label" for="secBtnText">Nút kêu gọi (Button Text)</label>
+              <input type="text" id="secBtnText" class="form-control" [(ngModel)]="selectedSection.content.buttonText"
+                (ngModelChange)="hasUnsavedChanges = true" placeholder="Xem thêm" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="secBtnLink">Đường dẫn nút (Button Link)</label>
+              <input type="text" id="secBtnLink" class="form-control" [(ngModel)]="selectedSection.content.buttonLink"
+                (ngModelChange)="hasUnsavedChanges = true" placeholder="/vi/product/all" />
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- DYNAMIC FIELDS FOR QUOTE -->
+        <ng-container *ngIf="selectedSection.type === 'quote'">
+          <div class="form-group">
+            <label class="form-label" for="secQuote">Lời trích dẫn (Quote)</label>
+            <textarea id="secQuote" class="form-control" rows="4" [(ngModel)]="selectedSection.content.quote"
+              (ngModelChange)="hasUnsavedChanges = true" placeholder="Nội dung trích dẫn nghệ thuật..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="secAuthor">Tác giả / Người phát ngôn</label>
+            <input type="text" id="secAuthor" class="form-control" [(ngModel)]="selectedSection.content.author"
+              (ngModelChange)="hasUnsavedChanges = true" placeholder="Ví dụ: Chéri Creative Director" />
+          </div>
+        </ng-container>
+
+        <!-- DYNAMIC FIELDS FOR CTA -->
+        <ng-container *ngIf="selectedSection.type === 'cta'">
+          <div class="form-group">
+            <label class="form-label" for="secCtaTitle">Tiêu đề kêu gọi</label>
+            <input type="text" id="secCtaTitle" class="form-control" [(ngModel)]="selectedSection.content.title"
+              (ngModelChange)="hasUnsavedChanges = true" placeholder="Gia nhập cộng đồng Chéri..." />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="secCtaDesc">Đoạn văn mô tả</label>
+            <textarea id="secCtaDesc" class="form-control" rows="3" [(ngModel)]="selectedSection.content.description"
+              (ngModelChange)="hasUnsavedChanges = true" placeholder="Thông điệp hành động..."></textarea>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label" for="secCtaBtn">Chữ trên nút</label>
+              <input type="text" id="secCtaBtn" class="form-control" [(ngModel)]="selectedSection.content.buttonText"
+                (ngModelChange)="hasUnsavedChanges = true" placeholder="Khám phá ngay" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="secCtaLink">Đường dẫn nút</label>
+              <input type="text" id="secCtaLink" class="form-control" [(ngModel)]="selectedSection.content.buttonLink"
+                (ngModelChange)="hasUnsavedChanges = true" placeholder="/vi/contact" />
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- DYNAMIC FIELDS FOR SPACER -->
+        <ng-container *ngIf="selectedSection.type === 'spacer'">
+          <div class="form-group">
+            <label class="form-label" for="secSpacerH">Chiều cao khoảng đệm (Pixel)</label>
+            <input type="number" id="secSpacerH" class="form-control"
+              [(ngModel)]="selectedSection.settings.spacerHeight" (ngModelChange)="hasUnsavedChanges = true" min="16"
+              max="240" step="8" />
+          </div>
+        </ng-container>
+      </div>
+
+      <!-- ── TAB 2: HÌNH ẢNH (MEDIA) ── -->
+      <div *ngIf="editorActiveTab === 'media'" class="home-cms-form-tab">
+        <!-- Desktop Image Box -->
+        <div class="media-upload-card">
+          <div class="media-upload-card__header">
+            <h4>Hình ảnh Desktop</h4>
+            <span class="badge-mini">Khuyến nghị 1200x800px hoặc 1600x900px</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Dán URL hình ảnh trực tiếp</label>
+            <input type="text" class="form-control" [ngModel]="selectedSection.media.desktop?.url"
+              (ngModelChange)="selectedSection.media.desktop = { url: $event, alt: selectedSection.media.desktop?.alt || '' }; hasUnsavedChanges = true"
+              placeholder="https://images.unsplash.com/..." />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">
+              Hoặc tải file từ máy lên máy chủ (Cloudinary / Server)
+              <span class="uploading-spinner" *ngIf="isUploadingDesktop">⏳ Đang tải ảnh...</span>
+            </label>
+            <input type="file" class="form-control" accept="image/*" [disabled]="isUploadingDesktop"
+              (change)="onFileSelected($event, 'desktop')" />
+          </div>
+
+          <div class="media-preview-box" *ngIf="selectedSection.media.desktop?.url">
+            <img [src]="selectedSection.media.desktop?.url" alt="Desktop Preview" />
+            <div class="media-preview-box__actions">
+              <button type="button" class="btn btn-outline btn-sm" (click)="onRemoveImage('desktop')">Gỡ ảnh</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mobile Image Box -->
+        <div class="media-upload-card mt-3">
+          <div class="media-upload-card__header">
+            <h4>Hình ảnh Mobile (Tùy chọn)</h4>
+            <span class="badge-mini">Khuyến nghị 800x1000px</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Dán URL hình ảnh Mobile</label>
+            <input type="text" class="form-control" [ngModel]="selectedSection.media.mobile?.url"
+              (ngModelChange)="selectedSection.media.mobile = { url: $event, alt: selectedSection.media.mobile?.alt || '' }; hasUnsavedChanges = true"
+              placeholder="https://..." />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">
+              Tải file Mobile lên máy chủ
+              <span class="uploading-spinner" *ngIf="isUploadingMobile">⏳ Đang tải ảnh...</span>
+            </label>
+            <input type="file" class="form-control" accept="image/*" [disabled]="isUploadingMobile"
+              (change)="onFileSelected($event, 'mobile')" />
+          </div>
+
+          <div class="media-preview-box" *ngIf="selectedSection.media.mobile?.url">
+            <img [src]="selectedSection.media.mobile?.url" alt="Mobile Preview" />
+            <div class="media-preview-box__actions">
+              <button type="button" class="btn btn-outline btn-sm" (click)="onRemoveImage('mobile')">Gỡ ảnh</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB 3: BỐ CỤC (LAYOUT) ── -->
+      <div *ngIf="editorActiveTab === 'layout'" class="home-cms-form-tab">
+        <label class="form-label">Kiểu bố cục hiển thị</label>
+
+        <!-- VISUAL LAYOUT SELECTOR -->
+        <div class="visual-layout-grid">
+          <div class="visual-layout-card" [class.is-selected]="selectedSection.layout.variant === 'image-left'"
+            (click)="selectedSection.layout.variant = 'image-left'; hasUnsavedChanges = true; triggerAnimationPreview()">
+            <div class="visual-layout-card__diagram layout-diag-left">
+              <span class="diag-img">ẢNH</span>
+              <span class="diag-text">CHỮ</span>
+            </div>
+            <span class="visual-layout-card__label">Ảnh Trái (50/50)</span>
+          </div>
+
+          <div class="visual-layout-card" [class.is-selected]="selectedSection.layout.variant === 'image-right'"
+            (click)="selectedSection.layout.variant = 'image-right'; hasUnsavedChanges = true; triggerAnimationPreview()">
+            <div class="visual-layout-card__diagram layout-diag-right">
+              <span class="diag-text">CHỮ</span>
+              <span class="diag-img">ẢNH</span>
+            </div>
+            <span class="visual-layout-card__label">Ảnh Phải (50/50)</span>
+          </div>
+
+          <div class="visual-layout-card" [class.is-selected]="selectedSection.layout.variant === 'centered'"
+            (click)="selectedSection.layout.variant = 'centered'; hasUnsavedChanges = true; triggerAnimationPreview()">
+            <div class="visual-layout-card__diagram layout-diag-center">
+              <span class="diag-text">CHỮ Ở GIỮA</span>
+            </div>
+            <span class="visual-layout-card__label">Căn giữa trang</span>
+          </div>
+        </div>
+
+        <!-- Căn lề văn bản -->
+        <div class="form-group mt-3">
+          <label class="form-label">Căn lề nội dung</label>
+          <div class="btn-group-segmented btn-group-toggle">
+            <button type="button" class="btn-segmented btn-toggle"
+              [class.is-active]="selectedSection.layout.alignment === 'left'"
+              (click)="selectedSection.layout.alignment = 'left'; hasUnsavedChanges = true">Trái</button>
+            <button type="button" class="btn-segmented btn-toggle"
+              [class.is-active]="selectedSection.layout.alignment === 'center'"
+              (click)="selectedSection.layout.alignment = 'center'; hasUnsavedChanges = true">Giữa</button>
+            <button type="button" class="btn-segmented btn-toggle"
+              [class.is-active]="selectedSection.layout.alignment === 'right'"
+              (click)="selectedSection.layout.alignment = 'right'; hasUnsavedChanges = true">Phải</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB 4: KIỂU CHỮ & MÀU SẮC (TYPOGRAPHY & COLORS) ── -->
+      <div *ngIf="editorActiveTab === 'typography'" class="home-cms-form-tab">
+
+        <!-- 0. TAB TOP ACTIONS BAR -->
+        <div class="typo-tab-topbar mb-3">
+          <div>
+            <h4 class="typo-tab-title">Kiểu Chữ & Màu Sắc (Typography & Colors)</h4>
+            <p class="typo-tab-subtitle">Tùy biến typography và phối màu chuẩn phong cách thời trang cao cấp Chéri</p>
+          </div>
+          <button type="button" class="btn-link-action btn-link-reset" (click)="onResetEntireTab4()"
+            title="Khôi phục toàn bộ Kiểu chữ & Màu sắc của phân đoạn về mặc định">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="1 4 1 10 7 10"></polyline>
+              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+            </svg>
+            <span>Khôi phục toàn bộ</span>
+          </button>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════════════════
+             KHU VỰC A: CẤU HÌNH KIỂU CHỮ (TYPOGRAPHY)
+             ════════════════════════════════════════════════════════════════ -->
+        <div class="cms-config-section mb-4">
+          <div class="cms-config-section__header d-flex justify-content-between align-items-center mb-2">
+            <div>
+              <h5 class="cms-config-section__title mb-1">
+                <span class="section-title-icon">🔤</span>
+                <span>Cấu hình kiểu chữ (Typography)</span>
+              </h5>
+              <p class="cms-config-section__desc mb-0">Áp dụng nhanh bộ phối font chữ chuẩn phong cách Chéri.</p>
+            </div>
+            <button type="button" class="btn-link-action btn-link-reset" (click)="onResetSectionTypography()"
+              title="Khôi phục toàn bộ font mặc định của phân đoạn">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="1 4 1 10 7 10"></polyline>
+                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+              </svg>
+              <span>Khôi phục font mặc định</span>
+            </button>
+          </div>
+
+          <!-- Danh sách preset kiểu chữ: Minimal, Editorial, Classic, Romantic, Modern -->
+          <div class="typo-preset-cards-grid mt-3">
+            <button type="button" *ngFor="let p of typographyPresets" class="typo-preset-card"
+              [class.is-active]="selectedTypographyPreset === p.value"
+              (click)="onSelectPreset(p.value)">
+              <div class="typo-preset-card__top">
+                <span class="badge-mini badge-mini--wine">{{ p.badge }}</span>
+                <span class="typo-preset-card__check" *ngIf="selectedTypographyPreset === p.value">✓</span>
+              </div>
+              <strong class="typo-preset-card__name" [style.font-family]="p.previewFont">{{ p.label }}</strong>
+              <small class="typo-preset-card__desc" *ngIf="p.description">{{ p.description }}</small>
+            </button>
+          </div>
+
+          <!-- Nút chính: Áp dụng nhanh toàn bộ -->
+          <div class="typo-preset-apply-wrap mt-3 d-flex justify-content-between align-items-center">
+            <div class="typo-preset-apply-hint">
+              <span>Đang chọn: </span>
+              <strong>{{ getSelectedPresetLabel() }}</strong>
+              <span class="text-muted d-none d-sm-inline"> — Nhấn nút để áp dụng bộ font này cho toàn bộ phần tử</span>
+            </div>
+            <button type="button" class="btn btn-cheri-primary btn-sm px-3" (click)="onApplyPresetToAll()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <span>Áp dụng nhanh toàn bộ</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════════════════
+             KHU VỰC B: TÙY CHỈNH TỪNG PHẦN TỬ
+             ════════════════════════════════════════════════════════════════ -->
+        <div class="cms-config-section mb-4">
+          <div class="cms-config-section__header d-flex justify-content-between align-items-center mb-2">
+            <div>
+              <h5 class="cms-config-section__title mb-1">
+                <span class="section-title-icon">🎯</span>
+                <span>Tùy chỉnh từng phần tử</span>
+              </h5>
+              <p class="cms-config-section__desc mb-0">Điều chỉnh kiểu chữ và màu sắc cho từng trường nội dung.</p>
+            </div>
+            <button type="button" class="btn-link-action btn-link-reset" (click)="onResetAllColors()"
+              title="Khôi phục toàn bộ màu sắc của phân đoạn về mặc định">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="1 4 1 10 7 10"></polyline>
+                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+              </svg>
+              <span>Khôi phục màu mặc định</span>
+            </button>
+          </div>
+
+          <!-- Danh sách chọn trường nội dung -->
+          <div class="content-fields-selector mt-3">
+            <label class="form-label mb-2">Chọn trường nội dung cần cấu hình:</label>
+            <div class="content-field-pills">
+              <button type="button" *ngFor="let f of getAvailableContentFields(selectedSection)"
+                class="content-field-pill" [class.is-active]="activeContentFieldKey === f.key"
+                (click)="onSelectContentField(f.key)">
+                <span class="content-field-pill__icon">{{ f.icon }}</span>
+                <span class="content-field-pill__label">{{ f.label }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Panel cấu hình chi tiết cho trường nội dung đang chọn -->
+          <div class="element-customizer-card mt-3">
+            <div class="element-customizer-card__header d-flex justify-content-between align-items-center">
+              <div class="d-flex align-items-center gap-2">
+                <span class="field-indicator-dot"></span>
+                <strong class="field-title">{{ getActiveFieldConfig()?.label }}</strong>
+                <span class="field-desc text-muted d-none d-md-inline">({{ getActiveFieldConfig()?.description }})</span>
+              </div>
+              <button type="button" class="btn-link-action" (click)="onResetCurrentElement()"
+                title="Khôi phục font và màu của trường này về mặc định">
+                Đặt lại phần tử này
+              </button>
+            </div>
+
+            <div class="element-customizer-card__body">
+              <!-- 1. PHÔNG CHỮ (FONT FAMILY) -->
+              <div class="form-group mb-3">
+                <label class="form-label" for="activeFontFamily">Phông chữ (Font Family)</label>
+                <div class="typo-font-select-wrap">
+                  <select id="activeFontFamily" class="form-control typo-font-select"
+                    [(ngModel)]="getActiveTypographyConfig().fontFamily"
+                    (ngModelChange)="onTypographyPropChange()">
+                    <option *ngFor="let font of availableFonts" [value]="font.fontFamily" [style.font-family]="font.fontFamily">
+                      {{ font.name }} ({{ font.category }})
+                    </option>
+                  </select>
+                </div>
+                <span class="form-hint" *ngIf="getActiveTypographyConfig().fontFamily">
+                  Font đang áp dụng: <strong>{{ getFontFamilyName(getActiveTypographyConfig().fontFamily) }}</strong>
+                </span>
+              </div>
+
+              <!-- 2. BỐN ĐIỀU KHIỂN SLIDER + INPUT NUMBER (MỖI THUỘC TÍNH 1 HÀNG RIÊNG) -->
+              <div class="cms-slider-controls-group mb-4">
+
+                <!-- 2.1 CỠ CHỮ (FONT SIZE) -->
+                <div class="cms-slider-row">
+                  <div class="cms-slider-label-col">
+                    <span class="cms-slider-prop-name">Cỡ chữ</span>
+                    <span class="cms-slider-curr-val">{{ getActiveTypographyConfig().fontSize || 16 }} px</span>
+                  </div>
+                  <div class="cms-slider-track-col">
+                    <input type="range" class="cms-range-slider" min="8" max="96" step="1"
+                      [(ngModel)]="getActiveTypographyConfig().fontSize"
+                      (ngModelChange)="onTypographyPropChange()"
+                      aria-label="Cỡ chữ" />
+                  </div>
+                  <div class="cms-slider-input-col">
+                    <div class="cms-number-input-wrap">
+                      <input type="number" class="cms-number-input" min="8" max="96" step="1"
+                        [(ngModel)]="getActiveTypographyConfig().fontSize"
+                        (ngModelChange)="onTypographyPropChange()"
+                        (blur)="validateNumericProp('fontSize', 8, 96, 16)" />
+                      <span class="cms-unit-badge">px</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 2.2 ĐỘ ĐẬM (FONT WEIGHT) -->
+                <div class="cms-slider-row">
+                  <div class="cms-slider-label-col">
+                    <span class="cms-slider-prop-name">Độ đậm</span>
+                    <span class="cms-slider-curr-val">{{ getFontWeightName(getActiveTypographyConfig().fontWeight) }}</span>
+                  </div>
+                  <div class="cms-slider-track-col">
+                    <input type="range" class="cms-range-slider" min="100" max="900" step="100"
+                      [(ngModel)]="getActiveTypographyConfig().fontWeight"
+                      (ngModelChange)="onTypographyPropChange()"
+                      aria-label="Độ đậm" />
+                  </div>
+                  <div class="cms-slider-input-col">
+                    <div class="cms-number-input-wrap">
+                      <input type="number" class="cms-number-input" min="100" max="900" step="100"
+                        [(ngModel)]="getActiveTypographyConfig().fontWeight"
+                        (ngModelChange)="onTypographyPropChange()"
+                        (blur)="validateNumericProp('fontWeight', 100, 900, 400)" />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 2.3 KHOẢNG CÁCH DÒNG (LINE HEIGHT) -->
+                <div class="cms-slider-row">
+                  <div class="cms-slider-label-col">
+                    <span class="cms-slider-prop-name">Khoảng cách dòng</span>
+                    <span class="cms-slider-curr-val">{{ formatDecimal(getActiveTypographyConfig().lineHeight || 1.5, 1) }}</span>
+                  </div>
+                  <div class="cms-slider-track-col">
+                    <input type="range" class="cms-range-slider" min="1.0" max="2.5" step="0.1"
+                      [(ngModel)]="getActiveTypographyConfig().lineHeight"
+                      (ngModelChange)="onTypographyPropChange()"
+                      aria-label="Khoảng cách dòng" />
+                  </div>
+                  <div class="cms-slider-input-col">
+                    <div class="cms-number-input-wrap">
+                      <input type="number" class="cms-number-input" min="1.0" max="2.5" step="0.1"
+                        [(ngModel)]="getActiveTypographyConfig().lineHeight"
+                        (ngModelChange)="onTypographyPropChange()"
+                        (blur)="validateNumericProp('lineHeight', 1.0, 2.5, 1.5)" />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 2.4 GIÃN CÁCH CHỮ (LETTER SPACING) -->
+                <div class="cms-slider-row">
+                  <div class="cms-slider-label-col">
+                    <span class="cms-slider-prop-name">Giãn cách chữ</span>
+                    <span class="cms-slider-curr-val">{{ formatDecimal(getActiveTypographyConfig().letterSpacing || 0, 1) }} px</span>
+                  </div>
+                  <div class="cms-slider-track-col">
+                    <input type="range" class="cms-range-slider" min="-2" max="10" step="0.1"
+                      [(ngModel)]="getActiveTypographyConfig().letterSpacing"
+                      (ngModelChange)="onTypographyPropChange()"
+                      aria-label="Giãn cách chữ" />
+                  </div>
+                  <div class="cms-slider-input-col">
+                    <div class="cms-number-input-wrap">
+                      <input type="number" class="cms-number-input" min="-2" max="10" step="0.1"
+                        [(ngModel)]="getActiveTypographyConfig().letterSpacing"
+                        (ngModelChange)="onTypographyPropChange()"
+                        (blur)="validateNumericProp('letterSpacing', -2, 10, 0)" />
+                      <span class="cms-unit-badge">px</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- 3. BIẾN ĐỔI CHỮ & CĂN LỀ -->
+              <div class="form-row-2 mb-4">
+                <!-- BIẾN ĐỔI CHỮ -->
+                <div class="form-group">
+                  <label class="form-label">Biến đổi chữ (Text Transform)</label>
+                  <div class="btn-group-segmented">
+                    <button type="button" class="btn-segmented"
+                      [class.is-active]="getActiveTypographyConfig().textTransform === 'none' || !getActiveTypographyConfig().textTransform"
+                      (click)="getActiveTypographyConfig().textTransform = 'none'; onTypographyPropChange()"
+                      title="Không biến đổi — Giữ nguyên kiểu chữ gốc">
+                      Mặc định
+                    </button>
+                    <button type="button" class="btn-segmented"
+                      [class.is-active]="getActiveTypographyConfig().textTransform === 'lowercase'"
+                      (click)="getActiveTypographyConfig().textTransform = 'lowercase'; onTypographyPropChange()"
+                      title="Chữ thường — Viết toàn bộ bằng chữ thường">
+                      thường
+                    </button>
+                    <button type="button" class="btn-segmented"
+                      [class.is-active]="getActiveTypographyConfig().textTransform === 'uppercase'"
+                      (click)="getActiveTypographyConfig().textTransform = 'uppercase'; onTypographyPropChange()"
+                      title="CHỮ HOA — Viết in hoa toàn bộ">
+                      CHỮ HOA
+                    </button>
+                    <button type="button" class="btn-segmented"
+                      [class.is-active]="getActiveTypographyConfig().textTransform === 'capitalize'"
+                      (click)="getActiveTypographyConfig().textTransform = 'capitalize'; onTypographyPropChange()"
+                      title="Viết hoa chữ cái đầu — Viết hoa ký tự đầu của mỗi từ">
+                      Đầu Từ
+                    </button>
+                  </div>
+                </div>
+
+                <!-- CĂN LỀ -->
+                <div class="form-group">
+                  <label class="form-label">Căn lề (Text Alignment)</label>
+                  <div class="btn-group-segmented">
+                    <button type="button" class="btn-segmented"
+                      [class.is-active]="getActiveTypographyConfig().textAlign === 'left' || !getActiveTypographyConfig().textAlign"
+                      (click)="getActiveTypographyConfig().textAlign = 'left'; onTypographyPropChange()"
+                      title="Căn lề trái">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1">
+                        <line x1="17" y1="10" x2="3" y2="10"></line>
+                        <line x1="21" y1="6" x2="3" y2="6"></line>
+                        <line x1="21" y1="14" x2="3" y2="14"></line>
+                        <line x1="17" y1="18" x2="3" y2="18"></line>
+                      </svg>
+                      <span>Trái</span>
+                    </button>
+                    <button type="button" class="btn-segmented"
+                      [class.is-active]="getActiveTypographyConfig().textAlign === 'center'"
+                      (click)="getActiveTypographyConfig().textAlign = 'center'; onTypographyPropChange()"
+                      title="Căn lề giữa">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1">
+                        <line x1="18" y1="10" x2="6" y2="10"></line>
+                        <line x1="21" y1="6" x2="3" y2="6"></line>
+                        <line x1="18" y1="14" x2="6" y2="14"></line>
+                        <line x1="21" y1="18" x2="3" y2="18"></line>
+                      </svg>
+                      <span>Giữa</span>
+                    </button>
+                    <button type="button" class="btn-segmented"
+                      [class.is-active]="getActiveTypographyConfig().textAlign === 'right'"
+                      (click)="getActiveTypographyConfig().textAlign = 'right'; onTypographyPropChange()"
+                      title="Căn lề phải">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1">
+                        <line x1="21" y1="10" x2="7" y2="10"></line>
+                        <line x1="21" y1="6" x2="3" y2="6"></line>
+                        <line x1="21" y1="14" x2="3" y2="14"></line>
+                        <line x1="21" y1="18" x2="7" y2="18"></line>
+                      </svg>
+                      <span>Phải</span>
+                    </button>
+                    <button type="button" class="btn-segmented"
+                      [class.is-active]="getActiveTypographyConfig().textAlign === 'justify'"
+                      (click)="getActiveTypographyConfig().textAlign = 'justify'; onTypographyPropChange()"
+                      title="Căn đều hai bên">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1">
+                        <line x1="21" y1="6" x2="3" y2="6"></line>
+                        <line x1="21" y1="10" x2="3" y2="10"></line>
+                        <line x1="21" y1="14" x2="3" y2="14"></line>
+                        <line x1="21" y1="18" x2="3" y2="18"></line>
+                      </svg>
+                      <span>Đều</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 4. KHU VỰC MÀU SẮC (COLORS CHO TRƯỜNG ĐANG CHỌN) -->
+              <div class="element-color-config-box">
+                <div class="element-color-header d-flex justify-content-between align-items-center mb-2">
+                  <label class="form-label mb-0">Màu sắc (Color) của trường này:</label>
+                  <button type="button" class="btn-link-action btn-link-reset"
+                    (click)="onResetCurrentElementColor()"
+                    title="Khôi phục màu của trường này về mặc định">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="1 4 1 10 7 10"></polyline>
+                      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                    </svg>
+                    <span>Khôi phục màu</span>
+                  </button>
+                </div>
+
+                <div class="color-prop-control-row">
+                  <!-- Color Preview Swatch -->
+                  <div class="color-swatch-box" [style.background-color]="getActiveColorValue()" title="Xem trước màu"></div>
+
+                  <!-- Native Color Picker Input -->
+                  <label class="color-picker-btn" title="Mở bảng chọn màu tùy chỉnh">
+                    <input type="color" class="color-native-input" [value]="getColorPickerValue(getActiveFieldConfig()?.colorKey || 'titleColor')"
+                      (input)="onActiveColorPickerChange($any($event.target).value)" />
+                    <span>Chọn màu</span>
+                  </label>
+
+                  <!-- HEX Text Input -->
+                  <div class="hex-input-wrap flex-grow-1">
+                    <input type="text" class="form-control form-control-sm hex-text-input" placeholder="#74070E"
+                      maxlength="7" [value]="getActiveColorValue()"
+                      (input)="onActiveHexInputChange($any($event.target).value)" />
+                  </div>
+                </div>
+
+                <!-- Error message if HEX invalid -->
+                <div class="color-error-msg mt-1" *ngIf="colorErrors[getActiveFieldConfig()?.colorKey || 'titleColor']">
+                  ⚠️ {{ colorErrors[getActiveFieldConfig()?.colorKey || 'titleColor'] }}
+                </div>
+
+                <!-- 8 GỢI Ý MÀU THƯƠNG HIỆU CHÉRI -->
+                <div class="cheri-brand-palette mt-3">
+                  <span class="palette-title">Bảng màu nhận diện Chéri:</span>
+                  <div class="cheri-presets-pills">
+                    <button type="button" *ngFor="let cp of cheriColorPresets" class="cheri-preset-pill"
+                      [title]="cp.name + ' (' + cp.hex + ')'"
+                      (click)="onApplyActiveColorPreset(cp.hex)">
+                      <span class="cheri-preset-dot" [style.background-color]="cp.hex"></span>
+                      <span class="cheri-preset-name">{{ cp.label }}</span>
+                      <span class="cheri-preset-hex">{{ cp.hex }}</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Nếu là buttonText, cho phép cấu hình màu nền nút CTA nữa -->
+                <div class="mt-3 pt-3 border-top" *ngIf="activeContentFieldKey === 'buttonText'">
+                  <div class="element-color-header d-flex justify-content-between align-items-center mb-2">
+                    <label class="form-label mb-0">Màu nền nút liên kết (Button Background):</label>
+                    <button type="button" class="btn-link-action btn-link-reset"
+                      (click)="onResetColorProperty('buttonBackgroundColor')"
+                      title="Khôi phục màu nền nút về mặc định">
+                      <span>Mặc định</span>
+                    </button>
+                  </div>
+                  <div class="color-prop-control-row">
+                    <div class="color-swatch-box" [style.background-color]="getCurrentColor('buttonBackgroundColor')" title="Xem trước màu nền"></div>
+                    <label class="color-picker-btn" title="Mở bảng chọn màu nền">
+                      <input type="color" class="color-native-input" [value]="getColorPickerValue('buttonBackgroundColor')"
+                        (input)="onColorPickerChange('buttonBackgroundColor', $any($event.target).value)" />
+                      <span>Chọn màu</span>
+                    </label>
+                    <div class="hex-input-wrap flex-grow-1">
+                      <input type="text" class="form-control form-control-sm hex-text-input" placeholder="#74070E"
+                        maxlength="7" [value]="getCurrentColor('buttonBackgroundColor')"
+                        (input)="onHexInputChange('buttonBackgroundColor', $any($event.target).value)" />
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- MÀU NỀN PHÂN ĐOẠN (BACKGROUND PHÂN ĐOẠN) -->
+        <div class="cms-config-section mb-4">
+          <div class="cms-config-section__header d-flex justify-content-between align-items-center mb-2">
+            <div>
+              <h5 class="cms-config-section__title mb-1">
+                <span class="section-title-icon">🖼️</span>
+                <span>Màu nền Phân đoạn (Section Background)</span>
+              </h5>
+              <p class="cms-config-section__desc mb-0">Thiết lập màu nền toàn bộ khối phân đoạn này.</p>
+            </div>
+            <button type="button" class="btn-link-action btn-link-reset" (click)="onResetColorProperty('backgroundColor')"
+              title="Khôi phục màu nền về mặc định">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="1 4 1 10 7 10"></polyline>
+                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+              </svg>
+              <span>Khôi phục màu nền</span>
+            </button>
+          </div>
+
+          <div class="color-prop-control-row mt-2">
+            <div class="color-swatch-box" [style.background-color]="getCurrentColor('backgroundColor')" title="Xem trước màu nền"></div>
+            <label class="color-picker-btn" title="Mở bảng chọn màu nền">
+              <input type="color" class="color-native-input" [value]="getColorPickerValue('backgroundColor')"
+                (input)="onColorPickerChange('backgroundColor', $any($event.target).value)" />
+              <span>Chọn màu</span>
+            </label>
+            <div class="hex-input-wrap flex-grow-1">
+              <input type="text" class="form-control form-control-sm hex-text-input" placeholder="#FFFFFF"
+                maxlength="7" [value]="getCurrentColor('backgroundColor')"
+                (input)="onHexInputChange('backgroundColor', $any($event.target).value)" />
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── TAB 5: HIỆU ỨNG (ANIMATION) ── -->
+      <div *ngIf="editorActiveTab === 'animation'" class="home-cms-form-tab">
+        <label class="form-label">Motion Preset (Gói Chuyển Động Sang Trọng)</label>
+        <div class="motion-preset-grid motion-preset-chips mb-3">
+          <div *ngFor="let mp of motionPresets" class="motion-preset-card motion-preset-chip"
+            [class.is-active]="selectedSection.motionPreset === mp.value && !selectedSection.isCustomAnimation"
+            (click)="onApplyMotionPreset(mp.value)">
+            <span class="motion-preset-card__title">{{ mp.label }}</span>
+            <span class="motion-preset-card__desc">{{ mp.desc }}</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="form-label mb-0">Hiệu ứng xuất hiện</label>
+            <button type="button" class="btn btn-link btn-sm p-0" (click)="onSwitchToCustomAnimation()">
+              Tùy chỉnh sâu
+            </button>
+          </div>
+          <select class="form-control" [(ngModel)]="selectedSection.animation.preset"
+            (ngModelChange)="selectedSection.isCustomAnimation = true; hasUnsavedChanges = true; triggerAnimationPreview()">
+            <option *ngFor="let a of animationPresets" [value]="a.value">{{ a.label }}</option>
+          </select>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label class="form-label">Thời lượng: {{ selectedSection.animation.duration || 750 }}ms</label>
+            <input type="range" class="form-range" [(ngModel)]="selectedSection.animation.duration"
+              (ngModelChange)="hasUnsavedChanges = true; triggerAnimationPreview()" min="200" max="2000" step="50" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Độ trễ: {{ selectedSection.animation.delay || 0 }}ms</label>
+            <input type="range" class="form-range" [(ngModel)]="selectedSection.animation.delay"
+              (ngModelChange)="hasUnsavedChanges = true; triggerAnimationPreview()" min="0" max="1000" step="50" />
+          </div>
+        </div>
+
+        <div class="form-check-card mt-2">
+          <label class="switch-toggle">
+            <input type="checkbox" [(ngModel)]="selectedSection.animation.once"
+              (ngModelChange)="hasUnsavedChanges = true" />
+            <span class="switch-slider"></span>
+          </label>
+          <div class="switch-label-box">
+            <strong>Chỉ chạy 1 lần khi cuộn tới</strong>
+            <span>Không lặp lại hiệu ứng mỗi lần cuộn qua lại.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB 6: CÀI ĐẶT (SETTINGS) ── -->
+      <div *ngIf="editorActiveTab === 'settings'" class="home-cms-form-tab">
+        <div class="form-check-card" *ngIf="selectedSection.type === 'editorial'">
+          <label class="switch-toggle">
+            <input type="checkbox" [(ngModel)]="selectedSection.settings.enableGlow"
+              (ngModelChange)="hasUnsavedChanges = true" />
+            <span class="switch-slider"></span>
+          </label>
+          <div class="switch-label-box">
+            <strong>Hiệu ứng vầng sáng nghệ thuật (Glow)</strong>
+            <span>Tạo hào quang sang trọng bao quanh hình ảnh câu chuyện thương hiệu.</span>
+          </div>
+        </div>
+
+        <div class="form-check-card mt-3">
+          <label class="switch-toggle">
+            <input type="checkbox" [(ngModel)]="selectedSection.settings.overlay"
+              (ngModelChange)="hasUnsavedChanges = true" />
+            <span class="switch-slider"></span>
+          </label>
+          <div class="switch-label-box">
+            <strong>Lớp phủ tối (Dark Overlay)</strong>
+            <span>Làm dịu ảnh nền giúp chữ nổi bật và dễ đọc hơn.</span>
+          </div>
+        </div>
+
+        <div class="form-check-card mt-3">
+          <label class="switch-toggle">
+            <input type="checkbox" [(ngModel)]="selectedSection.enabled" (ngModelChange)="hasUnsavedChanges = true" />
+            <span class="switch-slider"></span>
+          </label>
+          <div class="switch-label-box">
+            <strong>Kích hoạt hiển thị phân đoạn này</strong>
+            <span>Khi tắt, phân đoạn sẽ tạm ẩn khỏi giao diện khách hàng.</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- DRAWER FOOTER -->
+    <div class="home-cms-editor-drawer__footer">
+      <button type="button" class="btn btn-outline" (click)="onCloseEditor()">Đóng bảng</button>
+      <button type="button" class="btn btn-primary" (click)="onCloseEditor(); triggerAnimationPreview()">
+        Hoàn tất chỉnh sửa
+      </button>
+    </div>
+  </aside>
+
+  <!-- ══════════════════════════════════════════════════════════
+       4. ADD SECTION MODAL (HỘP THOẠI CHỌN LOẠI PHÂN ĐOẠN)
+       QUY TẮC BẮT BUỘC:
+       - CHỈ CÓ DUY NHẤT LỰA CHỌN "Phân Đoạn Mới".
+       - KHÔNG CÓ "Lưới sản phẩm".
+       - KHÔNG CÓ "Thêm Phân Đoạn Mới" thứ hai.
+  ══════════════════════════════════════════════════════════ -->
+  <div class="home-cms-modal-backdrop" *ngIf="isAddModalOpen" (click)="onCloseAddModal()">
+    <div class="home-cms-modal-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true"
+      aria-labelledby="addAboutModalTitle">
+      <div class="home-cms-modal-header">
+        <div>
+          <h3 id="addAboutModalTitle" class="home-cms-modal-title">Thêm Phân Đoạn Mới</h3>
+        </div>
+        <button type="button" class="btn-icon" (click)="onCloseAddModal()" aria-label="Đóng">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Type Options Grid: Đúng duy nhất 1 card "Phân Đoạn Mới" -->
+      <div class="home-cms-options-grid mt-3">
+        <div *ngFor="let opt of sectionTypeOptions" class="home-cms-option-card" (click)="onSelectNewSectionType(opt)">
+          <div class="home-cms-option-card__top">
+            <div class="home-cms-option-card__icon" [innerHTML]="opt.iconSvg"></div>
+            <span class="badge-mini" *ngIf="opt.badge">{{ opt.badge }}</span>
+          </div>
+          <h4 class="home-cms-option-card__name">{{ opt.name }}</h4>
+          <p class="home-cms-option-card__desc" *ngIf="opt.description">{{ opt.description }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       5. FULL PAGE PREVIEW MODAL (XEM TOÀN TRANG CUỘN DỌC)
+  ══════════════════════════════════════════════════════════ -->
+  <div class="home-cms-modal-backdrop is-full-preview" *ngIf="isFullPreviewOpen">
+    <div class="full-preview-container" [class.is-mobile-frame]="fullPreviewViewport === 'mobile'">
+      <div class="full-preview-topbar">
+        <div class="full-preview-topbar__info">
+          <h4>Preview Toàn Trang Giới Thiệu</h4>
+          <span>(Chỉ render {{ enabledSections.length }} phân đoạn đang ở trạng thái Hiện)</span>
+        </div>
+
+        <div class="full-preview-topbar__actions">
+          <div class="home-cms-device-toggle">
+            <button type="button" class="home-cms-device-btn" [class.is-active]="fullPreviewViewport === 'desktop'"
+              (click)="fullPreviewViewport = 'desktop'">
+              Desktop
+            </button>
+            <button type="button" class="home-cms-device-btn" [class.is-active]="fullPreviewViewport === 'mobile'"
+              (click)="fullPreviewViewport = 'mobile'">
+              Mobile
+            </button>
+          </div>
+
+          <button type="button" class="btn btn-outline btn-sm" (click)="triggerAnimationPreview()">
+            <span>▶ Chạy lại hiệu ứng</span>
+          </button>
+
+          <button type="button" class="btn btn-primary btn-sm" (click)="onCloseFullPreview()">
+            <span>Đóng xem trước</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Scrolling Content of All Enabled Sections -->
+      <div class="full-preview-scroll-body">
+        <div *ngFor="let sec of enabledSections" class="full-preview-section-wrapper"
+          [ngStyle]="getSectionContainerStyle(sec)">
+          <div class="full-preview-section-tag">Phân đoạn #{{ sec.order }}: {{ sec.name }}</div>
+
+          <!-- Editorial in Full Preview -->
+          <div *ngIf="sec.type === 'editorial'" class="preview-editorial"
+            [ngClass]="['variant-' + (sec.layout.variant || 'image-left'), 'align-' + (sec.layout.alignment || 'center')]">
+            <div class="preview-editorial__col-image">
+              <div class="preview-editorial__img-wrap" [class.has-glow]="sec.settings.enableGlow">
+                <img *ngIf="sec.media.desktop?.url; else noFullEdImg"
+                  [src]="(fullPreviewViewport === 'mobile' && sec.media.mobile?.url) ? sec.media.mobile?.url : sec.media.desktop?.url"
+                  alt="Editorial Image" />
+                <ng-template #noFullEdImg>
+                  <div class="preview-empty-media-box">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                      stroke-width="1.5">
+                      <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                      <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                      <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
+                    <span>Chưa chọn hình ảnh phân đoạn</span>
+                  </div>
+                </ng-template>
+              </div>
+            </div>
+
+            <div class="preview-editorial__col-content">
+              <div class="preview-editorial__taglines" *ngIf="sec.content.tagline1 || sec.content.tagline2">
+                <span class="preview-tagline" *ngIf="sec.content.tagline1"
+                  [ngStyle]="getTypographyStyle(sec, 'eyebrow')">{{ sec.content.tagline1 }}</span>
+                <span class="preview-tagline-dot" *ngIf="sec.content.tagline1 && sec.content.tagline2">•</span>
+                <span class="preview-tagline" *ngIf="sec.content.tagline2"
+                  [ngStyle]="getTypographyStyle(sec, 'eyebrow')">{{ sec.content.tagline2 }}</span>
+              </div>
+
+              <h2 class="preview-editorial__title" *ngIf="sec.content.title; else noFullEdTitle"
+                [ngStyle]="getTypographyStyle(sec, 'heading')">
+                {{ sec.content.title }}
+              </h2>
+              <ng-template #noFullEdTitle>
+                <h2 class="preview-editorial__title preview-placeholder-text">Chưa có tiêu đề phân đoạn</h2>
+              </ng-template>
+
+              <blockquote class="preview-editorial__quote" *ngIf="sec.content.quote"
+                [ngStyle]="getTypographyStyle(sec, 'quote')">
+                "{{ sec.content.quote }}"
+              </blockquote>
+
+              <p class="preview-editorial__desc" *ngIf="sec.content.description"
+                [ngStyle]="getTypographyStyle(sec, 'body')">
+                {{ sec.content.description }}
+              </p>
+
+              <div class="preview-editorial__actions" *ngIf="sec.content.buttonText">
+                <a class="btn-preview-primary" role="button" [ngStyle]="getTypographyStyle(sec, 'button')">
+                  {{ sec.content.buttonText }}
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Image + Text in Full Preview -->
+          <div *ngIf="sec.type === 'image-text'" class="preview-editorial"
+            [ngClass]="['variant-' + (sec.layout.variant || 'image-right')]">
+            <div class="preview-editorial__col-image">
+              <img *ngIf="sec.media.desktop?.url; else noFullImgText" [src]="sec.media.desktop.url" alt="Image" />
+              <ng-template #noFullImgText>
+                <div class="preview-empty-media-box">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                  </svg>
+                  <span>Chưa chọn hình ảnh</span>
+                </div>
+              </ng-template>
+            </div>
+            <div class="preview-editorial__col-content">
+              <span class="preview-hero__eyebrow" *ngIf="sec.content.eyebrow"
+                [ngStyle]="getTypographyStyle(sec, 'eyebrow')">{{ sec.content.eyebrow }}</span>
+              <h3 class="preview-editorial__title" *ngIf="sec.content.title; else noFullImgTextTitle"
+                [ngStyle]="getTypographyStyle(sec, 'heading')">
+                {{ sec.content.title }}
+              </h3>
+              <ng-template #noFullImgTextTitle>
+                <h3 class="preview-editorial__title preview-placeholder-text">Chưa có tiêu đề</h3>
+              </ng-template>
+              <p class="preview-editorial__desc" *ngIf="sec.content.description"
+                [ngStyle]="getTypographyStyle(sec, 'body')">
+                {{ sec.content.description }}
+              </p>
+              <a class="btn-preview-primary" *ngIf="sec.content.buttonText"
+                [ngStyle]="getTypographyStyle(sec, 'button')">{{ sec.content.buttonText }}</a>
+            </div>
+          </div>
+
+          <!-- Quote in Full Preview -->
+          <div *ngIf="sec.type === 'quote'" class="preview-quote">
+            <blockquote class="preview-quote__text" *ngIf="sec.content.quote; else noFullQuoteText"
+              [ngStyle]="getTypographyStyle(sec, 'quote')">
+              {{ sec.content.quote }}
+            </blockquote>
+            <ng-template #noFullQuoteText>
+              <blockquote class="preview-quote__text preview-placeholder-text">Chưa có nội dung trích dẫn</blockquote>
+            </ng-template>
+            <cite class="preview-quote__author" *ngIf="sec.content.author"
+              [ngStyle]="getTypographyStyle(sec, 'subheading')">— {{ sec.content.author }}</cite>
+          </div>
+
+          <!-- CTA in Full Preview -->
+          <div *ngIf="sec.type === 'cta'" class="preview-cta">
+            <h3 class="preview-cta__title" *ngIf="sec.content.title; else noFullCtaTitle"
+              [ngStyle]="getTypographyStyle(sec, 'heading')">
+              {{ sec.content.title }}
+            </h3>
+            <ng-template #noFullCtaTitle>
+              <h3 class="preview-cta__title preview-placeholder-text">Chưa có tiêu đề CTA</h3>
+            </ng-template>
+            <p class="preview-cta__desc" *ngIf="sec.content.description" [ngStyle]="getTypographyStyle(sec, 'body')">{{
+              sec.content.description }}</p>
+            <a class="btn-preview-primary" *ngIf="sec.content.buttonText" [ngStyle]="getTypographyStyle(sec, 'button')">
+              {{ sec.content.buttonText }}
+            </a>
+          </div>
+
+          <!-- Spacer in Full Preview -->
+          <div *ngIf="sec.type === 'spacer'" class="preview-spacer" [style.height.px]="sec.settings.spacerHeight || 48">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       6. CONFIRM DIALOG FOR DELETE
+  ══════════════════════════════════════════════════════════ -->
+  <app-confirm-dialog [isOpen]="isDeleteDialogOpen" title="Xóa phân đoạn trang"
+    [message]="'Bạn có chắc chắn muốn xóa phân đoạn \'' + (sectionToDelete?.name || '') + '\'? Thao tác này sẽ xóa khỏi danh sách tạm thời.'"
+    confirmLabel="Xóa phân đoạn" cancelLabel="Hủy bỏ" variant="danger" (confirmed)="onConfirmDelete()"
+    (cancelled)="onCancelDelete()" (closed)="onCancelDelete()">
+  </app-confirm-dialog>
+
+</div>

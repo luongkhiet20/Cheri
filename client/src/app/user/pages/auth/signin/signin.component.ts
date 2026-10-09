@@ -57,8 +57,8 @@ export class SignInComponent implements OnInit {
 
   ngOnInit(): void {
     const currentUser = this.selectors.user();
-    if (checkIsAdmin(currentUser)) {
-      this.router.navigate(['/admin']);
+    if (currentUser && (currentUser.email || currentUser.accessToken)) {
+      this.router.navigate(['/']);
     }
   }
 
@@ -105,11 +105,7 @@ export class SignInComponent implements OnInit {
           this.signInForm.reset();
           // Hợp nhất giỏ hàng khách vãng lai (nếu có) vào tài khoản User và xóa guest cart
           this.store.mergeGuestCartIfAny(lang || 'vi');
-          if (checkIsAdmin(user)) {
-            this.router.navigate(['/admin']);
-          } else {
-            this.router.navigate(['/' + lang]);
-          }
+          this.router.navigate(['/']);
         } else {
           this.snackBar.open('Đăng nhập thất bại. Vui lòng kiểm tra lại email hoặc mật khẩu!', 'Đóng', {
             duration: 4000,

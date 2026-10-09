@@ -1,0 +1,37 @@
+:host {
+  display: block;
+}
+
+:host ::ng-deep .container-mid {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+:host .page {
+  margin: 10px;
+}
+
+/* Định dạng h2 bên trong nội dung HTML */
+:host h2,
+:host ::ng-deep .page-content h2 {
+  font-family: var(--font-sans);
+  font-size: 18px;
+  font-weight: 700;
+  color: #74070e;
+  line-height: 1.2;
+}
+
+/* Tiêu đề chính của trang */
+:host .page-title {
+  font-family: var(--font-sans);
+  font-size: 18px;
+  font-weight: 700;
+  color: #74070e;
+  line-height: 1.2;
+  margin: 0 0 20px;
+  border-bottom: 1px solid #f3f4f6;
+  padding-bottom: 12px;
+}

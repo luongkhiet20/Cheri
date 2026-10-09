@@ -1,6 +1,12 @@
-/* =============================================
-   ADMIN SIDEBAR
-   ============================================= */
+/* ==========================================================================
+   CHÉRI ADMIN SIDEBAR — THIẾT KẾ CHUẨN XÁC THEO MẪU GIAO DIỆN
+   - Tối giản, nền trắng #FFFFFF, viền phải #ECECEC
+   - Icon màu Burgundy #74070E
+   - Menu Active: Nền hồng nhạt #F8E9EB, chữ & icon Burgundy #74070E
+   - Menu inactive: Chữ xám #374151, icon Burgundy #74070E
+   - Nhóm: TỔNG QUAN, KINH DOANH, VẬN HÀNH (Chữ xám #6B7280)
+   - Menu con: Dot xám #94A3B8 khi chưa chọn, Dot Burgundy #74070E khi chọn
+   ========================================================================== */
 
 .admin-sidebar {
   position: fixed;
@@ -8,118 +14,202 @@
   left: 0;
   bottom: 0;
   width: var(--sidebar-width, 240px);
-  background-color: var(--cheri-white, #FFFFFF);
-  border-right: 1px solid var(--cheri-divider, #EEEAEA);
+  background-color: #FFFFFF;
+  border-right: 1px solid #ECECEC;
   z-index: 90;
-  overflow-y: auto;
-  overflow-x: hidden;
-  transition: width var(--transition-base, 250ms ease),
-              transform var(--transition-base, 250ms ease);
+  overflow: visible; /* Giữ visible để nút floating toggle không bị cắt */
   display: flex;
   flex-direction: column;
+  transition: width 180ms cubic-bezier(0.4, 0, 0.2, 1),
+              transform 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
 }
 
 .admin-sidebar__inner {
   flex: 1;
-  padding: var(--space-md) 0;
-}
-
-/* ----- Navigation List ----- */
-.admin-sidebar__nav {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 0 var(--space-sm);
-  margin: 0;
+  height: 100%;
+  min-height: 0;
+  overflow: visible;
+  position: relative;
+}
+
+/* ==========================================================================
+   1. NÚT THU GỌN / MỞ RỘNG DẠNG FLOATING TOGGLE
+   - Nằm tại mép phải của sidebar, nhô ra ngoài 13px
+   ========================================================================== */
+.admin-sidebar__floating-toggle {
+  position: absolute;
+  top: 14px;
+  right: -13px;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background-color: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6B7280;
+  cursor: pointer;
+  z-index: 105;
+  padding: 0;
+  transition: all 140ms ease;
+}
+
+.admin-sidebar__floating-toggle:hover {
+  background-color: #FAF1F2;
+  color: #74070E;
+  border-color: #74070E;
+  box-shadow: 0 2px 8px rgba(116, 7, 14, 0.14);
+}
+
+.admin-sidebar__floating-toggle:focus {
+  outline: none;
+}
+
+.admin-sidebar__floating-toggle:focus-visible {
+  outline: 2px solid #74070E;
+  outline-offset: 2px;
+}
+
+.admin-sidebar__toggle-icon {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+/* Header ẩn trên desktop để bắt đầu ngay từ TỔNG QUAN như hình mẫu */
+.admin-sidebar__mobile-header {
+  display: none;
+}
+
+/* ==========================================================================
+   2. VÙNG CUỘN MENU (SCROLL AREA)
+   ========================================================================== */
+.admin-sidebar__scroll-area {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 14px 10px 24px 10px;
+  box-sizing: border-box;
+}
+
+/* Thanh cuộn mảnh mượt mà */
+.admin-sidebar__scroll-area::-webkit-scrollbar {
+  width: 3px;
+}
+.admin-sidebar__scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+.admin-sidebar__scroll-area::-webkit-scrollbar-thumb {
+  background: #E5E7EB;
+  border-radius: 3px;
+}
+.admin-sidebar__scroll-area::-webkit-scrollbar-thumb:hover {
+  background: #CBD5E1;
+}
+
+.admin-sidebar__nav-groups {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-sidebar__group {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ==========================================================================
+   3. NHÃN PHÂN NHÓM: TỔNG QUAN, KINH DOANH, VẬN HÀNH
+   ========================================================================== */
+.admin-sidebar__group-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6B7280;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  padding: 0 12px;
+  margin: 18px 0 8px 0;
+  user-select: none;
+  line-height: 1.2;
+}
+
+.admin-sidebar__group:first-child .admin-sidebar__group-label {
+  margin-top: 2px;
+}
+
+/* Đường kẻ phân cách trước Quản lý trang */
+.admin-sidebar__divider {
+  height: 1px;
+  background-color: #ECECEC;
+  margin: 16px 8px 12px 8px;
+}
+
+.admin-sidebar__group-list {
   list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
 .admin-sidebar__item {
   list-style: none;
+  position: relative;
 }
 
-/* ----- Nav Link States (Desktop Default) ----- */
+/* ==========================================================================
+   4. MENU CHÍNH (Cao 38-40px, Icon 17px, Chữ 13.5px, Gap 12px)
+   ========================================================================== */
 .admin-sidebar__link {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 14px;
-  border-radius: var(--radius-md, 8px);
-  color: var(--cheri-text-secondary);
-  font-size: var(--font-size-base);
-  font-weight: 400;
+  min-height: 38px;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 8px;
+  color: #374151;
+  font-size: 13.5px;
+  font-weight: 450;
   text-decoration: none;
   cursor: pointer;
-  transition: background-color var(--transition-fast),
-              color var(--transition-fast);
   white-space: nowrap;
   position: relative;
+  box-sizing: border-box;
+  transition: background-color 140ms ease, color 140ms ease;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
 }
 
-/* Icon Container */
+/* Icon container & SVG (Màu Burgundy #74070E cho toàn bộ icon) */
 .admin-sidebar__icon-wrap {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 17px;
+  height: 17px;
   flex-shrink: 0;
   color: #74070E;
 }
 
 .admin-sidebar__icon {
-  width: 20px;
-  height: 20px;
+  width: 17px;
+  height: 17px;
   display: block;
   color: #74070E;
   stroke: #74070E;
-  transition: transform var(--transition-fast, 150ms ease),
-              color var(--transition-fast, 150ms ease),
-              stroke var(--transition-fast, 150ms ease);
-}
-
-.admin-sidebar__link:hover .admin-sidebar__icon-wrap,
-.admin-sidebar__link:hover .admin-sidebar__icon,
-.admin-sidebar__link.is-active .admin-sidebar__icon-wrap,
-.admin-sidebar__link.is-active .admin-sidebar__icon {
-  color: #74070E;
-  stroke: #74070E;
-}
-
-/* Default state indicator bar */
-.admin-sidebar__link::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 0;
-  background-color: var(--cheri-primary);
-  border-radius: 0 3px 3px 0;
-  transition: height var(--transition-base);
-}
-
-/* Hover state */
-.admin-sidebar__link:hover {
-  background-color: var(--cheri-background);
-  color: var(--cheri-text);
-}
-
-/* Active state */
-.admin-sidebar__link.is-active {
-  background-color: var(--cheri-primary-light);
-  color: var(--cheri-primary);
-  font-weight: 600;
-}
-
-.admin-sidebar__link.is-active::before {
-  height: 60%;
-}
-
-/* Active hover state */
-.admin-sidebar__link.is-active:hover {
-  background-color: #EDD9DA;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .admin-sidebar__link-text {
@@ -130,13 +220,159 @@
   white-space: nowrap;
 }
 
-/* Tooltip (ẩn mặc định trên desktop và mobile) */
-.admin-sidebar__tooltip {
-  display: none;
+/* Trạng thái Hover */
+.admin-sidebar__link:hover {
+  background-color: #FAF1F2;
+  color: #74070E;
 }
 
-/* Mobile top bar & overlay mặc định ẩn */
-.admin-sidebar__mobile-top {
+/* Trạng thái Active (Nền hồng nhạt #F8E9EB, chữ & icon Burgundy #74070E) */
+.admin-sidebar__link.is-active {
+  background-color: #F8E9EB;
+  color: #74070E;
+  font-weight: 600;
+}
+
+.admin-sidebar__link.is-active .admin-sidebar__icon-wrap,
+.admin-sidebar__link.is-active .admin-sidebar__icon {
+  color: #74070E;
+  stroke: #74070E;
+}
+
+/* Bỏ viền cam mặc định trên Dashboard khi click / focus */
+.admin-sidebar__link:focus,
+.admin-sidebar__sublink:focus {
+  outline: none;
+}
+
+/* Giữ focus-visible phục vụ điều hướng bàn phím */
+.admin-sidebar__link:focus-visible,
+.admin-sidebar__sublink:focus-visible {
+  outline: 2px solid #74070E;
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   5. MENU CHA & MENU CON (Quản lý trang)
+   - Menu cha: chữ Burgundy #74070E, mũi tên chevron
+   - Menu con: thụt lề, dot tròn to tròn, active nền hồng #F8E9EB
+   ========================================================================== */
+.admin-sidebar__link--parent {
+  color: #74070E;
+  font-weight: 600;
+}
+
+.admin-sidebar__chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  color: #74070E;
+  flex-shrink: 0;
+}
+
+.admin-sidebar__chevron-icon {
+  width: 14px;
+  height: 14px;
+  display: block;
+  stroke-width: 2;
+  transition: transform 180ms ease, color 180ms ease;
+}
+
+.admin-sidebar__chevron-icon.is-rotated {
+  transform: rotate(180deg);
+}
+
+.admin-sidebar__subnav {
+  list-style: none;
+  padding: 4px 0 2px 14px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  animation: submenuFadeIn 140ms ease-out;
+}
+
+@keyframes submenuFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.admin-sidebar__subitem {
+  list-style: none;
+  position: relative;
+}
+
+.admin-sidebar__sublink {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 36px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  color: #4B5563;
+  font-size: 13.5px;
+  font-weight: 450;
+  text-decoration: none;
+  transition: all 140ms ease;
+  box-sizing: border-box;
+}
+
+/* Chấm tròn SVG submenu (Đầy đặn, nổi bật như hình mẫu) */
+.admin-sidebar__subdot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  color: #94A3B8; /* Xám slate khi chưa chọn */
+  transition: color 140ms ease;
+}
+
+.admin-sidebar__subicon-dot {
+  width: 13px;
+  height: 13px;
+  display: block;
+  fill: currentColor;
+}
+
+.admin-sidebar__sublink-text {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-sidebar__sublink:hover {
+  background-color: #FAF1F2;
+  color: #74070E;
+}
+
+.admin-sidebar__sublink:hover .admin-sidebar__subdot {
+  color: #74070E;
+}
+
+/* Active menu con: Nền hồng nhạt #F8E9EB, chữ & dot Burgundy #74070E */
+.admin-sidebar__sublink.is-active {
+  background-color: #F8E9EB;
+  color: #74070E;
+  font-weight: 600;
+}
+
+.admin-sidebar__sublink.is-active .admin-sidebar__subdot {
+  color: #74070E; /* Dot đổi sang Burgundy #74070E */
+}
+
+/* Tooltip ẩn mặc định */
+.admin-sidebar__tooltip {
   display: none;
 }
 
@@ -144,130 +380,101 @@
   display: none;
 }
 
-/* =============================================
-   RESPONSIVE: COLLAPSED SIDEBAR (769px - 1200px)
-   Chỉ giữ lại SVG icon, ẩn hoàn toàn menu text
-   ============================================= */
-@media (max-width: 1200px) and (min-width: 769px) {
-  .admin-sidebar {
-    width: var(--sidebar-width, 68px);
-    overflow-x: visible; /* Để tooltip có thể hiển thị ra ngoài */
-  }
-
-  .admin-sidebar__inner {
-    overflow-x: visible;
-  }
-
-  .admin-sidebar__nav {
-    padding: 0 10px;
-    align-items: center;
-    overflow-x: visible;
-  }
-
-  .admin-sidebar__item {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-  }
-
-  .admin-sidebar__link {
-    width: 48px;
-    height: 48px;
-    padding: 0;
-    justify-content: center;
-    align-items: center;
-    border-radius: var(--radius-lg, 10px);
-    position: relative;
-    overflow: visible;
-  }
-
-  /* Căn giữa icon hoàn hảo */
-  .admin-sidebar__icon-wrap {
-    margin: 0;
-    width: 22px;
-    height: 22px;
-  }
-
-  .admin-sidebar__icon {
-    width: 22px;
-    height: 22px;
-  }
-
-  /* Ẩn text khỏi giao diện thị giác nhưng giữ trong DOM cho Accessibility/Screen reader */
-  .admin-sidebar__link-text {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-
-  /* Indicator thanh sọc active căn giữa theo nút vuông */
-  .admin-sidebar__link::before {
-    left: -10px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 3px;
-    height: 0;
-  }
-
-  .admin-sidebar__link.is-active::before {
-    height: 24px;
-  }
-
-  /* Tooltip hiển thị khi hover menu ở chế độ collapsed */
-  .admin-sidebar__tooltip {
-    display: block;
-    position: absolute;
-    left: calc(100% + 12px);
-    top: 50%;
-    transform: translateY(-50%) translateX(-4px);
-    background: #1e293b;
-    color: #ffffff;
-    font-size: 13px;
-    font-weight: 500;
-    padding: 6px 12px;
-    border-radius: 6px;
-    white-space: nowrap;
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition: opacity 0.15s ease, transform 0.15s ease;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
-    z-index: 1000;
-  }
-
-  .admin-sidebar__tooltip::before {
-    content: '';
-    position: absolute;
-    right: 100%;
-    top: 50%;
-    transform: translateY(-50%);
-    border-width: 5px;
-    border-style: solid;
-    border-color: transparent #1e293b transparent transparent;
-  }
-
-  .admin-sidebar__link:hover .admin-sidebar__tooltip {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(-50%) translateX(0);
-  }
+/* ==========================================================================
+   6. CHẾ ĐỘ THU GỌN SIDEBAR (COLLAPSED STATE — 68px)
+   ========================================================================== */
+.admin-sidebar.is-collapsed {
+  width: 68px;
 }
 
-/* =============================================
-   RESPONSIVE: MOBILE OFFCANVAS DRAWER (<= 768px)
-   ============================================= */
+.admin-sidebar.is-collapsed .admin-sidebar__group-label {
+  display: none;
+}
+
+.admin-sidebar.is-collapsed .admin-sidebar__divider {
+  margin: 10px 4px;
+}
+
+.admin-sidebar.is-collapsed .admin-sidebar__scroll-area {
+  padding: 14px 6px 24px 6px;
+}
+
+.admin-sidebar.is-collapsed .admin-sidebar__link {
+  width: 44px;
+  height: 38px;
+  padding: 0;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.admin-sidebar.is-collapsed .admin-sidebar__link-text,
+.admin-sidebar.is-collapsed .admin-sidebar__chevron {
+  display: none;
+}
+
+.admin-sidebar.is-collapsed .admin-sidebar__subnav {
+  padding-left: 0;
+  align-items: center;
+}
+
+.admin-sidebar.is-collapsed .admin-sidebar__sublink {
+  width: 44px;
+  height: 36px;
+  padding: 0;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.admin-sidebar.is-collapsed .admin-sidebar__sublink-text {
+  display: none;
+}
+
+/* Tooltip thuần CSS hiển thị khi hover ở trạng thái thu gọn */
+.admin-sidebar.is-collapsed .admin-sidebar__link .admin-sidebar__tooltip,
+.admin-sidebar.is-collapsed .admin-sidebar__sublink .admin-sidebar__tooltip {
+  display: none;
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: #1F2937;
+  color: #FFFFFF;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.admin-sidebar.is-collapsed .admin-sidebar__link .admin-sidebar__tooltip::before,
+.admin-sidebar.is-collapsed .admin-sidebar__sublink .admin-sidebar__tooltip::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 4px;
+  border-style: solid;
+  border-color: transparent #1F2937 transparent transparent;
+}
+
+.admin-sidebar.is-collapsed .admin-sidebar__link:hover .admin-sidebar__tooltip,
+.admin-sidebar.is-collapsed .admin-sidebar__sublink:hover .admin-sidebar__tooltip {
+  display: block;
+}
+
+/* ==========================================================================
+   7. RESPONSIVE: MOBILE OFFCANVAS (<= 768px)
+   ========================================================================== */
 @media (max-width: 768px) {
   .admin-sidebar {
     top: 0;
     left: 0;
     bottom: 0;
-    width: 280px;
+    width: 270px;
     max-width: 85vw;
     z-index: 1000;
     transform: translateX(-100%);
@@ -278,51 +485,41 @@
 
   .admin-sidebar.is-open {
     transform: translateX(0);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
   }
 
-  .admin-sidebar__mobile-top {
+  .admin-sidebar__floating-toggle {
+    display: none !important;
+  }
+
+  .admin-sidebar__mobile-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--cheri-divider);
-    margin-bottom: 8px;
-  }
-
-  .admin-sidebar__mobile-brand {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
+    height: 54px;
+    padding: 0 16px;
+    border-bottom: 1px solid #ECECEC;
   }
 
   .admin-sidebar__mobile-title {
-    font-family: 'Corinthia', cursive, var(--font-logo);
-    font-size: 26px;
-    font-weight: 400;
-    color: var(--cheri-primary, #74070E);
-    line-height: 1;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: #74070E;
   }
 
-  .admin-sidebar__close-btn {
+  .admin-sidebar__mobile-close {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 34px;
-    height: 34px;
-    border-radius: var(--radius-md, 8px);
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
     background: transparent;
-    border: 1px solid var(--cheri-divider);
-    color: var(--cheri-text-secondary);
+    border: 1px solid #E5E7EB;
+    color: #6B7280;
     cursor: pointer;
-    transition: all var(--transition-fast, 0.15s ease);
     padding: 0;
-  }
-
-  .admin-sidebar__close-btn:hover {
-    background: var(--cheri-background);
-    color: var(--cheri-primary);
-    border-color: var(--cheri-primary);
   }
 
   .admin-sidebar__overlay {
@@ -333,41 +530,5 @@
     backdrop-filter: blur(2px);
     -webkit-backdrop-filter: blur(2px);
     z-index: -1;
-  }
-
-  .admin-sidebar__nav {
-    padding: 0 var(--space-sm);
-    align-items: stretch;
-  }
-
-  .admin-sidebar__item {
-    display: block;
-    width: 100%;
-  }
-
-  .admin-sidebar__link {
-    width: 100%;
-    height: auto;
-    padding: 12px 16px;
-    font-size: 15px;
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    justify-content: flex-start;
-  }
-
-  .admin-sidebar__link-text {
-    position: static;
-    width: auto;
-    height: auto;
-    clip: auto;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .admin-sidebar__tooltip {
-    display: none !important;
   }
 }

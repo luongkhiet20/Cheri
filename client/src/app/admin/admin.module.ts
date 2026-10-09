@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Routes } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { DragDropModule } from '@angular/cdk/drag-drop';
 
 // Layout
 import { AdminLayout } from './layout/admin-layout/admin-layout';
@@ -46,9 +47,11 @@ import { UsersDetailComponent } from './pages/users/users-detail/users-detail.co
 import { InventoryComponent } from './pages/inventory/inventory.component';
 import { InventoryDetailComponent } from './pages/inventory/inventory-detail/inventory-detail.component';
 import { InventoryImportComponent } from './pages/inventory/inventory-import/inventory-import.component';
-import { PagesComponent } from './pages/pages/pages.component';
-import { PageFormComponent } from './pages/pages/page-form/page-form.component';
-import { PageDetailComponent } from './pages/pages/page-detail/page-detail.component';
+import { PoliciesComponent } from './pages/pages/policies/policies.component';
+import { PolicyFormComponent } from './pages/pages/policies/policy-form/policy-form.component';
+import { PolicyEditComponent } from './pages/pages/policies/policy-edit/policy-edit.component';
+import { HomeComponent } from './pages/pages/home/home.component';
+import { AboutComponent } from './pages/pages/about/about';
 import { AccountComponent } from './pages/account/account.component';
 import { SettingsComponent } from './pages/settings/settings.component';
 import { CouponsComponent } from './pages/coupons/coupons.component';
@@ -97,11 +100,20 @@ const routes: Routes = [
       { path: 'inventory/import', component: InventoryImportComponent },
       { path: 'inventory/:id', component: InventoryDetailComponent },
       { path: 'inventory/:id/edit', component: InventoryImportComponent },
-      { path: 'pages', component: PagesComponent },
-      { path: 'pages/new', component: PageFormComponent },
-      { path: 'pages/add', component: PageFormComponent },
-      { path: 'pages/:id', component: PageDetailComponent },
-      { path: 'pages/:id/edit', component: PageFormComponent },
+      { path: 'policies', component: PoliciesComponent },
+      { path: 'policies/new', component: PolicyFormComponent },
+      { path: 'policies/add', component: PolicyFormComponent },
+      { path: 'policies/:id', component: PolicyEditComponent },
+      { path: 'policies/:id/edit', component: PolicyFormComponent },
+      { path: 'pages/home', component: HomeComponent },
+      { path: 'pages/about', component: AboutComponent },
+      { path: 'home', redirectTo: 'pages/home', pathMatch: 'full' },
+      { path: 'about', redirectTo: 'pages/about', pathMatch: 'full' },
+      { path: 'pages', redirectTo: 'pages/home', pathMatch: 'full' },
+      { path: 'pages/new', redirectTo: 'policies/new', pathMatch: 'full' },
+      { path: 'pages/add', redirectTo: 'policies/add', pathMatch: 'full' },
+      { path: 'pages/:id', redirectTo: 'policies/:id', pathMatch: 'full' },
+      { path: 'pages/:id/edit', redirectTo: 'policies/:id/edit', pathMatch: 'full' },
       { path: 'account', component: AccountComponent },
       { path: 'settings', component: SettingsComponent },
     ]
@@ -154,9 +166,11 @@ const routes: Routes = [
     InventoryComponent,
     InventoryDetailComponent,
     InventoryImportComponent,
-    PagesComponent,
-    PageFormComponent,
-    PageDetailComponent,
+    PoliciesComponent,
+    PolicyFormComponent,
+    PolicyEditComponent,
+    HomeComponent,
+    AboutComponent,
     AccountComponent,
     SettingsComponent,
   ],
@@ -164,6 +178,7 @@ const routes: Routes = [
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
+    DragDropModule,
     RouterModule.forChild(routes),
   ],
   exports: [

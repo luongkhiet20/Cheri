@@ -1,24 +1,24 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
-import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
-import { AdminService } from '../../services/admin.service';
-import { NotificationService } from '../../shared/notification/notification.service';
+import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../../shared/models/admin-table.models';
+import { AdminService } from '../../../services/admin.service';
+import { NotificationService } from '../../../shared/notification/notification.service';
 
-export function isPagePublished(row: any): boolean {
+export function isPolicyPublished(row: any): boolean {
   if (!row) return false;
   if (typeof row.isPublished === 'boolean') return row.isPublished;
   return row.status === 'Đã xuất bản' || row.statusCode === 'published';
 }
 
 @Component({
-  selector: 'app-pages',
+  selector: 'app-policies',
   standalone: false,
-  templateUrl: './pages.component.html',
-  styleUrls: ['./pages.component.css']
+  templateUrl: './policies.component.html',
+  styleUrls: ['./policies.component.css']
 })
-export class PagesComponent implements OnInit {
+export class PoliciesComponent implements OnInit {
   columns: TableColumn[] = [
-    { key: 'title', label: 'Tiêu đề trang', type: 'text', sortable: true },
+    { key: 'title', label: 'Tiêu đề chính sách', type: 'text', sortable: true },
     { key: 'slug', label: 'Đường dẫn', type: 'text', sortable: true },
     { key: 'updatedAt', label: 'Cập nhật lần cuối', type: 'date', sortable: true },
     { key: 'status', label: 'Trạng thái', type: 'status', sortable: true },
@@ -29,12 +29,12 @@ export class PagesComponent implements OnInit {
     {
       key: 'toggle',
       label: 'Tắt',
-      showWhen: (r: any) => isPagePublished(r)
+      showWhen: (r: any) => isPolicyPublished(r)
     },
     {
       key: 'toggle',
       label: 'Bật',
-      showWhen: (r: any) => !isPagePublished(r)
+      showWhen: (r: any) => !isPolicyPublished(r)
     }
   ];
   filterFields: FilterField[] = [
@@ -65,24 +65,31 @@ export class PagesComponent implements OnInit {
   currentSearch = '';
   currentStatusFilter = '';
 
-  get selectedCount(): number { return this.selectedIds.size; }
-  get allSelected(): boolean { return this.data.length > 0 && this.data.every((r: any) => this.selectedIds.has(r.id)); }
-  get isIndeterminate(): boolean { return this.selectedCount > 0 && !this.allSelected; }
-  get displayTotal(): number { return this.pagination?.total ?? this.data.length; }
-
   constructor(
-    private apiService: AdminService,
     private router: Router,
+    private apiService: AdminService,
     private cdr: ChangeDetectorRef,
     private notificationService: NotificationService
   ) { }
 
   ngOnInit(): void {
-    this.loadPages();
+    this.loadPolicies();
   }
 
-  isPagePublished(row: any): boolean {
-    return isPagePublished(row);
+  get selectedCount(): number {
+    return this.selectedIds.size;
+  }
+
+  get allSelected(): boolean {
+    return this.data.length > 0 && this.data.every(r => this.selectedIds.has(r.id));
+  }
+
+  get displayTotal(): number {
+    return this.pagination.total || this.data.length;
+  }
+
+  isPolicyPublished(row: any): boolean {
+    return isPolicyPublished(row);
   }
 
   applyFilters(): void {
@@ -99,7 +106,7 @@ export class PagesComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
-  loadPages(): void {
+  loadPolicies(): void {
     this.isLoading = true;
     this.errorMessage = '';
 
@@ -110,14 +117,14 @@ export class PagesComponent implements OnInit {
           this.allData = res.data || [];
           this.applyFilters();
         } else {
-          this.errorMessage = res.message || 'Lỗi khi tải danh sách trang';
+          this.errorMessage = res.message || 'Lỗi khi tải danh sách chính sách';
         }
         this.cdr.markForCheck();
       },
       error: (err) => {
         this.isLoading = false;
-        this.errorMessage = err.error?.message || 'Không thể tải danh sách trang từ máy chủ MongoDB';
-        console.error('Lỗi pages:', err);
+        this.errorMessage = err.error?.message || 'Không thể tải danh sách chính sách từ máy chủ MongoDB';
+        console.error('Lỗi policies:', err);
         this.cdr.markForCheck();
       }
     });
@@ -142,7 +149,7 @@ export class PagesComponent implements OnInit {
     if (c === 0) return;
     this.isBulkDelete = true;
     this.pendingDeleteId = null;
-    this.confirmMessage = `Bạn có chắc chắn muốn xóa ${c} trang đã chọn khỏi MongoDB?`;
+    this.confirmMessage = `Bạn có chắc chắn muốn xóa ${c} chính sách đã chọn khỏi MongoDB?`;
     this.confirmOpen = true;
     this.cdr.markForCheck();
   }
@@ -159,7 +166,7 @@ export class PagesComponent implements OnInit {
             completed++;
             if (completed === idsToDelete.length) {
               this.selectedIds.clear();
-              const msg = `Đã xóa thành công ${completed} trang`;
+              const msg = `Đã xóa thành công ${completed} chính sách`;
               this.successMessage = msg;
               this.notificationService.success(msg);
               this.cdr.markForCheck();
@@ -167,12 +174,12 @@ export class PagesComponent implements OnInit {
                 this.successMessage = '';
                 this.cdr.markForCheck();
               }, 3000);
-              this.loadPages();
+              this.loadPolicies();
             }
           },
           error: (err) => {
-            console.error('Lỗi khi xóa trang:', err);
-            const msg = err.error?.message || 'Lỗi khi xóa một số trang';
+            console.error('Lỗi khi xóa chính sách:', err);
+            const msg = err.error?.message || 'Lỗi khi xóa một số chính sách';
             this.notificationService.error(msg);
             this.cdr.markForCheck();
           }
@@ -184,12 +191,12 @@ export class PagesComponent implements OnInit {
           this.confirmOpen = false;
           this.pendingDeleteId = null;
           if (res.success) {
-            this.successMessage = 'Xóa trang thành công';
-            this.notificationService.success('Xóa trang thành công');
-            this.loadPages();
+            this.successMessage = 'Xóa chính sách thành công';
+            this.notificationService.success('Xóa chính sách thành công');
+            this.loadPolicies();
           } else {
-            this.errorMessage = res.message || 'Lỗi khi xóa trang';
-            this.notificationService.error(res.message || 'Lỗi khi xóa trang');
+            this.errorMessage = res.message || 'Lỗi khi xóa chính sách';
+            this.notificationService.error(res.message || 'Lỗi khi xóa chính sách');
           }
           this.cdr.markForCheck();
           setTimeout(() => {
@@ -201,7 +208,7 @@ export class PagesComponent implements OnInit {
         error: (err) => {
           this.confirmOpen = false;
           this.pendingDeleteId = null;
-          const msg = err.error?.message || 'Lỗi khi xóa trang khỏi MongoDB';
+          const msg = err.error?.message || 'Lỗi khi xóa chính sách khỏi MongoDB';
           this.errorMessage = msg;
           this.notificationService.error(msg);
           this.cdr.markForCheck();
@@ -226,11 +233,11 @@ export class PagesComponent implements OnInit {
 
   onAction(e: ActionEvent): void {
     if (e.action === 'view' || e.action === 'preview') {
-      this.router.navigate(['/admin/pages', e.row.id]);
+      this.router.navigate(['/admin/policies', e.row.id]);
     } else if (e.action === 'edit') {
-      this.router.navigate(['/admin/pages', e.row.id, 'edit']);
+      this.router.navigate(['/admin/policies', e.row.id, 'edit']);
     } else if (e.action === 'toggle') {
-      const isCurrentlyPublished = this.isPagePublished(e.row);
+      const isCurrentlyPublished = this.isPolicyPublished(e.row);
       const newTarget = isCurrentlyPublished ? 'draft' : 'published';
       const nextIsPublished = !isCurrentlyPublished;
 
@@ -264,10 +271,10 @@ export class PagesComponent implements OnInit {
                 Object.assign(itemInAll, res.data);
               }
             }
-            const msg = res.message || `Trang đã chuyển sang trạng thái "${nextIsPublished ? 'Đã xuất bản' : 'Bản nháp'}"`;
+            const msg = res.message || `Chính sách đã chuyển sang trạng thái "${nextIsPublished ? 'Đã xuất bản' : 'Bản nháp'}"`;
             this.successMessage = msg;
             this.notificationService.success(msg);
-            this.loadPages();
+            this.loadPolicies();
           } else {
             // Hoàn tác nếu server trả về không thành công
             e.row.isPublished = prevIsPublished;
@@ -303,7 +310,7 @@ export class PagesComponent implements OnInit {
             itemInAll.statusVariant = prevStatusVariant;
             itemInAll.statusCode = prevStatusCode;
           }
-          const msg = err.error?.message || 'Lỗi kết nối khi đổi trạng thái trang';
+          const msg = err.error?.message || 'Lỗi kết nối khi đổi trạng thái chính sách';
           this.errorMessage = msg;
           this.notificationService.error(msg);
           this.cdr.markForCheck();
@@ -316,7 +323,7 @@ export class PagesComponent implements OnInit {
     } else if (e.action === 'delete') {
       this.isBulkDelete = false;
       this.pendingDeleteId = e.row.id;
-      this.confirmMessage = `Bạn có chắc muốn xóa trang "${e.row.title}" khỏi MongoDB không?`;
+      this.confirmMessage = `Bạn có chắc muốn xóa chính sách "${e.row.title}" khỏi MongoDB không?`;
       this.confirmOpen = true;
       this.cdr.markForCheck();
     }
@@ -334,7 +341,7 @@ export class PagesComponent implements OnInit {
     this.applyFilters();
   }
 
-  onRefresh(): void { this.loadPages(); }
+  onRefresh(): void { this.loadPolicies(); }
   onPageChange(p: number): void {
     this.pagination = { ...this.pagination, page: p };
     this.cdr.markForCheck();
@@ -344,3 +351,5 @@ export class PagesComponent implements OnInit {
     this.cdr.markForCheck();
   }
 }
+
+export { PoliciesComponent as PagesComponent };

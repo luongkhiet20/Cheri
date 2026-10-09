@@ -1,9 +1,9 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { AdminService } from '../../../services/admin.service';
-import { NotificationService } from '../../../shared/notification/notification.service';
+import { AdminService } from '../../../../services/admin.service';
+import { NotificationService } from '../../../../shared/notification/notification.service';
 
-export interface PageFormData {
+export interface PolicyFormData {
   title: string;
   slug: string;
   isPublished: boolean;
@@ -12,12 +12,12 @@ export interface PageFormData {
 }
 
 @Component({
-  selector: 'app-page-form',
+  selector: 'app-policy-form',
   standalone: false,
-  templateUrl: './page-form.component.html',
-  styleUrls: ['./page-form.component.css']
+  templateUrl: './policy-form.component.html',
+  styleUrls: ['./policy-form.component.css']
 })
-export class PageFormComponent implements OnInit {
+export class PolicyFormComponent implements OnInit {
   isEditMode = false;
   pageId: string | null = null;
   isLoading = false;
@@ -25,7 +25,7 @@ export class PageFormComponent implements OnInit {
   isDirty = false;
   isSlugCustomized = false;
 
-  formData: PageFormData = {
+  formData: PolicyFormData = {
     title: '',
     slug: '',
     isPublished: true,
@@ -51,7 +51,7 @@ export class PageFormComponent implements OnInit {
     this.isEditMode = !!this.pageId;
 
     if (this.isEditMode && this.pageId) {
-      this.loadPageDetail(this.pageId);
+      this.loadPolicyDetail(this.pageId);
     }
   }
 
@@ -59,7 +59,7 @@ export class PageFormComponent implements OnInit {
     this.isDirty = true;
   }
 
-  loadPageDetail(id: string): void {
+  loadPolicyDetail(id: string): void {
     this.isLoading = true;
     this.errorMessage = '';
 
@@ -78,13 +78,13 @@ export class PageFormComponent implements OnInit {
           this.isSlugCustomized = true;
           this.isDirty = false;
         } else {
-          this.errorMessage = res.message || 'Không tìm thấy trang để chỉnh sửa';
+          this.errorMessage = res.message || 'Không tìm thấy chính sách để chỉnh sửa';
         }
         this.cdr.markForCheck();
       },
       error: (err) => {
         this.isLoading = false;
-        this.errorMessage = err.error?.message || 'Lỗi khi tải thông tin trang từ cơ sở dữ liệu MongoDB';
+        this.errorMessage = err.error?.message || 'Lỗi khi tải thông tin chính sách từ cơ sở dữ liệu MongoDB';
         this.cdr.markForCheck();
       }
     });
@@ -109,7 +109,7 @@ export class PageFormComponent implements OnInit {
     this.errors = {};
 
     if (!this.formData.title || !this.formData.title.trim()) {
-      this.errors['title'] = 'Tiêu đề trang không được để trống';
+      this.errors['title'] = 'Tiêu đề chính sách không được để trống';
     }
 
     if (this.formData.slug && !/^[a-z0-9-]+$/.test(this.formData.slug)) {
@@ -151,15 +151,15 @@ export class PageFormComponent implements OnInit {
         next: (res) => {
           this.isSubmitting = false;
           if (res.success) {
-            const msg = 'Cập nhật trang thành công!';
+            const msg = 'Cập nhật chính sách thành công!';
             this.successMessage = msg;
             this.notificationService.success(msg);
             this.isDirty = false;
             setTimeout(() => {
-              this.router.navigate(['/admin/pages', this.pageId]);
+              this.router.navigate(['/admin/policies', this.pageId]);
             }, 600);
           } else {
-            const msg = res.message || 'Lỗi cập nhật trang';
+            const msg = res.message || 'Lỗi cập nhật chính sách';
             this.errorMessage = msg;
             this.notificationService.error(msg);
           }
@@ -167,7 +167,7 @@ export class PageFormComponent implements OnInit {
         },
         error: (err) => {
           this.isSubmitting = false;
-          const msg = err.error?.message || 'Lỗi khi cập nhật trang vào MongoDB';
+          const msg = err.error?.message || 'Lỗi khi cập nhật chính sách vào MongoDB';
           this.errorMessage = msg;
           this.notificationService.error(msg);
           this.cdr.markForCheck();
@@ -180,20 +180,20 @@ export class PageFormComponent implements OnInit {
         next: (res) => {
           this.isSubmitting = false;
           if (res.success) {
-            const msg = 'Tạo trang mới thành công!';
+            const msg = 'Tạo chính sách mới thành công!';
             this.successMessage = msg;
             this.notificationService.success(msg);
             this.isDirty = false;
             const newId = res.id || res.data?.id || res.data?._id;
             setTimeout(() => {
               if (newId) {
-                this.router.navigate(['/admin/pages', newId]);
+                this.router.navigate(['/admin/policies', newId]);
               } else {
-                this.router.navigate(['/admin/pages']);
+                this.router.navigate(['/admin/policies']);
               }
             }, 600);
           } else {
-            const msg = res.message || 'Lỗi tạo trang mới';
+            const msg = res.message || 'Lỗi tạo chính sách mới';
             this.errorMessage = msg;
             this.notificationService.error(msg);
           }
@@ -201,7 +201,7 @@ export class PageFormComponent implements OnInit {
         },
         error: (err) => {
           this.isSubmitting = false;
-          const msg = err.error?.message || 'Lỗi khi tạo trang mới trong MongoDB';
+          const msg = err.error?.message || 'Lỗi khi tạo chính sách mới trong MongoDB';
           this.errorMessage = msg;
           this.notificationService.error(msg);
           this.cdr.markForCheck();
@@ -217,9 +217,9 @@ export class PageFormComponent implements OnInit {
       if (!confirmLeave) return;
     }
     if (this.isEditMode && this.pageId) {
-      this.router.navigate(['/admin/pages', this.pageId]);
+      this.router.navigate(['/admin/policies', this.pageId]);
     } else {
-      this.router.navigate(['/admin/pages']);
+      this.router.navigate(['/admin/policies']);
     }
   }
 
@@ -234,10 +234,10 @@ export class PageFormComponent implements OnInit {
       next: (res) => {
         this.confirmDeleteOpen = false;
         if (res.success) {
-          this.notificationService.success('Xóa trang thành công');
-          this.router.navigate(['/admin/pages']);
+          this.notificationService.success('Xóa chính sách thành công');
+          this.router.navigate(['/admin/policies']);
         } else {
-          const msg = res.message || 'Lỗi khi xóa trang';
+          const msg = res.message || 'Lỗi khi xóa chính sách';
           this.errorMessage = msg;
           this.notificationService.error(msg);
           this.cdr.markForCheck();
@@ -245,7 +245,7 @@ export class PageFormComponent implements OnInit {
       },
       error: (err) => {
         this.confirmDeleteOpen = false;
-        const msg = err.error?.message || 'Lỗi khi xóa trang khỏi MongoDB';
+        const msg = err.error?.message || 'Lỗi khi xóa chính sách khỏi MongoDB';
         this.errorMessage = msg;
         this.notificationService.error(msg);
         this.cdr.markForCheck();
@@ -272,3 +272,5 @@ export class PageFormComponent implements OnInit {
       .replace(/-+/g, '-');
   }
 }
+
+export { PolicyFormComponent as PageFormComponent };

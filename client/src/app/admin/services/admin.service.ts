@@ -374,6 +374,31 @@ export class AdminService {
     return this.http.delete(`${this.baseUrl}/pages/${id}`);
   }
 
+  // ── Policies (Aliases for Pages) ───────────
+  getPolicies(params?: { search?: string; status?: string }): Observable<any> {
+    return this.getPages(params);
+  }
+
+  getPolicyById(id: string): Observable<any> {
+    return this.getPageById(id);
+  }
+
+  createPolicy(data: any): Observable<any> {
+    return this.createPage(data);
+  }
+
+  updatePolicy(id: string, data: any): Observable<any> {
+    return this.updatePage(id, data);
+  }
+
+  patchPolicyStatus(id: string, status?: string): Observable<any> {
+    return this.patchPageStatus(id, status);
+  }
+
+  deletePolicy(id: string): Observable<any> {
+    return this.deletePage(id);
+  }
+
   // ── Account (Admin Profile) ─────────────────
   getAccountProfile(): Observable<any> {
     return this.http.get(`${this.baseUrl}/account/me`).pipe(

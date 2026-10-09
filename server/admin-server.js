@@ -6734,6 +6734,118 @@ app.get('/api/auth', async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────
+// CHÉRI CMS HOME PAGE CONFIGURATION (COLLECTION: pages_home)
+// Cấu hình duy nhất, không draft, không versioning
+// ─────────────────────────────────────────────────────────────
+
+// Middleware xác thực quyền Admin cho các endpoint CMS Home
+async function requireHomeAdminAuth(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization || '';
+    if (!authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Thiếu access token xác thực' });
+    }
+    const token = authHeader.slice(7).trim();
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789');
+    if (!decoded || !decoded.email) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Token không hợp lệ' });
+    }
+    const user = await db.collection('users').findOne({ email: decoded.email.toLowerCase() });
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Người dùng không tồn tại' });
+    }
+    const userRoles = Array.isArray(user.roles) ? user.roles : [user.role || 'user'];
+    const isAdmin = userRoles.some(r => typeof r === 'string' && ['admin', 'superadmin', 'super-admin'].includes(r.toLowerCase())) || user.isAdmin === true;
+    if (!isAdmin) {
+      return res.status(403).json({ success: false, error: 'Forbidden: Bạn không có quyền quản trị viên' });
+    }
+    req.adminUser = user;
+    next();
+  } catch (err) {
+    return res.status(401).json({ success: false, error: 'Unauthorized: Token không hợp lệ hoặc đã hết hạn: ' + (err.message || '') });
+  }
+}
+
+// 1. Public API: Lấy cấu hình trang chủ đã xuất bản duy nhất
+app.get('/api/cheri/home', async (req, res) => {
+  try {
+    const homeDoc = await db.collection('pages_home').findOne({ key: 'home_page', status: 'published' });
+    if (!homeDoc || !Array.isArray(homeDoc.sections)) {
+      return res.json({ success: true, data: null, sections: [] });
+    }
+    const activeSections = homeDoc.sections
+      .filter(sec => sec && sec.enabled !== false)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+    return res.json({
+      success: true,
+      data: { ...homeDoc, sections: activeSections },
+      sections: activeSections
+    });
+  } catch (err) {
+    console.error('Error fetching published home configuration:', err);
+    return res.json({ success: true, data: null, sections: [] });
+  }
+});
+
+// 2. Admin API: Lấy cấu hình xuất bản hiện hành cho Admin CMS (Yêu cầu quyền Admin)
+app.get('/api/cheri/home/admin', requireHomeAdminAuth, async (req, res) => {
+  try {
+    const homeDoc = await db.collection('pages_home').findOne({ key: 'home_page', status: 'published' });
+    if (!homeDoc || !Array.isArray(homeDoc.sections)) {
+      return res.json({ success: true, data: null, sections: [] });
+    }
+    const sortedSections = [...homeDoc.sections].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    return res.json({
+      success: true,
+      data: { ...homeDoc, sections: sortedSections },
+      sections: sortedSections
+    });
+  } catch (err) {
+    console.error('Error fetching admin home configuration:', err);
+    return res.status(500).json({ success: false, message: 'Lỗi server khi tải cấu hình Home' });
+  }
+});
+
+// 3. Admin API: Xuất bản cấu hình duy nhất lên database (Yêu cầu quyền Admin)
+app.post('/api/cheri/home/publish', requireHomeAdminAuth, async (req, res) => {
+  try {
+    const sectionsToPublish = req.body?.sections;
+    if (!sectionsToPublish || !Array.isArray(sectionsToPublish) || sectionsToPublish.length === 0) {
+      return res.status(400).json({ success: false, message: 'Dữ liệu phân đoạn (sections) không hợp lệ hoặc rỗng' });
+    }
+
+    const editorEmail = req.adminUser?.email || req.body?.updatedBy || 'admin';
+    const now = new Date();
+
+    const publishedResult = await db.collection('pages_home').findOneAndUpdate(
+      { key: 'home_page', status: 'published' },
+      {
+        $set: {
+          key: 'home_page',
+          status: 'published',
+          sections: sectionsToPublish,
+          publishedAt: now,
+          updatedBy: editorEmail,
+          updatedAt: now
+        },
+        $setOnInsert: { createdAt: now }
+      },
+      { upsert: true, returnDocument: 'after' }
+    );
+
+    return res.json({
+      success: true,
+      message: 'Xuất bản cấu hình trang chủ thành công',
+      data: publishedResult?.value || publishedResult
+    });
+  } catch (err) {
+    console.error('Error publishing home configuration:', err);
+    return res.status(500).json({ success: false, message: err.message || 'Lỗi server khi xuất bản' });
+  }
+});
+
 // Start Server (Chỉ listen khi chạy trực tiếp file này bằng node server/admin-server.js)
 if (require.main === module) {
   connectToMongo().then(() => {

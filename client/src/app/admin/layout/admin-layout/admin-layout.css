@@ -21,6 +21,10 @@
   box-sizing: border-box;
 }
 
+.admin-shell.is-collapsed {
+  --sidebar-width: 68px;
+}
+
 .admin-main {
   flex: 1 1 auto;
   min-width: 0;
@@ -31,14 +35,17 @@
   min-height: calc(100vh - var(--header-height, 60px));
   padding: 24px;
   box-sizing: border-box;
-  transition: margin-left var(--transition-base, 250ms ease),
-              width var(--transition-base, 250ms ease);
+  transition: margin-left 180ms ease,
+              width 180ms ease;
 }
 
 /* ----- Tablet / Collapsed Sidebar (769px - 1200px) ----- */
 @media (max-width: 1200px) and (min-width: 769px) {
   .admin-shell {
     --sidebar-width: 68px;
+  }
+  .admin-shell:not(.is-collapsed) {
+    --sidebar-width: 240px;
   }
 }
 

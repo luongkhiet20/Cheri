@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../../services/admin.service';
 import { NotificationService } from '../../../../shared/notification/notification.service';
+import { ADMIN_PAGES_URLS } from '../../pages.routes';
 
 export interface PolicyFormData {
   title: string;
@@ -18,6 +19,7 @@ export interface PolicyFormData {
   styleUrls: ['./policy-form.component.css']
 })
 export class PolicyFormComponent implements OnInit {
+  readonly adminPagesUrls = ADMIN_PAGES_URLS;
   isEditMode = false;
   pageId: string | null = null;
   isLoading = false;
@@ -156,7 +158,7 @@ export class PolicyFormComponent implements OnInit {
             this.notificationService.success(msg);
             this.isDirty = false;
             setTimeout(() => {
-              this.router.navigate(['/admin/policies', this.pageId]);
+              this.router.navigate([ADMIN_PAGES_URLS.POLICIES, this.pageId]);
             }, 600);
           } else {
             const msg = res.message || 'Lỗi cập nhật chính sách';
@@ -187,9 +189,9 @@ export class PolicyFormComponent implements OnInit {
             const newId = res.id || res.data?.id || res.data?._id;
             setTimeout(() => {
               if (newId) {
-                this.router.navigate(['/admin/policies', newId]);
+                this.router.navigate([ADMIN_PAGES_URLS.POLICIES, newId]);
               } else {
-                this.router.navigate(['/admin/policies']);
+                this.router.navigate([ADMIN_PAGES_URLS.POLICIES]);
               }
             }, 600);
           } else {
@@ -217,9 +219,9 @@ export class PolicyFormComponent implements OnInit {
       if (!confirmLeave) return;
     }
     if (this.isEditMode && this.pageId) {
-      this.router.navigate(['/admin/policies', this.pageId]);
+      this.router.navigate([ADMIN_PAGES_URLS.POLICIES, this.pageId]);
     } else {
-      this.router.navigate(['/admin/policies']);
+      this.router.navigate([ADMIN_PAGES_URLS.POLICIES]);
     }
   }
 
@@ -235,7 +237,7 @@ export class PolicyFormComponent implements OnInit {
         this.confirmDeleteOpen = false;
         if (res.success) {
           this.notificationService.success('Xóa chính sách thành công');
-          this.router.navigate(['/admin/policies']);
+          this.router.navigate([ADMIN_PAGES_URLS.POLICIES]);
         } else {
           const msg = res.message || 'Lỗi khi xóa chính sách';
           this.errorMessage = msg;

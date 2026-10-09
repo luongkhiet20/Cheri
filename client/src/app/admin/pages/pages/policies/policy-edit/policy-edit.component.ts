@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../../services/admin.service';
 import { NotificationService } from '../../../../shared/notification/notification.service';
+import { ADMIN_PAGES_URLS } from '../../pages.routes';
 
 @Component({
   selector: 'app-policy-edit',
@@ -10,6 +11,7 @@ import { NotificationService } from '../../../../shared/notification/notificatio
   styleUrls: ['./policy-edit.component.css']
 })
 export class PolicyEditComponent implements OnInit {
+  readonly adminPagesUrls = ADMIN_PAGES_URLS;
   pageId: string | null = null;
   page: any = null;
   isLoading = false;
@@ -98,7 +100,7 @@ export class PolicyEditComponent implements OnInit {
 
   onEdit(): void {
     if (this.pageId) {
-      this.router.navigate(['/admin/policies', this.pageId, 'edit']);
+      this.router.navigate([ADMIN_PAGES_URLS.POLICIES, this.pageId, 'edit']);
     }
   }
 
@@ -114,7 +116,7 @@ export class PolicyEditComponent implements OnInit {
         this.confirmDeleteOpen = false;
         if (res.success) {
           this.notificationService.success('Xóa chính sách thành công');
-          this.router.navigate(['/admin/policies']);
+          this.router.navigate([ADMIN_PAGES_URLS.POLICIES]);
         } else {
           const msg = res.message || 'Lỗi khi xóa chính sách';
           this.errorMessage = msg;

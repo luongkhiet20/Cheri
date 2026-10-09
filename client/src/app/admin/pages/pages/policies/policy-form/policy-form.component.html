@@ -4,9 +4,9 @@
   <div class="page-top">
     <div>
       <div class="breadcrumbs">
-        <a routerLink="/admin/policies" class="breadcrumb-link">Chính sách</a>
+        <a [routerLink]="adminPagesUrls.POLICIES" class="breadcrumb-link">Chính sách</a>
         <span class="breadcrumb-sep">/</span>
-        <a *ngIf="isEditMode && pageId" [routerLink]="['/admin/policies', pageId]" class="breadcrumb-link">{{
+        <a *ngIf="isEditMode && pageId" [routerLink]="[adminPagesUrls.POLICIES, pageId]" class="breadcrumb-link">{{
           formData.title || 'Chi tiết' }}</a>
         <span *ngIf="isEditMode && pageId" class="breadcrumb-sep">/</span>
         <span class="breadcrumb-current">{{ isEditMode ? 'Chỉnh sửa chính sách' : 'Tạo chính sách mới' }}</span>

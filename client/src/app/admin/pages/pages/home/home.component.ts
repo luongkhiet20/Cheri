@@ -25,6 +25,7 @@ import {
   AVAILABLE_FONTS,
   TYPOGRAPHY_PRESETS,
   CHERI_COLOR_PRESETS,
+  ColorPreset,
   getDefaultTypographyForType,
   getDefaultColorsForType,
   getDefaultCarouselConfig,
@@ -61,9 +62,33 @@ export class HomeComponent implements OnInit, OnDestroy {
   activeContentFieldKey: string = 'title';
   activeTargetId: string = '';
   activeTargetSectionId: string = '';
-  configurableSectionGroups: { section: HomeSection; targets: ConfigurableTypographyTarget[] }[] = [];
+  configurableSectionGroups: {
+    section: HomeSection;
+    sectionId: string;
+    sectionName: string;
+    targets: ConfigurableTypographyTarget[];
+  }[] = [];
   allConfigurableTargets: ConfigurableTypographyTarget[] = [];
   activeTarget: ConfigurableTypographyTarget | null = null;
+
+  get selectedPresetForQuickApply(): TypographyPresetType {
+    return this.selectedTypographyPreset;
+  }
+  set selectedPresetForQuickApply(val: TypographyPresetType) {
+    this.selectedTypographyPreset = val;
+  }
+
+  get fontOptions(): FontOption[] {
+    return this.availableFonts;
+  }
+
+  get brandColorPalette(): ColorPreset[] {
+    return this.cheriColorPresets;
+  }
+
+  get pageDoc(): { sections: HomeSection[] } {
+    return { sections: this.sections };
+  }
 
   readonly availableFonts: FontOption[] = AVAILABLE_FONTS;
   readonly typographyPresets = TYPOGRAPHY_PRESETS;
@@ -1180,7 +1205,12 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   // ── Tự động tạo danh sách phân đoạn & phần tử cấu hình động ────
   refreshTypographyTargets(): void {
-    const groups: { section: HomeSection; targets: ConfigurableTypographyTarget[] }[] = [];
+    const groups: {
+      section: HomeSection;
+      sectionId: string;
+      sectionName: string;
+      targets: ConfigurableTypographyTarget[];
+    }[] = [];
     const allTargets: ConfigurableTypographyTarget[] = [];
 
     for (const sec of this.sections) {
@@ -1500,8 +1530,13 @@ export class HomeComponent implements OnInit, OnDestroy {
       }
 
       if (secTargets.length > 0) {
-        groups.push({ section: sec, targets: secTargets });
+        groups.push({ section: sec, sectionId: sec.id, sectionName: secName, targets: secTargets });
       }
+    }
+
+    for (const t of allTargets) {
+      if (!t.label) t.label = t.fieldLabel;
+      if (!t.role) t.role = t.typoElementKey;
     }
 
     this.configurableSectionGroups = groups;
@@ -1566,9 +1601,13 @@ export class HomeComponent implements OnInit, OnDestroy {
     return group ? group.targets : [];
   }
 
-  getSlidesForSection(section: HomeSection | null): CarouselSlideItem[] {
-    if (!section?.media?.carouselSlides) return [];
-    return section.media.carouselSlides;
+  getSlidesForSection(sectionOrId: HomeSection | string | null | undefined): CarouselSlideItem[] {
+    if (!sectionOrId) return [];
+    const sec = typeof sectionOrId === 'string'
+      ? this.sections.find((s) => s.id === sectionOrId)
+      : sectionOrId;
+    if (!sec?.media?.carouselSlides) return [];
+    return sec.media.carouselSlides;
   }
 
   getSlideTargets(sectionId: string, slideId: string): ConfigurableTypographyTarget[] {
@@ -1756,7 +1795,13 @@ export class HomeComponent implements OnInit, OnDestroy {
     return typo[elKey] as TypographyConfig;
   }
 
-  onTargetTypographyPropChange(): void {
+  onTargetTypographyPropChange(prop?: string, value?: any): void {
+    if (prop && value !== undefined) {
+      const cfg = this.getActiveTargetTypographyConfig();
+      if (cfg) {
+        (cfg as any)[prop] = value;
+      }
+    }
     const target = this.activeTarget;
     if (!target) return;
     const section = this.sections.find((s) => s.id === target.sectionId);

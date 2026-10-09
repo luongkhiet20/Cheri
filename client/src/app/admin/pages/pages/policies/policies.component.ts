@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../../shared/models/admin-table.models';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
+import { ADMIN_PAGES_URLS } from '../pages.routes';
 
 export function isPolicyPublished(row: any): boolean {
   if (!row) return false;
@@ -17,6 +18,8 @@ export function isPolicyPublished(row: any): boolean {
   styleUrls: ['./policies.component.css']
 })
 export class PoliciesComponent implements OnInit {
+  readonly adminPagesUrls = ADMIN_PAGES_URLS;
+
   columns: TableColumn[] = [
     { key: 'title', label: 'Tiêu đề chính sách', type: 'text', sortable: true },
     { key: 'slug', label: 'Đường dẫn', type: 'text', sortable: true },
@@ -233,9 +236,9 @@ export class PoliciesComponent implements OnInit {
 
   onAction(e: ActionEvent): void {
     if (e.action === 'view' || e.action === 'preview') {
-      this.router.navigate(['/admin/policies', e.row.id]);
+      this.router.navigate([ADMIN_PAGES_URLS.POLICIES, e.row.id]);
     } else if (e.action === 'edit') {
-      this.router.navigate(['/admin/policies', e.row.id, 'edit']);
+      this.router.navigate([ADMIN_PAGES_URLS.POLICIES, e.row.id, 'edit']);
     } else if (e.action === 'toggle') {
       const isCurrentlyPublished = this.isPolicyPublished(e.row);
       const newTarget = isCurrentlyPublished ? 'draft' : 'published';

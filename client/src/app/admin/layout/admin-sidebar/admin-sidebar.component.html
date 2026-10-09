@@ -174,7 +174,7 @@
                 <li class="admin-sidebar__subitem" *ngFor="let sub of pageSubItems">
                   <a [routerLink]="sub.route"
                      routerLinkActive="is-active"
-                     [routerLinkActiveOptions]="{ exact: sub.route === '/admin/pages/home' || sub.route === '/admin/pages/about' }"
+                     [routerLinkActiveOptions]="{ exact: sub.route === adminPagesUrls.HOME || sub.route === adminPagesUrls.ABOUT }"
                      class="admin-sidebar__sublink"
                      (click)="closeMobile()"
                      [attr.title]="sub.label">

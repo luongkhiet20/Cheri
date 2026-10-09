@@ -52,6 +52,7 @@ import { PolicyFormComponent } from './pages/pages/policies/policy-form/policy-f
 import { PolicyEditComponent } from './pages/pages/policies/policy-edit/policy-edit.component';
 import { HomeComponent } from './pages/pages/home/home.component';
 import { AboutComponent } from './pages/pages/about/about';
+import { createAdminPagesRoutes } from './pages/pages/pages.routes';
 import { AccountComponent } from './pages/account/account.component';
 import { SettingsComponent } from './pages/settings/settings.component';
 import { CouponsComponent } from './pages/coupons/coupons.component';
@@ -100,20 +101,13 @@ const routes: Routes = [
       { path: 'inventory/import', component: InventoryImportComponent },
       { path: 'inventory/:id', component: InventoryDetailComponent },
       { path: 'inventory/:id/edit', component: InventoryImportComponent },
-      { path: 'policies', component: PoliciesComponent },
-      { path: 'policies/new', component: PolicyFormComponent },
-      { path: 'policies/add', component: PolicyFormComponent },
-      { path: 'policies/:id', component: PolicyEditComponent },
-      { path: 'policies/:id/edit', component: PolicyFormComponent },
-      { path: 'pages/home', component: HomeComponent },
-      { path: 'pages/about', component: AboutComponent },
-      { path: 'home', redirectTo: 'pages/home', pathMatch: 'full' },
-      { path: 'about', redirectTo: 'pages/about', pathMatch: 'full' },
-      { path: 'pages', redirectTo: 'pages/home', pathMatch: 'full' },
-      { path: 'pages/new', redirectTo: 'policies/new', pathMatch: 'full' },
-      { path: 'pages/add', redirectTo: 'policies/add', pathMatch: 'full' },
-      { path: 'pages/:id', redirectTo: 'policies/:id', pathMatch: 'full' },
-      { path: 'pages/:id/edit', redirectTo: 'policies/:id/edit', pathMatch: 'full' },
+      ...createAdminPagesRoutes({
+        home: HomeComponent,
+        about: AboutComponent,
+        policies: PoliciesComponent,
+        policyForm: PolicyFormComponent,
+        policyEdit: PolicyEditComponent
+      }),
       { path: 'account', component: AccountComponent },
       { path: 'settings', component: SettingsComponent },
     ]

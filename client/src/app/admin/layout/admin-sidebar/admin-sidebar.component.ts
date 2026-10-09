@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, HostListener, Output, EventEmitter } from
 import { Router, NavigationEnd } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
+import { ADMIN_PAGES_URLS, isPagesAdminUrl } from '../../pages/pages/pages.routes';
 
 export interface NavItem {
   label: string;
@@ -73,11 +74,13 @@ export class AdminSidebarComponent implements OnInit, OnDestroy {
     }
   ];
 
+  readonly adminPagesUrls = ADMIN_PAGES_URLS;
+
   // 3 mục con của Quản lý trang (Nhóm HỆ THỐNG)
   pageSubItems: PageSubItem[] = [
-    { label: 'Trang chủ', route: '/admin/pages/home' },
-    { label: 'Giới thiệu', route: '/admin/pages/about' },
-    { label: 'Chính sách', route: '/admin/policies' }
+    { label: 'Trang chủ', route: ADMIN_PAGES_URLS.HOME },
+    { label: 'Giới thiệu', route: ADMIN_PAGES_URLS.ABOUT },
+    { label: 'Chính sách', route: ADMIN_PAGES_URLS.POLICIES }
   ];
 
   isPagesOpen = false;
@@ -124,11 +127,7 @@ export class AdminSidebarComponent implements OnInit, OnDestroy {
   }
 
   isPagesActive(): boolean {
-    const url = this.router.url;
-    return url.startsWith('/admin/pages/home') ||
-           url.startsWith('/admin/pages/about') ||
-           url.startsWith('/admin/policies') ||
-           url.startsWith('/admin/pages');
+    return isPagesAdminUrl(this.router.url);
   }
 
   get isPagesSubmenuOpen(): boolean {

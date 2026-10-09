@@ -203,9 +203,11 @@ export interface ConfigurableTypographyTarget {
   slideTitle?: string;
   fieldKey: string;
   fieldLabel: string;
+  label?: string;
   groupLabel: string;
   fullPathLabel: string;
   typoElementKey: TypographyElementKey;
+  role?: string;
   colorKey: string;
   isButton?: boolean;
   isSlide?: boolean;

@@ -76,7 +76,7 @@ export const TYPOGRAPHY_PRESETS: {
   name: string;
   label: string;
   badge: string;
-  description: string;
+  description?: string;
   previewFont: string;
   typography: SectionTypography;
 }[] = [
@@ -86,7 +86,6 @@ export const TYPOGRAPHY_PRESETS: {
     name: 'Tối Giản Hiện Đại (Minimal)',
     label: 'Minimal',
     badge: 'Tối giản, hiện đại',
-    description: 'Nét chữ Inter thanh mảnh, hiện đại, tối giản và dễ đọc',
     previewFont: "'Inter', sans-serif",
     typography: {
       preset: 'minimal',
@@ -137,7 +136,6 @@ export const TYPOGRAPHY_PRESETS: {
     name: 'Tạp Chí Thời Trang (Editorial)',
     label: 'Editorial',
     badge: 'Phong cách tạp chí thời trang',
-    description: 'Tiêu đề Cormorant Garamond quý phái kết hợp chữ nội dung trang nhã',
     previewFont: "'Cormorant Garamond', Georgia, serif",
     typography: {
       preset: 'editorial',
@@ -188,7 +186,6 @@ export const TYPOGRAPHY_PRESETS: {
     name: 'Cổ Điển Thanh Lịch (Classic)',
     label: 'Classic',
     badge: 'Cổ điển, thanh lịch',
-    description: 'Chữ Playfair Display kiêu hãnh phối cùng Lora quý phái',
     previewFont: "'Playfair Display', Georgia, serif",
     typography: {
       preset: 'classic',
@@ -239,7 +236,6 @@ export const TYPOGRAPHY_PRESETS: {
     name: 'Lãng Mạn Mềm Mại (Romantic)',
     label: 'Romantic',
     badge: 'Lãng mạn, mềm mại',
-    description: 'Phong cách thơ mộng, nghệ thuật và nữ tính với Cormorant & Corinthia',
     previewFont: "'Corinthia', cursive, 'Cormorant Garamond', serif",
     typography: {
       preset: 'romantic',
@@ -290,7 +286,6 @@ export const TYPOGRAPHY_PRESETS: {
     name: 'Đương Đại Sắc Nét (Modern)',
     label: 'Modern',
     badge: 'Hiện đại, rõ nét',
-    description: 'Font Montserrat khỏe khoắn, sắc sảo và hiện đại',
     previewFont: "'Montserrat', sans-serif",
     typography: {
       preset: 'modern',

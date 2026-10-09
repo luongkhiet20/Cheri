@@ -1281,19 +1281,11 @@
              PHẦN 1: CẤU HÌNH KIỂU CHỮ (TYPOGRAPHY)
              ════════════════════════════════════════════════════════════════ -->
         <div class="cms-config-section mb-4">
-          <div class="cms-config-section__header d-flex justify-content-between align-items-center">
-            <div>
-              <h5 class="cms-config-section__title mb-1">
-                <span class="section-title-icon">🔤</span>
-                <span>Cấu hình kiểu chữ (Typography)</span>
-              </h5>
-              <p class="cms-config-section__subtitle mb-0 text-muted" style="font-size: 0.85rem;">
-                Áp dụng nhanh bộ phối font chữ chuẩn phong cách Chéri cho nội dung trang chủ.
-              </p>
-            </div>
+          <div class="cms-config-section__header d-flex justify-content-between align-items-center mb-3">
+            <h5 class="cms-config-section__title mb-0">Cấu hình kiểu chữ</h5>
             <button type="button" class="btn-link-action btn-link-reset" (click)="onResetGlobalDefaultFonts()"
               title="Khôi phục font mặc định cho toàn bộ các section trang chủ">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
                 <polyline points="1 4 1 10 7 10"></polyline>
                 <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
               </svg>
@@ -1301,41 +1293,35 @@
             </button>
           </div>
 
-          <!-- PRESETS CARDS -->
-          <div class="typo-presets-panel mt-3">
-            <div class="typo-preset-cards-grid">
-              <button type="button" *ngFor="let p of typographyPresets" class="typo-preset-card"
-                [class.is-active]="selectedPresetForQuickApply === p.value"
-                (click)="selectedPresetForQuickApply = p.value">
-                <div class="typo-preset-card__top">
-                  <span class="badge-mini badge-mini--wine">{{ p.badge }}</span>
-                  <span class="typo-preset-card__check" *ngIf="selectedPresetForQuickApply === p.value">✓</span>
-                </div>
-                <div class="typo-preset-card__name">{{ p.name }}</div>
-                <div class="typo-preset-card__desc">{{ p.description }}</div>
-                <div class="typo-preset-card__preview-sample"
-                  [style.font-family]="p.headingFont + ', sans-serif'">
-                  <span class="sample-heading">Chéri Paris</span>
-                  <span class="sample-sub" [style.font-family]="p.bodyFont + ', sans-serif'">Collection 2026</span>
-                </div>
-              </button>
-            </div>
-
-            <!-- BUTTON: ÁP DỤNG NHANH TOÀN BỘ -->
-            <div class="quick-apply-all-bar mt-3 pt-3 border-top d-flex justify-content-between align-items-center">
-              <div class="quick-apply-info">
-                <small class="text-muted">
-                  Preset được chọn: <strong>{{ selectedPresetForQuickApply | titlecase }}</strong>. Áp dụng cho toàn bộ các trường chữ của tất cả các section trang chủ theo phân cấp thị giác chuẩn.
-                </small>
+          <!-- Danh sách preset kiểu chữ: Minimal, Editorial, Classic, Romantic, Modern (Grid phẳng) -->
+          <div class="typo-preset-cards-grid">
+            <button type="button" *ngFor="let p of typographyPresets" class="typo-preset-card"
+              [class.is-active]="selectedPresetForQuickApply === p.value"
+              (click)="selectedPresetForQuickApply = p.value">
+              <div class="typo-preset-card__top">
+                <strong class="typo-preset-card__name" [style.font-family]="p.headingFont + ', sans-serif'">{{ p.name }}</strong>
+                <span class="typo-preset-card__check" *ngIf="selectedPresetForQuickApply === p.value" aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                </span>
               </div>
-              <button type="button" class="btn btn-wine btn-sm px-3 d-flex align-items-center gap-2"
-                (click)="onApplyQuickPresetToAll()">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
-                </svg>
-                <span>Áp dụng nhanh toàn bộ</span>
-              </button>
+              <small class="typo-preset-card__desc" *ngIf="p.description">{{ p.description }}</small>
+            </button>
+          </div>
+
+          <!-- Áp dụng nhanh toàn bộ -->
+          <div class="typo-preset-apply-wrap mt-3 d-flex justify-content-between align-items-center">
+            <div class="typo-preset-apply-hint">
+              <span>Đang chọn: </span>
+              <strong>{{ getSelectedPresetLabel() }}</strong>
             </div>
+            <button type="button" class="btn btn-cheri-primary btn-sm px-3" (click)="onApplyQuickPresetToAll()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="me-1">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+              </svg>
+              <span>Áp dụng nhanh toàn bộ</span>
+            </button>
           </div>
         </div>
 
@@ -1343,19 +1329,11 @@
              PHẦN 2: TÙY CHỈNH TỪNG PHẦN TỬ
              ════════════════════════════════════════════════════════════════ -->
         <div class="cms-config-section mb-4">
-          <div class="cms-config-section__header d-flex justify-content-between align-items-center">
-            <div>
-              <h5 class="cms-config-section__title mb-1">
-                <span class="section-title-icon">🎨</span>
-                <span>Tùy chỉnh từng phần tử</span>
-              </h5>
-              <p class="cms-config-section__subtitle mb-0 text-muted" style="font-size: 0.85rem;">
-                Điều chỉnh kiểu chữ và màu sắc riêng cho từng nội dung trên trang chủ.
-              </p>
-            </div>
+          <div class="cms-config-section__header d-flex justify-content-between align-items-center mb-3">
+            <h5 class="cms-config-section__title mb-0">Tùy chỉnh từng phần tử</h5>
             <button type="button" class="btn-link-action btn-link-reset" (click)="onResetGlobalDefaultColors()"
-              title="Khôi phục toàn bộ màu chữ của các phần tử về màu mặc định">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              title="Khôi phục toàn bộ màu chữ của các phần tử về mặc định">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
                 <polyline points="1 4 1 10 7 10"></polyline>
                 <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
               </svg>
@@ -1363,125 +1341,103 @@
             </button>
           </div>
 
-          <!-- BREADCRUMB BANNER & TARGET SELECTION CONTROLS -->
-          <div class="target-selection-container mt-3">
-            <!-- Breadcrumb display -->
-            <div class="active-target-breadcrumb-banner d-flex align-items-center justify-content-between mb-3" *ngIf="activeTarget">
-              <div class="d-flex align-items-center gap-2">
-                <span class="badge-mini badge-mini--wine">{{ activeTarget.sectionName }}</span>
-                <span class="breadcrumb-separator">→</span>
-                <strong class="breadcrumb-field-name">{{ activeTarget.label }}</strong>
-                <span class="badge badge-light border text-muted" style="font-size: 0.75rem;">{{ activeTarget.role }}</span>
-              </div>
-              <div class="d-flex align-items-center gap-2">
-                <button type="button" class="btn-link-action text-muted" style="font-size: 0.78rem;" (click)="onResetCurrentTargetElement()" title="Đặt lại typography phần tử này">
-                  ↺ Đặt lại font chữ
-                </button>
-                <span class="text-muted">|</span>
-                <button type="button" class="btn-link-action text-muted" style="font-size: 0.78rem;" (click)="onResetCurrentTargetElementColor()" title="Đặt lại màu phần tử này">
-                  ↺ Đặt lại màu
-                </button>
-              </div>
+          <!-- Bộ chọn phân đoạn & trường nội dung (2 Dropdowns phẳng) -->
+          <div class="form-row-2 mb-3">
+            <div class="form-group mb-0">
+              <label class="form-label" for="homeTargetSecSelect">Phân đoạn (Section)</label>
+              <select id="homeTargetSecSelect" class="form-control form-control-sm"
+                [ngModel]="activeTargetSectionId"
+                (ngModelChange)="onSelectTargetSection($event)">
+                <option *ngFor="let sec of pageDoc.sections" [value]="sec.id">
+                  {{ sec.name || (sec.type | uppercase) }} ({{ sec.type }})
+                </option>
+              </select>
             </div>
 
-            <!-- Hierarchical Section & Element Selector -->
-            <div class="row g-2 mb-3">
-              <!-- Section selector dropdown -->
-              <div class="col-md-5">
-                <label class="form-label form-label-sm fw-semibold mb-1">Phân đoạn (Section):</label>
-                <select class="form-select form-select-sm"
-                  [ngModel]="activeTargetSectionId"
-                  (ngModelChange)="onSelectTargetSection($event)">
-                  <option *ngFor="let sec of pageDoc.sections" [value]="sec.id">
-                    {{ sec.title || (sec.type | uppercase) }} ({{ sec.type }})
-                  </option>
-                </select>
-              </div>
-
-              <!-- Target field selector dropdown -->
-              <div class="col-md-7">
-                <label class="form-label form-label-sm fw-semibold mb-1">Trường nội dung cần chỉnh sửa:</label>
-                <select class="form-select form-select-sm"
-                  [ngModel]="activeTargetId"
-                  (ngModelChange)="onSelectTarget($event)">
-                  <ng-container *ngFor="let grp of configurableSectionGroups">
-                    <optgroup *ngIf="grp.sectionId === activeTargetSectionId" [label]="grp.sectionName">
-                      <option *ngFor="let t of grp.targets" [value]="t.id">
-                        {{ t.label }} ({{ t.role }})
-                      </option>
-                    </optgroup>
-                  </ng-container>
-                </select>
-              </div>
-            </div>
-
-            <!-- Target Tabs / Buttons per Section (Fast Selector) -->
-            <div class="hierarchical-target-picker mb-4 p-2 rounded bg-light border">
-              <!-- If Carousel Section: Group slides neatly -->
-              <div *ngIf="getSlidesForSection(activeTargetSectionId).length > 0" class="carousel-slides-elements-wrap">
-                <!-- Non-slide elements first (like Eyebrow, Button) -->
-                <div *ngIf="getNonSlideTargets(activeTargetSectionId).length > 0" class="mb-2">
-                  <div class="target-subgroup-label text-muted small fw-bold mb-1">Các trường chung của Carousel:</div>
-                  <div class="d-flex flex-wrap gap-1">
-                    <button type="button" *ngFor="let t of getNonSlideTargets(activeTargetSectionId)"
-                      class="btn btn-sm"
-                      [ngClass]="activeTargetId === t.id ? 'btn-wine' : 'btn-outline-secondary'"
-                      (click)="onSelectTarget(t.id)">
-                      {{ t.label }}
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Slide elements grouped per slide -->
-                <div class="target-subgroup-label text-muted small fw-bold mb-1">Các Slide trong Carousel:</div>
-                <div class="row g-2">
-                  <div *ngFor="let slide of getSlidesForSection(activeTargetSectionId); let sIdx = index" class="col-md-6">
-                    <div class="slide-group-card p-2 border rounded bg-white">
-                      <div class="d-flex align-items-center justify-content-between mb-1 pb-1 border-bottom">
-                        <span class="slide-badge fw-bold small text-wine">Slide {{ sIdx + 1 }}</span>
-                        <small class="text-truncate text-muted slide-title-preview" style="max-width: 140px;">
-                          {{ slide.title || '(Chưa có tiêu đề)' }}
-                        </small>
-                      </div>
-                      <div class="d-flex gap-1">
-                        <button type="button" *ngFor="let t of getSlideTargets(activeTargetSectionId, slide.id)"
-                          class="btn btn-xs flex-fill"
-                          [ngClass]="activeTargetId === t.id ? 'btn-wine' : 'btn-outline-secondary'"
-                          (click)="onSelectTarget(t.id)">
-                          {{ t.label }}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- If Standard Non-Carousel Section: Simple pill buttons -->
-              <div *ngIf="getSlidesForSection(activeTargetSectionId).length === 0" class="d-flex flex-wrap gap-1">
-                <button type="button" *ngFor="let t of getTargetsForSection(activeTargetSectionId)"
-                  class="btn btn-sm"
-                  [ngClass]="activeTargetId === t.id ? 'btn-wine' : 'btn-outline-secondary'"
-                  (click)="onSelectTarget(t.id)">
-                  {{ t.label }}
-                </button>
-              </div>
+            <div class="form-group mb-0">
+              <label class="form-label" for="homeTargetFieldSelect">Trường nội dung</label>
+              <select id="homeTargetFieldSelect" class="form-control form-control-sm"
+                [ngModel]="activeTargetId"
+                (ngModelChange)="onSelectTarget($event)">
+                <ng-container *ngFor="let grp of configurableSectionGroups">
+                  <optgroup *ngIf="grp.sectionId === activeTargetSectionId" [label]="grp.sectionName">
+                    <option *ngFor="let t of grp.targets" [value]="t.id">
+                      {{ t.fieldLabel || t.label }} ({{ t.typoElementKey || t.role }})
+                    </option>
+                  </optgroup>
+                </ng-container>
+              </select>
             </div>
           </div>
 
-          <!-- CONTROLS & LIVE PREVIEW CONTAINER -->
-          <div *ngIf="activeTarget">
-            <!-- A. KIỂU CHỮ (FONT FAMILY, FONT SIZE, FONT WEIGHT) -->
-            <div class="customizer-subgroup mb-4 pb-3 border-bottom">
-              <h6 class="customizer-subgroup-title text-wine fw-bold mb-3 d-flex align-items-center gap-2">
-                <span>A. Kiểu chữ</span>
-                <span class="badge badge-light border text-muted fw-normal" style="font-size: 0.72rem;">Font & Kích cỡ</span>
-              </h6>
+          <!-- Pills chọn nhanh các trường của Section đang chọn (Phẳng, không lồng card) -->
+          <div class="content-fields-selector mb-3">
+            <!-- Nếu là Carousel -->
+            <div *ngIf="getSlidesForSection(activeTargetSectionId).length > 0" class="d-flex flex-column gap-2">
+              <div *ngIf="getNonSlideTargets(activeTargetSectionId).length > 0" class="content-field-pills">
+                <button type="button" *ngFor="let t of getNonSlideTargets(activeTargetSectionId)"
+                  class="content-field-pill" [class.is-active]="activeTargetId === t.id"
+                  (click)="onSelectTarget(t.id)">
+                  <span class="content-field-pill__label">{{ t.fieldLabel || t.label }}</span>
+                </button>
+              </div>
+              <div class="d-flex flex-wrap gap-2">
+                <div *ngFor="let slide of getSlidesForSection(activeTargetSectionId); let sIdx = index"
+                  class="d-flex align-items-center gap-1 p-1 bg-light rounded border">
+                  <span class="badge-slide-idx text-muted small fw-semibold px-1">S{{ sIdx + 1 }}</span>
+                  <button type="button" *ngFor="let t of getSlideTargets(activeTargetSectionId, slide.id)"
+                    class="content-field-pill content-field-pill--xs" [class.is-active]="activeTargetId === t.id"
+                    (click)="onSelectTarget(t.id)">
+                    <span class="content-field-pill__label">{{ t.fieldLabel || t.label }}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
 
-              <!-- 1. Phông chữ (Font Family) -->
-              <div class="mb-3">
-                <label class="form-label form-label-sm fw-semibold mb-1">Phông chữ (Font Family)</label>
-                <div class="input-group input-group-sm">
-                  <select class="form-select font-family-select"
+            <!-- Nếu là Section thông thường -->
+            <div *ngIf="getSlidesForSection(activeTargetSectionId).length === 0" class="content-field-pills">
+              <button type="button" *ngFor="let t of getTargetsForSection(activeTargetSectionId)"
+                class="content-field-pill" [class.is-active]="activeTargetId === t.id"
+                (click)="onSelectTarget(t.id)">
+                <span class="content-field-pill__label">{{ t.fieldLabel || t.label }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Toolbar trường đang chọn + Nút đặt lại -->
+          <div class="element-field-toolbar d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom" *ngIf="activeTarget">
+            <div class="d-flex align-items-center gap-2">
+              <span class="field-indicator-dot"></span>
+              <strong class="field-title">{{ activeTarget.sectionName }} → {{ activeTarget.fieldLabel || activeTarget.label }}</strong>
+              <span class="field-desc text-muted d-none d-md-inline">({{ activeTarget.typoElementKey || activeTarget.role }})</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <button type="button" class="btn-link-action" (click)="onResetCurrentTargetElement()" title="Khôi phục font chữ trường này">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <polyline points="1 4 1 10 7 10"></polyline>
+                  <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                </svg>
+                <span>Đặt lại font chữ</span>
+              </button>
+              <button type="button" class="btn-link-action" (click)="onResetCurrentTargetElementColor()" title="Khôi phục màu sắc trường này">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <polyline points="1 4 1 10 7 10"></polyline>
+                  <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                </svg>
+                <span>Đặt lại màu</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Các trường cấu hình chi tiết (Khi activeTarget được chọn) -->
+          <div *ngIf="activeTarget">
+            <!-- NHÓM 1: KIỂU CHỮ (TYPOGRAPHY) -->
+            <div class="element-config-group mb-4">
+              <!-- Phông chữ -->
+              <div class="form-group mb-3">
+                <label class="form-label" for="homeActiveFontFamily">Phông chữ (Font Family)</label>
+                <div class="typo-font-select-wrap">
+                  <select id="homeActiveFontFamily" class="form-control typo-font-select"
                     [ngModel]="getActiveTargetTypographyConfig().fontFamily"
                     (ngModelChange)="onTargetTypographyPropChange('fontFamily', $event)">
                     <option *ngFor="let opt of fontOptions" [value]="opt.value"
@@ -1492,112 +1448,99 @@
                 </div>
                 <div class="font-sample-preview mt-1 px-2 py-1 bg-light border rounded small"
                   [style.font-family]="getActiveTargetTypographyConfig().fontFamily + ', sans-serif'">
-                  Aa Bb Cc 0123456789 — Vẻ đẹp thanh lịch & quyến rũ Chéri
+                  Aa Bb Cc 0123456789 — Vẻ đẹp thanh lịch &amp; quyến rũ Chéri
                 </div>
               </div>
 
-              <!-- Sliders with numeric input: Cỡ chữ & Độ đậm -->
-              <div class="cms-slider-controls-group d-flex flex-column gap-3">
-                <!-- 2. Cỡ chữ (Font Size) -->
+              <!-- 4 Thanh trượt: Cỡ chữ, Độ đậm, Khoảng cách dòng, Giãn cách chữ -->
+              <div class="cms-slider-controls-group mb-3">
+                <!-- Cỡ chữ -->
                 <div class="cms-slider-row">
                   <div class="cms-slider-label-col">
                     <span class="cms-slider-prop-name">Cỡ chữ</span>
-                    <span class="cms-slider-curr-val">{{ getActiveTargetTypographyConfig().fontSize }}px</span>
+                    <span class="cms-slider-curr-val">{{ getActiveTargetTypographyConfig().fontSize }} px</span>
                   </div>
                   <div class="cms-slider-track-col">
-                    <input type="range" class="form-range cms-range-slider"
-                      min="8" max="96" step="1"
+                    <input type="range" class="cms-range-slider" min="8" max="96" step="1"
                       [ngModel]="getActiveTargetTypographyConfig().fontSize"
-                      (ngModelChange)="onTargetTypographyPropChange('fontSize', $event)" />
+                      (ngModelChange)="onTargetTypographyPropChange('fontSize', $event)"
+                      aria-label="Cỡ chữ" />
                   </div>
                   <div class="cms-slider-input-col">
                     <div class="cms-number-input-wrap">
-                      <input type="number" class="form-control form-control-sm cms-number-input"
-                        min="8" max="96" step="1"
+                      <input type="number" class="cms-number-input" min="8" max="96" step="1"
                         [ngModel]="getActiveTargetTypographyConfig().fontSize"
-                        (ngModelChange)="validateTargetNumericProp('fontSize', $event, 8, 96)" />
+                        (ngModelChange)="onTargetTypographyPropChange('fontSize', $event)"
+                        (blur)="validateTargetNumericProp('fontSize', 8, 96, 16)" />
                       <span class="cms-unit-badge">px</span>
                     </div>
                   </div>
                 </div>
 
-                <!-- 3. Độ đậm (Font Weight) -->
+                <!-- Độ đậm -->
                 <div class="cms-slider-row">
                   <div class="cms-slider-label-col">
                     <span class="cms-slider-prop-name">Độ đậm</span>
-                    <span class="cms-slider-curr-val">
-                      {{ getActiveTargetTypographyConfig().fontWeight }}
-                      <small class="text-muted">({{ getFontWeightName(getActiveTargetTypographyConfig().fontWeight) }})</small>
-                    </span>
+                    <span class="cms-slider-curr-val">{{ getFontWeightName(getActiveTargetTypographyConfig().fontWeight) }}</span>
                   </div>
                   <div class="cms-slider-track-col">
-                    <input type="range" class="form-range cms-range-slider"
-                      min="100" max="900" step="100"
+                    <input type="range" class="cms-range-slider" min="100" max="900" step="100"
                       [ngModel]="getActiveTargetTypographyConfig().fontWeight"
-                      (ngModelChange)="onTargetTypographyPropChange('fontWeight', $event)" />
+                      (ngModelChange)="onTargetTypographyPropChange('fontWeight', $event)"
+                      aria-label="Độ đậm" />
                   </div>
                   <div class="cms-slider-input-col">
                     <div class="cms-number-input-wrap">
-                      <input type="number" class="form-control form-control-sm cms-number-input"
-                        min="100" max="900" step="100"
+                      <input type="number" class="cms-number-input" min="100" max="900" step="100"
                         [ngModel]="getActiveTargetTypographyConfig().fontWeight"
-                        (ngModelChange)="validateTargetNumericProp('fontWeight', $event, 100, 900)" />
+                        (ngModelChange)="onTargetTypographyPropChange('fontWeight', $event)"
+                        (blur)="validateTargetNumericProp('fontWeight', 100, 900, 400)" />
                       <span class="cms-unit-badge">w</span>
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            <!-- B. BỐ CỤC CHỮ (LINE HEIGHT, LETTER SPACING, TEXT TRANSFORM, TEXT ALIGN) -->
-            <div class="customizer-subgroup mb-4 pb-3 border-bottom">
-              <h6 class="customizer-subgroup-title text-wine fw-bold mb-3 d-flex align-items-center gap-2">
-                <span>B. Bố cục chữ</span>
-                <span class="badge badge-light border text-muted fw-normal" style="font-size: 0.72rem;">Giãn cách & Canh lề</span>
-              </h6>
-
-              <div class="cms-slider-controls-group d-flex flex-column gap-3 mb-3">
-                <!-- 4. Khoảng cách dòng (Line Height) -->
+                <!-- Khoảng cách dòng -->
                 <div class="cms-slider-row">
                   <div class="cms-slider-label-col">
                     <span class="cms-slider-prop-name">Khoảng cách dòng</span>
                     <span class="cms-slider-curr-val">{{ formatDecimal(getActiveTargetTypographyConfig().lineHeight, 1) }}</span>
                   </div>
                   <div class="cms-slider-track-col">
-                    <input type="range" class="form-range cms-range-slider"
-                      min="1.0" max="2.5" step="0.1"
+                    <input type="range" class="cms-range-slider" min="1.0" max="2.5" step="0.1"
                       [ngModel]="getActiveTargetTypographyConfig().lineHeight"
-                      (ngModelChange)="onTargetTypographyPropChange('lineHeight', $event)" />
+                      (ngModelChange)="onTargetTypographyPropChange('lineHeight', $event)"
+                      aria-label="Khoảng cách dòng" />
                   </div>
                   <div class="cms-slider-input-col">
                     <div class="cms-number-input-wrap">
-                      <input type="number" class="form-control form-control-sm cms-number-input"
-                        min="1.0" max="2.5" step="0.1"
+                      <input type="number" class="cms-number-input" min="1.0" max="2.5" step="0.1"
                         [ngModel]="getActiveTargetTypographyConfig().lineHeight"
-                        (ngModelChange)="validateTargetNumericProp('lineHeight', $event, 1.0, 2.5)" />
+                        (ngModelChange)="onTargetTypographyPropChange('lineHeight', $event)"
+                        (blur)="validateTargetNumericProp('lineHeight', 1.0, 2.5, 1.5)" />
                       <span class="cms-unit-badge">em</span>
                     </div>
                   </div>
                 </div>
 
-                <!-- 5. Giãn cách chữ (Letter Spacing) -->
+                <!-- Giãn cách chữ -->
                 <div class="cms-slider-row">
                   <div class="cms-slider-label-col">
                     <span class="cms-slider-prop-name">Giãn cách chữ</span>
-                    <span class="cms-slider-curr-val">{{ formatDecimal(getActiveTargetTypographyConfig().letterSpacing, 1) }}px</span>
+                    <span class="cms-slider-curr-val">{{ formatDecimal(getActiveTargetTypographyConfig().letterSpacing, 1) }} px</span>
                   </div>
                   <div class="cms-slider-track-col">
-                    <input type="range" class="form-range cms-range-slider"
-                      min="-2" max="10" step="0.1"
+                    <input type="range" class="cms-range-slider" min="-2" max="10" step="0.1"
                       [ngModel]="getActiveTargetTypographyConfig().letterSpacing"
-                      (ngModelChange)="onTargetTypographyPropChange('letterSpacing', $event)" />
+                      (ngModelChange)="onTargetTypographyPropChange('letterSpacing', $event)"
+                      aria-label="Giãn cách chữ" />
                   </div>
                   <div class="cms-slider-input-col">
                     <div class="cms-number-input-wrap">
-                      <input type="number" class="form-control form-control-sm cms-number-input"
-                        min="-2" max="10" step="0.1"
+                      <input type="number" class="cms-number-input" min="-2" max="10" step="0.1"
                         [ngModel]="getActiveTargetTypographyConfig().letterSpacing"
-                        (ngModelChange)="validateTargetNumericProp('letterSpacing', $event, -2, 10)" />
+                        (ngModelChange)="onTargetTypographyPropChange('letterSpacing', $event)"
+                        (blur)="validateTargetNumericProp('letterSpacing', -2, 10, 0)" />
                       <span class="cms-unit-badge">px</span>
                     </div>
                   </div>
@@ -1605,31 +1548,31 @@
               </div>
 
               <!-- Biến đổi chữ & Căn lề -->
-              <div class="row g-3">
-                <!-- 6. Biến đổi chữ (Text Transform) -->
-                <div class="col-md-6">
-                  <label class="form-label form-label-sm fw-semibold mb-1">Biến đổi chữ (Text Transform)</label>
-                  <div class="btn-group btn-group-sm w-100" role="group">
-                    <button type="button" class="btn"
-                      [ngClass]="(!getActiveTargetTypographyConfig().textTransform || getActiveTargetTypographyConfig().textTransform === 'none') ? 'btn-wine' : 'btn-outline-secondary'"
+              <div class="form-row-2">
+                <!-- Biến đổi chữ -->
+                <div class="form-group mb-0">
+                  <label class="form-label">Biến đổi chữ (Text Transform)</label>
+                  <div class="btn-group-segmented">
+                    <button type="button" class="btn-segmented"
+                      [class.is-active]="!getActiveTargetTypographyConfig().textTransform || getActiveTargetTypographyConfig().textTransform === 'none'"
                       (click)="onTargetTypographyPropChange('textTransform', 'none')"
                       title="Mặc định theo văn bản">
                       Mặc định
                     </button>
-                    <button type="button" class="btn"
-                      [ngClass]="getActiveTargetTypographyConfig().textTransform === 'lowercase' ? 'btn-wine' : 'btn-outline-secondary'"
+                    <button type="button" class="btn-segmented"
+                      [class.is-active]="getActiveTargetTypographyConfig().textTransform === 'lowercase'"
                       (click)="onTargetTypographyPropChange('textTransform', 'lowercase')"
                       title="Chữ thường (lowercase)">
                       abc
                     </button>
-                    <button type="button" class="btn"
-                      [ngClass]="getActiveTargetTypographyConfig().textTransform === 'uppercase' ? 'btn-wine' : 'btn-outline-secondary'"
+                    <button type="button" class="btn-segmented"
+                      [class.is-active]="getActiveTargetTypographyConfig().textTransform === 'uppercase'"
                       (click)="onTargetTypographyPropChange('textTransform', 'uppercase')"
                       title="CHỮ HOA (uppercase)">
                       ABC
                     </button>
-                    <button type="button" class="btn"
-                      [ngClass]="getActiveTargetTypographyConfig().textTransform === 'capitalize' ? 'btn-wine' : 'btn-outline-secondary'"
+                    <button type="button" class="btn-segmented"
+                      [class.is-active]="getActiveTargetTypographyConfig().textTransform === 'capitalize'"
                       (click)="onTargetTypographyPropChange('textTransform', 'capitalize')"
                       title="Viết hoa chữ cái đầu (capitalize)">
                       Abc
@@ -1637,93 +1580,90 @@
                   </div>
                 </div>
 
-                <!-- 7. Căn lề (Text Align) -->
-                <div class="col-md-6">
-                  <label class="form-label form-label-sm fw-semibold mb-1">Căn lề (Text Align)</label>
-                  <div class="btn-group btn-group-sm w-100" role="group">
-                    <button type="button" class="btn"
-                      [ngClass]="(!getActiveTargetTypographyConfig().textAlign || getActiveTargetTypographyConfig().textAlign === 'left') ? 'btn-wine' : 'btn-outline-secondary'"
+                <!-- Căn lề -->
+                <div class="form-group mb-0">
+                  <label class="form-label">Căn lề (Text Align)</label>
+                  <div class="btn-group-segmented">
+                    <button type="button" class="btn-segmented"
+                      [class.is-active]="!getActiveTargetTypographyConfig().textAlign || getActiveTargetTypographyConfig().textAlign === 'left'"
                       (click)="onTargetTypographyPropChange('textAlign', 'left')"
                       title="Căn trái">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="me-1">
                         <line x1="17" y1="10" x2="3" y2="10"></line>
                         <line x1="21" y1="6" x2="3" y2="6"></line>
                         <line x1="21" y1="14" x2="3" y2="14"></line>
                         <line x1="17" y1="18" x2="3" y2="18"></line>
                       </svg>
-                      Trái
+                      <span>Trái</span>
                     </button>
-                    <button type="button" class="btn"
-                      [ngClass]="getActiveTargetTypographyConfig().textAlign === 'center' ? 'btn-wine' : 'btn-outline-secondary'"
+                    <button type="button" class="btn-segmented"
+                      [class.is-active]="getActiveTargetTypographyConfig().textAlign === 'center'"
                       (click)="onTargetTypographyPropChange('textAlign', 'center')"
                       title="Căn giữa">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="me-1">
                         <line x1="18" y1="10" x2="6" y2="10"></line>
                         <line x1="21" y1="6" x2="3" y2="6"></line>
                         <line x1="21" y1="14" x2="3" y2="14"></line>
                         <line x1="18" y1="18" x2="6" y2="18"></line>
                       </svg>
-                      Giữa
+                      <span>Giữa</span>
                     </button>
-                    <button type="button" class="btn"
-                      [ngClass]="getActiveTargetTypographyConfig().textAlign === 'right' ? 'btn-wine' : 'btn-outline-secondary'"
+                    <button type="button" class="btn-segmented"
+                      [class.is-active]="getActiveTargetTypographyConfig().textAlign === 'right'"
                       (click)="onTargetTypographyPropChange('textAlign', 'right')"
                       title="Căn phải">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="me-1">
                         <line x1="21" y1="10" x2="7" y2="10"></line>
                         <line x1="21" y1="6" x2="3" y2="6"></line>
                         <line x1="21" y1="14" x2="3" y2="14"></line>
                         <line x1="21" y1="18" x2="7" y2="18"></line>
                       </svg>
-                      Phải
+                      <span>Phải</span>
                     </button>
-                    <button type="button" class="btn"
-                      [ngClass]="getActiveTargetTypographyConfig().textAlign === 'justify' ? 'btn-wine' : 'btn-outline-secondary'"
+                    <button type="button" class="btn-segmented"
+                      [class.is-active]="getActiveTargetTypographyConfig().textAlign === 'justify'"
                       (click)="onTargetTypographyPropChange('textAlign', 'justify')"
                       title="Căn đều">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="me-1">
                         <line x1="21" y1="10" x2="3" y2="10"></line>
                         <line x1="21" y1="6" x2="3" y2="6"></line>
                         <line x1="21" y1="14" x2="3" y2="14"></line>
                         <line x1="21" y1="18" x2="3" y2="18"></line>
                       </svg>
-                      Đều
+                      <span>Đều</span>
                     </button>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- C. MÀU SẮC (TEXT COLOR + BRAND PALETTE + COLOR PICKER + BUTTON BG IF BUTTON) -->
-            <div class="customizer-subgroup mb-4 pb-3 border-bottom">
-              <h6 class="customizer-subgroup-title text-wine fw-bold mb-3 d-flex align-items-center gap-2">
-                <span>C. Màu sắc</span>
-                <span class="badge badge-light border text-muted fw-normal" style="font-size: 0.72rem;">Màu chữ & Bảng màu</span>
-              </h6>
-
-              <!-- Text Color Row -->
-              <div class="mb-3">
-                <label class="form-label form-label-sm fw-semibold mb-1">Màu chữ của phần tử</label>
+            <!-- NHÓM 2: MÀU SẮC (COLORS) — Phẳng, ngăn cách bằng border-top -->
+            <div class="element-color-section pt-3 border-top mb-4">
+              <div class="form-group mb-3">
+                <label class="form-label mb-1">Màu chữ (Text Color)</label>
                 <div class="d-flex align-items-center gap-2">
                   <div class="color-swatch-box" [style.background-color]="getActiveTargetColor()" title="Xem trước màu chữ"></div>
                   <label class="color-picker-btn mb-0" title="Mở bảng chọn màu trực quan">
                     <input type="color" class="color-native-input"
                       [value]="getActiveTargetColorPickerValue()"
-                      (input)="onTargetColorPickerChange($event.target.value)" />
+                      (input)="onTargetColorPickerChange($any($event.target).value)" />
                     <span>Chọn màu</span>
                   </label>
                   <div class="hex-input-wrap flex-grow-1">
                     <input type="text" class="form-control form-control-sm hex-text-input"
                       placeholder="#74070E" maxlength="7"
                       [value]="getActiveTargetColor()"
-                      (input)="onTargetHexChange($event.target.value)" />
+                      (input)="onTargetHexChange($any($event.target).value)" />
                   </div>
+                </div>
+                <div class="color-error-text text-danger small mt-1" *ngIf="colorErrors[activeTarget.id]">
+                  {{ colorErrors[activeTarget.id] }}
                 </div>
               </div>
 
-              <!-- Chéri Brand Palette -->
-              <div class="mb-3">
-                <label class="form-label form-label-sm fw-semibold mb-1">Bảng màu thương hiệu Chéri</label>
+              <!-- Bảng màu Chéri -->
+              <div class="form-group mb-3">
+                <label class="form-label mb-1">Bảng màu thương hiệu Chéri</label>
                 <div class="brand-swatches-grid">
                   <button type="button" *ngFor="let sw of brandColorPalette"
                     class="brand-swatch-btn"
@@ -1731,39 +1671,52 @@
                     [style.background-color]="sw.hex"
                     [title]="sw.label + ' (' + sw.hex + ')'"
                     (click)="onApplyTargetBrandColor(sw.hex)">
-                    <span class="swatch-check" *ngIf="getActiveTargetColor().toLowerCase() === sw.hex.toLowerCase()">✓</span>
+                    <span class="swatch-check" *ngIf="getActiveTargetColor().toLowerCase() === sw.hex.toLowerCase()">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                    </span>
                   </button>
                 </div>
               </div>
 
-              <!-- Button Special Background Color Control (If role is button) -->
-              <div *ngIf="activeTarget.role === 'button'" class="mt-3 p-3 bg-light border rounded">
-                <label class="form-label form-label-sm fw-semibold mb-1">Màu nền nút (Button Background)</label>
+              <!-- Màu nền nút (Nếu trường là Button) -->
+              <div class="form-group mb-0" *ngIf="activeTarget.role === 'button' || activeTarget.isButton">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <label class="form-label mb-0">Màu nền nút (Button Background)</label>
+                  <button type="button" class="btn-link-action" (click)="onResetTargetButtonBg()" title="Đặt lại màu nền nút về mặc định">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                      <polyline points="1 4 1 10 7 10"></polyline>
+                      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                    </svg>
+                    <span>Đặt lại nền nút</span>
+                  </button>
+                </div>
                 <div class="d-flex align-items-center gap-2">
                   <div class="color-swatch-box" [style.background-color]="getActiveTargetButtonBg()" title="Xem trước màu nền nút"></div>
                   <label class="color-picker-btn mb-0" title="Mở bảng chọn màu nền nút">
                     <input type="color" class="color-native-input"
                       [value]="getActiveTargetButtonBgPickerValue()"
-                      (input)="onTargetButtonBgPickerChange($event.target.value)" />
+                      (input)="onTargetButtonBgPickerChange($any($event.target).value)" />
                     <span>Chọn màu nền</span>
                   </label>
                   <div class="hex-input-wrap flex-grow-1">
                     <input type="text" class="form-control form-control-sm hex-text-input"
                       placeholder="#74070E" maxlength="7"
                       [value]="getActiveTargetButtonBg()"
-                      (input)="onTargetButtonBgHexChange($event.target.value)" />
+                      (input)="onTargetButtonBgHexChange($any($event.target).value)" />
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- D. BẢN XEM TRƯỚC TRỰC TIẾP (LIVE ELEMENT PREVIEW BOX) -->
-            <div class="element-live-preview-box mt-3 p-3 border rounded shadow-sm">
+            <!-- NHÓM 3: BẢN XEM TRƯỚC TRỰC TIẾP (LIVE PREVIEW) — Phẳng, gọn -->
+            <div class="element-live-preview-box p-3 border rounded">
               <div class="element-live-preview-header d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
                 <div class="d-flex align-items-center gap-2">
                   <span class="preview-dot"></span>
                   <strong class="small text-uppercase text-wine">Bản xem trước trực tiếp</strong>
-                  <span class="badge badge-light border text-muted" style="font-size: 0.7rem;">{{ activeTarget.label }}</span>
+                  <span class="badge badge-light border text-muted" style="font-size: 0.7rem;">{{ activeTarget.fieldLabel || activeTarget.label }}</span>
                 </div>
                 <small class="text-muted" style="font-size: 0.72rem;">
                   {{ getActiveTargetTypographyConfig().fontFamily }} • {{ getActiveTargetTypographyConfig().fontSize }}px • {{ getActiveTargetTypographyConfig().fontWeight }}
@@ -1771,9 +1724,8 @@
               </div>
 
               <!-- Live Preview Stage with Adaptive Background -->
-              <div class="element-live-preview-stage p-4 rounded text-center"
+              <div class="element-live-preview-stage p-3 rounded text-center"
                 [style.background-color]="getPreviewStageBgColor()">
-
                 <!-- Hero / Heading Role -->
                 <div *ngIf="activeTarget.role === 'heading'" class="preview-role-heading">
                   <h1 class="m-0" [ngStyle]="getActiveTargetStyle()">
@@ -1817,22 +1769,13 @@
                 </div>
 
                 <!-- Button Role -->
-                <div *ngIf="activeTarget.role === 'button'" class="preview-role-button-wrap">
+                <div *ngIf="activeTarget.role === 'button' || activeTarget.isButton" class="preview-role-button-wrap">
                   <button type="button" class="btn-role-preview"
                     [ngStyle]="getActiveTargetStyle()"
                     [style.background-color]="getActiveTargetButtonBg()">
                     {{ getActiveTargetSampleText() }}
                   </button>
                 </div>
-              </div>
-
-              <div class="element-live-preview-footer mt-2 d-flex justify-content-between align-items-center">
-                <small class="text-muted" style="font-size: 0.72rem;">
-                  Nền tự động điều chỉnh tương phản để dễ quan sát màu chữ.
-                </small>
-                <small class="text-muted" style="font-size: 0.72rem;">
-                  Đồng bộ tức thời với khung Live Preview bên trái.
-                </small>
               </div>
             </div>
           </div>

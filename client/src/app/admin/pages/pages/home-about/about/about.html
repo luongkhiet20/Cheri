@@ -131,9 +131,9 @@
               [ngClass]="['variant-' + (selectedSection.layout.variant || 'image-left'), 'align-' + (selectedSection.layout.alignment || 'center')]">
               <div class="preview-editorial__col-image">
                 <div class="preview-editorial__img-wrap" [class.has-glow]="selectedSection.settings.enableGlow">
-                  <img *ngIf="selectedSection.media.desktop?.url; else noEditorialImg"
-                    [src]="(previewViewport === 'mobile' && selectedSection.media.mobile?.url) ? selectedSection.media.mobile?.url : selectedSection.media.desktop?.url"
-                    [alt]="selectedSection.media.desktop?.alt || 'Editorial Image'" />
+                  <img *ngIf="selectedSection.media?.desktop?.url; else noEditorialImg"
+                    [src]="(previewViewport === 'mobile' && selectedSection.media?.mobile?.url) ? selectedSection.media?.mobile?.url : selectedSection.media?.desktop?.url"
+                    [alt]="selectedSection.media?.desktop?.alt || 'Editorial Image'" />
                   <ng-template #noEditorialImg>
                     <div class="preview-empty-media-box">
                       <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -199,8 +199,8 @@
               [ngClass]="['variant-' + (selectedSection.layout.variant || 'image-right')]">
               <div class="preview-editorial__col-image">
                 <div class="preview-editorial__img-wrap">
-                  <img *ngIf="selectedSection.media.desktop?.url; else noImgTextMedia"
-                    [src]="(previewViewport === 'mobile' && selectedSection.media.mobile?.url) ? selectedSection.media.mobile?.url : selectedSection.media.desktop?.url"
+                  <img *ngIf="selectedSection.media?.desktop?.url; else noImgTextMedia"
+                    [src]="(previewViewport === 'mobile' && selectedSection.media?.mobile?.url) ? selectedSection.media?.mobile?.url : selectedSection.media?.desktop?.url"
                     alt="Image" />
                   <ng-template #noImgTextMedia>
                     <div class="preview-empty-media-box">
@@ -611,9 +611,8 @@
 
           <div class="form-group">
             <label class="form-label">Dán URL hình ảnh trực tiếp</label>
-            <input type="text" class="form-control" [ngModel]="selectedSection.media.desktop?.url"
-              (ngModelChange)="selectedSection.media.desktop = { url: $event, alt: selectedSection.media.desktop?.alt || '' }; hasUnsavedChanges = true"
-              placeholder="https://images.unsplash.com/..." />
+            <input type="text" class="form-control" [ngModel]="selectedSection.media?.desktop?.url"
+              (ngModelChange)="onImageUrlChange($event, 'desktop')" placeholder="https://..." />
           </div>
 
           <div class="form-group">
@@ -625,8 +624,8 @@
               (change)="onFileSelected($event, 'desktop')" />
           </div>
 
-          <div class="media-preview-box" *ngIf="selectedSection.media.desktop?.url">
-            <img [src]="selectedSection.media.desktop?.url" alt="Desktop Preview" />
+          <div class="media-preview-box" *ngIf="selectedSection.media?.desktop?.url">
+            <img [src]="selectedSection.media?.desktop?.url" alt="Desktop Preview" />
             <div class="media-preview-box__actions">
               <button type="button" class="btn btn-outline btn-sm" (click)="onRemoveImage('desktop')">Gỡ ảnh</button>
             </div>
@@ -642,9 +641,8 @@
 
           <div class="form-group">
             <label class="form-label">Dán URL hình ảnh Mobile</label>
-            <input type="text" class="form-control" [ngModel]="selectedSection.media.mobile?.url"
-              (ngModelChange)="selectedSection.media.mobile = { url: $event, alt: selectedSection.media.mobile?.alt || '' }; hasUnsavedChanges = true"
-              placeholder="https://..." />
+            <input type="text" class="form-control" [ngModel]="selectedSection.media?.mobile?.url"
+              (ngModelChange)="onImageUrlChange($event, 'mobile')" placeholder="https://..." />
           </div>
 
           <div class="form-group">
@@ -718,66 +716,8 @@
       <!-- ── TAB 4: KIỂU CHỮ & MÀU SẮC (TYPOGRAPHY & COLORS) ── -->
       <div *ngIf="editorActiveTab === 'typography'" class="home-cms-form-tab">
 
-        <!-- 0. TAB TOP ACTIONS BAR -->
-        <div class="typo-tab-topbar mb-3">
-          <h4 class="typo-tab-title mb-0">Kiểu chữ và màu sắc</h4>
-          <button type="button" class="btn-link-action btn-link-reset" (click)="onResetEntireTab4()"
-            title="Khôi phục toàn bộ Kiểu chữ & Màu sắc của phân đoạn về mặc định">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-              <polyline points="1 4 1 10 7 10"></polyline>
-              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
-            </svg>
-            <span>Khôi phục toàn bộ</span>
-          </button>
-        </div>
 
-        <!-- ════════════════════════════════════════════════════════════════
-             KHU VỰC A: CẤU HÌNH KIỂU CHỮ (TYPOGRAPHY)
-             ════════════════════════════════════════════════════════════════ -->
-        <div class="cms-config-section mb-4">
-          <div class="cms-config-section__header d-flex justify-content-between align-items-center mb-3">
-            <h5 class="cms-config-section__title mb-0">Cấu hình kiểu chữ</h5>
-            <button type="button" class="btn-link-action btn-link-reset" (click)="onResetSectionTypography()"
-              title="Khôi phục toàn bộ font mặc định của phân đoạn">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-                <polyline points="1 4 1 10 7 10"></polyline>
-                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
-              </svg>
-              <span>Khôi phục font mặc định</span>
-            </button>
-          </div>
 
-          <!-- Danh sách preset kiểu chữ: Minimal, Editorial, Classic, Romantic, Modern -->
-          <div class="typo-preset-cards-grid">
-            <button type="button" *ngFor="let p of typographyPresets" class="typo-preset-card"
-              [class.is-active]="selectedTypographyPreset === p.value" (click)="onSelectPreset(p.value)">
-              <div class="typo-preset-card__top">
-                <strong class="typo-preset-card__name" [style.font-family]="p.previewFont">{{ p.label }}</strong>
-                <span class="typo-preset-card__check" *ngIf="selectedTypographyPreset === p.value" aria-hidden="true">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                  </svg>
-                </span>
-              </div>
-              <small class="typo-preset-card__desc" *ngIf="p.description">{{ p.description }}</small>
-            </button>
-          </div>
-
-          <!-- Nút chính: Áp dụng nhanh toàn bộ -->
-          <div class="typo-preset-apply-wrap mt-3 d-flex justify-content-between align-items-center">
-            <div class="typo-preset-apply-hint">
-              <span>Đang chọn: </span>
-              <strong>{{ getSelectedPresetLabel() }}</strong>
-            </div>
-            <button type="button" class="btn btn-cheri-primary btn-sm px-3" (click)="onApplyPresetToAll()">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-                class="me-1">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-              <span>Áp dụng nhanh toàn bộ</span>
-            </button>
-          </div>
-        </div>
 
         <!-- ════════════════════════════════════════════════════════════════
              KHU VỰC B: TÙY CHỈNH TỪNG PHẦN TỬ
@@ -831,10 +771,12 @@
               <div class="typo-font-select-wrap">
                 <select id="activeFontFamily" class="form-control typo-font-select"
                   [(ngModel)]="getActiveTypographyConfig().fontFamily" (ngModelChange)="onTypographyPropChange()">
-                  <option *ngFor="let font of availableFonts" [value]="font.fontFamily"
-                    [style.font-family]="font.fontFamily">
-                    {{ font.name }} ({{ font.category }})
-                  </option>
+                  <optgroup *ngFor="let group of fontGroups" [label]="group.name">
+                    <option *ngFor="let font of group.fonts" [value]="font.fontFamily"
+                      [style.font-family]="font.fontFamily">
+                      {{ font.name }} ({{ font.category }})
+                    </option>
+                  </optgroup>
                 </select>
               </div>
               <span class="form-hint" *ngIf="getActiveTypographyConfig().fontFamily">
@@ -1337,8 +1279,8 @@
             [ngClass]="['variant-' + (sec.layout.variant || 'image-left'), 'align-' + (sec.layout.alignment || 'center')]">
             <div class="preview-editorial__col-image">
               <div class="preview-editorial__img-wrap" [class.has-glow]="sec.settings.enableGlow">
-                <img *ngIf="sec.media.desktop?.url; else noFullEdImg"
-                  [src]="(fullPreviewViewport === 'mobile' && sec.media.mobile?.url) ? sec.media.mobile?.url : sec.media.desktop?.url"
+                <img *ngIf="sec.media?.desktop?.url; else noFullEdImg"
+                  [src]="(fullPreviewViewport === 'mobile' && sec.media?.mobile?.url) ? sec.media?.mobile?.url : sec.media?.desktop?.url"
                   alt="Editorial Image" />
                 <ng-template #noFullEdImg>
                   <div class="preview-empty-media-box">
@@ -1393,7 +1335,7 @@
           <div *ngIf="sec.type === 'image-text'" class="preview-editorial"
             [ngClass]="['variant-' + (sec.layout.variant || 'image-right')]">
             <div class="preview-editorial__col-image">
-              <img *ngIf="sec.media.desktop?.url; else noFullImgText" [src]="sec.media.desktop.url" alt="Image" />
+              <img *ngIf="sec.media?.desktop?.url; else noFullImgText" [src]="sec.media?.desktop?.url" alt="Image" />
               <ng-template #noFullImgText>
                 <div class="preview-empty-media-box">
                   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">

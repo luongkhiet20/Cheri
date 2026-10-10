@@ -169,8 +169,20 @@ export interface PageDoc<S extends CmsSection = CmsSection> {
 
 // ───────────────────────── UI helper types ─────────────────────────
 export interface FontOption {
-  id: string; name: string; fontFamily: string; category: 'Serif' | 'Sans-Serif' | 'System';
-  description?: string; label?: string; value?: string; style?: string;
+  id: string;
+  name: string;
+  fontFamily: string;
+  category: 'Serif' | 'Sans-Serif' | 'Display' | 'Script' | 'System';
+  description?: string;
+  label?: string;
+  value?: string;
+  style?: string;
+  googleFont?: string;
+}
+export interface FontGroup {
+  name: string;
+  category: 'Sans-Serif' | 'Serif' | 'Display' | 'Script' | 'System';
+  fonts: FontOption[];
 }
 export interface SectionTypeOption<T extends string = string> {
   type: T; category: SectionCategory; name: string; description?: string; iconSvg: string; badge?: string;

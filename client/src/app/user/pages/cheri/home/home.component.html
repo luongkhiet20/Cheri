@@ -76,7 +76,12 @@
             } @else {
               <!-- Static Hero Banner -->
               @if (section.media?.desktop?.url || section.content?.title) {
-                <section class="dynamic-hero-section" [id]="section.id" [ngClass]="getSectionAnimationClass(section)" [ngStyle]="getSectionContainerStyle(section)">
+                <section class="dynamic-hero-section" [id]="section.id"
+                  [class.has-media]="!!section.media?.desktop?.url"
+                  [class.align-left]="section.layout?.alignment === 'left'"
+                  [class.align-center]="section.layout?.alignment !== 'left'"
+                  [ngClass]="getSectionAnimationClass(section)"
+                  [ngStyle]="getSectionContainerStyle(section)">
                   <picture *ngIf="section.media?.desktop?.url">
                     <source *ngIf="section.media?.mobile?.url" [srcset]="section.media.mobile.url" media="(max-width: 768px)">
                     <img [src]="section.media.desktop.url"

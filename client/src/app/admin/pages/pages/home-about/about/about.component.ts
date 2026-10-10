@@ -15,12 +15,16 @@ import {
   SectionTypography,
   SectionColors,
   FontOption,
+  FontGroup,
   SectionAnimation,
 } from '../cms-core/cms.models';
 import {
   INITIAL_ABOUT_SECTIONS,
   ABOUT_SECTION_TYPE_OPTIONS,
   AVAILABLE_FONTS,
+  FONT_GROUPS,
+  ensureGoogleFontLoaded,
+  ensureFontsLoadedForSections,
   TYPOGRAPHY_PRESETS,
   CHERI_COLOR_PRESETS,
   getDefaultColorsForType,
@@ -67,6 +71,7 @@ export class AboutComponent implements OnInit, OnDestroy {
   private readonly hexRegex = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
 
   readonly availableFonts: FontOption[] = AVAILABLE_FONTS;
+  readonly fontGroups: FontGroup[] = FONT_GROUPS;
   readonly typographyPresets = TYPOGRAPHY_PRESETS;
   selectedTypographyPreset: TypographyPresetType = 'editorial';
 
@@ -249,6 +254,7 @@ export class AboutComponent implements OnInit, OnDestroy {
       this.ensureSectionTypography(sec);
       this.ensureSectionAnimation(sec);
     });
+    ensureFontsLoadedForSections(this.sections);
 
     if (this.sections.length > 0) {
       this.selectedSection = this.sections[0];
@@ -310,13 +316,20 @@ export class AboutComponent implements OnInit, OnDestroy {
   onPublish(): void {
     if (this.isPublishing || this.isLoadingDraft) return;
 
+    if (this.isUploadingDesktop || this.isUploadingMobile) {
+      this.notificationService.error(
+        'Hình ảnh đang được tải lên máy chủ. Vui lòng chờ quá trình tải hoàn tất trước khi xuất bản.'
+      );
+      return;
+    }
+
     const validation = this.validateSectionsForPublish();
     if (!validation.valid) {
       this.notificationService.error(validation.message);
       return;
     }
 
-    if (this.checkForLargeBase64(this.sections)) {
+    if (this.checkForUnuploadedImages(this.sections)) {
       this.notificationService.error(
         'Phát hiện một số ảnh đang ở dạng tạm thời. Vui lòng tải ảnh lên máy chủ qua nút Tải ảnh trước khi xuất bản.'
       );
@@ -757,30 +770,66 @@ export class AboutComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
+  onImageUrlChange(url: string, target: 'desktop' | 'mobile'): void {
+    if (!this.selectedSection) return;
+    if (!this.selectedSection.media) {
+      this.selectedSection.media = {};
+    }
+    const currentAlt = this.selectedSection.media[target]?.alt || '';
+    const trimmed = (url || '').trim();
+    if (!trimmed) {
+      this.selectedSection.media[target] = null;
+    } else {
+      this.selectedSection.media[target] = {
+        url: trimmed,
+        alt: currentAlt || this.selectedSection.name || 'Hình ảnh',
+      };
+    }
+    this.hasUnsavedChanges = true;
+    this.triggerAnimationPreview();
+    this.cdr.markForCheck();
+  }
+
   extractUploadedImageUrl(res: any): string {
     if (!res) return '';
-    if (typeof res === 'string' && (res.startsWith('http') || res.startsWith('/'))) {
+    if (typeof res === 'string' && (res.startsWith('http') || res.startsWith('/') || res.startsWith('data:image'))) {
       return res;
     }
     if (res.secure_url) return res.secure_url;
     if (res.url) return res.url;
+    if (res.imageUrl) return res.imageUrl;
+    if (res.data?.url) return res.data.url;
+    if (res.data?.secure_url) return res.data.secure_url;
     if (res.all && Array.isArray(res.all) && res.all.length > 0) {
-      return res.all[res.all.length - 1];
+      const last = res.all[res.all.length - 1];
+      return typeof last === 'string' ? last : (last?.url || last?.secure_url || '');
+    }
+    if (Array.isArray(res) && res.length > 0) {
+      const last = res[res.length - 1];
+      return typeof last === 'string' ? last : (last?.url || last?.secure_url || '');
     }
     return '';
   }
 
-  checkForLargeBase64(sections: AboutSection[]): boolean {
+  checkForUnuploadedImages(sections: AboutSection[]): boolean {
     if (!Array.isArray(sections)) return false;
     for (const sec of sections) {
-      if (sec.media?.desktop?.url && sec.media.desktop.url.startsWith('data:image')) {
+      if (!sec.enabled) continue;
+      // Chỉ nhận diện là ảnh tạm thời khi URL là blob: (URL cục bộ chỉ tồn tại trên phiên trình duyệt chưa được tải lên máy chủ)
+      const desktopUrl = sec.media?.desktop?.url;
+      if (desktopUrl && typeof desktopUrl === 'string' && desktopUrl.trim().startsWith('blob:')) {
         return true;
       }
-      if (sec.media?.mobile?.url && sec.media.mobile.url.startsWith('data:image')) {
+      const mobileUrl = sec.media?.mobile?.url;
+      if (mobileUrl && typeof mobileUrl === 'string' && mobileUrl.trim().startsWith('blob:')) {
         return true;
       }
     }
     return false;
+  }
+
+  checkForLargeBase64(sections: AboutSection[]): boolean {
+    return this.checkForUnuploadedImages(sections);
   }
 
   // ── Preview Animation Trigger ────────────────────────────────────
@@ -1054,6 +1103,10 @@ export class AboutComponent implements OnInit, OnDestroy {
     if (!this.selectedSection) return;
     const typo = this.ensureSectionTypography(this.selectedSection);
     typo.preset = 'custom';
+    const activeCfg = this.getActiveTypographyConfig();
+    if (activeCfg?.fontFamily) {
+      ensureGoogleFontLoaded(activeCfg.fontFamily);
+    }
     this.hasUnsavedChanges = true;
     this.triggerAnimationPreview();
     this.cdr.markForCheck();
@@ -1171,7 +1224,12 @@ export class AboutComponent implements OnInit, OnDestroy {
 
   getFontFamilyName(fontFamily?: string): string {
     if (!fontFamily || fontFamily === 'inherit') return 'System Default';
-    const found = this.availableFonts.find((f) => f.fontFamily === fontFamily);
+    const clean = fontFamily.trim().toLowerCase();
+    const found = this.availableFonts.find((f) =>
+      f.fontFamily === fontFamily ||
+      clean === f.fontFamily.toLowerCase() ||
+      clean.includes(f.name.toLowerCase())
+    );
     return found ? found.name : fontFamily.split(',')[0].replace(/['"]/g, '');
   }
 
@@ -1188,6 +1246,7 @@ export class AboutComponent implements OnInit, OnDestroy {
       if (cfg) {
         if (cfg.fontFamily && cfg.fontFamily !== 'inherit') {
           style['font-family'] = cfg.fontFamily;
+          ensureGoogleFontLoaded(cfg.fontFamily);
         }
         if (cfg.fontSize) {
           style['font-size'] = `${cfg.fontSize}px`;

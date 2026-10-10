@@ -30,6 +30,10 @@ import {
   CarouselConfig,
   TypographyElementKey,
 } from '../../../../admin/pages/pages/home-about/cms-core/cms.models';
+import {
+  ensureGoogleFontLoaded,
+  ensureFontsLoadedForSections,
+} from '../../../../admin/pages/pages/home-about/cms-core/cms.constants';
 
 @Component({
   selector: 'app-home',
@@ -294,6 +298,7 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
           this.hasDynamicConfig = this.dynamicSections.length > 0;
 
           if (this.hasDynamicConfig) {
+            ensureFontsLoadedForSections(this.dynamicSections);
             this.initDynamicCarousels();
           }
         } else {
@@ -455,6 +460,7 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
       if (cfg) {
         if (cfg.fontFamily && cfg.fontFamily !== 'inherit') {
           style['font-family'] = cfg.fontFamily;
+          ensureGoogleFontLoaded(cfg.fontFamily);
         }
         if (cfg.fontSize) {
           style['font-size'] = `${cfg.fontSize}px`;

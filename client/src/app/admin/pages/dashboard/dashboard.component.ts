@@ -717,4 +717,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   navigateProductAdd(): void { this.router.navigate(['/admin/products/add']); }
   navigateUsers(): void { this.router.navigate(['/admin/users']); }
   navigateCategories(): void { this.router.navigate(['/admin/categories']); }
+  navigateInventory(status?: string): void {
+    if (status) {
+      this.router.navigate(['/admin/inventory'], { queryParams: { status } });
+    } else {
+      this.router.navigate(['/admin/inventory']);
+    }
+  }
 }

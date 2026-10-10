@@ -16,6 +16,7 @@ import {
   SectionTypography,
   SectionColors,
   FontOption,
+  FontGroup,
   CarouselConfig,
   CarouselSlideItem,
   ConfigurableTypographyTarget,
@@ -25,6 +26,9 @@ import {
   INITIAL_HOME_SECTIONS,
   SECTION_TYPE_OPTIONS,
   AVAILABLE_FONTS,
+  FONT_GROUPS,
+  ensureGoogleFontLoaded,
+  ensureFontsLoadedForSections,
   TYPOGRAPHY_PRESETS,
   CHERI_COLOR_PRESETS,
   ColorPreset,
@@ -104,6 +108,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   readonly availableFonts: FontOption[] = AVAILABLE_FONTS;
+  readonly fontGroups: FontGroup[] = FONT_GROUPS;
   readonly typographyPresets = TYPOGRAPHY_PRESETS;
   readonly cheriColorPresets = CHERI_COLOR_PRESETS;
   readonly hexRegex = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
@@ -289,6 +294,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       this.updateActiveTypographyElementForSection(this.selectedSection);
     }
     this.refreshTypographyTargets();
+    ensureFontsLoadedForSections(this.sections);
     this.startCarouselAutoplay();
     this.cdr.markForCheck();
   }
@@ -1926,6 +1932,9 @@ export class HomeComponent implements OnInit, OnDestroy {
       if (cfg) {
         (cfg as any)[prop] = value;
       }
+      if (prop === 'fontFamily' && value) {
+        ensureGoogleFontLoaded(value);
+      }
     }
     const target = this.activeTarget;
     if (!target) return;
@@ -2338,7 +2347,12 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   getFontFamilyName(fontFamily?: string): string {
     if (!fontFamily || fontFamily === 'inherit') return 'System Default';
-    const found = this.availableFonts.find((f) => f.fontFamily === fontFamily);
+    const clean = fontFamily.trim().toLowerCase();
+    const found = this.availableFonts.find((f) =>
+      f.fontFamily === fontFamily ||
+      clean === f.fontFamily.toLowerCase() ||
+      clean.includes(f.name.toLowerCase())
+    );
     return found ? found.name : fontFamily.split(',')[0].replace(/['"]/g, '');
   }
 
@@ -2365,6 +2379,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       if (cfg) {
         if (cfg.fontFamily && cfg.fontFamily !== 'inherit') {
           style['font-family'] = cfg.fontFamily;
+          ensureGoogleFontLoaded(cfg.fontFamily);
         }
         if (cfg.fontSize) {
           style['font-size'] = `${cfg.fontSize}px`;
@@ -2650,10 +2665,20 @@ export class HomeComponent implements OnInit, OnDestroy {
     if (section.settings?.textColor) {
       style['color'] = section.settings.textColor;
     }
-    if (viewport === 'mobile') {
-      style['min-height'] = section.layout?.mobileMinHeight || '320px';
+    // Đối với Hero Banner tĩnh: nếu có hình ảnh nền, để container co giãn tự nhiên theo tỷ lệ ảnh
+    // (aspect ratio), giúp Live Preview ở Desktop (100%) và Mobile phản ánh chính xác storefront
+    // mà không bị ép cứng pixel gây cắt mất nội dung.
+    if (section.type === 'hero' && section.layout?.variant !== 'carousel') {
+      const hasImg = !!(section.media?.desktop?.url || (viewport === 'mobile' && section.media?.mobile?.url));
+      if (!hasImg) {
+        style['min-height'] = viewport === 'mobile' ? '280px' : (section.layout?.minHeight || '420px');
+      }
     } else {
-      style['min-height'] = section.layout?.minHeight || '480px';
+      if (viewport === 'mobile') {
+        style['min-height'] = section.layout?.mobileMinHeight || '320px';
+      } else {
+        style['min-height'] = section.layout?.minHeight || '480px';
+      }
     }
     return style;
   }

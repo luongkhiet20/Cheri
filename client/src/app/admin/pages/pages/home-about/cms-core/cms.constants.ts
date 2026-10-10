@@ -4,7 +4,7 @@
  */
 import {
   HomeSection, AboutSection, HomeSectionType, AboutSectionType,
-  FontOption, SectionTypography, SectionColors, CarouselConfig, SectionTypeOption,
+  FontOption, FontGroup, SectionTypography, SectionColors, CarouselConfig, SectionTypeOption,
   TypographyPresetOption,
 } from './cms.models';
 
@@ -24,23 +24,164 @@ export const CHERI_COLOR_PRESETS: ColorPreset[] = [
 export function getDefaultCarouselConfig(): CarouselConfig {
   return { autoplay: true, autoplayInterval: 4, showDots: true, showArrows: true, loop: true };
 }
-// ─────────────────── Available Fonts (14 fonts, trung 100% voi Home/About) ───────────────────
+// ─────────────────── Available Fonts (61 fonts: 56 Google Fonts + 5 System) ───────────────────
 export const AVAILABLE_FONTS: FontOption[] = [
+  // ── 1. Sans-Serif (20 fonts) ──
+  { id: 'inter', name: 'Inter', label: 'Inter', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", value: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", category: 'Sans-Serif', style: 'Sans-Serif', googleFont: 'Inter:wght@300;400;500;600;700' },
+  { id: 'montserrat', name: 'Montserrat', label: 'Montserrat', fontFamily: "'Montserrat', sans-serif", value: "'Montserrat', sans-serif", category: 'Sans-Serif', style: 'Sans-Serif', googleFont: 'Montserrat:wght@300;400;500;600;700' },
+  { id: 'poppins', name: 'Poppins', label: 'Poppins', fontFamily: "'Poppins', sans-serif", value: "'Poppins', sans-serif", category: 'Sans-Serif', style: 'Sans-Serif', googleFont: 'Poppins:wght@300;400;500;600;700' },
+  { id: 'roboto', name: 'Roboto', label: 'Roboto', fontFamily: "'Roboto', sans-serif", value: "'Roboto', sans-serif", category: 'Sans-Serif', style: 'Sans-Serif', googleFont: 'Roboto:wght@300;400;500;700' },
+  { id: 'lato', name: 'Lato', label: 'Lato', fontFamily: "'Lato', sans-serif", value: "'Lato', sans-serif", category: 'Sans-Serif', style: 'Sans-Serif', googleFont: 'Lato:wght@300;400;700' },
+  { id: 'opensans', name: 'Open Sans', label: 'Open Sans', fontFamily: "'Open Sans', sans-serif", value: "'Open Sans', sans-serif", category: 'Sans-Serif', style: 'Sans-Serif', googleFont: 'Open+Sans:wght@300;400;600;700' },
+  { id: 'dmsans', name: 'DM Sans', label: 'DM Sans', fontFamily: "'DM Sans', sans-serif", value: "'DM Sans', sans-serif", category: 'Sans-Serif', style: 'Sans-Serif', googleFont: 'DM+Sans:wght@300;400;500;700' },
+  { id: 'plusjakartasans', name: 'Plus Jakarta Sans', label: 'Plus Jakarta Sans', fontFamily: "'Plus Jakarta Sans', sans-serif", value: "'Plus Jakarta Sans', sans-serif", category: 'Sans-Serif', style: 'Sans-Serif', googleFont: 'Plus+Jakarta+Sans:wght@300;400;500;600;700' },
+  { id: 'jost', name: 'Jost', label: 'Jost', fontFamily: "'Jost', sans-serif", value: "'Jost', sans-serif", category: 'Sans-Serif', style: 'Sans-Serif', googleFont: 'Jost:wght@300;400;500;600' },
+  { id: 'outfit', name: 'Outfit', label: 'Outfit', fontFamily: "'Outfit', sans-serif", value: "'Outfit', sans-serif", category: 'Sans-Serif', style: 'Sans-Serif', googleFont: 'Outfit:wght@300;400;500;600' },
+  { id: 'raleway', name: 'Raleway', label: 'Raleway', fontFamily: "'Raleway', sans-serif", value: "'Raleway', sans-serif", category: 'Sans-Serif', style: 'Sans-Serif', googleFont: 'Raleway:wght@300;400;500;600' },
+  { id: 'nunito', name: 'Nunito', label: 'Nunito', fontFamily: "'Nunito', sans-serif", value: "'Nunito', sans-serif", category: 'Sans-Serif', style: 'Sans-Serif', googleFont: 'Nunito:wght@300;400;600;700' },
+  { id: 'worksans', name: 'Work Sans', label: 'Work Sans', fontFamily: "'Work Sans', sans-serif", value: "'Work Sans', sans-serif", category: 'Sans-Serif', style: 'Sans-Serif', googleFont: 'Work+Sans:wght@300;400;500;600' },
+  { id: 'manrope', name: 'Manrope', label: 'Manrope', fontFamily: "'Manrope', sans-serif", value: "'Manrope', sans-serif", category: 'Sans-Serif', style: 'Sans-Serif', googleFont: 'Manrope:wght@300;400;500;600' },
+  { id: 'urbanist', name: 'Urbanist', label: 'Urbanist', fontFamily: "'Urbanist', sans-serif", value: "'Urbanist', sans-serif", category: 'Sans-Serif', style: 'Sans-Serif', googleFont: 'Urbanist:wght@300;400;500;600' },
+  { id: 'syne', name: 'Syne', label: 'Syne', fontFamily: "'Syne', sans-serif", value: "'Syne', sans-serif", category: 'Sans-Serif', style: 'Sans-Serif', googleFont: 'Syne:wght@400;500;700' },
+  { id: 'tenorsans', name: 'Tenor Sans', label: 'Tenor Sans', fontFamily: "'Tenor Sans', sans-serif", value: "'Tenor Sans', sans-serif", category: 'Sans-Serif', style: 'Sans-Serif', googleFont: 'Tenor+Sans' },
+  { id: 'questrial', name: 'Questrial', label: 'Questrial', fontFamily: "'Questrial', sans-serif", value: "'Questrial', sans-serif", category: 'Sans-Serif', style: 'Sans-Serif', googleFont: 'Questrial' },
+  { id: 'marcellussc', name: 'Marcellus SC', label: 'Marcellus SC', fontFamily: "'Marcellus SC', sans-serif", value: "'Marcellus SC', sans-serif", category: 'Sans-Serif', style: 'Sans-Serif', googleFont: 'Marcellus+SC' },
+  { id: 'epilogue', name: 'Epilogue', label: 'Epilogue', fontFamily: "'Epilogue', sans-serif", value: "'Epilogue', sans-serif", category: 'Sans-Serif', style: 'Sans-Serif', googleFont: 'Epilogue:wght@300;400;600' },
+
+  // ── 2. Serif (18 fonts) ──
+  { id: 'playfair', name: 'Playfair Display', label: 'Playfair Display', fontFamily: "'Playfair Display', Georgia, serif", value: "'Playfair Display', Georgia, serif", category: 'Serif', style: 'Serif', googleFont: 'Playfair+Display:ital,wght@0,400;0,600;0,700;1,400' },
+  { id: 'cormorant', name: 'Cormorant Garamond', label: 'Cormorant Garamond', fontFamily: "'Cormorant Garamond', Garamond, serif", value: "'Cormorant Garamond', Garamond, serif", category: 'Serif', style: 'Serif', googleFont: 'Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400' },
+  { id: 'lora', name: 'Lora', label: 'Lora', fontFamily: "'Lora', Georgia, serif", value: "'Lora', Georgia, serif", category: 'Serif', style: 'Serif', googleFont: 'Lora:ital,wght@0,400;0,500;0,600;1,400' },
+  { id: 'cinzel', name: 'Cinzel', label: 'Cinzel', fontFamily: "'Cinzel', Georgia, serif", value: "'Cinzel', Georgia, serif", category: 'Serif', style: 'Serif', googleFont: 'Cinzel:wght@400;600;700' },
+  { id: 'bodonimoda', name: 'Bodoni Moda', label: 'Bodoni Moda', fontFamily: "'Bodoni Moda', Georgia, serif", value: "'Bodoni Moda', Georgia, serif", category: 'Serif', style: 'Serif', googleFont: 'Bodoni+Moda:ital,wght@0,400;0,600;0,700;1,400' },
+  { id: 'prata', name: 'Prata', label: 'Prata', fontFamily: "'Prata', Georgia, serif", value: "'Prata', Georgia, serif", category: 'Serif', style: 'Serif', googleFont: 'Prata' },
+  { id: 'marcellus', name: 'Marcellus', label: 'Marcellus', fontFamily: "'Marcellus', Georgia, serif", value: "'Marcellus', Georgia, serif", category: 'Serif', style: 'Serif', googleFont: 'Marcellus' },
+  { id: 'castorotitling', name: 'Castoro Titling', label: 'Castoro Titling', fontFamily: "'Castoro Titling', Georgia, serif", value: "'Castoro Titling', Georgia, serif", category: 'Serif', style: 'Serif', googleFont: 'Castoro+Titling' },
+  { id: 'ebgaramond', name: 'EB Garamond', label: 'EB Garamond', fontFamily: "'EB Garamond', Garamond, Georgia, serif", value: "'EB Garamond', Garamond, Georgia, serif", category: 'Serif', style: 'Serif', googleFont: 'EB+Garamond:ital,wght@0,400;0,600;1,400' },
+  { id: 'merriweather', name: 'Merriweather', label: 'Merriweather', fontFamily: "'Merriweather', Georgia, serif", value: "'Merriweather', Georgia, serif", category: 'Serif', style: 'Serif', googleFont: 'Merriweather:wght@300;400;700' },
+  { id: 'italiana', name: 'Italiana', label: 'Italiana', fontFamily: "'Italiana', Georgia, serif", value: "'Italiana', Georgia, serif", category: 'Serif', style: 'Serif', googleFont: 'Italiana' },
+  { id: 'bellefair', name: 'Bellefair', label: 'Bellefair', fontFamily: "'Bellefair', Georgia, serif", value: "'Bellefair', Georgia, serif", category: 'Serif', style: 'Serif', googleFont: 'Bellefair' },
+  { id: 'aboreto', name: 'Aboreto', label: 'Aboreto', fontFamily: "'Aboreto', Georgia, serif", value: "'Aboreto', Georgia, serif", category: 'Serif', style: 'Serif', googleFont: 'Aboreto' },
+  { id: 'oranienbaum', name: 'Oranienbaum', label: 'Oranienbaum', fontFamily: "'Oranienbaum', Georgia, serif", value: "'Oranienbaum', Georgia, serif", category: 'Serif', style: 'Serif', googleFont: 'Oranienbaum' },
+  { id: 'spectral', name: 'Spectral', label: 'Spectral', fontFamily: "'Spectral', Georgia, serif", value: "'Spectral', Georgia, serif", category: 'Serif', style: 'Serif', googleFont: 'Spectral:wght@300;400;600' },
+  { id: 'vollkorn', name: 'Vollkorn', label: 'Vollkorn', fontFamily: "'Vollkorn', Georgia, serif", value: "'Vollkorn', Georgia, serif", category: 'Serif', style: 'Serif', googleFont: 'Vollkorn:ital,wght@0,400;0,600;1,400' },
+  { id: 'baskervville', name: 'Baskervville', label: 'Baskervville', fontFamily: "'Baskervville', Georgia, serif", value: "'Baskervville', Georgia, serif", category: 'Serif', style: 'Serif', googleFont: 'Baskervville:ital@0;1' },
+  { id: 'cardo', name: 'Cardo', label: 'Cardo', fontFamily: "'Cardo', Georgia, serif", value: "'Cardo', Georgia, serif", category: 'Serif', style: 'Serif', googleFont: 'Cardo:ital,wght@0,400;0,700;1,400' },
+
+  // ── 3. Display (10 fonts) ──
+  { id: 'abrilfatface', name: 'Abril Fatface', label: 'Abril Fatface', fontFamily: "'Abril Fatface', Georgia, serif", value: "'Abril Fatface', Georgia, serif", category: 'Display', style: 'Display', googleFont: 'Abril+Fatface' },
+  { id: 'yesevaone', name: 'Yeseva One', label: 'Yeseva One', fontFamily: "'Yeseva One', Georgia, serif", value: "'Yeseva One', Georgia, serif", category: 'Display', style: 'Display', googleFont: 'Yeseva+One' },
+  { id: 'rozhaone', name: 'Rozha One', label: 'Rozha One', fontFamily: "'Rozha One', Georgia, serif", value: "'Rozha One', Georgia, serif", category: 'Display', style: 'Display', googleFont: 'Rozha+One' },
+  { id: 'dmserifdisplay', name: 'DM Serif Display', label: 'DM Serif Display', fontFamily: "'DM Serif Display', Georgia, serif", value: "'DM Serif Display', Georgia, serif", category: 'Display', style: 'Display', googleFont: 'DM+Serif+Display' },
+  { id: 'forum', name: 'Forum', label: 'Forum', fontFamily: "'Forum', Georgia, serif", value: "'Forum', Georgia, serif", category: 'Display', style: 'Display', googleFont: 'Forum' },
+  { id: 'gloock', name: 'Gloock', label: 'Gloock', fontFamily: "'Gloock', Georgia, serif", value: "'Gloock', Georgia, serif", category: 'Display', style: 'Display', googleFont: 'Gloock' },
+  { id: 'stintultraexpanded', name: 'Stint Ultra Expanded', label: 'Stint Ultra Expanded', fontFamily: "'Stint Ultra Expanded', Georgia, serif", value: "'Stint Ultra Expanded', Georgia, serif", category: 'Display', style: 'Display', googleFont: 'Stint+Ultra+Expanded' },
+  { id: 'belleza', name: 'Belleza', label: 'Belleza', fontFamily: "'Belleza', sans-serif", value: "'Belleza', sans-serif", category: 'Display', style: 'Display', googleFont: 'Belleza' },
+  { id: 'federo', name: 'Federo', label: 'Federo', fontFamily: "'Federo', sans-serif", value: "'Federo', sans-serif", category: 'Display', style: 'Display', googleFont: 'Federo' },
+  { id: 'cinzeldec', name: 'Cinzel Decorative', label: 'Cinzel Decorative', fontFamily: "'Cinzel Decorative', Georgia, serif", value: "'Cinzel Decorative', Georgia, serif", category: 'Display', style: 'Display', googleFont: 'Cinzel+Decorative:wght@400;700' },
+
+  // ── 4. Script (8 fonts) ──
+  { id: 'corinthia', name: 'Corinthia', label: 'Corinthia', fontFamily: "'Corinthia', cursive, 'Cormorant Garamond', serif", value: "'Corinthia', cursive, 'Cormorant Garamond', serif", category: 'Script', style: 'Script', googleFont: 'Corinthia:wght@400;700' },
+  { id: 'greatvibes', name: 'Great Vibes', label: 'Great Vibes', fontFamily: "'Great Vibes', cursive, 'Brush Script MT', serif", value: "'Great Vibes', cursive, 'Brush Script MT', serif", category: 'Script', style: 'Script', googleFont: 'Great+Vibes' },
+  { id: 'alexbrush', name: 'Alex Brush', label: 'Alex Brush', fontFamily: "'Alex Brush', cursive, 'Brush Script MT', serif", value: "'Alex Brush', cursive, 'Brush Script MT', serif", category: 'Script', style: 'Script', googleFont: 'Alex+Brush' },
+  { id: 'allura', name: 'Allura', label: 'Allura', fontFamily: "'Allura', cursive, 'Brush Script MT', serif", value: "'Allura', cursive, 'Brush Script MT', serif", category: 'Script', style: 'Script', googleFont: 'Allura' },
+  { id: 'pinyonscript', name: 'Pinyon Script', label: 'Pinyon Script', fontFamily: "'Pinyon Script', cursive, 'Brush Script MT', serif", value: "'Pinyon Script', cursive, 'Brush Script MT', serif", category: 'Script', style: 'Script', googleFont: 'Pinyon+Script' },
+  { id: 'parisienne', name: 'Parisienne', label: 'Parisienne', fontFamily: "'Parisienne', cursive, 'Brush Script MT', serif", value: "'Parisienne', cursive, 'Brush Script MT', serif", category: 'Script', style: 'Script', googleFont: 'Parisienne' },
+  { id: 'monsieurladoulaise', name: 'Monsieur La Doulaise', label: 'Monsieur La Doulaise', fontFamily: "'Monsieur La Doulaise', cursive, 'Brush Script MT', serif", value: "'Monsieur La Doulaise', cursive, 'Brush Script MT', serif", category: 'Script', style: 'Script', googleFont: 'Monsieur+La+Doulaise' },
+  { id: 'meaculpa', name: 'Mea Culpa', label: 'Mea Culpa', fontFamily: "'Mea Culpa', cursive, 'Brush Script MT', serif", value: "'Mea Culpa', cursive, 'Brush Script MT', serif", category: 'Script', style: 'Script', googleFont: 'Mea+Culpa' },
+
+  // ── 5. System Default (5 fonts) ──
   { id: 'system', name: 'System Default', label: 'System Default', fontFamily: 'inherit', value: 'inherit', category: 'System', style: 'He thong' },
-  { id: 'inter', name: 'Inter', label: 'Inter', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", value: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", category: 'Sans-Serif', style: 'Sans-Serif' },
-  { id: 'playfair', name: 'Playfair Display', label: 'Playfair Display', fontFamily: "'Playfair Display', Georgia, serif", value: "'Playfair Display', Georgia, serif", category: 'Serif', style: 'Serif' },
-  { id: 'cormorant', name: 'Cormorant Garamond', label: 'Cormorant Garamond', fontFamily: "'Cormorant Garamond', Garamond, serif", value: "'Cormorant Garamond', Garamond, serif", category: 'Serif', style: 'Serif' },
-  { id: 'lora', name: 'Lora', label: 'Lora', fontFamily: "'Lora', Georgia, serif", value: "'Lora', Georgia, serif", category: 'Serif', style: 'Serif' },
-  { id: 'montserrat', name: 'Montserrat', label: 'Montserrat', fontFamily: "'Montserrat', sans-serif", value: "'Montserrat', sans-serif", category: 'Sans-Serif', style: 'Sans-Serif' },
-  { id: 'roboto', name: 'Roboto', label: 'Roboto', fontFamily: "'Roboto', sans-serif", value: "'Roboto', sans-serif", category: 'Sans-Serif', style: 'Sans-Serif' },
-  { id: 'lato', name: 'Lato', label: 'Lato', fontFamily: "'Lato', sans-serif", value: "'Lato', sans-serif", category: 'Sans-Serif', style: 'Sans-Serif' },
-  { id: 'opensans', name: 'Open Sans', label: 'Open Sans', fontFamily: "'Open Sans', sans-serif", value: "'Open Sans', sans-serif", category: 'Sans-Serif', style: 'Sans-Serif' },
-  { id: 'corinthia', name: 'Corinthia', label: 'Corinthia', fontFamily: "'Corinthia', cursive, 'Cormorant Garamond', serif", value: "'Corinthia', cursive, 'Cormorant Garamond', serif", category: 'Serif', style: 'Serif' },
-  { id: 'arial', name: 'Arial', label: 'Arial', fontFamily: 'Arial, Helvetica, sans-serif', value: 'Arial, Helvetica, sans-serif', category: 'Sans-Serif', style: 'Sans-Serif' },
-  { id: 'georgia', name: 'Georgia', label: 'Georgia', fontFamily: 'Georgia, serif', value: 'Georgia, serif', category: 'Serif', style: 'Serif' },
-  { id: 'times', name: 'Times New Roman', label: 'Times New Roman', fontFamily: "'Times New Roman', Times, serif", value: "'Times New Roman', Times, serif", category: 'Serif', style: 'Serif' },
-  { id: 'segoe', name: 'Segoe UI', label: 'Segoe UI', fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", value: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", category: 'Sans-Serif', style: 'Sans-Serif' },
+  { id: 'arial', name: 'Arial', label: 'Arial', fontFamily: 'Arial, Helvetica, sans-serif', value: 'Arial, Helvetica, sans-serif', category: 'System', style: 'He thong' },
+  { id: 'georgia', name: 'Georgia', label: 'Georgia', fontFamily: 'Georgia, serif', value: 'Georgia, serif', category: 'System', style: 'He thong' },
+  { id: 'times', name: 'Times New Roman', label: 'Times New Roman', fontFamily: "'Times New Roman', Times, serif", value: "'Times New Roman', Times, serif", category: 'System', style: 'He thong' },
+  { id: 'segoe', name: 'Segoe UI', label: 'Segoe UI', fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", value: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", category: 'System', style: 'He thong' },
 ];
+
+export const FONT_GROUPS: FontGroup[] = [
+  {
+    name: 'Sans-serif',
+    category: 'Sans-Serif',
+    fonts: AVAILABLE_FONTS.filter((f) => f.category === 'Sans-Serif'),
+  },
+  {
+    name: 'Serif',
+    category: 'Serif',
+    fonts: AVAILABLE_FONTS.filter((f) => f.category === 'Serif'),
+  },
+  {
+    name: 'Display',
+    category: 'Display',
+    fonts: AVAILABLE_FONTS.filter((f) => f.category === 'Display'),
+  },
+  {
+    name: 'Script',
+    category: 'Script',
+    fonts: AVAILABLE_FONTS.filter((f) => f.category === 'Script'),
+  },
+  {
+    name: 'Hệ thống (System)',
+    category: 'System',
+    fonts: AVAILABLE_FONTS.filter((f) => f.category === 'System'),
+  },
+];
+
+const loadedGoogleFonts = new Set<string>();
+
+/**
+ * Tải font Google theo yêu cầu (on-demand lazy loading).
+ * Tránh tải hàng loạt 50+ font cùng lúc, chỉ tải khi font được chọn hoặc hiển thị.
+ */
+export function ensureGoogleFontLoaded(fontFamilyOrName?: string): void {
+  if (typeof document === 'undefined' || typeof window === 'undefined' || !fontFamilyOrName) return;
+  const target = fontFamilyOrName.trim();
+  if (!target || target === 'inherit') return;
+
+  const font = AVAILABLE_FONTS.find((f) => {
+    if (f.fontFamily === target || f.id === target) return true;
+    const cleanTarget = target.toLowerCase();
+    const cleanFontName = f.name.toLowerCase();
+    return cleanTarget.includes(cleanFontName);
+  });
+
+  if (!font || !font.googleFont) return;
+  if (loadedGoogleFonts.has(font.id)) return;
+  loadedGoogleFonts.add(font.id);
+
+  const linkId = `google-font-${font.id}`;
+  if (document.getElementById(linkId)) return;
+
+  const link = document.createElement('link');
+  link.id = linkId;
+  link.rel = 'stylesheet';
+  link.href = `https://fonts.googleapis.com/css2?family=${font.googleFont}&display=swap`;
+  document.head.appendChild(link);
+}
+
+/**
+ * Quét danh sách sections và chỉ tải những Google Fonts đang thực sự được dùng.
+ */
+export function ensureFontsLoadedForSections(sections?: any[]): void {
+  if (!sections || !Array.isArray(sections)) return;
+  for (const s of sections) {
+    if (s?.typography) {
+      for (const k of Object.keys(s.typography)) {
+        const item = s.typography[k];
+        if (item?.fontFamily) {
+          ensureGoogleFontLoaded(item.fontFamily);
+        }
+      }
+    }
+    if (s?.media?.carouselSlides && Array.isArray(s.media.carouselSlides)) {
+      for (const slide of s.media.carouselSlides) {
+        if (slide?.typography) {
+          if (slide.typography.title?.fontFamily) ensureGoogleFontLoaded(slide.typography.title.fontFamily);
+          if (slide.typography.description?.fontFamily) ensureGoogleFontLoaded(slide.typography.description.fontFamily);
+        }
+      }
+    }
+  }
+}
 
 // ─────────────────── Typography Presets ───────────────────
 export const TYPOGRAPHY_PRESETS: TypographyPresetOption[] = [
@@ -272,26 +413,26 @@ export const INITIAL_HOME_SECTIONS: HomeSection[] = [
 
 export const INITIAL_ABOUT_SECTIONS: AboutSection[] = [
   {
-    id: 'about-intro', name: 'Gioi thieu Thuong hieu Cheri', type: 'editorial', category: 'CONTENT', enabled: true, order: 1,
-    content: { title: 'Cau Chuyen Cheri', quote: 'Tung duong kim mui chi la su ton vinh net dep thanh lich vuot thoi gian.', tagline1: 'Atelier de Cheri', tagline2: 'Depuis 2024', buttonText: 'Kham pha bo suu tap', buttonLink: '/vi/product/all' },
-    media: { desktop: { url: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=1600&auto=format&fit=crop', alt: 'Cau chuyen Cheri' }, mobile: null, overlayOpacity: 20 },
+    id: 'about-intro', name: 'Giới thiệu Thương hiệu Chéri', type: 'editorial', category: 'CONTENT', enabled: true, order: 1,
+    content: { title: '', quote: '', tagline1: '', tagline2: '', description: '', buttonText: '', buttonLink: '' },
+    media: { desktop: null, mobile: null, overlayOpacity: 0 },
     layout: { variant: 'image-left', imageWidth: 50, contentWidth: 50, alignment: 'center' }, motionPreset: 'editorial',
     animation: { preset: 'split-reveal', duration: 850, delay: 100, intensity: 'normal', once: true },
     typography: getDefaultTypographyForType('editorial'), colors: getDefaultColorsForType('editorial'),
-    settings: { enableGlow: true },
+    settings: { enableGlow: false },
   },
   {
-    id: 'about-philosophy', name: 'Triet ly Thiet ke', type: 'image-text', category: 'CONTENT', enabled: true, order: 2,
-    content: { eyebrow: 'Triet ly & Nghe thuat', title: 'Su Tinh Te Trong Tung Chi Tiet', description: 'Chung toi tin rang su sang trong thuc su nam o su gian di tinh te, chat lieu cao cap va su thoai mai tuyet doi.', buttonText: 'Tim hieu them', buttonLink: '/vi/product/all' },
-    media: { desktop: { url: 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?q=80&w=1600&auto=format&fit=crop', alt: 'Triet ly thiet ke' }, mobile: null },
+    id: 'about-philosophy', name: 'Triết lý Thiết kế', type: 'image-text', category: 'CONTENT', enabled: true, order: 2,
+    content: { eyebrow: '', title: '', description: '', buttonText: '', buttonLink: '' },
+    media: { desktop: null, mobile: null },
     layout: { variant: 'image-right', imageWidth: 50, contentWidth: 50 }, motionPreset: 'subtle',
     animation: { preset: 'slide-right', duration: 750 },
     typography: getDefaultTypographyForType('image-text'), colors: getDefaultColorsForType('image-text'),
     settings: {},
   },
   {
-    id: 'about-quote', name: 'Thong Diep Tac Gia', type: 'quote', category: 'CONTENT', enabled: true, order: 3,
-    content: { quote: 'Ve dep khong nam o trang phuc ban mac, ma o phong thai va nang luong ban toa ra.', author: 'Cheri Creative Director' },
+    id: 'about-quote', name: 'Thông Điệp Tác Giả', type: 'quote', category: 'CONTENT', enabled: true, order: 3,
+    content: { quote: '', author: '' },
     media: {}, layout: { variant: 'centered' }, motionPreset: 'minimal',
     animation: { preset: 'fade', duration: 700 },
     typography: getDefaultTypographyForType('quote'), colors: getDefaultColorsForType('quote'),
@@ -337,28 +478,25 @@ export function createDefaultAboutSection(type: AboutSectionType = 'editorial', 
         enabled: true,
         order,
         content: {
-          eyebrow: 'Atelier de Chéri',
-          title: 'Câu Chuyện Chéri',
-          quote: 'Từng đường kim mũi chỉ là sự tôn vinh nét đẹp thanh lịch vượt thời gian.',
-          tagline1: 'Atelier de Chéri',
-          tagline2: 'Depuis 2024',
-          description: 'Không chạy theo xu hướng nhất thời, chúng tôi tạo nên những thiết kế mang vẻ đẹp trường tồn.',
-          buttonText: 'Khám phá bộ sưu tập',
-          buttonLink: '/vi/product/all',
+          eyebrow: '',
+          title: '',
+          quote: '',
+          tagline1: '',
+          tagline2: '',
+          description: '',
+          buttonText: '',
+          buttonLink: '',
         },
         media: {
-          desktop: {
-            url: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=1600&auto=format&fit=crop',
-            alt: 'Câu chuyện Chéri',
-          },
+          desktop: null,
           mobile: null,
-          overlayOpacity: 20,
+          overlayOpacity: 0,
           carouselSlides: [],
         },
         layout: { variant: 'image-left', imageWidth: 50, contentWidth: 50, alignment: 'center' },
         motionPreset: 'editorial',
         animation: { preset: 'split-reveal', duration: 850, delay: 100, intensity: 'normal', once: true },
-        settings: { enableGlow: true },
+        settings: { enableGlow: false },
       };
       break;
 
@@ -371,17 +509,14 @@ export function createDefaultAboutSection(type: AboutSectionType = 'editorial', 
         enabled: true,
         order,
         content: {
-          eyebrow: 'Triết lý & Nghệ thuật',
-          title: 'Sự Tinh Tế Trong Từng Chi Tiết',
-          description: 'Chúng tôi tin rằng sự sang trọng thực sự bắt nguồn từ sự tối giản thanh khiết, chất liệu thượng hạng và sự thoải mái tuyệt đối cho quý cô.',
-          buttonText: 'Tìm hiểu thêm',
-          buttonLink: '/vi/product/all',
+          eyebrow: '',
+          title: '',
+          description: '',
+          buttonText: '',
+          buttonLink: '',
         },
         media: {
-          desktop: {
-            url: 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?q=80&w=1600&auto=format&fit=crop',
-            alt: 'Triết lý thiết kế Chéri',
-          },
+          desktop: null,
           mobile: null,
           overlayOpacity: 0,
           carouselSlides: [],
@@ -402,8 +537,8 @@ export function createDefaultAboutSection(type: AboutSectionType = 'editorial', 
         enabled: true,
         order,
         content: {
-          quote: 'Vẻ đẹp không nằm ở trang phục bạn mặc, mà ở phong thái và năng lượng bạn toả ra.',
-          author: 'Chéri Creative Director',
+          quote: '',
+          author: '',
         },
         media: { desktop: null, mobile: null, carouselSlides: [] },
         layout: { variant: 'centered', alignment: 'center' },
@@ -422,10 +557,10 @@ export function createDefaultAboutSection(type: AboutSectionType = 'editorial', 
         enabled: true,
         order,
         content: {
-          title: 'Gia Nhập Cộng Đồng Quý Cô Chéri',
-          description: 'Đăng ký thành viên để nhận những đặc quyền thượng lưu độc bản và trải nghiệm sớm nhất các bộ sưu tập Haute Couture.',
-          buttonText: 'Khám phá ngay',
-          buttonLink: '/vi/contact',
+          title: '',
+          description: '',
+          buttonText: '',
+          buttonLink: '',
         },
         media: { desktop: null, mobile: null, carouselSlides: [] },
         layout: { variant: 'centered', alignment: 'center' },

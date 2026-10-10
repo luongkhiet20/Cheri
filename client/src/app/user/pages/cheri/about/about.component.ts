@@ -17,6 +17,10 @@ import {
   AboutSection,
   TypographyElementKey,
 } from '../../../../admin/pages/pages/home-about/cms-core/cms.models';
+import {
+  ensureGoogleFontLoaded,
+  ensureFontsLoadedForSections,
+} from '../../../../admin/pages/pages/home-about/cms-core/cms.constants';
 
 @Component({
   selector: 'app-user-about',
@@ -121,6 +125,7 @@ export class AboutComponent implements OnInit, OnDestroy {
 
           // Trường hợp A: Có dữ liệu hợp lệ xuất bản từ CMS
           this.sections = validSections;
+          ensureFontsLoadedForSections(this.sections);
           if (!this.isDestroyed) {
             this.initIntersectionObserver();
             this.cdr.markForCheck();
@@ -160,6 +165,7 @@ export class AboutComponent implements OnInit, OnDestroy {
       if (cfg) {
         if (cfg.fontFamily && cfg.fontFamily !== 'inherit') {
           style['font-family'] = cfg.fontFamily;
+          ensureGoogleFontLoaded(cfg.fontFamily);
         }
         if (cfg.fontSize) {
           style['font-size'] = `${cfg.fontSize}px`;

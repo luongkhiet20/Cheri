@@ -491,24 +491,31 @@
   overflow: hidden;
   background-color: #111827;
   color: #ffffff;
-  padding: 40px 24px;
+  padding: 0;
   width: 100%;
-  min-height: 480px;
+  min-height: 320px;
+  box-sizing: border-box;
   transition: all 0.3s ease;
 }
 
+.preview-hero.has-image,
+.preview-hero:has(.preview-hero__bg img) {
+  min-height: unset !important;
+}
+
 .preview-hero__bg {
-  position: absolute;
-  inset: 0;
+  position: relative;
   width: 100%;
-  height: 100%;
+  height: auto;
+  display: block;
+  line-height: 0;
 }
 
 .preview-hero__bg img {
   width: 100%;
-  height: 100%;
-  min-height: 480px;
-  max-height: 800px;
+  height: auto;
+  min-height: unset;
+  max-height: 85vh;
   object-fit: cover;
   object-position: center;
   display: block;
@@ -521,25 +528,44 @@
   pointer-events: none;
 }
 
-.preview-hero__content {
-  position: relative;
+.preview-hero.has-image .preview-hero__content {
+  position: absolute;
+  inset: 0;
   z-index: 2;
-  max-width: 800px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: clamp(20px, 4vw, 40px) 24px;
   width: 100%;
+  box-sizing: border-box;
 }
 
-.preview-hero.align-center {
+.preview-hero:not(.has-image) .preview-hero__content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   text-align: center;
+  padding: 36px 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.preview-hero.align-center .preview-hero__content {
+  text-align: center;
+  align-items: center;
   justify-content: center;
 }
 
-.preview-hero.align-left {
-  text-align: left;
-  justify-content: flex-start;
-}
-
 .preview-hero.align-left .preview-hero__content {
-  margin-left: clamp(16px, 4vw, 48px);
+  text-align: left;
+  align-items: flex-start;
+  justify-content: center;
+  padding-left: clamp(24px, 6vw, 48px);
 }
 
 .preview-hero__eyebrow {
@@ -553,20 +579,20 @@
 }
 
 .preview-hero__title {
-  font-size: 42px;
+  font-size: 38px;
   font-weight: 700;
   line-height: 1.2;
-  margin: 0 0 16px 0;
+  margin: 0 0 14px 0;
   color: #ffffff;
   max-width: 800px;
 }
 
 .preview-hero__desc {
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.6;
   color: rgba(255, 255, 255, 0.9);
   max-width: 640px;
-  margin: 0 0 24px 0;
+  margin: 0 0 20px 0;
 }
 
 .btn-preview-primary {
@@ -596,41 +622,63 @@
 /* Mobile responsive for Hero Preview (Đồng bộ breakpoint Mobile storefront) */
 .is-mobile-view .preview-hero,
 .is-mobile-frame .preview-hero {
-  min-height: 320px !important;
-  padding: 32px 18px;
+  padding: 0;
+  min-height: 200px;
+}
+
+.is-mobile-view .preview-hero.has-image,
+.is-mobile-frame .preview-hero.has-image,
+.is-mobile-view .preview-hero:has(.preview-hero__bg img),
+.is-mobile-frame .preview-hero:has(.preview-hero__bg img) {
+  min-height: unset !important;
 }
 
 .is-mobile-view .preview-hero__bg img,
 .is-mobile-frame .preview-hero__bg img {
-  min-height: 320px;
-  max-height: 520px;
+  width: 100%;
+  height: auto;
+  min-height: unset;
+  max-height: none;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+.is-mobile-view .preview-hero.has-image .preview-hero__content,
+.is-mobile-frame .preview-hero.has-image .preview-hero__content {
+  padding: 16px 14px;
+}
+
+.is-mobile-view .preview-hero:not(.has-image) .preview-hero__content,
+.is-mobile-frame .preview-hero:not(.has-image) .preview-hero__content {
+  padding: 24px 14px;
 }
 
 .is-mobile-view .preview-hero__eyebrow,
 .is-mobile-frame .preview-hero__eyebrow {
   font-size: 11px;
   letter-spacing: 0.2em;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .is-mobile-view .preview-hero__title,
 .is-mobile-frame .preview-hero__title {
-  font-size: 26px !important;
-  margin-bottom: 10px;
+  font-size: 22px !important;
+  margin-bottom: 8px;
   line-height: 1.25;
 }
 
 .is-mobile-view .preview-hero__desc,
 .is-mobile-frame .preview-hero__desc {
-  font-size: 14px !important;
-  margin-bottom: 18px;
-  line-height: 1.5;
+  font-size: 13px !important;
+  margin-bottom: 12px;
+  line-height: 1.4;
 }
 
 .is-mobile-view .btn-preview-primary,
 .is-mobile-frame .btn-preview-primary {
-  font-size: 12px;
-  padding: 10px 20px;
+  font-size: 11px;
+  padding: 8px 16px;
 }
 
 /* PRODUCT SLIDER & GRID PREVIEW (ĐỒNG BỘ ASPECT RATIO 3:4) */
@@ -1903,6 +1951,19 @@
    7. TYPOGRAPHY & COLORS — TINH GỌN BỐ CỤC, GIAO DIỆN PHẲNG CHÉRI
    ══════════════════════════════════════════════════════════════════════════ */
 
+.typo-tab-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.typo-tab-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.4;
+}
+
 .cms-config-section {
   background: #ffffff;
   border: 1px solid #e5e7eb;
@@ -2287,6 +2348,12 @@
   border-top: 1px solid #f3f4f6;
 }
 
+.color-prop-control-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .color-swatch-box {
   width: 32px;
   height: 32px;
@@ -2311,6 +2378,7 @@
   height: 32px;
   margin-bottom: 0;
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .color-picker-btn:hover {
@@ -2328,6 +2396,10 @@
   cursor: pointer;
 }
 
+.hex-input-wrap {
+  position: relative;
+}
+
 .hex-text-input {
   height: 32px;
   font-size: 12.5px;
@@ -2339,10 +2411,69 @@
   letter-spacing: 0.5px;
 }
 
+.color-error-msg,
 .color-error-text {
   font-size: 11.5px;
   color: #dc2626;
   font-weight: 500;
+}
+
+/* 8 GỢI Ý MÀU THƯƠNG HIỆU CHÉRI */
+.cheri-brand-palette {
+  margin-top: 14px;
+}
+
+.palette-title {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 8px;
+}
+
+.cheri-presets-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cheri-preset-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #ffffff;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s ease;
+}
+
+.cheri-preset-pill:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  transform: translateY(-1px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.cheri-preset-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+}
+
+.cheri-preset-name {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.cheri-preset-hex {
+  font-family: monospace;
+  font-size: 11px;
+  color: #64748b;
 }
 
 .brand-swatches-grid {

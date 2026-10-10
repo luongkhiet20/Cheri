@@ -21,8 +21,11 @@
   box-sizing: border-box;
 }
 
-.admin-shell.is-collapsed {
-  --sidebar-width: 68px;
+/* Trạng thái thu gọn chỉ áp dụng trên màn hình >= 769px (Desktop & Tablet) */
+@media (min-width: 769px) {
+  .admin-shell.is-collapsed {
+    --sidebar-width: 68px;
+  }
 }
 
 .admin-main {
@@ -39,25 +42,16 @@
               width 180ms ease;
 }
 
-/* ----- Tablet / Collapsed Sidebar (769px - 1200px) ----- */
-@media (max-width: 1200px) and (min-width: 769px) {
-  .admin-shell {
-    --sidebar-width: 68px;
-  }
-  .admin-shell:not(.is-collapsed) {
-    --sidebar-width: 240px;
-  }
-}
-
-/* ----- Mobile (<= 768px) ----- */
+/* ----- Mobile (<= 768px): Sidebar biến thành drawer ẩn, không chiếm diện tích layout ----- */
 @media (max-width: 768px) {
-  .admin-shell {
-    --sidebar-width: 0px;
+  .admin-shell,
+  .admin-shell.is-collapsed {
+    --sidebar-width: 0px !important;
   }
 
   .admin-main {
-    margin-left: 0;
-    width: 100%;
+    margin-left: 0 !important;
+    width: 100% !important;
     padding: var(--space-md, 16px);
   }
 }

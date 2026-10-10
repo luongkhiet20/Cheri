@@ -179,4 +179,14 @@ export class AdminSidebarComponent implements OnInit, OnDestroy {
   closeMobile(): void {
     this.isMobileOpen = false;
   }
+
+  @HostListener('window:resize')
+  onResize(): void {
+    if (typeof window === 'undefined') return;
+    const width = window.innerWidth;
+    // Tự động đóng overlay mobile khi kéo rộng màn hình trở lại desktop (> 768px)
+    if (width > 768 && this.isMobileOpen) {
+      this.isMobileOpen = false;
+    }
+  }
 }

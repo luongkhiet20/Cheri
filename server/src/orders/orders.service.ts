@@ -41,6 +41,12 @@ export class OrdersService {
     discountType?: string;
     discountValue?: number;
     discountAmount?: number;
+    maxDiscount?: number;
+    minOrderValue?: number;
+    startDate?: Date;
+    endDate?: Date;
+    usageLimit?: number;
+    usedCount?: number;
     message: string;
   }> {
     if (!code || !code.trim()) {
@@ -50,54 +56,83 @@ export class OrdersService {
     const cleanCode = code.trim().toUpperCase();
     await this.ensureDefaultCoupons();
 
-    const coupon = await this.couponModel.findOne({
-      code: cleanCode,
-      isActive: true,
-    });
+    // 1. Kiểm tra mã tồn tại trong CSDL
+    const coupon = await this.couponModel.findOne({ code: cleanCode });
 
     if (!coupon) {
-      return { valid: false, message: 'Mã giảm giá không hợp lệ hoặc đã hết hạn' };
+      return { valid: false, message: 'Mã giảm giá không tồn tại hoặc không hợp lệ' };
     }
 
+    // 2. Trạng thái hoạt động (isActive)
+    if (!coupon.isActive) {
+      return { valid: false, message: 'Mã giảm giá hiện đang tạm ngừng hoạt động' };
+    }
+
+    // 3. Ngày bắt đầu (startDate)
     const now = new Date();
     if (coupon.startDate && new Date(coupon.startDate) > now) {
-      return { valid: false, message: 'Chương trình ưu đãi chưa bắt đầu' };
+      const startFormatted = new Date(coupon.startDate).toLocaleDateString('vi-VN');
+      return { valid: false, message: `Chương trình ưu đãi chỉ bắt đầu từ ${startFormatted}` };
     }
+
+    // 4. Ngày kết thúc (endDate)
     if (coupon.endDate && new Date(coupon.endDate) < now) {
-      return { valid: false, message: 'Mã giảm giá đã hết hạn sử dụng' };
+      const endFormatted = new Date(coupon.endDate).toLocaleDateString('vi-VN');
+      return { valid: false, message: `Mã giảm giá đã hết hạn sử dụng (hết hạn ngày ${endFormatted})` };
     }
-    if (coupon.usageLimit > 0 && coupon.usedCount >= coupon.usageLimit) {
+
+    // 5. Giới hạn lượt sử dụng (usageLimit & usedCount)
+    if (coupon.usageLimit > 0 && (coupon.usedCount || 0) >= coupon.usageLimit) {
       return { valid: false, message: 'Mã giảm giá đã hết lượt sử dụng' };
     }
+
+    // 6. Giá trị đơn tối thiểu (minOrderValue)
     if (coupon.minOrderValue > 0 && subtotal < coupon.minOrderValue) {
       const minFormatted = coupon.minOrderValue.toLocaleString('vi-VN');
+      const diffFormatted = (coupon.minOrderValue - subtotal).toLocaleString('vi-VN');
       return {
         valid: false,
-        message: `Mã ${cleanCode} chỉ áp dụng cho đơn hàng từ ${minFormatted} ₫ trở lên`,
+        message: `Mã ${cleanCode} chỉ áp dụng cho đơn hàng từ ${minFormatted} ₫ trở lên (cần thêm ${diffFormatted} ₫)`,
       };
     }
 
+    // 7. Công thức tính tiền giảm:
     let discountAmount = 0;
+    const discountVal = Number(coupon.discountValue) || 0;
+
     if (coupon.discountType === 'PERCENTAGE') {
-      discountAmount = Math.round((subtotal * coupon.discountValue) / 100);
-      if (coupon.maxDiscount > 0 && discountAmount > coupon.maxDiscount) {
-        discountAmount = coupon.maxDiscount;
+      // Trường hợp 1: D = min(B * (r / 100), M)
+      discountAmount = Math.round((subtotal * discountVal) / 100);
+      const maxCap = Number(coupon.maxDiscount) || 0;
+      if (maxCap > 0 && discountAmount > maxCap) {
+        discountAmount = maxCap;
       }
     } else {
-      discountAmount = coupon.discountValue;
+      // Trường hợp 2: D = min(F, B)
+      discountAmount = discountVal;
     }
 
+    // Không vượt quá tổng tiền hàng đủ điều kiện B
     if (discountAmount > subtotal) {
       discountAmount = subtotal;
+    }
+    if (discountAmount < 0) {
+      discountAmount = 0;
     }
 
     return {
       valid: true,
       code: coupon.code,
-      description: coupon.description,
+      description: coupon.description || '',
       discountType: coupon.discountType,
       discountValue: coupon.discountValue,
       discountAmount,
+      maxDiscount: coupon.maxDiscount || 0,
+      minOrderValue: coupon.minOrderValue || 0,
+      startDate: coupon.startDate,
+      endDate: coupon.endDate,
+      usageLimit: coupon.usageLimit || 0,
+      usedCount: coupon.usedCount || 0,
       message: 'Áp dụng mã giảm giá thành công!',
     };
   }

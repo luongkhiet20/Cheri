@@ -381,101 +381,106 @@
 }
 
 /* ==========================================================================
-   6. CHẾ ĐỘ THU GỌN SIDEBAR (COLLAPSED STATE — 68px)
+   6. CHẾ ĐỘ THU GỌN SIDEBAR TRÊN DESKTOP/TABLET (COLLAPSED STATE — 68px)
+   - CHỈ ÁP DỤNG TRÊN MÀN HÌNH >= 769px
+   - Trên mobile (<= 768px), sidebar là drawer riêng biệt, không bị ảnh hưởng bởi is-collapsed
    ========================================================================== */
-.admin-sidebar.is-collapsed {
-  width: 68px;
-}
+@media (min-width: 769px) {
+  .admin-sidebar.is-collapsed {
+    width: 68px;
+  }
 
-.admin-sidebar.is-collapsed .admin-sidebar__group-label {
-  display: none;
-}
+  .admin-sidebar.is-collapsed .admin-sidebar__group-label {
+    display: none;
+  }
 
-.admin-sidebar.is-collapsed .admin-sidebar__divider {
-  margin: 10px 4px;
-}
+  .admin-sidebar.is-collapsed .admin-sidebar__divider {
+    margin: 10px 4px;
+  }
 
-.admin-sidebar.is-collapsed .admin-sidebar__scroll-area {
-  padding: 14px 6px 24px 6px;
-}
+  .admin-sidebar.is-collapsed .admin-sidebar__scroll-area {
+    padding: 14px 6px 24px 6px;
+  }
 
-.admin-sidebar.is-collapsed .admin-sidebar__link {
-  width: 44px;
-  height: 38px;
-  padding: 0;
-  justify-content: center;
-  margin: 0 auto;
-}
+  .admin-sidebar.is-collapsed .admin-sidebar__link {
+    width: 44px;
+    height: 38px;
+    padding: 0;
+    justify-content: center;
+    margin: 0 auto;
+  }
 
-.admin-sidebar.is-collapsed .admin-sidebar__link-text,
-.admin-sidebar.is-collapsed .admin-sidebar__chevron {
-  display: none;
-}
+  .admin-sidebar.is-collapsed .admin-sidebar__link-text,
+  .admin-sidebar.is-collapsed .admin-sidebar__chevron {
+    display: none;
+  }
 
-.admin-sidebar.is-collapsed .admin-sidebar__subnav {
-  padding-left: 0;
-  align-items: center;
-}
+  .admin-sidebar.is-collapsed .admin-sidebar__subnav {
+    padding-left: 0;
+    align-items: center;
+  }
 
-.admin-sidebar.is-collapsed .admin-sidebar__sublink {
-  width: 44px;
-  height: 36px;
-  padding: 0;
-  justify-content: center;
-  margin: 0 auto;
-}
+  .admin-sidebar.is-collapsed .admin-sidebar__sublink {
+    width: 44px;
+    height: 36px;
+    padding: 0;
+    justify-content: center;
+    margin: 0 auto;
+  }
 
-.admin-sidebar.is-collapsed .admin-sidebar__sublink-text {
-  display: none;
-}
+  .admin-sidebar.is-collapsed .admin-sidebar__sublink-text {
+    display: none;
+  }
 
-/* Tooltip thuần CSS hiển thị khi hover ở trạng thái thu gọn */
-.admin-sidebar.is-collapsed .admin-sidebar__link .admin-sidebar__tooltip,
-.admin-sidebar.is-collapsed .admin-sidebar__sublink .admin-sidebar__tooltip {
-  display: none;
-  position: absolute;
-  left: calc(100% + 12px);
-  top: 50%;
-  transform: translateY(-50%);
-  background-color: #1F2937;
-  color: #FFFFFF;
-  font-size: 12.5px;
-  font-weight: 500;
-  padding: 6px 10px;
-  border-radius: 6px;
-  white-space: nowrap;
-  pointer-events: none;
-  z-index: 1000;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
+  /* Tooltip thuần CSS hiển thị khi hover ở trạng thái thu gọn trên desktop */
+  .admin-sidebar.is-collapsed .admin-sidebar__link .admin-sidebar__tooltip,
+  .admin-sidebar.is-collapsed .admin-sidebar__sublink .admin-sidebar__tooltip {
+    display: none;
+    position: absolute;
+    left: calc(100% + 12px);
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: #1F2937;
+    color: #FFFFFF;
+    font-size: 12.5px;
+    font-weight: 500;
+    padding: 6px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
 
-.admin-sidebar.is-collapsed .admin-sidebar__link .admin-sidebar__tooltip::before,
-.admin-sidebar.is-collapsed .admin-sidebar__sublink .admin-sidebar__tooltip::before {
-  content: '';
-  position: absolute;
-  right: 100%;
-  top: 50%;
-  transform: translateY(-50%);
-  border-width: 4px;
-  border-style: solid;
-  border-color: transparent #1F2937 transparent transparent;
-}
+  .admin-sidebar.is-collapsed .admin-sidebar__link .admin-sidebar__tooltip::before,
+  .admin-sidebar.is-collapsed .admin-sidebar__sublink .admin-sidebar__tooltip::before {
+    content: '';
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 4px;
+    border-style: solid;
+    border-color: transparent #1F2937 transparent transparent;
+  }
 
-.admin-sidebar.is-collapsed .admin-sidebar__link:hover .admin-sidebar__tooltip,
-.admin-sidebar.is-collapsed .admin-sidebar__sublink:hover .admin-sidebar__tooltip {
-  display: block;
+  .admin-sidebar.is-collapsed .admin-sidebar__link:hover .admin-sidebar__tooltip,
+  .admin-sidebar.is-collapsed .admin-sidebar__sublink:hover .admin-sidebar__tooltip {
+    display: block;
+  }
 }
 
 /* ==========================================================================
    7. RESPONSIVE: MOBILE OFFCANVAS (<= 768px)
    ========================================================================== */
 @media (max-width: 768px) {
-  .admin-sidebar {
+  .admin-sidebar,
+  .admin-sidebar.is-collapsed {
     top: 0;
     left: 0;
     bottom: 0;
-    width: 270px;
-    max-width: 85vw;
+    width: 270px !important;
+    max-width: 85vw !important;
     z-index: 1000;
     transform: translateX(-100%);
     box-shadow: none;
@@ -483,12 +488,52 @@
                 box-shadow 0.28s ease;
   }
 
-  .admin-sidebar.is-open {
+  .admin-sidebar.is-open,
+  .admin-sidebar.is-collapsed.is-open {
     transform: translateX(0);
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
   }
 
-  .admin-sidebar__floating-toggle {
+  .admin-sidebar__floating-toggle,
+  .admin-sidebar.is-collapsed .admin-sidebar__floating-toggle {
+    display: none !important;
+  }
+
+  /* Đảm bảo chữ, nhãn, menu con luôn hiển thị chuẩn xác trên mobile drawer */
+  .admin-sidebar.is-collapsed .admin-sidebar__link-text,
+  .admin-sidebar.is-collapsed .admin-sidebar__chevron,
+  .admin-sidebar.is-collapsed .admin-sidebar__group-label,
+  .admin-sidebar.is-collapsed .admin-sidebar__sublink-text {
+    display: block !important;
+  }
+
+  .admin-sidebar.is-collapsed .admin-sidebar__chevron {
+    display: inline-flex !important;
+  }
+
+  .admin-sidebar.is-collapsed .admin-sidebar__link {
+    width: 100% !important;
+    height: 42px !important;
+    padding: 0 12px !important;
+    justify-content: flex-start !important;
+    margin: 0 !important;
+  }
+
+  .admin-sidebar.is-collapsed .admin-sidebar__sublink {
+    width: 100% !important;
+    height: 38px !important;
+    padding: 0 12px 0 34px !important;
+    justify-content: flex-start !important;
+    margin: 0 !important;
+  }
+
+  .admin-sidebar.is-collapsed .admin-sidebar__scroll-area {
+    padding: 14px 10px 24px 10px !important;
+  }
+
+  /* Ẩn tooltip desktop trên mobile */
+  .admin-sidebar.is-collapsed .admin-sidebar__link:hover .admin-sidebar__tooltip,
+  .admin-sidebar.is-collapsed .admin-sidebar__sublink:hover .admin-sidebar__tooltip {
     display: none !important;
   }
 
@@ -501,11 +546,29 @@
     border-bottom: 1px solid #ECECEC;
   }
 
+  .admin-sidebar__mobile-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
   .admin-sidebar__mobile-title {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 20px;
-    font-weight: 700;
+    font-family: 'Corinthia', cursive, var(--font-logo);
+    font-size: 32px;
+    font-weight: 400;
     color: #74070E;
+    line-height: 1;
+    letter-spacing: 0.5px;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .admin-sidebar__mobile-sub {
+    font-size: 11px;
+    font-weight: 500;
+    color: #8A8A8A;
+    letter-spacing: 2px;
+    text-transform: uppercase;
   }
 
   .admin-sidebar__mobile-close {

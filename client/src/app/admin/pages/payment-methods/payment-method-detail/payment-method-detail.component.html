@@ -3,6 +3,7 @@
   <!-- Header -->
   <div class="detail-header" *ngIf="!isLoading && !isNotFound && method">
     <div class="detail-header-info">
+      <app-admin-breadcrumb [items]="breadcrumbItems"></app-admin-breadcrumb>
       <div class="header-badges">
         <span class="code-badge">{{ method.code }}</span>
         <app-admin-status-badge [label]="method.isActive !== false ? 'Đang hoạt động' : 'Tạm khóa'"

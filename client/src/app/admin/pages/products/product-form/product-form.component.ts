@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
+import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 export interface ProductVariant {
   key: string;            // Identity key e.g. "class:áo|color:đỏ|size:m"
@@ -31,6 +32,11 @@ export class ProductFormComponent implements OnInit {
   isLoading = false;
   isSubmitting = false;
   isDirty = false;
+
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Quản lý sản phẩm', url: '/admin/products' },
+    { label: 'Thêm sản phẩm' }
+  ];
 
   // Feedback messages
   errorMessage = '';
@@ -155,7 +161,16 @@ export class ProductFormComponent implements OnInit {
     this.productId = this.route.snapshot.paramMap.get('id');
     if (this.productId) {
       this.isEditMode = true;
+      this.breadcrumbItems = [
+        { label: 'Quản lý sản phẩm', url: '/admin/products' },
+        { label: 'Chỉnh sửa sản phẩm' }
+      ];
       this.loadProduct(this.productId);
+    } else {
+      this.breadcrumbItems = [
+        { label: 'Quản lý sản phẩm', url: '/admin/products' },
+        { label: 'Thêm sản phẩm' }
+      ];
     }
   }
 
@@ -284,6 +299,13 @@ export class ProductFormComponent implements OnInit {
           this.recalculateVariants();
           this.syncVariantStockToProduct();
           this.isDirty = false;
+          if (this.productId) {
+            this.breadcrumbItems = [
+              { label: 'Quản lý sản phẩm', url: '/admin/products' },
+              { label: this.product.vi?.title || 'Chi tiết', url: ['/admin/products', this.productId] },
+              { label: 'Chỉnh sửa sản phẩm' }
+            ];
+          }
         } else {
           this.errorMessage = 'Không tìm thấy sản phẩm trong cơ sở dữ liệu.';
         }

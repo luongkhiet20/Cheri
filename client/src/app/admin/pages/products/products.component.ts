@@ -3,6 +3,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent, BadgeVariant } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
 import { NotificationService } from '../../shared/notification/notification.service';
+import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 @Component({
   selector: 'app-products',
@@ -11,6 +12,9 @@ import { NotificationService } from '../../shared/notification/notification.serv
   styleUrls: ['./products.component.css']
 })
 export class ProductsComponent implements OnInit {
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Quản lý sản phẩm' }
+  ];
 
   // ── Table Configuration ──────────────────────────────────────
   columns: TableColumn[] = [
@@ -128,9 +132,24 @@ export class ProductsComponent implements OnInit {
         const statusField = this.filterFields.find(f => f.key === 'status');
         if (statusField) statusField.value = s;
       }
+      this.updateBreadcrumbs();
       this.loadProducts();
     });
     this.loadCategoriesForFilter();
+  }
+
+  updateBreadcrumbs(): void {
+    if (this.filteredCategoryId && this.filteredCategoryName) {
+      this.breadcrumbItems = [
+        { label: 'Quản lý danh mục', url: '/admin/categories' },
+        { label: this.filteredCategoryName },
+        { label: 'Sản phẩm' }
+      ];
+    } else {
+      this.breadcrumbItems = [
+        { label: 'Quản lý sản phẩm' }
+      ];
+    }
   }
 
   clearCategoryFilter(): void {
@@ -138,6 +157,7 @@ export class ProductsComponent implements OnInit {
     this.filteredCategoryName = '';
     this.filteredCategorySlug = '';
     this.categoryNotFound = false;
+    this.updateBreadcrumbs();
     this.router.navigate(['/admin/products'], {
       queryParams: { categoryId: null, category: null },
       queryParamsHandling: 'merge'

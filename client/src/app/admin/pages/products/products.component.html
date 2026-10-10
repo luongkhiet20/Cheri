@@ -3,13 +3,7 @@
   <!-- Page Header -->
   <div class="page-top">
     <div>
-      <div *ngIf="filteredCategoryId && filteredCategoryName" class="category-breadcrumb">
-        <a routerLink="/admin/categories" class="category-breadcrumb-link">Quản lý danh mục</a>
-        <span class="category-breadcrumb-sep">/</span>
-        <span class="category-breadcrumb-current">{{ filteredCategoryName }}</span>
-        <span class="category-breadcrumb-sep">/</span>
-        <span class="category-breadcrumb-current">Sản phẩm</span>
-      </div>
+      <app-admin-breadcrumb [items]="breadcrumbItems"></app-admin-breadcrumb>
       <h1 class="page-title">
         {{ filteredCategoryId && filteredCategoryName ? ('Sản phẩm thuộc danh mục: ' + filteredCategoryName) : 'Quản lý sản phẩm' }}
       </h1>

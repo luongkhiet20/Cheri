@@ -5,11 +5,7 @@
   ══════════════════════════════════════════════════════════ -->
   <header class="home-cms-header">
     <div class="home-cms-header__left">
-      <div class="home-cms-breadcrumbs">
-        <span class="home-cms-breadcrumbs__parent">Quản lý trang</span>
-        <span class="home-cms-breadcrumbs__sep">/</span>
-        <span class="home-cms-breadcrumbs__current">Giới thiệu</span>
-      </div>
+      <app-admin-breadcrumb [items]="breadcrumbItems"></app-admin-breadcrumb>
       <div class="home-cms-title-row">
         <h1 class="home-cms-title">Quản lý Trang Giới thiệu</h1>
         <span class="home-cms-sync-indicator" *ngIf="isLoadingDraft">

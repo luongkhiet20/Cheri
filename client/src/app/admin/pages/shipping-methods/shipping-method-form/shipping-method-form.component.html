@@ -2,10 +2,10 @@
   <!-- Header / Action bar -->
   <div class="form-header">
     <div class="form-header-left">
+      <app-admin-breadcrumb [items]="breadcrumbItems"></app-admin-breadcrumb>
       <h1 class="page-title">
         {{ isEditMode ? 'Chỉnh sửa phương thức vận chuyển' : 'Thêm phương thức vận chuyển' }}
       </h1>
-
     </div>
     <div class="form-header-right">
       <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="isSubmitting">

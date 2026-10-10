@@ -27,6 +27,7 @@ import {
   getDefaultTypographyForType,
   createDefaultAboutSection,
 } from '../cms-core/cms.constants';
+import { BreadcrumbItem } from '../../../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 @Component({
   selector: 'app-about',
@@ -36,6 +37,11 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AboutComponent implements OnInit, OnDestroy {
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Quản lý trang' },
+    { label: 'Giới thiệu' }
+  ];
+
   // ── State Kết Nối Backend API & MongoDB (pages_about) ────────────
   isLoadingDraft = false;
   isPublishing = false;

@@ -3,11 +3,7 @@
   <!-- Breadcrumbs & Header -->
   <div class="page-top">
     <div>
-      <div class="breadcrumbs">
-        <a routerLink="/admin/categories" class="breadcrumb-link">Danh mục</a>
-        <span class="breadcrumb-sep">/</span>
-        <span class="breadcrumb-current">{{ isEditMode ? 'Chỉnh sửa danh mục' : 'Thêm danh mục mới' }}</span>
-      </div>
+      <app-admin-breadcrumb [items]="breadcrumbItems"></app-admin-breadcrumb>
       <h1 class="page-title">{{ isEditMode ? 'Chỉnh sửa danh mục' : 'Thêm danh mục mới' }}</h1>
     </div>
 

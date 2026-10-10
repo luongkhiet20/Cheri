@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
+import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 @Component({
   selector: 'app-coupon-detail',
@@ -12,6 +13,11 @@ import { NotificationService } from '../../../shared/notification/notification.s
 export class CouponDetailComponent implements OnInit {
   couponId: string | null = null;
   coupon: any = null;
+
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Mã giảm giá', url: '/admin/pages/coupons' },
+    { label: 'Chi tiết mã giảm giá' }
+  ];
 
   isLoading = true;
   isNotFound = false;
@@ -55,6 +61,10 @@ export class CouponDetailComponent implements OnInit {
         this.isLoading = false;
         if (res && res.success && res.data) {
           this.coupon = res.data;
+          this.breadcrumbItems = [
+            { label: 'Mã giảm giá', url: '/admin/pages/coupons' },
+            { label: this.coupon?.code || 'Chi tiết mã giảm giá' }
+          ];
         } else {
           this.isNotFound = true;
           this.errorMessage = res?.message || 'Không tìm thấy thông tin mã giảm giá.';

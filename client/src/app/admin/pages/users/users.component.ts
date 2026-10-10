@@ -3,6 +3,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
 import { NotificationService } from '../../shared/notification/notification.service';
+import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 @Component({
   selector: 'app-users',
@@ -11,6 +12,10 @@ import { NotificationService } from '../../shared/notification/notification.serv
   styleUrls: ['./users.component.css']
 })
 export class UsersComponent implements OnInit {
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Quản lý tài khoản' }
+  ];
+
   columns: TableColumn[] = [
     { key: 'image', label: '', type: 'image', shape: 'circle', isAvatar: true, width: '60px' },
     { key: 'name', label: 'Họ tên', type: 'text', sortable: true },

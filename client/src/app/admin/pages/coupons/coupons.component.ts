@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
 import { NotificationService } from '../../shared/notification/notification.service';
+import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 @Component({
   selector: 'app-coupons',
@@ -11,6 +12,10 @@ import { NotificationService } from '../../shared/notification/notification.serv
   styleUrls: ['./coupons.component.css']
 })
 export class CouponsComponent implements OnInit {
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Mã giảm giá' }
+  ];
+
   columns: TableColumn[] = [
     { key: 'code', label: 'Mã giảm giá', type: 'text', sortable: true },
     { key: 'description', label: 'Mô tả', type: 'text' },

@@ -553,6 +553,15 @@ export class OrdersService {
   }
 
 
+  private async isMaintenanceMode(): Promise<boolean> {
+    try {
+      const settings: any = await this.orderModel.db.collection('settings').findOne({});
+      return Boolean(settings?.maintenance?.enabled);
+    } catch {
+      return false;
+    }
+  }
+
   // ─── Thêm order COD ───────────────────────────────────────────────────────
   async addOrder(
     orderDto: OrderDto,
@@ -560,6 +569,9 @@ export class OrdersService {
     lang = 'vi',
   ): Promise<{ error: string; result: Order }> {
     try {
+      if (await this.isMaintenanceMode()) {
+        return { error: 'Hệ thống đang bảo trì. Quý khách vui lòng quay lại sau.', result: null };
+      }
       const orderData = await this.buildOrderData(orderDto, user, 'COD');
       const newOrder = new this.orderModel(orderData);
       await newOrder.save();
@@ -607,6 +619,9 @@ export class OrdersService {
     lang = 'vi',
   ): Promise<{ error: string; result: Order }> {
     try {
+      if (await this.isMaintenanceMode()) {
+        return { error: 'Hệ thống đang bảo trì. Quý khách vui lòng quay lại sau.', result: null };
+      }
       const orderData = await this.buildOrderData(body, user, 'STRIPE');
       const chargeCurrency = 'vnd';
       const charge = await stripe.charges.create({

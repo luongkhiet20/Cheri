@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
+import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 export interface ProductVariant {
   key?: string;
@@ -70,6 +71,10 @@ export class ProductDetailComponent implements OnInit {
           this.rawProduct = res.raw;
           this.product = res.data;
           this.activeImage = this.rawProduct.mainImage?.url || this.product.image || '';
+          this.breadcrumbs = [
+            { label: 'Quản lý sản phẩm', url: '/admin/products' },
+            { label: this.rawProduct?.vi?.title || 'Chi tiết sản phẩm' }
+          ];
         } else {
           this.isNotFound = true;
         }

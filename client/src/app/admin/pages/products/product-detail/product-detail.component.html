@@ -7,7 +7,7 @@
   <div class="page-top" *ngIf="!isLoading && !isNotFound">
     <div class="page-header-info">
       <!-- Breadcrumb -->
-      <app-admin-breadcrumb [items]="breadcrumbs" [showBackArrow]="true"></app-admin-breadcrumb>
+      <app-admin-breadcrumb [items]="breadcrumbs"></app-admin-breadcrumb>
 
       <!-- Tên sản phẩm chính -->
       <h1 class="page-title">{{ rawProduct?.vi?.title || 'Chi tiết sản phẩm' }}</h1>

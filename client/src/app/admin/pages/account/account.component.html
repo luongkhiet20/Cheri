@@ -2,11 +2,7 @@
   <!-- Page Header -->
   <div class="account-header">
     <div class="account-header-info">
-      <div class="breadcrumb">
-        <a routerLink="/admin" class="breadcrumb-link">Quản trị</a>
-        <span class="breadcrumb-sep">/</span>
-        <span class="breadcrumb-current">Thông tin tài khoản</span>
-      </div>
+      <app-admin-breadcrumb [items]="breadcrumbItems"></app-admin-breadcrumb>
       <h1 class="page-title">Hồ sơ Quản trị viên</h1>
 
     </div>

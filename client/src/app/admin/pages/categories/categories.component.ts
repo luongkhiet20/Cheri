@@ -3,6 +3,7 @@ import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } fr
 import { AdminService } from '../../services/admin.service';
 import { NotificationService } from '../../shared/notification/notification.service';
 import { Router } from '@angular/router';
+import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 @Component({
   selector: 'app-categories',
@@ -11,6 +12,10 @@ import { Router } from '@angular/router';
   styleUrls: ['./categories.component.css']
 })
 export class CategoriesComponent implements OnInit {
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Quản lý danh mục' }
+  ];
+
   columns: TableColumn[] = [
     { key: 'position', label: 'Vị trí', type: 'number', sortable: true, width: '90px', align: 'center' },
     { key: 'name', label: 'Tên danh mục', type: 'text', sortable: true },

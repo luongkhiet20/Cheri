@@ -4,6 +4,7 @@ import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } fr
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
 import { ADMIN_PAGES_URLS } from '../pages.routes';
+import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 export function isPolicyPublished(row: any): boolean {
   if (!row) return false;
@@ -19,6 +20,9 @@ export function isPolicyPublished(row: any): boolean {
 })
 export class PoliciesComponent implements OnInit {
   readonly adminPagesUrls = ADMIN_PAGES_URLS;
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Quản lý chính sách' }
+  ];
 
   columns: TableColumn[] = [
     { key: 'title', label: 'Tiêu đề chính sách', type: 'text', sortable: true },

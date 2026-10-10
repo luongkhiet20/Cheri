@@ -26,6 +26,17 @@ export type AnimationPreset =
 export type TypographyPresetType = 'minimal' | 'editorial' | 'classic' | 'romantic' | 'modern' | 'luxury';
 export type TextTransformType = 'none' | 'uppercase' | 'lowercase' | 'capitalize';
 
+export interface TypographyPresetOption {
+  id: string;
+  value: TypographyPresetType;
+  name: string;
+  label: string;
+  badge: string;
+  description?: string;
+  previewFont: string;
+  typography: SectionTypography;
+}
+
 // ───────────── Khóa typography / màu: KHÔNG dùng index-signature `any` ─────────────
 export type TypographyElementKey =
   | 'heading' | 'subheading' | 'body' | 'button' | 'eyebrow' | 'quote'

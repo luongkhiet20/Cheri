@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
 import { NotificationService } from '../../shared/notification/notification.service';
+import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 @Component({
   selector: 'app-payment-methods',
@@ -11,6 +12,10 @@ import { NotificationService } from '../../shared/notification/notification.serv
   styleUrls: ['./payment-methods.component.css']
 })
 export class PaymentMethodsComponent implements OnInit {
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Phương thức thanh toán' }
+  ];
+
   columns: TableColumn[] = [
     { key: 'name', label: 'Tên phương thức', type: 'text', sortable: true },
     { key: 'code', label: 'Mã phương thức', type: 'text', sortable: true },

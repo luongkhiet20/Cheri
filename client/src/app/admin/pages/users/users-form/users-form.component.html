@@ -3,6 +3,7 @@
   <!-- Header -->
   <div class="form-header">
     <div class="form-header-info">
+      <app-admin-breadcrumb [items]="breadcrumbItems"></app-admin-breadcrumb>
       <h1 class="form-title">{{ isEditMode ? 'Chỉnh sửa tài khoản' : 'Thêm tài khoản' }}</h1>
     </div>
     <div class="form-header-actions">

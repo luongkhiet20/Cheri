@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
+import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 interface ShippingMethodFormData {
   name: string;
@@ -40,6 +41,11 @@ export class ShippingMethodFormComponent implements OnInit {
   errors: Record<string, string> = {};
   errorMessage = '';
 
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Phương thức vận chuyển', url: '/admin/shipping-methods' },
+    { label: 'Thêm phương thức' }
+  ];
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -51,6 +57,11 @@ export class ShippingMethodFormComponent implements OnInit {
   ngOnInit(): void {
     this.methodId = this.route.snapshot.paramMap.get('id');
     this.isEditMode = !!this.methodId;
+
+    this.breadcrumbItems = [
+      { label: 'Phương thức vận chuyển', url: '/admin/shipping-methods' },
+      { label: this.isEditMode ? 'Chỉnh sửa phương thức' : 'Thêm phương thức' }
+    ];
 
     if (this.isEditMode) {
       if (!this.methodId || this.methodId.trim() === '') {
@@ -81,6 +92,10 @@ export class ShippingMethodFormComponent implements OnInit {
             isActive: m.isActive !== false,
             description: m.description || ''
           };
+          this.breadcrumbItems = [
+            { label: 'Phương thức vận chuyển', url: '/admin/shipping-methods' },
+            { label: this.formData.name ? ('Chỉnh sửa: ' + this.formData.name) : 'Chỉnh sửa phương thức' }
+          ];
         } else {
           this.errorMessage = res.message || 'Không tìm thấy phương thức vận chuyển';
         }

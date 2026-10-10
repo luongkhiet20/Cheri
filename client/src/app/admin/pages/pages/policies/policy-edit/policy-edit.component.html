@@ -3,11 +3,7 @@
   <!-- Breadcrumbs & Header -->
   <div class="page-top">
     <div>
-      <div class="breadcrumbs">
-        <a [routerLink]="adminPagesUrls.POLICIES" class="breadcrumb-link">Chính sách</a>
-        <span class="breadcrumb-sep">/</span>
-        <span class="breadcrumb-current">{{ page?.title || 'Chi tiết chính sách' }}</span>
-      </div>
+      <app-admin-breadcrumb [items]="breadcrumbItems"></app-admin-breadcrumb>
       <div class="title-with-badge">
         <h1 class="page-title mb-0">{{ page?.title || 'Chi tiết chính sách' }}</h1>
         <span *ngIf="page" class="status-badge" [class.badge-published]="page.isPublished"

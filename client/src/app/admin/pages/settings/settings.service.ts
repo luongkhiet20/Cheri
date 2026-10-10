@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject } from 'rxjs';
-import { tap } from 'rxjs/operators';
-import { AppSettings, SettingsApiResponse } from './settings.model';
+import { Observable, BehaviorSubject, of } from 'rxjs';
+import { tap, map, catchError } from 'rxjs/operators';
+import { AppSettings, MaintenanceSettings, SettingsApiResponse } from './settings.model';
 import { environment } from '../../../../environments/environment';
 
 @Injectable({
@@ -48,6 +48,39 @@ export class SettingsService {
 
     oldLinks.forEach(el => el.remove());
     document.head.appendChild(newLink);
+  }
+
+  get currentSettings(): AppSettings | null {
+    return this.settingsSubject.value;
+  }
+
+  get isMaintenanceActive(): boolean {
+    return Boolean(this.settingsSubject.value?.maintenance?.enabled);
+  }
+
+  ensureSettings(): Observable<AppSettings | null> {
+    const current = this.settingsSubject.value;
+    if (current) {
+      return of(current);
+    }
+    return this.getSettings().pipe(
+      map(res => (res && res.success && res.data) ? res.data : null),
+      catchError(() => of(null))
+    );
+  }
+
+  getMaintenance(): Observable<{ success: boolean; data: MaintenanceSettings }> {
+    return this.http.get<{ success: boolean; data: MaintenanceSettings }>(`${this.baseUrl}/settings/maintenance`).pipe(
+      tap((res) => {
+        if (res && res.success && res.data && this.settingsSubject.value) {
+          const updated = {
+            ...this.settingsSubject.value,
+            maintenance: res.data
+          };
+          this.settingsSubject.next(updated);
+        }
+      })
+    );
   }
 
   getSettings(): Observable<SettingsApiResponse> {

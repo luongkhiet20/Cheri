@@ -33,6 +33,7 @@ import {
   getDefaultCarouselConfig,
   createDefaultSection,
 } from '../cms-core/cms.constants';
+import { BreadcrumbItem } from '../../../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 @Component({
   selector: 'app-home',
@@ -42,6 +43,11 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HomeComponent implements OnInit, OnDestroy {
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Quản lý trang' },
+    { label: 'Trang chủ' }
+  ];
+
   // ── State Kết Nối Backend API & MongoDB ─────────────────────────
   isLoadingDraft = false;
   isPublishing = false;

@@ -6,11 +6,11 @@ import 'reflect-metadata';
 import { Provider } from '@nestjs/common';
 import * as express from 'express';
 import { CommonEngine } from '@angular/ssr/node';
-import { fileURLToPath } from 'url';
+
 import bootstrap from '../../client/src/main.server';
 
 export function setupUniversal(app: any) {
-  const serverDistFolder = dirname(fileURLToPath(import.meta.url));
+  const serverDistFolder = __dirname;
   const browserDistFolder = resolve(serverDistFolder, '../browser');
   const indexHtml = join(serverDistFolder, 'index.server.html');
 
@@ -75,7 +75,7 @@ export class AngularUniversalModule implements OnModuleInit {
       return;
     }
     const app = httpAdapter.getInstance();
-    const serverDistFolder = dirname(fileURLToPath(import.meta.url));
+    const serverDistFolder = __dirname;
     const templatePath = join(serverDistFolder, 'index.server.html');
     app.get(/(.*)/, (req, res) =>
       res.render(templatePath, {

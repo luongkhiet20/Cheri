@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
+import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 export interface ProductVariantItem {
   id: string;
@@ -30,6 +31,10 @@ export interface ProductOption {
   styleUrls: ['./inventory-import.component.css']
 })
 export class InventoryImportComponent implements OnInit {
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Quản lý tồn kho', url: '/admin/inventory' },
+    { label: 'Nhập kho' }
+  ];
   isEditMode: boolean = false;
 
   products: ProductOption[] = [];
@@ -86,6 +91,10 @@ export class InventoryImportComponent implements OnInit {
       const id = params.get('id');
       if (id) {
         this.isEditMode = true;
+        this.breadcrumbItems = [
+          { label: 'Quản lý tồn kho', url: '/admin/inventory' },
+          { label: 'Chỉnh sửa tồn kho' }
+        ];
         this.selectedProductId = id;
         this.fetchAndSelectProduct(id);
       }
@@ -181,6 +190,12 @@ export class InventoryImportComponent implements OnInit {
         };
 
         this.productSearchQuery = this.selectedProduct.name;
+        if (this.selectedProduct.name) {
+          this.breadcrumbItems = [
+            { label: 'Quản lý tồn kho', url: '/admin/inventory' },
+            { label: this.isEditMode ? `Chỉnh sửa: ${this.selectedProduct.name}` : `Nhập kho: ${this.selectedProduct.name}` }
+          ];
+        }
 
         if (!hasVariants) {
           this.sku = this.selectedProduct.sku;

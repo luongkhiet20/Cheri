@@ -1,6 +1,7 @@
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
+import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 interface OrderItemForm {
   clientId: number;
@@ -27,6 +28,11 @@ export class OrderFormComponent implements OnInit {
   products: any[] = [];
   paymentMethods: any[] = [];
   items: OrderItemForm[] = [];
+
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Quản lý đơn hàng', url: '/admin/orders' },
+    { label: 'Thêm đơn hàng' }
+  ];
 
   customerEmail = '';
   customerPhone = '';
@@ -60,9 +66,17 @@ export class OrderFormComponent implements OnInit {
     this.orderId = this.route.snapshot.paramMap.get('id');
     this.isEditMode = Boolean(this.orderId);
     if (this.isEditMode && this.orderId) {
+      this.breadcrumbItems = [
+        { label: 'Quản lý đơn hàng', url: '/admin/orders' },
+        { label: 'Chỉnh sửa đơn hàng' }
+      ];
       this.loadOrder(this.orderId);
       return;
     }
+    this.breadcrumbItems = [
+      { label: 'Quản lý đơn hàng', url: '/admin/orders' },
+      { label: 'Thêm đơn hàng' }
+    ];
     this.addItem();
     this.loadProducts();
     this.loadPaymentMethods();
@@ -241,6 +255,11 @@ export class OrderFormComponent implements OnInit {
         this.trackingNumber = this.toSafeEditableString(this.order.trackingNumber, true);
         this.estimatedDeliveryDate = this.toDateInputValue(this.order.estimatedDeliveryDate);
         this.notes = this.toSafeEditableString(this.order.notes);
+        const orderCode = this.order?.orderId || this.order?.code || '';
+        this.breadcrumbItems = [
+          { label: 'Quản lý đơn hàng', url: '/admin/orders' },
+          { label: orderCode ? ('Chỉnh sửa đơn hàng #' + orderCode) : 'Chỉnh sửa đơn hàng' }
+        ];
         this.cdr.markForCheck();
       },
       error: () => {

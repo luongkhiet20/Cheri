@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../../services/admin.service';
 import { NotificationService } from '../../../../shared/notification/notification.service';
 import { ADMIN_PAGES_URLS } from '../../pages.routes';
+import { BreadcrumbItem } from '../../../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 export interface PolicyFormData {
   title: string;              // vi.title
@@ -20,6 +21,10 @@ export interface PolicyFormData {
 })
 export class PolicyFormComponent implements OnInit {
   readonly adminPagesUrls = ADMIN_PAGES_URLS;
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Quản lý chính sách', url: '/admin/policies' },
+    { label: 'Chỉnh sửa chính sách' }
+  ];
   isEditMode = true;
   pageId: string | null = null;
   isLoading = false;
@@ -82,6 +87,11 @@ export class PolicyFormComponent implements OnInit {
             metaDescription: page.vi?.metaDescription || page.metaDescription || '',
             contentHTML: page.vi?.contentHTML || page.contentHTML || ''
           };
+          this.breadcrumbItems = [
+            { label: 'Quản lý chính sách', url: '/admin/policies' },
+            { label: this.formData.title || 'Chi tiết', url: ['/admin/policies', this.pageId] },
+            { label: 'Chỉnh sửa chính sách' }
+          ];
           this.isDirty = false;
         } else {
           this.errorMessage = res.message || 'Không tìm thấy chính sách để chỉnh sửa';

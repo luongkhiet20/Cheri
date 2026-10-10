@@ -3,6 +3,7 @@
   <!-- Top bar with Back and Status Summary -->
   <div class="detail-header" *ngIf="!isLoading && !isNotFound && order">
     <div class="detail-header-info">
+      <app-admin-breadcrumb [items]="breadcrumbItems"></app-admin-breadcrumb>
       <div class="header-badges">
         <span class="order-code-badge">{{ order.orderId || order.code || '—' }}</span>
         <app-admin-status-badge [label]="order.statusText || order.status || '—'"

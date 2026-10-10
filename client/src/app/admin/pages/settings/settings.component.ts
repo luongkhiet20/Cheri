@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { SettingsService } from './settings.service';
 import { AppSettings } from './settings.model';
 import { NotificationService } from '../../shared/notification/notification.service';
+import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 @Component({
   selector: 'app-settings',
@@ -13,9 +14,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
   isLoading = true;
   isSaving = false;
 
-  breadcrumbs = [
-    { label: 'Quản trị', url: '/admin' },
-    { label: 'Cài đặt' }
+  breadcrumbs: BreadcrumbItem[] = [
+    { label: 'Cài đặt hệ thống' }
   ];
 
   settings: AppSettings = {

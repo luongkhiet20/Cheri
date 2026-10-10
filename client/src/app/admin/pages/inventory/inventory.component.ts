@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
 import { NotificationService } from '../../shared/notification/notification.service';
+import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 @Component({
   selector: 'app-inventory',
@@ -11,6 +12,10 @@ import { NotificationService } from '../../shared/notification/notification.serv
   styleUrls: ['./inventory.component.css']
 })
 export class InventoryComponent implements OnInit {
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Quản lý tồn kho' }
+  ];
+
   columns: TableColumn[] = [
     { key: 'image', label: '', type: 'image', width: '72px' },
     { key: 'name', label: 'Tên sản phẩm', type: 'text', sortable: true },

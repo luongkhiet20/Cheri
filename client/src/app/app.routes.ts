@@ -4,22 +4,24 @@ import { languages } from './user/shared/constants';
 import { HomeComponent } from './user/pages/cheri/home/home.component';
 import { NotFoundComponent } from './user/pages/not-found/not-found.component';
 import { AuthGuard, AdminGuard } from './services/auth.guard';
+import { MaintenanceGuard, MaintenancePageGuard } from './services/maintenance.guard';
 
 const langRoutes = languages.map(lang => {
   return [
-    { path: lang, component: HomeComponent },
-    { path: lang + '/product', loadChildren: () => import('./user/pages/product/product.module').then(m => m.ProductModule) },
-    { path: lang + '/cart', loadChildren: () => import('./user/pages/cart/cart.module').then(m => m.CartModule) },
-    { path: lang + '/order', loadChildren: () => import('./user/pages/order/order.module').then(m => m.OrderModule) },
-    { path: lang + '/orders', loadChildren: () => import('./user/pages/order/order.module').then(m => m.OrderModule) },
+    { path: lang, component: HomeComponent, canActivate: [MaintenanceGuard] },
+    { path: lang + '/system-maintenance', loadComponent: () => import('./user/pages/system-maintenance/system-maintenance').then(m => m.SystemMaintenance), canActivate: [MaintenancePageGuard] },
+    { path: lang + '/product', loadChildren: () => import('./user/pages/product/product.module').then(m => m.ProductModule), canActivate: [MaintenanceGuard] },
+    { path: lang + '/cart', loadChildren: () => import('./user/pages/cart/cart.module').then(m => m.CartModule), canActivate: [MaintenanceGuard] },
+    { path: lang + '/order', loadChildren: () => import('./user/pages/order/order.module').then(m => m.OrderModule), canActivate: [MaintenanceGuard] },
+    { path: lang + '/orders', loadChildren: () => import('./user/pages/order/order.module').then(m => m.OrderModule), canActivate: [MaintenanceGuard] },
     { path: lang + '/cart/summary', redirectTo: '/' + lang + '/order', pathMatch: 'full' },
-    { path: lang + '/cheri', loadChildren: () => import('./user/pages/cheri/routes').then(m => m.CHERI_ROUTER) },
-    { path: lang + '/wishlist', loadComponent: () => import('./user/pages/wishlist/wishlist').then(m => m.Wishlist) },
+    { path: lang + '/cheri', loadChildren: () => import('./user/pages/cheri/routes').then(m => m.CHERI_ROUTER), canActivate: [MaintenanceGuard] },
+    { path: lang + '/wishlist', loadComponent: () => import('./user/pages/wishlist/wishlist').then(m => m.Wishlist), canActivate: [MaintenanceGuard] },
     { path: lang + '/wishlish', redirectTo: '/' + lang + '/wishlist', pathMatch: 'full' },
-    { path: lang + '/profile', loadComponent: () => import('./user/pages/profile/profile').then(m => m.Profile), canActivate: [AuthGuard] },
+    { path: lang + '/profile', loadComponent: () => import('./user/pages/profile/profile').then(m => m.Profile), canActivate: [AuthGuard, MaintenanceGuard] },
     { path: lang + '/authorize', loadChildren: () => import('./user/pages/auth/routes').then(m => m.AUTH_ROUTER) },
     { path: lang + '/register', redirectTo: '/' + lang + '/authorize/signup', pathMatch: 'full' },
-    { path: lang + '/tracking', loadComponent: () => import('./user/pages/order-tracking/order-tracking.component').then(m => m.OrderTrackingComponent) },
+    { path: lang + '/tracking', loadComponent: () => import('./user/pages/order-tracking/order-tracking.component').then(m => m.OrderTrackingComponent), canActivate: [MaintenanceGuard] },
     { path: lang + '/order-tracking', redirectTo: '/' + lang + '/tracking', pathMatch: 'full' },
     { path: lang + '/not-found', component: NotFoundComponent },
     { path: lang + '/404', component: NotFoundComponent },
@@ -32,13 +34,14 @@ const langRoutes = languages.map(lang => {
     { path: lang + '/shipping-policy', redirectTo: '/' + lang + '/cheri/shipping-policy', pathMatch: 'full' },
     { path: lang + '/terms-of-service', redirectTo: '/' + lang + '/cheri/terms-of-service', pathMatch: 'full' },
     { path: lang + '/virtual-try-on', redirectTo: '/' + lang + '/product/all', pathMatch: 'full' },
-    { path: lang + '/about', loadComponent: () => import('./user/pages/cheri/about/about.component').then(m => m.AboutComponent) },
+    { path: lang + '/about', loadComponent: () => import('./user/pages/cheri/about/about.component').then(m => m.AboutComponent), canActivate: [MaintenanceGuard] },
     { path: lang + '/contact', redirectTo: '/' + lang + '/cheri/contact', pathMatch: 'full' },
   ]
 });
 
 export const routes: Routes = [
-  { path: '', component: HomeComponent, pathMatch: 'full' },
+  { path: '', component: HomeComponent, pathMatch: 'full', canActivate: [MaintenanceGuard] },
+  { path: 'system-maintenance', loadComponent: () => import('./user/pages/system-maintenance/system-maintenance').then(m => m.SystemMaintenance), canActivate: [MaintenancePageGuard] },
   { path: 'profile', redirectTo: '/vi/profile', pathMatch: 'full' },
   { path: 'products', redirectTo: '/vi/product/all', pathMatch: 'full' },
   { path: 'product/all', redirectTo: '/vi/product/all', pathMatch: 'full' },

@@ -6700,6 +6700,25 @@ app.get('/api/settings', async (req, res) => {
   }
 });
 
+// 11.1b GET /api/settings/maintenance - Lấy riêng trạng thái bảo trì hệ thống (Public)
+app.get('/api/settings/maintenance', async (req, res) => {
+  try {
+    let settings = await db.collection('settings').findOne({});
+    if (!settings) {
+      const result = await db.collection('settings').insertOne({ ...DEFAULT_SETTINGS });
+      settings = await db.collection('settings').findOne({ _id: result.insertedId });
+    }
+    const maintenance = settings?.maintenance || { enabled: false, message: 'Hệ thống đang bảo trì' };
+    res.json({
+      success: true,
+      data: maintenance
+    });
+  } catch (error) {
+    console.error('Error fetching maintenance settings:', error);
+    res.status(500).json({ success: false, message: error.message || 'Lỗi hệ thống khi tải thông tin bảo trì' });
+  }
+});
+
 // 11.2 PATCH /api/settings - Cập nhật cấu hình hệ thống
 app.patch('/api/settings', async (req, res) => {
   try {

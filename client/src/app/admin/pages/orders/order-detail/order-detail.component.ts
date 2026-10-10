@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
 import { paymentStatusLabel } from '../orders-report-csv.cjs';
+import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 interface StatusOption {
   code: string;
@@ -19,6 +20,11 @@ interface StatusOption {
 export class OrderDetailComponent implements OnInit {
   orderId: string | null = null;
   order: any = null;
+
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Quản lý đơn hàng', url: '/admin/orders' },
+    { label: 'Chi tiết đơn hàng' }
+  ];
 
   isLoading = true;
   isNotFound = false;
@@ -89,6 +95,11 @@ export class OrderDetailComponent implements OnInit {
           this.selectedNextStatus = '';
           this.statusNote = '';
           this.statusValidationMessage = '';
+          const code = this.order?.orderId || this.order?.code || '';
+          this.breadcrumbItems = [
+            { label: 'Quản lý đơn hàng', url: '/admin/orders' },
+            { label: code ? ('Đơn hàng #' + code) : 'Chi tiết đơn hàng' }
+          ];
         } else {
           this.isNotFound = true;
         }

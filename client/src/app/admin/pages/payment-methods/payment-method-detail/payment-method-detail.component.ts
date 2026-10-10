@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
+import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 @Component({
   selector: 'app-payment-method-detail',
@@ -12,6 +13,11 @@ import { NotificationService } from '../../../shared/notification/notification.s
 export class PaymentMethodDetailComponent implements OnInit {
   methodId: string | null = null;
   method: any = null;
+
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Phương thức thanh toán', url: '/admin/payment-methods' },
+    { label: 'Chi tiết phương thức' }
+  ];
 
   isLoading = true;
   isNotFound = false;
@@ -54,6 +60,10 @@ export class PaymentMethodDetailComponent implements OnInit {
         this.isLoading = false;
         if (res.success && res.data) {
           this.method = res.data;
+          this.breadcrumbItems = [
+            { label: 'Phương thức thanh toán', url: '/admin/payment-methods' },
+            { label: this.method?.name || 'Chi tiết phương thức' }
+          ];
         } else {
           this.isNotFound = true;
         }

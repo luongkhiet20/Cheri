@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
 import { environment } from '../../../../../environments/environment';
+import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 @Component({
   selector: 'app-users-detail',
@@ -13,6 +14,12 @@ import { environment } from '../../../../../environments/environment';
 export class UsersDetailComponent implements OnInit {
   userId: string | null = null;
   user: any = null;
+
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Quản lý tài khoản', url: '/admin/users' },
+    { label: 'Chi tiết tài khoản' }
+  ];
+
   isLoading = false;
   isNotFound = false;
   errorMessage = '';
@@ -150,6 +157,11 @@ export class UsersDetailComponent implements OnInit {
           this.avatarHasError = false;
           this.isAvatarExpanded = false;
           this.resolveCartItems();
+          const name = this.user?.fullName || this.user?.name || this.user?.email || '';
+          this.breadcrumbItems = [
+            { label: 'Quản lý tài khoản', url: '/admin/users' },
+            { label: name ? name : 'Chi tiết tài khoản' }
+          ];
         } else {
           this.isNotFound = true;
         }

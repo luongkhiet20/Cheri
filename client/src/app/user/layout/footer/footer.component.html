@@ -4,9 +4,9 @@
 
     <!-- Col 1: Địa chỉ & liên hệ -->
     <div class="footer-col footer-col--contact">
-      <p class="footer-contact-line">Địa chỉ: 118 Linh Trung, Phường Linh Trung, Thủ Đức, Thành phố Hồ Chí Minh</p>
-      <p class="footer-contact-line">Hotline: 0881 1880 080</p>
-      <p class="footer-contact-line">Email: contact.cheri&#64;gmail.com</p>
+      <p class="footer-contact-line" *ngIf="contact?.address">Địa chỉ: {{ contact.address }}</p>
+      <p class="footer-contact-line" *ngIf="contact?.phone">Hotline: {{ contact.phone }}</p>
+      <p class="footer-contact-line" *ngIf="contact?.email">Email: {{ contact.email }}</p>
     </div>
 
     <!-- Col 2: Hỗ trợ -->

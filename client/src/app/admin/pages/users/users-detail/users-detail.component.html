@@ -3,6 +3,7 @@
   <!-- Top bar with Back and Actions -->
   <div class="detail-header" *ngIf="!isLoading && !isNotFound">
     <div class="detail-header-info">
+      <app-admin-breadcrumb [items]="breadcrumbItems"></app-admin-breadcrumb>
       <h1 class="detail-title">{{ user?.fullName || user?.name || user?.email || 'Chi tiết tài khoản' }}</h1>
       <p class="detail-subtitle">Mã tài khoản (ID): <code>{{ userId }}</code></p>
     </div>

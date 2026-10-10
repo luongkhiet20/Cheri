@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
+import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 interface CouponFormData {
   code: string;
@@ -43,6 +44,11 @@ export class CouponFormComponent implements OnInit {
 
   usedCount = 0; // Displayed info only in edit mode, not editable
 
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Mã giảm giá', url: '/admin/pages/coupons' },
+    { label: 'Thêm mã giảm giá' }
+  ];
+
   errors: Record<string, string> = {};
   errorMessage = '';
 
@@ -57,6 +63,11 @@ export class CouponFormComponent implements OnInit {
   ngOnInit(): void {
     this.couponId = this.route.snapshot.paramMap.get('id');
     this.isEditMode = !!this.couponId;
+
+    this.breadcrumbItems = [
+      { label: 'Mã giảm giá', url: '/admin/pages/coupons' },
+      { label: this.isEditMode ? 'Chỉnh sửa mã giảm giá' : 'Thêm mã giảm giá' }
+    ];
 
     const today = new Date();
     const nextMonth = new Date();
@@ -100,6 +111,10 @@ export class CouponFormComponent implements OnInit {
             isActive: c.isActive !== false
           };
           this.usedCount = Number(c.usedCount) || 0;
+          this.breadcrumbItems = [
+            { label: 'Mã giảm giá', url: '/admin/pages/coupons' },
+            { label: this.formData.code ? ('Chỉnh sửa: ' + this.formData.code) : 'Chỉnh sửa mã giảm giá' }
+          ];
         } else {
           this.errorMessage = res?.message || 'Không tìm thấy thông tin mã giảm giá.';
         }

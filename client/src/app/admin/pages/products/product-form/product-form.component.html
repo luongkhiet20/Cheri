@@ -3,14 +3,7 @@
   <!-- Breadcrumbs & Header -->
   <div class="page-top">
     <div>
-      <div class="breadcrumbs">
-        <a routerLink="/admin/products" class="breadcrumb-link">Sản phẩm</a>
-        <span class="breadcrumb-sep">/</span>
-        <a *ngIf="isEditMode && productId" [routerLink]="['/admin/products', productId]" class="breadcrumb-link">{{
-          product?.vi?.title || 'Chi tiết' }}</a>
-        <span *ngIf="isEditMode && productId" class="breadcrumb-sep">/</span>
-        <span class="breadcrumb-current">{{ isEditMode ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới' }}</span>
-      </div>
+      <app-admin-breadcrumb [items]="breadcrumbItems"></app-admin-breadcrumb>
       <h1 class="page-title">{{ isEditMode ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới' }}</h1>
     </div>
 

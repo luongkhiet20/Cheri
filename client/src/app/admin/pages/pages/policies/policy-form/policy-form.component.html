@@ -3,14 +3,7 @@
   <!-- Breadcrumbs & Header -->
   <div class="page-top">
     <div>
-      <div class="breadcrumbs">
-        <a [routerLink]="adminPagesUrls.POLICIES" class="breadcrumb-link">Chính sách</a>
-        <span class="breadcrumb-sep">/</span>
-        <a *ngIf="pageId" [routerLink]="[adminPagesUrls.POLICIES, pageId]" class="breadcrumb-link">{{
-          formData.title || 'Chi tiết' }}</a>
-        <span *ngIf="pageId" class="breadcrumb-sep">/</span>
-        <span class="breadcrumb-current">Chỉnh sửa chính sách</span>
-      </div>
+      <app-admin-breadcrumb [items]="breadcrumbItems"></app-admin-breadcrumb>
       <h1 class="page-title">Chỉnh sửa chính sách</h1>
     </div>
 

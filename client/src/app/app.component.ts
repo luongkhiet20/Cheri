@@ -22,6 +22,7 @@ import { currencyLang } from './user/shared/constants';
 import { SignalStore } from './store/signal.store';
 import { SignalStoreSelectors } from './store/signal.store.selectors';
 import { SettingsService } from './admin/pages/settings/settings.service';
+import { isRouteAllowedDuringMaintenance } from './services/maintenance.guard';
 import { FooterComponent } from './user/layout/footer/footer.component';
 import { HeaderComponent } from './user/layout/header/header.component';
 
@@ -36,6 +37,7 @@ export class AppComponent {
   rememberScroll: { [component: string]: number } = {};
   position = 0;
   isDashboard = false;
+  isMaintenancePage = false;
 
   constructor(
     private elRef: ElementRef,
@@ -109,19 +111,50 @@ export class AppComponent {
       })
     );
 
-    // Ẩn header/footer trên trang admin
+    // Ẩn header/footer trên trang admin hoặc trang bảo trì
     const checkIsAdmin = (url: string): boolean => {
       return url.includes('/admin') || url.includes('/dashboard') || url.includes('/product-management');
     };
+    const checkIsMaintenance = (url: string): boolean => {
+      return url.includes('system-maintenance');
+    };
+
     const initialUrl = this.router.url || '';
     this.isDashboard = checkIsAdmin(initialUrl);
+    this.isMaintenancePage = checkIsMaintenance(initialUrl);
 
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
     ).subscribe((event: NavigationEnd) => {
       const currentUrl = event.urlAfterRedirects || event.url || '';
       this.isDashboard = checkIsAdmin(currentUrl);
+      this.isMaintenancePage = checkIsMaintenance(currentUrl);
+
+      // Nếu hệ thống đang bật bảo trì và khách truy cập đang ở trang mua sắm thông thường
+      if (isPlatformBrowser(this.platformId)) {
+        const curSettings = this.settingsService.currentSettings;
+        if (curSettings?.maintenance?.enabled === true && !isRouteAllowedDuringMaintenance(currentUrl) && !this.isAdmin()) {
+          this.router.navigate(['/system-maintenance']);
+        }
+      }
     });
+
+    // Lắng nghe thay đổi settings thời gian thực từ database
+    if (isPlatformBrowser(this.platformId)) {
+      this.settingsService.settings$.subscribe((settings) => {
+        if (!settings?.maintenance) return;
+        const currentUrl = this.router.url || '';
+        if (settings.maintenance.enabled === true) {
+          if (!isRouteAllowedDuringMaintenance(currentUrl) && !this.isAdmin()) {
+            this.router.navigate(['/system-maintenance']);
+          }
+        } else if (settings.maintenance.enabled === false) {
+          if (currentUrl.includes('system-maintenance')) {
+            this.router.navigate(['/']);
+          }
+        }
+      });
+    }
   }
 
   isAdmin(): boolean {

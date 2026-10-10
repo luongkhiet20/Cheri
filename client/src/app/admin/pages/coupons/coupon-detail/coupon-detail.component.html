@@ -11,6 +11,7 @@
       </button>
 
       <div>
+        <app-admin-breadcrumb [items]="breadcrumbItems"></app-admin-breadcrumb>
         <div class="header-badges" *ngIf="coupon">
           <span class="badge" [ngClass]="coupon.isActive !== false ? 'badge-success' : 'badge-neutral'">
             {{ coupon.isActive !== false ? 'Đang kích hoạt' : 'Đang tạm dừng' }}

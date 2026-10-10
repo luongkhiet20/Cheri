@@ -2,6 +2,7 @@
   <!-- Header / Action bar -->
   <div class="form-header">
     <div class="form-header-left">
+      <app-admin-breadcrumb [items]="breadcrumbItems"></app-admin-breadcrumb>
       <h1 class="page-title">
         {{ isEditMode ? 'Chỉnh sửa mã giảm giá' : 'Thêm mã giảm giá' }}
       </h1>

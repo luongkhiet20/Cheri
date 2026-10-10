@@ -7,6 +7,8 @@ import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { AdminService } from '../../services/admin.service';
 
+import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
+
 // ── Types ───────────────────────────────────────────────────────────────────
 export interface DonutSegment {
   label: string; count: number; color: string;
@@ -39,6 +41,10 @@ type PresetKey = typeof QUICK_PRESETS[number]['key'];
   styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit, OnDestroy {
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Tổng quan' }
+  ];
+
   // ── Constants ──────────────────────────────────────────────────────────
   readonly LOW_STOCK_THRESHOLD = 5;
   readonly QUICK_PRESETS = QUICK_PRESETS;

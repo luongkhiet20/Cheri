@@ -5,6 +5,7 @@
 import {
   HomeSection, AboutSection, HomeSectionType, AboutSectionType,
   FontOption, SectionTypography, SectionColors, CarouselConfig, SectionTypeOption,
+  TypographyPresetOption,
 } from './cms.models';
 
 export interface ColorPreset { name: string; hex: string; label: string; }
@@ -42,13 +43,10 @@ export const AVAILABLE_FONTS: FontOption[] = [
 ];
 
 // ─────────────────── Typography Presets ───────────────────
-export const TYPOGRAPHY_PRESETS: {
-  id: string; value: string; name: string; label: string; badge: string;
-  previewFont: string; typography: SectionTypography;
-}[] = [
+export const TYPOGRAPHY_PRESETS: TypographyPresetOption[] = [
   {
     id: 'minimal', value: 'minimal', name: 'Toi Gian Hien Dai (Minimal)', label: 'Minimal',
-    badge: 'Toi gian, hien dai', previewFont: `'Inter', sans-serif`,
+    badge: 'Toi gian, hien dai', description: 'Tối giản, hiện đại', previewFont: `'Inter', sans-serif`,
     typography: {
       preset: 'minimal',
       eyebrow:    { fontFamily: `'Inter', sans-serif`, fontSize: 12, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase' },
@@ -65,7 +63,7 @@ export const TYPOGRAPHY_PRESETS: {
   },
   {
     id: 'editorial', value: 'editorial', name: 'Tap Chi Thoi Trang (Editorial)', label: 'Editorial',
-    badge: 'Phong cach tap chi thoi trang', previewFont: `'Cormorant Garamond', Georgia, serif`,
+    badge: 'Phong cach tap chi thoi trang', description: 'Phong cách tạp chí thời trang', previewFont: `'Cormorant Garamond', Georgia, serif`,
     typography: {
       preset: 'editorial',
       eyebrow:    { fontFamily: `'Inter', sans-serif`, fontSize: 11, fontWeight: 600, letterSpacing: 3, textTransform: 'uppercase' },
@@ -82,7 +80,7 @@ export const TYPOGRAPHY_PRESETS: {
   },
   {
     id: 'classic', value: 'classic', name: 'Co Dien Thanh Lich (Classic)', label: 'Classic',
-    badge: 'Co dien, thanh lich', previewFont: `'Playfair Display', Georgia, serif`,
+    badge: 'Co dien, thanh lich', description: 'Cổ điển, thanh lịch', previewFont: `'Playfair Display', Georgia, serif`,
     typography: {
       preset: 'classic',
       eyebrow:    { fontFamily: `'Montserrat', sans-serif`, fontSize: 11, fontWeight: 500, letterSpacing: 3.5, textTransform: 'uppercase' },
@@ -99,7 +97,7 @@ export const TYPOGRAPHY_PRESETS: {
   },
   {
     id: 'romantic', value: 'romantic', name: 'Lang Man Mem Mai (Romantic)', label: 'Romantic',
-    badge: 'Lang man, mem mai', previewFont: `'Playfair Display', Georgia, serif`,
+    badge: 'Lang man, mem mai', description: 'Lãng mạn, mềm mại', previewFont: `'Playfair Display', Georgia, serif`,
     typography: {
       preset: 'romantic',
       eyebrow:    { fontFamily: `'Montserrat', sans-serif`, fontSize: 12, fontWeight: 500, letterSpacing: 3, textTransform: 'uppercase' },
@@ -116,7 +114,7 @@ export const TYPOGRAPHY_PRESETS: {
   },
   {
     id: 'modern', value: 'modern', name: 'Hien Dai Ro Net (Modern)', label: 'Modern',
-    badge: 'Hien dai, ro net', previewFont: `'Montserrat', sans-serif`,
+    badge: 'Hien dai, ro net', description: 'Hiện đại, rõ nét', previewFont: `'Montserrat', sans-serif`,
     typography: {
       preset: 'modern',
       eyebrow:    { fontFamily: `'Montserrat', sans-serif`, fontSize: 12, fontWeight: 600, letterSpacing: 2.5, textTransform: 'uppercase' },
@@ -133,7 +131,7 @@ export const TYPOGRAPHY_PRESETS: {
   },
   {
     id: 'luxury', value: 'luxury', name: 'Sang Trong Tinh Te (Luxury)', label: 'Luxury',
-    badge: 'Sang trong, dang cap', previewFont: `'Playfair Display', Georgia, serif`,
+    badge: 'Sang trong, dang cap', description: 'Sang trọng, đẳng cấp', previewFont: `'Playfair Display', Georgia, serif`,
     typography: {
       preset: 'luxury',
       eyebrow:    { fontFamily: `'Montserrat', sans-serif`, fontSize: 11, fontWeight: 500, letterSpacing: 4, textTransform: 'uppercase' },

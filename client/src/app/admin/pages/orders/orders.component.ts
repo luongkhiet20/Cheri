@@ -4,6 +4,7 @@ import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } fr
 import { AdminService } from '../../services/admin.service';
 import { NotificationService } from '../../shared/notification/notification.service';
 import { escapeCsvTextField, paymentStatusLabel } from './orders-report-csv.cjs';
+import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 @Component({
   selector: 'app-orders',
@@ -12,6 +13,10 @@ import { escapeCsvTextField, paymentStatusLabel } from './orders-report-csv.cjs'
   styleUrls: ['./orders.component.css']
 })
 export class OrdersComponent implements OnInit {
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Quản lý đơn hàng' }
+  ];
+
   columns: TableColumn[] = [
     { key: 'code', label: 'Mã đơn', type: 'text', sortable: true },
     { key: 'customer', label: 'Khách hàng', type: 'text', sortable: true },

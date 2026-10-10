@@ -4,6 +4,7 @@ import { Location } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { AdminService } from '../../services/admin.service';
 import { NotificationService } from '../../shared/notification/notification.service';
+import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 @Component({
   selector: 'app-account',
@@ -12,6 +13,11 @@ import { NotificationService } from '../../shared/notification/notification.serv
   styleUrls: ['./account.component.scss']
 })
 export class AccountComponent implements OnInit, OnDestroy {
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Quản trị', url: '/admin' },
+    { label: 'Thông tin tài khoản' }
+  ];
+
   isLoading = true;
   activeTab: 'overview' | 'edit' | 'password' = 'overview';
 

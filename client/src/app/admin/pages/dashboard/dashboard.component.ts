@@ -51,28 +51,47 @@ export class DashboardComponent implements OnInit, OnDestroy {
   readonly QUICK_PRESETS = QUICK_PRESETS;
   readonly WEEKDAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
-  private readonly DONUT_COLORS = [
-    '#74070E', // Đã giao (Delivered) - Đỏ rượu vang Chéri
-    '#C2410C', // Đang giao (Shipping) - Đỏ gạch / Rust
-    '#D96B76', // Đang xử lý (Processing) - Đỏ hồng / Rosewood
-    '#F59E0B', // Chờ xác nhận (Pending) - Hổ phách ấm / Vàng cam
-    '#9CA3AF', // Đã hủy (Cancelled) - Xám trung tính
-    '#8B5CF6'  // Đã hoàn trả (Returned) - Tím Lavender sang trọng
+  private readonly STATUS_ORDER = [
+    'pending',     // 1. Chờ xác nhận
+    'processing',  // 2. Đang xử lý
+    'shipping',    // 3. Đang giao
+    'delivered',   // 4. Đã giao
+    'cancelled',   // 5. Đã hủy
+    'returned'     // 6. Đã hoàn trả
   ];
-  private readonly STATUS_ORDER = ['delivered', 'shipping', 'processing', 'pending', 'cancelled', 'returned'];
+
+  private readonly STATUS_COLOR_MAP: Record<string, string> = {
+    pending: '#CC8780',     // Chờ xác nhận
+    processing: '#F7D4D6',  // Đang xử lý
+    shipping: '#EFA9AE',    // Đang giao
+    delivered: '#AD1F2A',   // Đã giao
+    cancelled: '#82171F',   // Đã hủy
+    returned: '#561015'     // Đã hoàn trả
+  };
+
+  private readonly DONUT_COLORS = [
+    '#CC8780', // Chờ xác nhận
+    '#F7D4D6', // Đang xử lý
+    '#EFA9AE', // Đang giao
+    '#AD1F2A', // Đã giao
+    '#82171F', // Đã hủy
+    '#561015'  // Đã hoàn trả
+  ];
+
   private readonly STATUS_LABELS: Record<string, string> = {
-    delivered: 'Đã giao',
-    shipping: 'Đang giao',
-    processing: 'Đang xử lý',
     pending: 'Chờ xác nhận',
+    processing: 'Đang xử lý',
+    shipping: 'Đang giao',
+    delivered: 'Đã giao',
     cancelled: 'Đã hủy',
     returned: 'Đã hoàn trả'
   };
+
   private readonly STATUS_VARIANTS: Record<string, string> = {
-    delivered: 'success',
-    shipping: 'primary',
-    processing: 'warning',
     pending: 'neutral',
+    processing: 'warning',
+    shipping: 'primary',
+    delivered: 'success',
     cancelled: 'danger',
     returned: 'neutral'
   };
@@ -640,7 +659,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         code: key.toUpperCase(),
         label: this.STATUS_LABELS[key] || key,
         count,
-        color: this.DONUT_COLORS[i % this.DONUT_COLORS.length],
+        color: this.STATUS_COLOR_MAP[key] || this.DONUT_COLORS[i % this.DONUT_COLORS.length],
         pct,
         dash: Math.max(0, dash - gap),
         offset: CIRC - cumOffset,

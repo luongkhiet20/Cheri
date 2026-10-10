@@ -142,8 +142,38 @@ export class OrdersController {
   // ─── Admin: thông báo ──────────────────────────────────────────────────
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
   @Get('/notifications')
-  getNotifications() {
-    return this.ordersService.getNotifications();
+  getNotifications(@Query('recipientId') recipientId?: string) {
+    return this.ordersService.getNotifications(recipientId || 'admin');
+  }
+
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @Get('/notifications/unread-count')
+  getUnreadCount(@Query('recipientId') recipientId?: string) {
+    return this.ordersService.getUnreadNotificationCount(recipientId || 'admin');
+  }
+
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @Post('/notifications/read-all')
+  markAllNotificationsReadPost(@Body('recipientId') recipientId?: string) {
+    return this.ordersService.markAllNotificationsRead(recipientId || 'admin');
+  }
+
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @Patch('/notifications/read-all')
+  markAllNotificationsReadPatch(@Body('recipientId') recipientId?: string) {
+    return this.ordersService.markAllNotificationsRead(recipientId || 'admin');
+  }
+
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @Patch('/notifications/:id/read')
+  markNotificationReadPatch(@Param('id') id: string, @Body('recipientId') recipientId?: string) {
+    return this.ordersService.markNotificationRead(id, recipientId || 'admin');
+  }
+
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @Post('/notifications/:id/read')
+  markNotificationReadPost(@Param('id') id: string, @Body('recipientId') recipientId?: string) {
+    return this.ordersService.markNotificationRead(id, recipientId || 'admin');
   }
 
   // ─── Admin: thống kê dashboard ───────────────────────────────────────────

@@ -892,6 +892,33 @@ export class ApiService {
     );
   }
 
+  // ── Admin Notifications (MongoDB notification-popup) ──
+  getNotifications(recipientId: string = 'admin'): Observable<any[]> {
+    const params = new HttpParams().set('recipientId', recipientId);
+    return this.http.get<any[]>(`${this.apiUrl}/api/orders/notifications`, { ...this.getRequestOptions(), params }).pipe(
+      catchError(() => of([]))
+    );
+  }
+
+  getUnreadNotificationCount(recipientId: string = 'admin'): Observable<{ success: boolean; unreadCount: number }> {
+    const params = new HttpParams().set('recipientId', recipientId);
+    return this.http.get<{ success: boolean; unreadCount: number }>(`${this.apiUrl}/api/orders/notifications/unread-count`, { ...this.getRequestOptions(), params }).pipe(
+      catchError(() => of({ success: false, unreadCount: 0 }))
+    );
+  }
+
+  markNotificationAsRead(id: string, recipientId: string = 'admin'): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/api/orders/notifications/${id}/read`, { recipientId }, this.getRequestOptions()).pipe(
+      catchError((error) => of({ success: false, error }))
+    );
+  }
+
+  markAllNotificationsAsRead(recipientId: string = 'admin'): Observable<any> {
+    return this.http.post(`${this.apiUrl}/api/orders/notifications/read-all`, { recipientId }, this.getRequestOptions()).pipe(
+      catchError((error) => of({ success: false, error }))
+    );
+  }
+
   private initAuthTracking() {
     const selectors = inject(SignalStoreSelectors);
     combineLatest([toObservable(selectors.appLang), toObservable(selectors.user)]).subscribe(([lang, user]) => {

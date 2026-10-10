@@ -23,11 +23,13 @@ import { AdminService } from '../../services/admin.service';
 export class NotificationPopupComponent implements OnInit, OnDestroy {
   isOpen = false;
   notifications: any[] = [];
-  readNotifIds = new Set<string>();
   loading = false;
   hasError = false;
   errorMessage = 'Không thể tải thông báo. Vui lòng thử lại sau.';
   private notifInterval: any = null;
+
+  isMarkingAllRead = false;
+  private processingNotifIds = new Set<string>();
 
   @Output() unreadCountChange = new EventEmitter<number>();
   @Output() closed = new EventEmitter<void>();
@@ -55,7 +57,7 @@ export class NotificationPopupComponent implements OnInit, OnDestroy {
   }
 
   get unreadCount(): number {
-    return this.notifications.filter(n => !this.readNotifIds.has(n.id)).length;
+    return (this.notifications || []).filter(n => !this.isNotifRead(n)).length;
   }
 
   get notificationGroups(): { key: string; label: string; items: any[] }[] {
@@ -73,15 +75,14 @@ export class NotificationPopupComponent implements OnInit, OnDestroy {
       .filter(g => g.items.length > 0);
   }
 
-  isNotifRead(id: string): boolean {
-    return this.readNotifIds.has(id);
+  isNotifRead(n: any): boolean {
+    return n?.isRead === true;
   }
 
   toggle(): void {
     this.isOpen = !this.isOpen;
     if (this.isOpen) {
       this.fetchNotifications();
-      this.markAllNotificationsRead();
     }
     this.cdr.markForCheck();
   }
@@ -124,6 +125,7 @@ export class NotificationPopupComponent implements OnInit, OnDestroy {
       error: () => {
         this.loading = false;
         this.hasError = true;
+        this.errorMessage = 'Không thể tải thông báo. Vui lòng thử lại sau.';
         this.cdr.markForCheck();
       }
     });
@@ -138,22 +140,63 @@ export class NotificationPopupComponent implements OnInit, OnDestroy {
     this.refreshNotifications();
   }
 
-  markAllNotificationsRead(): void {
-    this.notifications.forEach(n => this.readNotifIds.add(n.id));
-    this.emitUnreadCount();
-    this.cdr.markForCheck();
-  }
-
   onMarkAllRead(): void {
-    this.markAllNotificationsRead();
+    if (this.isMarkingAllRead || this.unreadCount === 0) return;
+    this.isMarkingAllRead = true;
+    this.cdr.markForCheck();
+
+    this.apiService.markAllNotificationsAsRead().subscribe({
+      next: () => {
+        this.isMarkingAllRead = false;
+        // Tải lại trực tiếp từ backend MongoDB để đảm bảo đồng bộ hoàn toàn
+        this.fetchNotifications();
+      },
+      error: (err) => {
+        console.error('Lỗi khi đánh dấu tất cả đã đọc:', err);
+        this.isMarkingAllRead = false;
+        this.hasError = true;
+        this.errorMessage = 'Lỗi cập nhật tất cả thông báo. Vui lòng thử lại.';
+        this.fetchNotifications();
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   onNotificationItemClick(n: any): void {
     if (!n) return;
-    this.readNotifIds.add(n.id);
-    this.emitUnreadCount();
-    this.close();
-    this.navigateForNotification(n);
+
+    // Nếu thông báo đã đọc, chỉ đóng popup và điều hướng ngay, không gọi API cập nhật lại
+    if (this.isNotifRead(n)) {
+      this.close();
+      this.navigateForNotification(n);
+      return;
+    }
+
+    const notifId = n._id ? String(n._id) : String(n.id);
+    if (this.processingNotifIds.has(notifId)) return;
+    this.processingNotifIds.add(notifId);
+
+    // Gọi API lưu trạng thái đã đọc vào MongoDB
+    this.apiService.markNotificationAsRead(notifId).subscribe({
+      next: () => {
+        this.processingNotifIds.delete(notifId);
+        n.isRead = true;
+        n.readAt = new Date();
+        this.emitUnreadCount();
+        this.close();
+        this.navigateForNotification(n);
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.processingNotifIds.delete(notifId);
+        console.error('Lỗi cập nhật trạng thái thông báo:', err);
+        this.hasError = true;
+        this.errorMessage = 'Không thể cập nhật trạng thái thông báo. Vui lòng thử lại.';
+        // Đồng bộ lại từ backend, không đóng popup, không điều hướng giả định thành công
+        this.fetchNotifications();
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   private emitUnreadCount(): void {

@@ -26,7 +26,8 @@
 
       <!-- Nút đánh dấu đã đọc -->
       <button type="button" class="admin-notif-action-btn" (click)="onMarkAllRead()"
-        [disabled]="loading || unreadCount === 0" title="Đánh dấu tất cả đã đọc" aria-label="Đánh dấu tất cả đã đọc">
+        [disabled]="loading || isMarkingAllRead || unreadCount === 0" [class.is-loading]="isMarkingAllRead"
+        title="Đánh dấu tất cả đã đọc" aria-label="Đánh dấu tất cả đã đọc">
         <svg class="admin-notif-icon-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <path d="M18 6L7 17l-5-5"></path>
@@ -113,7 +114,7 @@
       </div>
 
       <!-- Danh sách item của nhóm -->
-      <div class="admin-notif-item" *ngFor="let n of group.items" [class.is-unread]="!isNotifRead(n.id)"
+      <div class="admin-notif-item" *ngFor="let n of group.items" [class.is-unread]="!isNotifRead(n)"
         (click)="onNotificationItemClick(n)" role="button" tabindex="0" (keydown.enter)="onNotificationItemClick(n)">
         <!-- Icon sự kiện (SVG inline thủ công, stroke thanh mảnh) -->
         <div class="admin-notif-item-icon" [ngClass]="'level-' + (n.level || 'info')">
@@ -236,7 +237,7 @@
         </div>
 
         <!-- Chấm đỏ rượu vang chỉ hiển thị khi chưa đọc -->
-        <div class="admin-notif-dot-wrap" *ngIf="!isNotifRead(n.id)" title="Chưa đọc">
+        <div class="admin-notif-dot-wrap" *ngIf="!isNotifRead(n)" title="Chưa đọc">
           <span class="admin-notif-dot"></span>
         </div>
       </div>

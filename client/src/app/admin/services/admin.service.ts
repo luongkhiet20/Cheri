@@ -26,8 +26,22 @@ export class AdminService {
   }
 
   // ── Notifications ───────────────────────────
-  getNotifications(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.baseUrl}/orders/notifications`);
+  getNotifications(recipientId: string = 'admin'): Observable<any[]> {
+    const params = new HttpParams().set('recipientId', recipientId);
+    return this.http.get<any[]>(`${this.baseUrl}/orders/notifications`, { params });
+  }
+
+  getUnreadNotificationCount(recipientId: string = 'admin'): Observable<{ success: boolean; unreadCount: number }> {
+    const params = new HttpParams().set('recipientId', recipientId);
+    return this.http.get<{ success: boolean; unreadCount: number }>(`${this.baseUrl}/orders/notifications/unread-count`, { params });
+  }
+
+  markNotificationAsRead(id: string, recipientId: string = 'admin'): Observable<any> {
+    return this.http.patch(`${this.baseUrl}/orders/notifications/${id}/read`, { recipientId });
+  }
+
+  markAllNotificationsAsRead(recipientId: string = 'admin'): Observable<any> {
+    return this.http.post(`${this.baseUrl}/orders/notifications/read-all`, { recipientId });
   }
 
   // ── Products ───────────────────────────────

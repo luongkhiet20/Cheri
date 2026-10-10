@@ -1164,7 +1164,9 @@ export class OrdersService {
     };
   }
 
-  async getNotifications(): Promise<any[]> {
+  async getNotifications(recipientId: string = 'admin'): Promise<any[]> {
+    const db = this.orderModel.db;
+    const notifCol = db.collection('notification-popup');
     const since = new Date();
     since.setDate(since.getDate() - 30);
 
@@ -1175,7 +1177,7 @@ export class OrdersService {
           { dateAdded: { $gte: since } },
         ],
       }).sort('-createdAt').lean(),
-      this.productModel.find({}).select('title titleUrl stock dateAdded quantity').lean(),
+      this.productModel.find({}).select('title titleUrl stock dateAdded quantity updatedAt').lean(),
       this.userModel.find({
         $or: [
           { createdAt: { $gte: since } },
@@ -1184,65 +1186,74 @@ export class OrdersService {
       }).select('email name fullName status createdAt dateAdded').sort('-createdAt').lean(),
     ]);
 
-    const notifications: any[] = [];
+    const activeEvents: any[] = [];
 
     // ── 🔔 ĐƠN HÀNG ──────────────────────────────────────────────────────────
-    const newOrders = orders.filter(o => o.status === OrderStatus.PENDING || (o as any).status === 'NEW');
+    const newOrders = orders.filter(o => o.status === OrderStatus.PENDING || (o as any).status === 'NEW' || (o as any).status === 'Pending');
     if (newOrders.length) {
-      notifications.push({
+      activeEvents.push({
         id: 'orders-new',
+        type: 'order_new',
         group: 'orders',
         icon: 'new-order',
         title: 'Có đơn hàng mới',
         message: `${newOrders.length} đơn hàng mới chờ xử lý`,
         count: newOrders.length,
         level: 'info',
-        time: newOrders[0]?.createdAt || (newOrders[0] as any)?.dateAdded,
+        time: newOrders[0]?.createdAt || (newOrders[0] as any)?.dateAdded || new Date(),
+        targetUrl: '/admin/orders?status=PENDING',
       });
     }
 
     const confirmedOrders = orders.filter(
       o => o.status === OrderStatus.CONFIRMED || (o as any).status === 'CONFIRMED' ||
-           o.status === OrderStatus.PROCESSING || (o as any).status === 'PROCESSING'
+           o.status === OrderStatus.PROCESSING || (o as any).status === 'PROCESSING' ||
+           (o as any).status === 'Confirmed' || (o as any).status === 'Processing'
     );
     if (confirmedOrders.length) {
-      notifications.push({
+      activeEvents.push({
         id: 'orders-confirmed',
+        type: 'order_confirmed',
         group: 'orders',
         icon: 'confirmed',
         title: 'Đơn đã xác nhận cần xuất kho',
         message: `${confirmedOrders.length} đơn đã xác nhận và cần xuất kho`,
         count: confirmedOrders.length,
         level: 'info',
-        time: confirmedOrders[0]?.createdAt || (confirmedOrders[0] as any)?.dateAdded,
+        time: confirmedOrders[0]?.createdAt || (confirmedOrders[0] as any)?.dateAdded || new Date(),
+        targetUrl: '/admin/orders?status=CONFIRMED',
       });
     }
 
-    const paidOrders = orders.filter(o => o.paymentStatus === PaymentStatus.PAID || (o as any).status === 'PAID');
+    const paidOrders = orders.filter(o => o.paymentStatus === PaymentStatus.PAID || (o as any).paymentStatus === 'Paid' || (o as any).status === 'PAID');
     if (paidOrders.length) {
-      notifications.push({
+      activeEvents.push({
         id: 'orders-paid',
+        type: 'order_paid',
         group: 'orders',
         icon: 'paid',
         title: 'Đơn hàng được thanh toán',
         message: `${paidOrders.length} đơn đã thanh toán thành công`,
         count: paidOrders.length,
         level: 'success',
-        time: paidOrders[0]?.createdAt || (paidOrders[0] as any)?.dateAdded,
+        time: paidOrders[0]?.createdAt || (paidOrders[0] as any)?.dateAdded || new Date(),
+        targetUrl: '/admin/orders?status=CONFIRMED',
       });
     }
 
-    const canceledOrders = orders.filter(o => o.status === OrderStatus.CANCELLED || (o as any).status === 'CANCELLED' || (o as any).status === 'CANCELED');
+    const canceledOrders = orders.filter(o => o.status === OrderStatus.CANCELLED || (o as any).status === 'CANCELLED' || (o as any).status === 'CANCELED' || (o as any).status === 'Cancelled');
     if (canceledOrders.length) {
-      notifications.push({
+      activeEvents.push({
         id: 'orders-canceled',
+        type: 'order_canceled',
         group: 'orders',
         icon: 'cancel',
         title: 'Đơn hàng bị hủy',
         message: `${canceledOrders.length} đơn hàng đã bị hủy`,
         count: canceledOrders.length,
         level: 'error',
-        time: canceledOrders[0]?.createdAt || (canceledOrders[0] as any)?.dateAdded,
+        time: canceledOrders[0]?.createdAt || (canceledOrders[0] as any)?.dateAdded || new Date(),
+        targetUrl: '/admin/orders?status=CANCELLED',
       });
     }
 
@@ -1252,23 +1263,26 @@ export class OrdersService {
            (o.notes && /đổi|trả|refund|return/i.test(o.notes)),
     );
     if (returnOrders.length) {
-      notifications.push({
+      activeEvents.push({
         id: 'orders-return',
+        type: 'order_return',
         group: 'orders',
         icon: 'return',
         title: 'Đơn hàng yêu cầu đổi/trả',
         message: `${returnOrders.length} đơn yêu cầu đổi/trả`,
         count: returnOrders.length,
         level: 'warning',
-        time: returnOrders[0]?.createdAt || (returnOrders[0] as any)?.dateAdded,
+        time: returnOrders[0]?.createdAt || (returnOrders[0] as any)?.dateAdded || new Date(),
+        targetUrl: '/admin/orders?status=RETURNED',
       });
     }
 
     // ── 🔔 SẢN PHẨM & KHO ────────────────────────────────────────────────────
     const outOfStock = products.filter(p => p.stock === 'outOfStock' || p.stock === 'out' || p.quantity === 0);
     if (outOfStock.length) {
-      notifications.push({
+      activeEvents.push({
         id: 'stock-out',
+        type: 'stock_out',
         group: 'products',
         icon: 'out-of-stock',
         title: 'Sản phẩm hết hàng',
@@ -1276,6 +1290,8 @@ export class OrdersService {
         count: outOfStock.length,
         level: 'error',
         items: outOfStock.slice(0, 3).map((p: any) => p.title || p.titleUrl),
+        targetUrl: '/admin/products?status=out',
+        time: new Date(),
       });
     }
 
@@ -1284,8 +1300,9 @@ export class OrdersService {
            (typeof p.quantity === 'number' && p.quantity > 0 && p.quantity <= 5),
     );
     if (lowStock.length) {
-      notifications.push({
+      activeEvents.push({
         id: 'stock-low',
+        type: 'stock_low',
         group: 'products',
         icon: 'low-stock',
         title: 'Sản phẩm sắp hết hàng',
@@ -1293,6 +1310,8 @@ export class OrdersService {
         count: lowStock.length,
         level: 'warning',
         items: lowStock.slice(0, 3).map((p: any) => p.title || p.titleUrl),
+        targetUrl: '/admin/products?status=out',
+        time: new Date(),
       });
     }
 
@@ -1302,14 +1321,17 @@ export class OrdersService {
       return d && new Date(d) >= since;
     });
     if (recentlyRestocked.length) {
-      notifications.push({
+      activeEvents.push({
         id: 'stock-in',
+        type: 'stock_in',
         group: 'products',
         icon: 'restock',
         title: 'Nhập kho thành công',
         message: `${recentlyRestocked.length} sản phẩm được cập nhật vào kho`,
         count: recentlyRestocked.length,
         level: 'success',
+        targetUrl: '/admin/products',
+        time: new Date(),
       });
     }
 
@@ -1317,14 +1339,17 @@ export class OrdersService {
       o => o.status === OrderStatus.SHIPPING || o.status === OrderStatus.DELIVERED,
     );
     if (recentlyShipped.length) {
-      notifications.push({
+      activeEvents.push({
         id: 'stock-out-shipped',
+        type: 'stock_shipped',
         group: 'products',
         icon: 'shipped',
         title: 'Xuất kho thành công',
         message: `${recentlyShipped.length} đơn hàng đã xuất kho`,
         count: recentlyShipped.length,
         level: 'info',
+        targetUrl: '/admin/orders?status=SHIPPING',
+        time: recentlyShipped[0]?.createdAt || (recentlyShipped[0] as any)?.dateAdded || new Date(),
       });
     }
 
@@ -1334,32 +1359,124 @@ export class OrdersService {
       return d && new Date(d) >= since;
     });
     if (newUsers.length) {
-      notifications.push({
+      activeEvents.push({
         id: 'users-new',
+        type: 'user_new',
         group: 'users',
         icon: 'new-user',
         title: 'Người dùng mới đăng ký',
         message: `${newUsers.length} tài khoản mới trong 30 ngày`,
         count: newUsers.length,
         level: 'info',
-        time: (newUsers[0] as any)?.createdAt || (newUsers[0] as any)?.dateAdded,
+        time: (newUsers[0] as any)?.createdAt || (newUsers[0] as any)?.dateAdded || new Date(),
+        targetUrl: '/admin/users',
       });
     }
 
     const totalLockedCount = await this.userModel.countDocuments({ status: false });
     if (totalLockedCount > 0) {
-      notifications.push({
+      activeEvents.push({
         id: 'users-locked',
+        type: 'user_locked',
         group: 'users',
         icon: 'locked-user',
         title: 'Người dùng bị khóa/kích hoạt',
         message: `${totalLockedCount} tài khoản đang bị khóa`,
         count: totalLockedCount,
         level: 'warning',
+        targetUrl: '/admin/users',
+        time: new Date(),
       });
     }
 
-    return notifications;
+    // Đồng bộ vào MongoDB collection 'notification-popup'
+    const existingDocs = await notifCol.find({ recipientId }).toArray();
+    const existingMap = new Map(existingDocs.map((d: any) => [d.id, d]));
+
+    for (const event of activeEvents) {
+      const existing = existingMap.get(event.id);
+      if (existing) {
+        const countIncreased = typeof event.count === 'number' && typeof existing.count === 'number'
+          ? event.count > existing.count
+          : (event.count !== existing.count && event.count > 0);
+
+        const updateDoc: any = {
+          title: event.title,
+          message: event.message,
+          count: event.count,
+          level: event.level,
+          icon: event.icon,
+          group: event.group,
+          type: event.type,
+          targetUrl: event.targetUrl,
+          items: event.items || [],
+          updatedAt: new Date(),
+        };
+
+        if (countIncreased) {
+          updateDoc.isRead = false;
+          updateDoc.readAt = null;
+          updateDoc.time = event.time || new Date();
+        } else {
+          updateDoc.time = existing.time || event.time || new Date();
+        }
+
+        await notifCol.updateOne({ _id: existing._id }, { $set: updateDoc });
+      } else {
+        await notifCol.insertOne({
+          ...event,
+          items: event.items || [],
+          isRead: false,
+          readAt: null,
+          recipientId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+    }
+
+    // Xóa những thông báo không còn sự kiện active
+    const activeIds = activeEvents.map(e => e.id);
+    if (activeIds.length > 0) {
+      await notifCol.deleteMany({ recipientId, id: { $nin: activeIds } });
+    } else {
+      await notifCol.deleteMany({ recipientId });
+    }
+
+    return await notifCol.find({ recipientId }).sort({ createdAt: -1 }).toArray();
+  }
+
+  async getUnreadNotificationCount(recipientId: string = 'admin'): Promise<{ success: boolean; unreadCount: number }> {
+    const unreadCount = await this.orderModel.db.collection('notification-popup').countDocuments({ recipientId, isRead: false });
+    return { success: true, unreadCount };
+  }
+
+  async markNotificationRead(id: string, recipientId: string = 'admin'): Promise<any> {
+    const notifCol = this.orderModel.db.collection('notification-popup');
+    const filter: any = { recipientId };
+    try {
+      const { ObjectId } = require('mongodb');
+      if (ObjectId.isValid(id) && String(new ObjectId(id)) === id) {
+        filter.$or = [{ _id: new ObjectId(id) }, { id: id }];
+      } else {
+        filter.id = id;
+      }
+    } catch {
+      filter.id = id;
+    }
+
+    await notifCol.updateOne(filter, { $set: { isRead: true, readAt: new Date(), updatedAt: new Date() } });
+    const notification = await notifCol.findOne(filter);
+    return { success: true, message: 'Đã đánh dấu thông báo là đã đọc', notification };
+  }
+
+  async markAllNotificationsRead(recipientId: string = 'admin'): Promise<any> {
+    const notifCol = this.orderModel.db.collection('notification-popup');
+    const result = await notifCol.updateMany(
+      { recipientId, isRead: false },
+      { $set: { isRead: true, readAt: new Date(), updatedAt: new Date() } },
+    );
+    return { success: true, message: 'Đã đánh dấu tất cả thông báo là đã đọc', modifiedCount: result.modifiedCount };
   }
 
   async getDashboardDetailedStats(

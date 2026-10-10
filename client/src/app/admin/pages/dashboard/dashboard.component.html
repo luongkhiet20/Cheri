@@ -336,7 +336,7 @@
                 text-anchor="end">{{ t.label }}</text>
             </g>
             <path [attr.d]="getAreaPath()" fill="url(#lineAreaGrad)" class="chart-area" />
-            <path [attr.d]="getLinePath()" fill="none" stroke="#74070E" stroke-width="2.2" stroke-linejoin="round"
+            <path [attr.d]="getLinePath()" fill="none" stroke="#74070E" stroke-width="1.5" stroke-linejoin="round"
               stroke-linecap="round" class="chart-line" />
             <g *ngFor="let cp of getChartPoints(); let i = index">
               <rect [attr.x]="cp.x-14" [attr.y]="LINE_PAD_T-4" width="28" [attr.height]="LINE_H-LINE_PAD_T-LINE_PAD_B+8"

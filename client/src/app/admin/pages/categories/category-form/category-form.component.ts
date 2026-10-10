@@ -40,7 +40,6 @@ export class CategoryFormComponent implements OnInit {
   parentCategories: any[] = [];
   errors: Record<string, string> = {};
   errorMessage = '';
-  successMessage = '';
 
   constructor(
     private route: ActivatedRoute,
@@ -252,7 +251,6 @@ export class CategoryFormComponent implements OnInit {
 
   onSubmit(): void {
     this.errorMessage = '';
-    this.successMessage = '';
 
     if (!this.validate()) {
       const fieldOrder = ['title', 'slug', 'position'];
@@ -292,7 +290,6 @@ export class CategoryFormComponent implements OnInit {
         next: (res) => {
           this.isSubmitting = false;
           if (res.success) {
-            this.successMessage = 'Cập nhật danh mục thành công!';
             this.notificationService.success('Cập nhật danh mục thành công!');
             this.isDirty = false;
             this.cdr.markForCheck();
@@ -319,7 +316,6 @@ export class CategoryFormComponent implements OnInit {
         next: (res) => {
           this.isSubmitting = false;
           if (res.success) {
-            this.successMessage = 'Thêm danh mục thành công!';
             this.notificationService.success('Thêm danh mục thành công!');
             this.isDirty = false;
             this.cdr.markForCheck();

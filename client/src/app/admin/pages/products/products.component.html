@@ -126,8 +126,15 @@
 </div>
 
 <!-- Confirm Dialog -->
-<app-confirm-dialog [isOpen]="confirmOpen" title="Xác nhận xóa sản phẩm" [message]="confirmMessage" confirmLabel="Xóa"
-  variant="danger" (confirmed)="onConfirmDelete()" (cancelled)="onCancelDelete()"></app-confirm-dialog>
+<app-confirm-dialog
+  [isOpen]="confirmOpen"
+  [title]="confirmTitle"
+  [message]="confirmMessage"
+  [confirmLabel]="confirmLabel"
+  [variant]="confirmVariant"
+  (confirmed)="onConfirmDialog()"
+  (cancelled)="onCancelDialog()">
+</app-confirm-dialog>
 
 <!-- Product CSV Import Modal -->
 <app-product-csv-modal [isOpen]="isCsvModalOpen" (closed)="isCsvModalOpen = false"

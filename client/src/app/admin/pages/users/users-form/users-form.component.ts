@@ -47,7 +47,6 @@ export class UsersFormComponent implements OnInit {
 
   errors: Record<string, string> = {};
   errorMessage = '';
-  successMessage = '';
 
   constructor(
     private route: ActivatedRoute,
@@ -239,7 +238,6 @@ export class UsersFormComponent implements OnInit {
 
     this.isSubmitting = true;
     this.errorMessage = '';
-    this.successMessage = '';
 
     if (this.isEditMode && this.userId) {
       // Edit User -> PUT /api/users/:id
@@ -261,7 +259,6 @@ export class UsersFormComponent implements OnInit {
         next: (res) => {
           this.isSubmitting = false;
           if (res.success) {
-            this.successMessage = 'Cập nhật tài khoản thành công';
             this.notificationService.success('Cập nhật tài khoản thành công');
             this.cdr.markForCheck();
             setTimeout(() => {
@@ -302,7 +299,6 @@ export class UsersFormComponent implements OnInit {
         next: (res) => {
           this.isSubmitting = false;
           if (res.success) {
-            this.successMessage = 'Thêm tài khoản thành công';
             this.notificationService.success('Thêm tài khoản thành công');
             this.cdr.markForCheck();
             setTimeout(() => {

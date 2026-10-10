@@ -23,7 +23,6 @@ export class OrderDetailComponent implements OnInit {
   isLoading = true;
   isNotFound = false;
   errorMessage = '';
-  successMessage = '';
 
   // Status transition state
   selectedNextStatus = '';
@@ -67,7 +66,6 @@ export class OrderDetailComponent implements OnInit {
   ngOnInit(): void {
     this.orderId = this.route.snapshot.paramMap.get('id');
     if (this.route.snapshot.queryParamMap.get('updated') === '1') {
-      this.successMessage = 'Cập nhật đơn hàng thành công.';
       this.notificationService.success('Cập nhật đơn hàng thành công.');
     }
     if (!this.orderId || this.orderId.trim() === '') {
@@ -147,7 +145,6 @@ export class OrderDetailComponent implements OnInit {
   onSelectStatus(targetStatus: string): void {
     this.statusValidationMessage = '';
     this.errorMessage = '';
-    this.successMessage = '';
 
     if (!this.order || !this.order.statusCode) return;
     const current = this.order.statusCode.toUpperCase();
@@ -196,7 +193,6 @@ export class OrderDetailComponent implements OnInit {
 
     this.isUpdatingStatus = true;
     this.errorMessage = '';
-    this.successMessage = '';
     this.statusValidationMessage = '';
 
     const newStatus = this.selectedNextStatus;
@@ -210,8 +206,8 @@ export class OrderDetailComponent implements OnInit {
           this.order = res.data;
           this.selectedNextStatus = '';
           this.statusNote = '';
-          this.successMessage = res.message || 'Cập nhật trạng thái đơn hàng thành công';
-          this.notificationService.success(this.successMessage);
+          const msg = res.message || 'Cập nhật trạng thái đơn hàng thành công';
+          this.notificationService.success(msg);
         } else {
           this.errorMessage = res.message || 'Cập nhật trạng thái thất bại';
           this.notificationService.error(this.errorMessage);

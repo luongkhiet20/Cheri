@@ -16,7 +16,6 @@ export class ShippingMethodDetailComponent implements OnInit {
   isLoading = true;
   isNotFound = false;
   errorMessage = '';
-  successMessage = '';
 
   // Confirm dialog for status toggle or delete
   confirmOpen = false;
@@ -130,12 +129,7 @@ export class ShippingMethodDetailComponent implements OnInit {
           if (res.success && res.data) {
             this.method = res.data;
             const msg = res.message || `Đã ${targetActive ? 'bật' : 'tắt'} phương thức vận chuyển thành công`;
-            this.successMessage = msg;
             this.notificationService.success(msg);
-            setTimeout(() => {
-              this.successMessage = '';
-              this.cdr.markForCheck();
-            }, 4000);
           } else {
             const msg = res.message || 'Không thể cập nhật trạng thái';
             this.errorMessage = msg;

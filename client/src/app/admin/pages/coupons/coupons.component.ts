@@ -72,7 +72,6 @@ export class CouponsComponent implements OnInit {
   currentTypeFilter = '';
   isLoading = false;
 
-  successMessage = '';
   errorMessage = '';
 
   // Confirm dialog
@@ -288,20 +287,24 @@ export class CouponsComponent implements OnInit {
     if (!this.pendingAction || this.isProcessing) return;
 
     this.isProcessing = true;
+    const action = this.pendingAction;
 
-    if (this.pendingAction.type === 'bulk_delete') {
-      const ids = this.pendingAction.ids || [];
+    if (action.type === 'bulk_delete') {
+      const ids = action.ids || [];
       this.apiService.bulkDeleteCoupons(ids).subscribe({
         next: (res) => {
           this.isProcessing = false;
           this.confirmOpen = false;
+          this.pendingAction = null;
           this.selectedIds.clear();
           this.notificationService.success(res?.message || 'Xóa các mã giảm giá thành công.');
           this.loadCoupons();
+          this.cdr.markForCheck();
         },
         error: (err) => {
           this.isProcessing = false;
           this.confirmOpen = false;
+          this.pendingAction = null;
           this.notificationService.error(err?.error?.message || 'Lỗi khi xóa các mã giảm giá.');
           this.cdr.markForCheck();
         }
@@ -309,37 +312,43 @@ export class CouponsComponent implements OnInit {
       return;
     }
 
-    const row = this.pendingAction.row;
+    const row = action.row;
     const itemId = row._id || row.id;
 
-    if (this.pendingAction.type === 'toggle') {
+    if (action.type === 'toggle') {
       const targetState = !(row.isActive !== false);
       this.apiService.updateCouponStatus(itemId, targetState).subscribe({
         next: (res) => {
           this.isProcessing = false;
           this.confirmOpen = false;
+          this.pendingAction = null;
           this.notificationService.success(res?.message || `Mã giảm giá đã được ${targetState ? 'bật' : 'tắt'}`);
           this.loadCoupons();
+          this.cdr.markForCheck();
         },
         error: (err) => {
           this.isProcessing = false;
           this.confirmOpen = false;
+          this.pendingAction = null;
           this.notificationService.error(err?.error?.message || 'Lỗi khi cập nhật trạng thái.');
           this.cdr.markForCheck();
         }
       });
-    } else if (this.pendingAction.type === 'delete') {
+    } else if (action.type === 'delete') {
       this.apiService.deleteCoupon(itemId).subscribe({
         next: (res) => {
           this.isProcessing = false;
           this.confirmOpen = false;
+          this.pendingAction = null;
           this.selectedIds.delete(itemId);
           this.notificationService.success(res?.message || 'Xóa mã giảm giá thành công.');
           this.loadCoupons();
+          this.cdr.markForCheck();
         },
         error: (err) => {
           this.isProcessing = false;
           this.confirmOpen = false;
+          this.pendingAction = null;
           this.notificationService.error(err?.error?.message || 'Lỗi khi xóa mã giảm giá.');
           this.cdr.markForCheck();
         }

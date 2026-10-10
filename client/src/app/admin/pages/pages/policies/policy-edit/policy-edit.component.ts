@@ -17,7 +17,6 @@ export class PolicyEditComponent implements OnInit {
   isLoading = false;
   isToggling = false;
   errorMessage = '';
-  successMessage = '';
 
   activeTab: 'preview' | 'html' = 'preview';
 
@@ -89,12 +88,7 @@ export class PolicyEditComponent implements OnInit {
         if (res.success && res.data) {
           this.page = res.data;
           const msg = res.message || 'Cập nhật trạng thái thành công';
-          this.successMessage = msg;
           this.notificationService.success(msg);
-          setTimeout(() => {
-            this.successMessage = '';
-            this.cdr.markForCheck();
-          }, 3000);
         } else {
           const msg = res.message || 'Lỗi khi chuyển trạng thái chính sách';
           this.errorMessage = msg;

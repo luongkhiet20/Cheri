@@ -56,7 +56,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
   errors: { [key: string]: string } = {};
 
   // Alerts
-  successMessage = '';
   errorMessage = '';
   private timer: any = null;
 
@@ -335,20 +334,13 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   // ── ALERTS ──────────────────────────────────────────
   private showSuccess(msg: string): void {
-    this.successMessage = msg;
     this.errorMessage = '';
     this.notificationService.success(msg);
     this.cdr.markForCheck();
-    if (this.timer) clearTimeout(this.timer);
-    this.timer = setTimeout(() => {
-      this.successMessage = '';
-      this.cdr.markForCheck();
-    }, 6000);
   }
 
   private showError(msg: string): void {
     this.errorMessage = msg;
-    this.successMessage = '';
     this.notificationService.error(msg);
     this.cdr.markForCheck();
     if (this.timer) clearTimeout(this.timer);
@@ -359,7 +351,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   clearAlerts(): void {
-    this.successMessage = '';
     this.errorMessage = '';
     if (this.timer) clearTimeout(this.timer);
     this.cdr.markForCheck();

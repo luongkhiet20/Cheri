@@ -16,7 +16,6 @@ export class UsersDetailComponent implements OnInit {
   isLoading = false;
   isNotFound = false;
   errorMessage = '';
-  successMessage = '';
 
   // Orders section state
   orders: any[] = [];
@@ -279,8 +278,8 @@ export class UsersDetailComponent implements OnInit {
         this.isStatusUpdating = false;
         this.confirmOpen = false;
         if (res.success) {
-          this.successMessage = res.message || (newStatus ? 'Đã mở khóa tài khoản thành công' : 'Đã khóa tài khoản thành công');
-          this.notificationService.success(this.successMessage);
+          const msg = res.message || (newStatus ? 'Đã mở khóa tài khoản thành công' : 'Đã khóa tài khoản thành công');
+          this.notificationService.success(msg);
           this.loadUser();
         } else {
           this.errorMessage = res.message || 'Thao tác không thành công';

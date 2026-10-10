@@ -47,7 +47,6 @@ export class AccountComponent implements OnInit, OnDestroy {
   isUploadingAvatar = false;
 
   // Alerts
-  successMessage = '';
   errorMessage = '';
   private messageTimer: any = null;
   private routeSub: Subscription | null = null;
@@ -398,20 +397,13 @@ export class AccountComponent implements OnInit, OnDestroy {
   }
 
   private showSuccess(msg: string): void {
-    this.successMessage = msg;
     this.errorMessage = '';
     this.notificationService.success(msg);
     this.cdr.markForCheck();
-    if (this.messageTimer) clearTimeout(this.messageTimer);
-    this.messageTimer = setTimeout(() => {
-      this.successMessage = '';
-      this.cdr.markForCheck();
-    }, 6000);
   }
 
   private showError(msg: string): void {
     this.errorMessage = msg;
-    this.successMessage = '';
     this.notificationService.error(msg);
     this.cdr.markForCheck();
     if (this.messageTimer) clearTimeout(this.messageTimer);
@@ -422,7 +414,6 @@ export class AccountComponent implements OnInit, OnDestroy {
   }
 
   clearAlerts(): void {
-    this.successMessage = '';
     this.errorMessage = '';
     if (this.messageTimer) clearTimeout(this.messageTimer);
     this.cdr.markForCheck();

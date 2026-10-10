@@ -34,7 +34,6 @@ export class ProductFormComponent implements OnInit {
 
   // Feedback messages
   errorMessage = '';
-  successMessage = '';
   errors: { [key: string]: string } = {};
 
   // Delete confirm dialog
@@ -652,7 +651,6 @@ export class ProductFormComponent implements OnInit {
   // ─────────────────────────────────────────────────────────────
   onSubmit(): void {
     this.errorMessage = '';
-    this.successMessage = '';
     this.errors = {};
 
     const vi = this.product.vi || {};
@@ -827,7 +825,6 @@ export class ProductFormComponent implements OnInit {
         next: (res) => {
           this.isSubmitting = false;
           if (res.success) {
-            this.successMessage = 'Cập nhật sản phẩm thành công!';
             this.notificationService.success('Cập nhật sản phẩm thành công!');
             this.isDirty = false;
             this.cdr.markForCheck();
@@ -854,7 +851,6 @@ export class ProductFormComponent implements OnInit {
         next: (res) => {
           this.isSubmitting = false;
           if (res.success) {
-            this.successMessage = 'Thêm sản phẩm thành công!';
             this.notificationService.success('Thêm sản phẩm thành công!');
             this.isDirty = false;
             this.cdr.markForCheck();

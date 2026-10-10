@@ -39,7 +39,6 @@ export class PolicyFormComponent implements OnInit {
 
   errors: Record<string, string> = {};
   errorMessage = '';
-  successMessage = '';
 
   constructor(
     private route: ActivatedRoute,
@@ -115,7 +114,6 @@ export class PolicyFormComponent implements OnInit {
 
   onSubmit(): void {
     this.errorMessage = '';
-    this.successMessage = '';
 
     if (!this.pageId) {
       this.router.navigate([ADMIN_PAGES_URLS.POLICIES]);
@@ -155,7 +153,6 @@ export class PolicyFormComponent implements OnInit {
         this.isSubmitting = false;
         if (res.success) {
           const msg = 'Cập nhật chính sách thành công!';
-          this.successMessage = msg;
           this.notificationService.success(msg);
           this.isDirty = false;
           setTimeout(() => {

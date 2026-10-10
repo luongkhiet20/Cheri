@@ -58,7 +58,6 @@ export class PoliciesComponent implements OnInit {
   selectedIds: Set<any> = new Set();
   isLoading = false;
   errorMessage = '';
-  successMessage = '';
 
   currentSearch = '';
   currentStatusFilter = '';
@@ -182,8 +181,7 @@ export class PoliciesComponent implements OnInit {
                 Object.assign(itemInAll, res.data);
               }
             }
-            const msg = res.message || `Chính sách    cn sang trạng thái "${nextIsPublished ? 'Đã xuất bản' : 'Bản nháp'}"`;
-            this.successMessage = msg;
+            const msg = res.message || `Chính sách đã chuyển sang trạng thái "${nextIsPublished ? 'Đã xuất bản' : 'Bản nháp'}"`;
             this.notificationService.success(msg);
             this.loadPolicies();
           } else {
@@ -204,7 +202,6 @@ export class PoliciesComponent implements OnInit {
           }
           this.cdr.markForCheck();
           setTimeout(() => {
-            this.successMessage = '';
             this.errorMessage = '';
             this.cdr.markForCheck();
           }, 3000);

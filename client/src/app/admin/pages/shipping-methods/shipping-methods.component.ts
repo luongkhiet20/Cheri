@@ -60,7 +60,6 @@ export class ShippingMethodsComponent implements OnInit {
   currentStatusFilter = '';
   isLoading = false;
   errorMessage = '';
-  successMessage = '';
 
   // Confirm dialog state
   confirmOpen = false;
@@ -319,7 +318,6 @@ export class ShippingMethodsComponent implements OnInit {
   }
 
   private showSuccess(msg: string): void {
-    this.successMessage = msg;
     this.notificationService.success(msg);
     this.cdr.markForCheck();
   }

@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
+import { NotificationService } from '../../../shared/notification/notification.service';
 
 @Component({
   selector: 'app-payment-method-detail',
@@ -15,7 +16,6 @@ export class PaymentMethodDetailComponent implements OnInit {
   isLoading = true;
   isNotFound = false;
   errorMessage = '';
-  successMessage = '';
 
   // Confirm dialog for status toggle
   confirmOpen = false;
@@ -29,7 +29,8 @@ export class PaymentMethodDetailComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private apiService: AdminService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private notificationService: NotificationService
   ) { }
 
   ngOnInit(): void {
@@ -112,18 +113,22 @@ export class PaymentMethodDetailComponent implements OnInit {
         this.isStatusUpdating = false;
         this.confirmOpen = false;
         if (res.success) {
-          this.successMessage = res.message || (newActive ? 'Đã bật phương thức thanh toán' : 'Đã tắt phương thức thanh toán');
+          const msg = res.message || (newActive ? 'Đã bật phương thức thanh toán' : 'Đã tắt phương thức thanh toán');
+          this.notificationService.success(msg);
           this.loadMethod(this.methodId!);
-          setTimeout(() => this.successMessage = '', 4000);
         } else {
-          this.errorMessage = res.message || 'Thao tác không thành công';
+          const msg = res.message || 'Thao tác không thành công';
+          this.errorMessage = msg;
+          this.notificationService.error(msg);
         }
         this.cdr.markForCheck();
       },
       error: (err) => {
         this.isStatusUpdating = false;
         this.confirmOpen = false;
-        this.errorMessage = err.error?.message || 'Lỗi khi cập nhật trạng thái';
+        const msg = err.error?.message || 'Lỗi khi cập nhật trạng thái';
+        this.errorMessage = msg;
+        this.notificationService.error(msg);
         console.error('Status change error:', err);
         this.cdr.markForCheck();
       }

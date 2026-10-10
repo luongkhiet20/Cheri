@@ -39,7 +39,6 @@ export class ShippingMethodFormComponent implements OnInit {
 
   errors: Record<string, string> = {};
   errorMessage = '';
-  successMessage = '';
 
   constructor(
     private route: ActivatedRoute,
@@ -207,7 +206,6 @@ export class ShippingMethodFormComponent implements OnInit {
 
   onSubmit(): void {
     this.errorMessage = '';
-    this.successMessage = '';
 
     if (!this.validate()) {
       const orderedCandidates: string[] = ['name', 'code', 'baseCost', 'estimatedDays', 'freeShippingThreshold'];
@@ -238,7 +236,6 @@ export class ShippingMethodFormComponent implements OnInit {
         next: (res) => {
           this.isSubmitting = false;
           if (res.success) {
-            this.successMessage = 'Cập nhật phương thức vận chuyển thành công';
             this.notificationService.success('Cập nhật phương thức vận chuyển thành công');
             setTimeout(() => {
               this.router.navigate(['/admin/shipping-methods', this.methodId]);
@@ -263,7 +260,6 @@ export class ShippingMethodFormComponent implements OnInit {
         next: (res) => {
           this.isSubmitting = false;
           if (res.success) {
-            this.successMessage = 'Thêm phương thức vận chuyển thành công';
             this.notificationService.success('Thêm phương thức vận chuyển thành công');
             setTimeout(() => {
               this.router.navigate(['/admin/shipping-methods']);

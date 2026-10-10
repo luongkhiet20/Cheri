@@ -45,7 +45,6 @@ export class CouponFormComponent implements OnInit {
 
   errors: Record<string, string> = {};
   errorMessage = '';
-  successMessage = '';
 
   constructor(
     private route: ActivatedRoute,
@@ -180,7 +179,6 @@ export class CouponFormComponent implements OnInit {
 
     this.isSubmitting = true;
     this.errorMessage = '';
-    this.successMessage = '';
 
     const payload: any = {
       code: this.formData.code.trim().toUpperCase(),

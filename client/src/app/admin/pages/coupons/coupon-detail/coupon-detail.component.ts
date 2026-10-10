@@ -16,7 +16,6 @@ export class CouponDetailComponent implements OnInit {
   isLoading = true;
   isNotFound = false;
   errorMessage = '';
-  successMessage = '';
 
   // Confirm dialog
   confirmOpen = false;

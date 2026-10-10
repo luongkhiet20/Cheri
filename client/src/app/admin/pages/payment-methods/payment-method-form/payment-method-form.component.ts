@@ -44,7 +44,6 @@ export class PaymentMethodFormComponent implements OnInit {
 
   errors: Record<string, string> = {};
   errorMessage = '';
-  successMessage = '';
 
   readonly PAYMENT_TYPES: string[] = [
     'Online',
@@ -306,7 +305,6 @@ export class PaymentMethodFormComponent implements OnInit {
 
     this.isSubmitting = true;
     this.errorMessage = '';
-    this.successMessage = '';
 
     const payload = {
       name: this.formData.name.trim(),
@@ -324,7 +322,6 @@ export class PaymentMethodFormComponent implements OnInit {
         next: (res) => {
           this.isSubmitting = false;
           if (res.success) {
-            this.successMessage = 'Cập nhật phương thức thanh toán thành công';
             this.notificationService.success('Cập nhật phương thức thanh toán thành công');
             this.cdr.markForCheck();
             setTimeout(() => {
@@ -350,7 +347,6 @@ export class PaymentMethodFormComponent implements OnInit {
         next: (res) => {
           this.isSubmitting = false;
           if (res.success) {
-            this.successMessage = 'Thêm phương thức thanh toán thành công';
             this.notificationService.success('Thêm phương thức thanh toán thành công');
             this.cdr.markForCheck();
             setTimeout(() => {

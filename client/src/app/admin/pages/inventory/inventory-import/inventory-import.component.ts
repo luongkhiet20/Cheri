@@ -55,7 +55,6 @@ export class InventoryImportComponent implements OnInit {
 
   errors: Record<string, string> = {};
   errorMessage = '';
-  successMessage = '';
 
   get previewStock(): number | null {
     if (this.importQuantity === null || isNaN(this.importQuantity) || !Number.isInteger(Number(this.importQuantity))) {
@@ -428,7 +427,6 @@ export class InventoryImportComponent implements OnInit {
 
   onSubmit(): void {
     this.errorMessage = '';
-    this.successMessage = '';
 
     if (!this.validate()) {
       const orderedCandidates: string[] = ['product', 'variant', 'quantity'];
@@ -462,12 +460,12 @@ export class InventoryImportComponent implements OnInit {
             ? `biến thể SKU ${this.selectedVariant?.sku || ''}`
             : `sản phẩm ${this.selectedProduct?.name}`;
 
-          this.successMessage = res.message || (
+          const msg = res.message || (
             this.isEditMode
               ? `Đã cập nhật tồn kho ${targetName} thành công. Tồn kho mới: ${finalStock}.`
               : `Đã nhập thêm ${qty} vào ${targetName}. Tồn kho hiện tại: ${finalStock}.`
           );
-          this.notificationService.success(this.successMessage);
+          this.notificationService.success(msg);
           this.cdr.markForCheck();
           setTimeout(() => {
             this.router.navigate(['/admin/inventory']);

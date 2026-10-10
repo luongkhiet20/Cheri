@@ -11,6 +11,7 @@ import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.c
 
 // ── Types ───────────────────────────────────────────────────────────────────
 export interface DonutSegment {
+  key?: string; code?: string;
   label: string; count: number; color: string;
   pct: number; offset: number; dash: number; variant: string;
 }
@@ -21,7 +22,7 @@ export interface ChartPoint {
 
 export interface CalendarDay {
   date: Date; day: number; inMonth: boolean;
-  isToday: boolean; isStart: boolean; isEnd: boolean; inRange: boolean;
+  isToday: boolean; isFuture: boolean; isStart: boolean; isEnd: boolean; inRange: boolean;
 }
 
 // ── Quick select presets ─────────────────────────────────────────────────────
@@ -50,15 +51,30 @@ export class DashboardComponent implements OnInit, OnDestroy {
   readonly QUICK_PRESETS = QUICK_PRESETS;
   readonly WEEKDAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
-  private readonly DONUT_COLORS = ['#74070E', '#C9868B', '#B7791F', '#4F7A5A', '#6B7280', '#B8A99A'];
-  private readonly STATUS_ORDER = ['pending', 'processing', 'shipping', 'delivered', 'cancelled', 'returned'];
+  private readonly DONUT_COLORS = [
+    '#74070E', // Đã giao (Delivered) - Đỏ rượu vang Chéri
+    '#C2410C', // Đang giao (Shipping) - Đỏ gạch / Rust
+    '#D96B76', // Đang xử lý (Processing) - Đỏ hồng / Rosewood
+    '#F59E0B', // Chờ xác nhận (Pending) - Hổ phách ấm / Vàng cam
+    '#9CA3AF', // Đã hủy (Cancelled) - Xám trung tính
+    '#8B5CF6'  // Đã hoàn trả (Returned) - Tím Lavender sang trọng
+  ];
+  private readonly STATUS_ORDER = ['delivered', 'shipping', 'processing', 'pending', 'cancelled', 'returned'];
   private readonly STATUS_LABELS: Record<string, string> = {
-    pending: 'Chờ xác nhận', processing: 'Đang xử lý', shipping: 'Đang giao',
-    delivered: 'Đã giao', cancelled: 'Đã hủy', returned: 'Đã hoàn trả',
+    delivered: 'Đã giao',
+    shipping: 'Đang giao',
+    processing: 'Đang xử lý',
+    pending: 'Chờ xác nhận',
+    cancelled: 'Đã hủy',
+    returned: 'Đã hoàn trả'
   };
   private readonly STATUS_VARIANTS: Record<string, string> = {
-    pending: 'neutral', processing: 'warning', shipping: 'primary',
-    delivered: 'success', cancelled: 'danger', returned: 'neutral',
+    delivered: 'success',
+    shipping: 'primary',
+    processing: 'warning',
+    pending: 'neutral',
+    cancelled: 'danger',
+    returned: 'neutral'
   };
 
   private platformId = inject(PLATFORM_ID);
@@ -130,11 +146,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
   @HostListener('document:mousedown', ['$event'])
   onDocClick(e: MouseEvent): void {
     if (!this.pickerOpen) return;
-    if (!this.elRef.nativeElement.querySelector('.date-picker-popup')?.contains(e.target as Node) &&
-        !this.elRef.nativeElement.querySelector('.picker-trigger-btn')?.contains(e.target as Node)) {
-      this.closePicker(false);
+    const target = e.target as HTMLElement;
+    if (target?.closest('.date-picker-popup') || target?.closest('.picker-trigger-btn')) {
+      return;
     }
+    this.closePicker(false);
   }
+
+  trackByWeek = (index: number) => index;
+  trackByDay = (index: number, day: CalendarDay) => `${day.date.getTime()}_${day.inMonth}`;
 
   // ── Data loading ────────────────────────────────────────────────────────
   loadStats(isRefresh = false): void {
@@ -237,14 +257,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   openPicker(): void {
-    // Initialise draught from current active range
     const { start, end } = this.getActiveDateRange();
-    this.draftStart   = start;
-    this.draftEnd     = end;
+    this.draftStart   = start ? new Date(start.getFullYear(), start.getMonth(), start.getDate(), 0, 0, 0, 0) : null;
+    this.draftEnd     = end ? new Date(end.getFullYear(), end.getMonth(), end.getDate(), 0, 0, 0, 0) : null;
     this.draftPreset  = this.currentTimeRange !== 'custom' ? this.currentTimeRange : null;
     this.selectingEnd = false;
     this.hoverDate    = null;
-    // Scroll calendar so draftStart is visible
+
     if (this.draftStart) {
       this.leftMonth  = new Date(this.draftStart.getFullYear(), this.draftStart.getMonth(), 1);
       this.rightMonth = new Date(this.draftStart.getFullYear(), this.draftStart.getMonth() + 1, 1);
@@ -257,27 +276,33 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   closePicker(apply: boolean): void {
-    if (apply && this.draftStart && this.draftEnd) {
+    if (apply && this.canApply() && this.draftStart && this.draftEnd) {
       if (this.draftPreset && this.draftPreset !== 'custom') {
         this.currentTimeRange = this.draftPreset;
-        this.currentCustomStart = null; this.currentCustomEnd = null;
+        this.currentCustomStart = null;
+        this.currentCustomEnd = null;
       } else {
         this.currentTimeRange = 'custom';
-        this.currentCustomStart = this.draftStart;
-        this.currentCustomEnd   = this.draftEnd;
+        this.currentCustomStart = new Date(this.draftStart.getFullYear(), this.draftStart.getMonth(), this.draftStart.getDate(), 0, 0, 0, 0);
+        this.currentCustomEnd   = new Date(this.draftEnd.getFullYear(), this.draftEnd.getMonth(), this.draftEnd.getDate(), 23, 59, 59, 999);
       }
+      this.selectingEnd = false;
+      this.hoverDate = null;
       this.loadStats(true);
     }
     this.pickerOpen = false;
+    this.selectingEnd = false;
+    this.hoverDate = null;
     this.cdr.markForCheck();
   }
 
   selectPreset(key: string): void {
     this.draftPreset = key;
     const { start, end } = this.calcPresetRange(key as PresetKey);
-    this.draftStart = start; this.draftEnd = end;
+    this.draftStart = start ? new Date(start.getFullYear(), start.getMonth(), start.getDate(), 0, 0, 0, 0) : null;
+    this.draftEnd = end ? new Date(end.getFullYear(), end.getMonth(), end.getDate(), 0, 0, 0, 0) : null;
     this.selectingEnd = false;
-    // Navigate calendar to show draftStart
+    this.hoverDate = null;
     if (start) {
       this.leftMonth  = new Date(start.getFullYear(), start.getMonth(), 1);
       this.rightMonth = new Date(start.getFullYear(), start.getMonth() + 1, 1);
@@ -286,51 +311,79 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  onDayClick(day: CalendarDay): void {
-    if (!day.inMonth) return;
+  onDayClick(day: CalendarDay, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    // Ngày ngoài tháng đang hiển thị hoặc ngày tương lai không được phép chọn
+    if (!day.inMonth || day.isFuture) return;
+
+    const clickedDate = new Date(day.date.getFullYear(), day.date.getMonth(), day.date.getDate(), 0, 0, 0, 0);
+
+    // If starting a new range or no start date currently
     if (!this.selectingEnd || !this.draftStart) {
-      // First click: set start
-      this.draftStart = day.date;
+      this.draftStart = clickedDate;
       this.draftEnd = null;
       this.draftPreset = null;
       this.selectingEnd = true;
+      this.hoverDate = null;
     } else {
-      // Second click: set end
-      if (day.date < this.draftStart) {
-        // Clicked before start → restart
-        this.draftStart = day.date; this.draftEnd = null; this.selectingEnd = true;
+      // Second click: we already have draftStart, now setting draftEnd
+      const startMs = new Date(this.draftStart.getFullYear(), this.draftStart.getMonth(), this.draftStart.getDate(), 0, 0, 0, 0).getTime();
+      const clickedMs = clickedDate.getTime();
+
+      if (clickedMs < startMs) {
+        // Clicked date is earlier than start: restart range with this date as new start date
+        this.draftStart = clickedDate;
+        this.draftEnd = null;
+        this.draftPreset = null;
+        this.selectingEnd = true;
+        this.hoverDate = null;
       } else {
-        this.draftEnd = day.date; this.selectingEnd = false;
+        // Valid end date (same day or later)
+        this.draftEnd = clickedDate;
+        this.selectingEnd = false;
+        this.hoverDate = null;
+        this.draftPreset = null;
       }
     }
+
     this.rebuildCalendars();
     this.cdr.markForCheck();
   }
 
   onDayHover(day: CalendarDay): void {
+    if (!day.inMonth || day.isFuture) return;
     if (this.selectingEnd && this.draftStart) {
-      this.hoverDate = day.date;
-      this.rebuildCalendars();
-      this.cdr.markForCheck();
+      const hDate = new Date(day.date.getFullYear(), day.date.getMonth(), day.date.getDate(), 0, 0, 0, 0);
+      if (this.hoverDate?.getTime() !== hDate.getTime()) {
+        this.hoverDate = hDate;
+        this.rebuildCalendars();
+        this.cdr.markForCheck();
+      }
     }
   }
 
   onCalendarLeave(): void {
-    this.hoverDate = null;
-    this.rebuildCalendars();
-    this.cdr.markForCheck();
+    if (this.hoverDate) {
+      this.hoverDate = null;
+      this.rebuildCalendars();
+      this.cdr.markForCheck();
+    }
   }
 
   prevMonth(): void {
     this.leftMonth  = new Date(this.leftMonth.getFullYear(), this.leftMonth.getMonth() - 1, 1);
     this.rightMonth = new Date(this.leftMonth.getFullYear(), this.leftMonth.getMonth() + 1, 1);
     this.rebuildCalendars();
+    this.cdr.markForCheck();
   }
 
   nextMonth(): void {
     this.leftMonth  = new Date(this.leftMonth.getFullYear(), this.leftMonth.getMonth() + 1, 1);
     this.rightMonth = new Date(this.leftMonth.getFullYear(), this.leftMonth.getMonth() + 1, 1);
     this.rebuildCalendars();
+    this.cdr.markForCheck();
   }
 
   private rebuildCalendars(): void {
@@ -369,26 +422,49 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return weeks;
   }
 
+  // ── Helper methods kiểm tra trạng thái chọn ngày ──────────────────────
+  isRangeStart(t: number, inMonth: boolean): boolean {
+    if (!inMonth || !this.draftStart) return false;
+    const s = new Date(this.draftStart.getFullYear(), this.draftStart.getMonth(), this.draftStart.getDate(), 0, 0, 0, 0).getTime();
+    return t === s;
+  }
+
+  isRangeEnd(t: number, inMonth: boolean, effectiveEnd: Date | null): boolean {
+    if (!inMonth || !effectiveEnd) return false;
+    const e = new Date(effectiveEnd.getFullYear(), effectiveEnd.getMonth(), effectiveEnd.getDate(), 0, 0, 0, 0).getTime();
+    return t === e;
+  }
+
+  isInSelectedRange(t: number, inMonth: boolean, effectiveEnd: Date | null): boolean {
+    if (!inMonth || !this.draftStart || !effectiveEnd) return false;
+    const s = new Date(this.draftStart.getFullYear(), this.draftStart.getMonth(), this.draftStart.getDate(), 0, 0, 0, 0).getTime();
+    const e = new Date(effectiveEnd.getFullYear(), effectiveEnd.getMonth(), effectiveEnd.getDate(), 0, 0, 0, 0).getTime();
+    return t > s && t < e;
+  }
+
   private makeDay(date: Date, inMonth: boolean, today: Date): CalendarDay {
-    const t = date.getTime();
+    const t = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0).getTime();
+    const isFuture = t > today.getTime();
     const effectiveEnd = (this.selectingEnd && this.hoverDate && this.draftStart)
       ? (this.hoverDate >= this.draftStart ? this.hoverDate : null)
       : this.draftEnd;
-    const s = this.draftStart?.getTime();
-    const e = effectiveEnd?.getTime();
+
     return {
-      date, day: date.getDate(), inMonth,
-      isToday: date.getTime() === today.getTime(),
-      isStart: s != null && t === s,
-      isEnd:   e != null && t === e,
-      inRange: s != null && e != null && t > s && t < e,
+      date,
+      day: date.getDate(),
+      inMonth,
+      isToday: inMonth && t === today.getTime(),
+      isFuture,
+      isStart: this.isRangeStart(t, inMonth),
+      isEnd:   this.isRangeEnd(t, inMonth, effectiveEnd),
+      inRange: this.isInSelectedRange(t, inMonth, effectiveEnd),
     };
   }
 
   private calcPresetRange(key: PresetKey): { start: Date; end: Date } {
     const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
 
     switch (key) {
       case '7d': {
@@ -404,10 +480,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
         return { start: s, end: endOfToday };
       }
       case 'this_month':
-        return { start: new Date(today.getFullYear(), today.getMonth(), 1), end: endOfToday };
+        return { start: new Date(today.getFullYear(), today.getMonth(), 1, 0, 0, 0, 0), end: endOfToday };
       case 'last_month': {
-        const s = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-        const e = new Date(today.getFullYear(), today.getMonth(), 0);
+        const s = new Date(today.getFullYear(), today.getMonth() - 1, 1, 0, 0, 0, 0);
+        const e = new Date(today.getFullYear(), today.getMonth(), 0, 0, 0, 0, 0);
         return { start: s, end: e };
       }
     }
@@ -440,7 +516,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   canApply(): boolean {
-    return !!(this.draftStart && this.draftEnd);
+    if (!this.draftStart || !this.draftEnd) return false;
+    const s = new Date(this.draftStart.getFullYear(), this.draftStart.getMonth(), this.draftStart.getDate(), 0, 0, 0, 0).getTime();
+    const e = new Date(this.draftEnd.getFullYear(), this.draftEnd.getMonth(), this.draftEnd.getDate(), 0, 0, 0, 0).getTime();
+    return s <= e;
   }
 
   private toISODate(d: Date): string {
@@ -520,21 +599,56 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   // ── DONUT helpers ────────────────────────────────────────────────────────
+  readonly DONUT_R = 45;
+  readonly DONUT_CIRC = 282.74;
+
   buildDonutSegments(): void {
-    if (!this.stats?.ordersByStatus) { this.donutSegments = []; this.donutTotal = 0; return; }
-    const s = this.stats.ordersByStatus;
-    const CIRC = 2 * Math.PI * 54;
-    const counts = this.STATUS_ORDER.map(k => s[k] || 0);
+    if (!this.stats) {
+      this.donutSegments = [];
+      this.donutTotal = 0;
+      return;
+    }
+    const s = this.stats.ordersByStatus || {};
+    const CIRC = this.DONUT_CIRC;
+
+    const getCount = (k: string): number => {
+      if (typeof s[k] === 'number') return s[k];
+      if (typeof s[k.toLowerCase()] === 'number') return s[k.toLowerCase()];
+      if (typeof s[k.toUpperCase()] === 'number') return s[k.toUpperCase()];
+      if (Array.isArray(this.stats.ordersByStatusList)) {
+        const found = this.stats.ordersByStatusList.find((item: any) =>
+          item.key?.toLowerCase() === k.toLowerCase() ||
+          item.code?.toUpperCase() === k.toUpperCase()
+        );
+        return found ? (Number(found.count) || 0) : 0;
+      }
+      return 0;
+    };
+
+    const counts = this.STATUS_ORDER.map(k => getCount(k));
     const total = counts.reduce((a, b) => a + b, 0);
     this.donutTotal = total;
-    if (total === 0) { this.donutSegments = []; return; }
+
     let cumOffset = 0;
     this.donutSegments = this.STATUS_ORDER.map((key, i) => {
-      const count = counts[i], pct = +(count/total*100).toFixed(1);
-      const dash = count/total*CIRC, gap = count > 0 ? 2 : 0;
-      const seg: DonutSegment = { label: this.STATUS_LABELS[key], count, color: this.DONUT_COLORS[i], pct,
-        dash: Math.max(0, dash-gap), offset: CIRC - cumOffset, variant: this.STATUS_VARIANTS[key] };
-      cumOffset += dash;
+      const count = counts[i];
+      const pct = total > 0 ? +(count / total * 100).toFixed(1) : 0;
+      const dash = total > 0 ? (count / total * CIRC) : 0;
+      const gap = count > 0 && total > count ? 2 : 0;
+      const seg: DonutSegment = {
+        key,
+        code: key.toUpperCase(),
+        label: this.STATUS_LABELS[key] || key,
+        count,
+        color: this.DONUT_COLORS[i % this.DONUT_COLORS.length],
+        pct,
+        dash: Math.max(0, dash - gap),
+        offset: CIRC - cumOffset,
+        variant: this.STATUS_VARIANTS[key] || 'neutral'
+      };
+      if (total > 0) {
+        cumOffset += dash;
+      }
       return seg;
     });
     this.cdr.markForCheck();
@@ -549,11 +663,32 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   onDonutLeave(): void { this.hoveredSegmentIndex = -1; this.donutTooltip = null; this.cdr.markForCheck(); }
 
+  getStatusLabel(status: string | undefined): string {
+    if (!status) return '—';
+    const lower = status.toLowerCase();
+    if (this.STATUS_LABELS[lower]) return this.STATUS_LABELS[lower];
+    const upper = status.toUpperCase();
+    if (this.STATUS_LABELS[upper.toLowerCase()]) return this.STATUS_LABELS[upper.toLowerCase()];
+    return status;
+  }
+
+  getStatusVariant(status: string | undefined): string {
+    if (!status) return 'neutral';
+    const lower = status.toLowerCase();
+    if (this.STATUS_VARIANTS[lower]) return this.STATUS_VARIANTS[lower];
+    const entry = Object.entries(this.STATUS_LABELS).find(([_, label]) => label.toLowerCase() === lower);
+    if (entry) return this.STATUS_VARIANTS[entry[0]] || 'neutral';
+    return 'neutral';
+  }
+
   trackById = (_: number, s: { id: string }) => s.id;
 
   // ── Navigation ──────────────────────────────────────────────────────────
   navigateOrders(): void { this.router.navigate(['/admin/orders']); }
-  navigateOrdersByStatus(s: string): void { this.router.navigate(['/admin/orders'], { queryParams: { status: s } }); }
+  navigateOrdersByStatus(s: string): void {
+    if (!s) { this.router.navigate(['/admin/orders']); return; }
+    this.router.navigate(['/admin/orders'], { queryParams: { status: s } });
+  }
   navigateOrderDetail(id: string): void { if (!id) return; this.router.navigate(['/admin/orders', id]); }
   navigateProducts(k?: string, v?: string): void {
     if (k && v) this.router.navigate(['/admin/products'], { queryParams: { [k]: v } });

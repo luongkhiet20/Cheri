@@ -63,7 +63,7 @@ export class OrdersComponent implements OnInit {
   private skipNextResetFilterLoad = false;
   private ordersRequestId = 0;
   private readonly orderStatusCodes = new Set([
-    'PENDING', 'PROCESSING', 'SHIPPING', 'DELIVERY_FAILED', 'DELIVERED', 'CANCELLED', 'RETURNED'
+    'DELIVERED', 'SHIPPING', 'PROCESSING', 'PENDING', 'CANCELLED', 'RETURNED'
   ]);
 
   selectedIds: Set<any> = new Set();

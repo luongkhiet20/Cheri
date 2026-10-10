@@ -9,7 +9,8 @@ import { Component, Input } from '@angular/core';
 export class LoadingStateComponent {
   @Input() message: string = 'Đang tải dữ liệu...';
   @Input() rows: number = 5;
-  @Input() type: 'spinner' | 'skeleton' = 'skeleton';
+  @Input() type: 'spinner' | 'skeleton' | 'dashboard' = 'skeleton';
+  @Input() overlay: boolean = false;
 
   get skeletonRows(): number[] {
     return Array.from({ length: this.rows }, (_, i) => i);

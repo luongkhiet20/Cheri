@@ -212,13 +212,15 @@ textarea {
   color: var(--cheri-text);
   letter-spacing: -0.3px;
   line-height: 1.3;
+  margin: 0;
 }
 
 :host ::ng-deep .admin-shell .page-subtitle,
 .admin-shell .page-subtitle {
   font-size: var(--font-size-base);
   color: var(--cheri-text-secondary);
-  margin-top: var(--space-xs);
+  margin-top: 4px;
+  margin-bottom: 0;
 }
 
 /* ----- Semantic Typography Classes ----- */
@@ -230,6 +232,7 @@ textarea {
   line-height: 1.3;
   color: var(--cheri-text);
   letter-spacing: -0.02em;
+  margin: 0;
 }
 
 :host ::ng-deep .admin-shell .typo-section-title,

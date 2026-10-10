@@ -1418,8 +1418,8 @@ export class OrdersService {
       prevStart.setHours(0, 0, 0, 0);
     }
 
-    const sevenDaysAgo = new Date(now);
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000);
 
     const [allOrders, allProducts, allCategories, allUsers] = await Promise.all([
       this.orderModel.find({}).sort('-createdAt').lean(),
@@ -1430,62 +1430,101 @@ export class OrdersService {
 
     const getOrderTime = (o: any) => {
       const d = o.createdAt || o.dateAdded;
-      return d ? new Date(d).getTime() : 0;
+      if (d) {
+        const t = new Date(d).getTime();
+        if (!isNaN(t)) return t;
+      }
+      if (o._id && typeof o._id.getTimestamp === 'function') {
+        return o._id.getTimestamp().getTime();
+      }
+      return 0;
     };
 
-    const isPaid = (o: any) =>
-      o.paymentStatus === PaymentStatus.PAID ||
-      o.status === OrderStatus.DELIVERED ||
-      (o as any).status === 'PAID';
+    const getOrderAmount = (o: any) => {
+      const amt = Number(o.totalAmount !== undefined && o.totalAmount !== null ? o.totalAmount : (o.cart?.totalPrice !== undefined ? o.cart.totalPrice : (o.amount || 0)));
+      return isNaN(amt) ? 0 : amt;
+    };
 
-    // 1. Tổng doanh thu (từ các đơn hoàn tất / đã thanh toán)
-    const totalRevenue = allOrders
-      .filter(isPaid)
-      .reduce((sum, o) => sum + (o.totalAmount || (o as any).amount || 0), 0);
+    const normalizeStatus = (st: any): string => {
+      if (!st) return 'PENDING';
+      const upper = String(st).trim().toUpperCase();
+      if (upper === 'NEW') return 'PENDING';
+      if (upper === 'COMPLETED') return 'DELIVERED';
+      if (upper === 'CANCELED') return 'CANCELLED';
+      if (upper === 'RETURN') return 'RETURNED';
+      return upper;
+    };
 
-    // 2. Số lượng các chỉ số
-    const ordersCount = allOrders.length;
-    const productsCount = allProducts.length;
-    const categoriesCount = allCategories.length;
-    const usersCount = allUsers.length;
+    const isPaid = (o: any) => {
+      const st = normalizeStatus(o.status || o.statusHistory?.[0]?.status);
+      if (st === 'CANCELLED' || st === 'RETURNED' || st === 'DELIVERY_FAILED') return false;
+      const paySt = String(o.paymentStatus || o.payment?.status || '').toUpperCase();
+      return paySt === 'PAID' || st === 'DELIVERED' || paySt === 'COMPLETED';
+    };
 
-    // 3. User mới trong 7 ngày
-    const new7DaysUsers = allUsers.filter(u => {
+    // Category mapping
+    const categoryMap = new Map<string, string>();
+    for (const c of allCategories) {
+      const title = c.vi?.title || c.title || c.titleUrl || 'Danh mục';
+      categoryMap.set(String(c._id), title);
+      if (c.titleUrl) categoryMap.set(c.titleUrl, title);
+    }
+
+    // User mapping for customer name lookup
+    const userMap = new Map<string, string>();
+    for (const u of allUsers) {
+      userMap.set(String(u._id), u.fullName || u.name || u.email);
+    }
+
+    // Customer Users calculation (Exclude Admin & staff)
+    const isCustomer = (u: any) => {
+      if (u.isAdmin === true) return false;
+      const roles = Array.isArray(u.roles) ? u.roles : (u.roles ? [u.roles] : (Array.isArray(u.role) ? u.role : (u.role ? [u.role] : [])));
+      const hasAdmin = roles.some((r: any) => typeof r === 'string' && (r.toLowerCase() === 'admin' || r.toLowerCase() === 'super-admin'));
+      return !hasAdmin;
+    };
+
+    const customerUsers = allUsers.filter(isCustomer);
+    const usersCount = customerUsers.length;
+    let new7DaysUsers = 0;
+    let new30DaysUsers = 0;
+    for (const u of customerUsers) {
       const d = (u as any).createdAt || (u as any).dateAdded;
-      return d && new Date(d) >= sevenDaysAgo;
-    }).length;
+      if (d) {
+        const ud = new Date(d);
+        if (!isNaN(ud.getTime())) {
+          if (ud >= sevenDaysAgo) new7DaysUsers++;
+          if (ud >= thirtyDaysAgo) new30DaysUsers++;
+        }
+      }
+    }
 
     // 4. Biểu đồ timeline
-    const revenueTimeline: { label: string; date: string; revenue: number; ordersCount: number }[] = [];
-    const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-
-    for (let i = days - 1; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - i);
-      const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0).getTime();
-      const dayEnd   = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999).getTime();
+    const revenueTimeline: { label: string; date: string; fullDate?: string; revenue: number; ordersCount: number }[] = [];
+    const curDay = new Date(periodStart);
+    while (curDay <= periodEnd) {
+      const dStart = new Date(curDay.getFullYear(), curDay.getMonth(), curDay.getDate(), 0, 0, 0, 0).getTime();
+      const dEnd   = new Date(curDay.getFullYear(), curDay.getMonth(), curDay.getDate(), 23, 59, 59, 999).getTime();
 
       const dayOrders = allOrders.filter(o => {
         const t = getOrderTime(o);
-        return t >= dayStart && t <= dayEnd;
+        return t >= dStart && t <= dEnd;
       });
 
-      const dayRevenue = dayOrders
-        .filter(isPaid)
-        .reduce((sum, o) => sum + (o.totalAmount || (o as any).amount || 0), 0);
-
-      const label = period === '7d'
-        ? dayNames[d.getDay()]
-        : `${d.getDate()}/${d.getMonth() + 1}`;
-
-      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const dayRevenue = dayOrders.filter(isPaid).reduce((sum, o) => sum + getOrderAmount(o), 0);
+      const label = `${String(curDay.getDate()).padStart(2, '0')}/${String(curDay.getMonth() + 1).padStart(2, '0')}`;
+      const fullDate = `${label}/${curDay.getFullYear()}`;
+      const dateStr = `${curDay.getFullYear()}-${String(curDay.getMonth() + 1).padStart(2, '0')}-${String(curDay.getDate()).padStart(2, '0')}`;
 
       revenueTimeline.push({
         label,
         date: dateStr,
+        fullDate,
         revenue: dayRevenue,
         ordersCount: dayOrders.length,
       });
+
+      curDay.setDate(curDay.getDate() + 1);
     }
 
     // 5. Đơn hàng trong kỳ (period) + theo trạng thái
@@ -1494,90 +1533,212 @@ export class OrdersService {
     const periodOrders = allOrders.filter(o => { const t = getOrderTime(o); return t >= pStart && t <= pEnd; });
     const prevOrders   = allOrders.filter(o => { const t = getOrderTime(o); return t >= prevStart.getTime() && t <= prevEnd.getTime(); });
 
-    const periodRevenue      = periodOrders.filter(isPaid).reduce((s, o) => s + (o.totalAmount || (o as any).amount || 0), 0);
-    const prevPeriodRevenue  = prevOrders.filter(isPaid).reduce((s, o) => s + (o.totalAmount || (o as any).amount || 0), 0);
+    const periodRevenue      = periodOrders.filter(isPaid).reduce((s, o) => s + getOrderAmount(o), 0);
+    const prevPeriodRevenue  = prevOrders.filter(isPaid).reduce((s, o) => s + getOrderAmount(o), 0);
     const periodOrdersCount  = periodOrders.length;
     const prevPeriodOrdersCount = prevOrders.length;
 
-    const fst = (orders: any[], ...st: string[]) => orders.filter(o => st.includes(o.status) || st.includes((o as any).type)).length;
-    const ordersByStatus = {
-      pending:    fst(periodOrders, OrderStatus.PENDING, 'NEW'),
-      confirmed:  fst(periodOrders, OrderStatus.CONFIRMED),
-      processing: fst(periodOrders, OrderStatus.PROCESSING),
-      shipping:   fst(periodOrders, OrderStatus.SHIPPING),
-      delivered:  fst(periodOrders, OrderStatus.DELIVERED, 'COMPLETED'),
-      cancelled:  fst(periodOrders, OrderStatus.CANCELLED, 'CANCELED'),
-      returned:   fst(periodOrders, OrderStatus.RETURNED, 'RETURN'),
+    const fst = (orders: any[], ...st: string[]) => {
+      const upperSt = st.map(s => s.toUpperCase());
+      return orders.filter(o => {
+        const norm = normalizeStatus(o.status || o.statusHistory?.[0]?.status);
+        return upperSt.includes(norm);
+      }).length;
     };
 
-    // 6. Tồn kho
-    const outOfStockCount = allProducts.filter(
-      p => p.stock === 'outOfStock' || p.stock === 'out' || p.quantity === 0,
-    ).length;
-    const lowStockCount = allProducts.filter(
-      p => p.stock === 'lowStock' || p.stock === 'low' || (typeof p.quantity === 'number' && p.quantity > 0 && p.quantity <= 5),
-    ).length;
-    const inStockCount = Math.max(0, productsCount - outOfStockCount);
+    const ordersByStatus: Record<string, number> = {
+      delivered:       fst(periodOrders, OrderStatus.DELIVERED, 'COMPLETED'),
+      shipping:        fst(periodOrders, OrderStatus.SHIPPING),
+      processing:      fst(periodOrders, OrderStatus.PROCESSING, 'CONFIRMED'),
+      pending:         fst(periodOrders, OrderStatus.PENDING, 'NEW'),
+      cancelled:       fst(periodOrders, OrderStatus.CANCELLED, 'CANCELED'),
+      returned:        fst(periodOrders, OrderStatus.RETURNED, 'RETURN', 'DELIVERY_FAILED'),
+    };
 
-    const totalStock = allProducts.reduce((sum, p) => sum + (typeof p.quantity === 'number' ? p.quantity : 1), 0);
+    // UPPERCASE aliases for compatibility
+    ordersByStatus['DELIVERED'] = ordersByStatus['delivered'];
+    ordersByStatus['SHIPPING'] = ordersByStatus['shipping'];
+    ordersByStatus['PROCESSING'] = ordersByStatus['processing'];
+    ordersByStatus['PENDING'] = ordersByStatus['pending'];
+    ordersByStatus['CANCELLED'] = ordersByStatus['cancelled'];
+    ordersByStatus['RETURNED'] = ordersByStatus['returned'];
 
-    // 7. Top sản phẩm bán chạy (tính từ items trong orders)
-    const productSalesMap = new Map<string, { title: string; sku: string; image: string; totalSold: number; revenue: number }>();
-    for (const order of allOrders) {
-      if (Array.isArray(order.items)) {
-        for (const item of order.items) {
-          const key = String(item.productId || item.productSnapshot?.sku || 'item');
-          const existing = productSalesMap.get(key) || {
-            title: item.productSnapshot?.title || 'Sản phẩm',
-            sku: item.productSnapshot?.sku || '',
-            image: item.productSnapshot?.image || '',
-            totalSold: 0,
-            revenue: 0,
-          };
-          existing.totalSold += item.quantity || 1;
-          existing.revenue += (item.unitPrice || 0) * (item.quantity || 1);
-          productSalesMap.set(key, existing);
-        }
+    // 6. Tồn kho & Sản phẩm sắp hết hàng (<= 5)
+    let outOfStockCount = 0;
+    let inStockCount = 0;
+    let totalStock = 0;
+    const lowStockProducts: any[] = [];
+
+    for (const p of allProducts) {
+      const vi = (p as any).vi || {};
+      let qty = 0;
+
+      if (Array.isArray((p as any).variants) && (p as any).variants.length > 0) {
+        qty = (p as any).variants.reduce((acc: number, v: any) => acc + (Number(v.stock) || 0), 0);
+      } else if (typeof p.quantity === 'number') {
+        qty = p.quantity;
+      } else if (typeof vi.quantity === 'number') {
+        qty = vi.quantity;
+      } else if (typeof (p as any).stock === 'number') {
+        qty = (p as any).stock;
+      } else if (typeof vi.stock === 'number') {
+        qty = vi.stock;
+      }
+
+      totalStock += qty;
+
+      if (qty === 0 || vi.stock === 'outOfStock' || (p as any).stock === 'outOfStock') {
+        outOfStockCount++;
+      } else {
+        inStockCount++;
+      }
+
+      if (qty <= 5) {
+        const rawCat = vi.categoryLevel1 || p.categoryLevel1;
+        const catKey = Array.isArray(rawCat) ? rawCat[0] : rawCat;
+        const catName = categoryMap.get(String(catKey)) || (typeof catKey === 'string' && catKey.trim() ? catKey.trim() : 'Thời trang nữ');
+
+        lowStockProducts.push({
+          id: String(p._id),
+          name: vi.title || p.title || (p as any).titleUrl || 'Sản phẩm',
+          sku: (p as any).variants?.[0]?.sku || vi.sku || p.sku || ('SP-' + String(p._id).slice(-6).toUpperCase()),
+          stock: qty,
+          price: vi.salePrice || vi.regularPrice || p.regularPrice || 0,
+          image: p.mainImage?.url || (Array.isArray(p.images) ? p.images[0] : ''),
+          category: catName,
+        });
       }
     }
 
-    const topSellingProducts = Array.from(productSalesMap.entries())
-      .map(([id, data]) => ({ id, ...data }))
+    lowStockProducts.sort((a, b) => a.stock - b.stock);
+    const topLowStock = lowStockProducts.slice(0, 5);
+
+    // 7. Top sản phẩm bán chạy (chỉ từ các đơn đủ điều kiện kinh doanh)
+    const productSalesMap = new Map<string, { id: string; title: string; name: string; sku: string; image: string; totalSold: number; revenue: number }>();
+    for (const order of allOrders) {
+      if (!isPaid(order)) continue;
+      const items = (Array.isArray(order.items) && order.items.length > 0)
+        ? order.items
+        : (Array.isArray((order as any).cart?.items) ? (order as any).cart.items : []);
+
+      for (const item of items) {
+        const key = String(item.productId || item.productSnapshot?.sku || item.id || (item as any).item?._id || 'item');
+        const name = item.name || item.productSnapshot?.name || item.productSnapshot?.title || (item as any).item?.vi?.title || (item as any).item?.title || 'Sản phẩm';
+        const image = item.image || item.productSnapshot?.image || (item as any).item?.mainImage?.url || (Array.isArray((item as any).item?.images) ? (item as any).item.images[0] : '');
+        const sku = item.sku || item.productSnapshot?.sku || (item as any).item?.vi?.sku || (item as any).item?.sku || '';
+        const qty = Number(item.quantity || (item as any).qty || 1);
+        const price = Number(item.unitPrice || item.price || (item as any).item?.salePrice || 0);
+
+        const existing = productSalesMap.get(key) || {
+          id: key,
+          title: name,
+          name,
+          sku,
+          image,
+          totalSold: 0,
+          revenue: 0,
+        };
+        existing.totalSold += qty;
+        existing.revenue += qty * price;
+        productSalesMap.set(key, existing);
+      }
+    }
+
+    const topSellingProducts = Array.from(productSalesMap.values())
       .sort((a, b) => b.totalSold - a.totalSold)
       .slice(0, 5);
 
     // 8. Đơn hàng gần nhất (5 đơn)
-    const recentOrders = allOrders.slice(0, 5).map(o => ({
-      _id: o._id,
-      orderId: o.orderId,
-      customerName: o.customer?.name || o.shippingAddress?.fullName || (o as any).customerName || 'Khách hàng',
-      customerEmail: o.customerEmail,
-      totalAmount: o.totalAmount || (o as any).amount || 0,
-      status: o.status,
-      paymentStatus: o.paymentStatus || (o as any).payment?.status || 'PENDING',
-      createdAt: o.createdAt || (o as any).dateAdded || new Date(),
-    }));
+    const recentOrders = allOrders.slice(0, 5).map(o => {
+      let customerName = 'Khách hàng';
+      if (o.customer?.name && o.customer.name.trim()) {
+        customerName = o.customer.name.trim();
+      } else if (o.shippingAddress?.fullName && o.shippingAddress.fullName.trim()) {
+        customerName = o.shippingAddress.fullName.trim();
+      } else if (typeof o.shippingAddress?.address === 'string' && (o.shippingAddress as any).name) {
+        customerName = (o.shippingAddress as any).name.trim();
+      } else if (Array.isArray((o as any).addresses) && (o as any).addresses[0]?.name) {
+        customerName = (o as any).addresses[0].name.trim();
+      } else if (o.userId && userMap.has(String(o.userId))) {
+        customerName = userMap.get(String(o.userId)) || 'Khách hàng';
+      } else if ((o as any)._user && userMap.has(String((o as any)._user))) {
+        customerName = userMap.get(String((o as any)._user)) || 'Khách hàng';
+      } else if ((o as any).customerName && typeof (o as any).customerName === 'string') {
+        customerName = (o as any).customerName;
+      }
+
+      const customerEmail = o.customerEmail || o.customer?.email || (o.shippingAddress as any)?.email || (Array.isArray((o as any).addresses) ? (o as any).addresses[0]?.email : '') || '';
+      const rawStatus = normalizeStatus(o.status || (o as any).statusHistory?.[0]?.status);
+      const totalAmount = getOrderAmount(o);
+      const createdAt = new Date(getOrderTime(o)).toISOString();
+
+      const statusLabels: Record<string, string> = {
+        PENDING: 'Chờ xác nhận',
+        CONFIRMED: 'Đã xác nhận',
+        PROCESSING: 'Đang xử lý',
+        SHIPPING: 'Đang giao',
+        DELIVERED: 'Đã giao',
+        CANCELLED: 'Đã hủy',
+        RETURNED: 'Đã hoàn trả',
+        DELIVERY_FAILED: 'Giao thất bại',
+      };
+
+      const statusVariants: Record<string, string> = {
+        PENDING: 'neutral',
+        CONFIRMED: 'primary',
+        PROCESSING: 'warning',
+        SHIPPING: 'primary',
+        DELIVERED: 'success',
+        CANCELLED: 'danger',
+        RETURNED: 'neutral',
+        DELIVERY_FAILED: 'danger',
+      };
+
+      return {
+        _id: String(o._id),
+        id: String(o._id),
+        orderId: o.orderId || ('#DH' + String(o._id).slice(-6).toUpperCase()),
+        code: o.orderId || ('#DH' + String(o._id).slice(-6).toUpperCase()),
+        customerName,
+        customer: customerName,
+        customerEmail,
+        totalAmount,
+        total: totalAmount,
+        status: statusLabels[rawStatus] || rawStatus,
+        statusLabel: statusLabels[rawStatus] || rawStatus,
+        statusCode: rawStatus,
+        statusVariant: statusVariants[rawStatus] || 'neutral',
+        createdAt,
+        date: createdAt,
+      };
+    });
 
     return {
       totalRevenue: periodRevenue,
       prevPeriodRevenue,
       ordersCount: periodOrdersCount,
       prevPeriodOrdersCount,
-      productsCount,
-      categoriesCount,
+      productsCount: allProducts.length,
+      categoriesCount: allCategories.length,
       usersCount,
+      outOfStockCount,
+      lowStockCount: lowStockProducts.length,
+      lowStockThreshold: 5,
       customers: {
+        total: usersCount,
         new7Days: new7DaysUsers,
+        new30Days: new30DaysUsers,
       },
       revenueTimeline,
       ordersByStatus,
       inventory: {
         totalStock,
         outOfStockCount,
-        lowStockCount,
+        lowStockCount: lowStockProducts.length,
         inStockCount,
       },
       topSellingProducts,
+      lowStockProducts: topLowStock,
       recentOrders,
     };
   }

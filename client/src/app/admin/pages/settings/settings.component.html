@@ -182,170 +182,107 @@
       </div>
     </div>
 
+
     <!-- ══════════════════════════════════════════════════════
-         PHẦN 3: CẤU HÌNH CỬA HÀNG (STORE, CHECKOUT, SHIPPING)
+         PHẦN 4: BẢO TRÌ HỆ THỐNG
          ══════════════════════════════════════════════════════ -->
-    <div class="settings-card">
+    <div class="settings-card" [class.is-maintenance-active]="settings.maintenance.enabled">
       <div class="card-header">
-        <div class="card-header-icon">
+        <div class="card-header-icon alert-icon-wrapper">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="9" cy="21" r="1"></circle>
-            <circle cx="20" cy="21" r="1"></circle>
-            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
           </svg>
         </div>
         <div>
-          <h2 class="card-title">Cấu hình cửa hàng</h2>
+          <h2 class="card-title">Chế độ bảo trì</h2>
 
         </div>
       </div>
 
       <div class="card-body">
-        <div class="toggle-list">
-
-          <!-- 1. Website đang mở -->
-          <div class="toggle-item">
-            <div class="toggle-info">
-              <span class="toggle-title">Website đang mở</span>
-              <span class="toggle-desc">
-                Khi BẬT, website hoạt động bình thường cho khách hàng xem sản phẩm. Khi TẮT, website hiển thị thông báo
-                tạm đóng cửa.
-              </span>
-            </div>
-            <div class="toggle-action">
-              <button type="button" class="toggle-switch" [class.is-on]="settings.store.isOpen"
-                (click)="toggleStoreOpen()" id="toggle-store-is-open" [attr.aria-checked]="settings.store.isOpen"
-                role="switch">
-                <span class="toggle-knob"></span>
-                <span class="toggle-label">{{ settings.store.isOpen ? 'BẬT' : 'TẮT' }}</span>
-              </button>
-            </div>
+        <div class="toggle-item border-none">
+          <div class="toggle-info">
+            <span class="toggle-title">Kích hoạt chế độ bảo trì</span>
+            <span class="toggle-desc">
+              Khi bật, khách truy cập sẽ được chuyển hướng tới trang thông báo bảo trì.
+            </span>
           </div>
-
-          <!-- 2. Cho phép đặt hàng -->
-          <div class="toggle-item">
-            <div class="toggle-info">
-              <span class="toggle-title">Cho phép đặt hàng</span>
-              <span class="toggle-desc">
-                Khi BẬT, khách hàng có thể thêm sản phẩm và tiến hành thanh toán giỏ hàng. Khi TẮT, hệ thống chặn tạo
-                đơn hàng mới.
-              </span>
-            </div>
-            <div class="toggle-action">
-              <button type="button" class="toggle-switch" [class.is-on]="settings.checkout.allowOrder"
-                (click)="toggleAllowOrder()" id="toggle-checkout-allow-order"
-                [attr.aria-checked]="settings.checkout.allowOrder" role="switch">
-                <span class="toggle-knob"></span>
-                <span class="toggle-label">{{ settings.checkout.allowOrder ? 'BẬT' : 'TẮT' }}</span>
-              </button>
-            </div>
+          <div class="toggle-action">
+            <button type="button" class="toggle-switch toggle-switch-warning"
+              [class.is-on]="settings.maintenance.enabled" (click)="toggleMaintenance()" id="toggle-maintenance-enabled"
+              [attr.aria-checked]="settings.maintenance.enabled" role="switch">
+              <span class="toggle-knob"></span>
+              <span class="toggle-label">{{ settings.maintenance.enabled ? 'BẬT' : 'TẮT' }}</span>
+            </button>
           </div>
+        </div>
 
-
+        <!-- Thông báo bảo trì -->
+        <div class="form-group full-width maintenance-msg-group">
+          <label for="input-maintenance-msg" class="form-label">Thông báo bảo trì hiển thị với khách hàng</label>
+          <textarea id="input-maintenance-msg" class="form-control textarea-control" rows="3"
+            [(ngModel)]="settings.maintenance.message" name="maintenanceMsg"
+            placeholder="Website đang trong quá trình bảo trì định kỳ. Quý khách vui lòng quay lại sau ít phút."></textarea>
         </div>
       </div>
     </div>
 
-<!-- ══════════════════════════════════════════════════════
-         PHẦN 4: BẢO TRÌ HỆ THỐNG
-         ══════════════════════════════════════════════════════ -->
-<div class="settings-card" [class.is-maintenance-active]="settings.maintenance.enabled">
-  <div class="card-header">
-    <div class="card-header-icon alert-icon-wrapper">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-        <line x1="12" y1="9" x2="12" y2="13"></line>
-        <line x1="12" y1="17" x2="12.01" y2="17"></line>
-      </svg>
-    </div>
-    <div>
-      <h2 class="card-title">Chế độ bảo trì</h2>
-
-    </div>
-  </div>
-
-  <div class="card-body">
-    <div class="toggle-item border-none">
-      <div class="toggle-info">
-        <span class="toggle-title">Kích hoạt chế độ bảo trì</span>
-        <span class="toggle-desc">
-          Khi bật, khách truy cập sẽ được chuyển hướng tới trang thông báo bảo trì.
-        </span>
-      </div>
-      <div class="toggle-action">
-        <button type="button" class="toggle-switch toggle-switch-warning" [class.is-on]="settings.maintenance.enabled"
-          (click)="toggleMaintenance()" id="toggle-maintenance-enabled"
-          [attr.aria-checked]="settings.maintenance.enabled" role="switch">
-          <span class="toggle-knob"></span>
-          <span class="toggle-label">{{ settings.maintenance.enabled ? 'BẬT' : 'TẮT' }}</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Thông báo bảo trì -->
-    <div class="form-group full-width maintenance-msg-group">
-      <label for="input-maintenance-msg" class="form-label">Thông báo bảo trì hiển thị với khách hàng</label>
-      <textarea id="input-maintenance-msg" class="form-control textarea-control" rows="3"
-        [(ngModel)]="settings.maintenance.message" name="maintenanceMsg"
-        placeholder="Website đang trong quá trình bảo trì định kỳ. Quý khách vui lòng quay lại sau ít phút."></textarea>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════════════════
+    <!-- ══════════════════════════════════════════════════════
          PHẦN 5: CẤU HÌNH HỆ THỐNG (LANGUAGE, CURRENCY, TIMEZONE)
          ══════════════════════════════════════════════════════ -->
-<div class="settings-card">
-  <div class="card-header">
-    <div class="card-header-icon">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-        <line x1="8" y1="21" x2="16" y2="21"></line>
-        <line x1="12" y1="17" x2="12" y2="21"></line>
-      </svg>
-    </div>
-    <div>
-      <h2 class="card-title">Cấu hình hệ thống</h2>
-    </div>
-  </div>
-
-  <div class="card-body">
-    <div class="form-grid form-grid-3">
-      <!-- Ngôn ngữ -->
-      <div class="form-group">
-        <label for="select-language" class="form-label">Ngôn ngữ mặc định</label>
-        <select id="select-language" class="form-control select-control" [(ngModel)]="settings.system.language"
-          name="systemLanguage">
-          <option *ngFor="let lang of languages" [value]="lang.code">
-            {{ lang.name }}
-          </option>
-        </select>
+    <div class="settings-card">
+      <div class="card-header">
+        <div class="card-header-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+            <line x1="8" y1="21" x2="16" y2="21"></line>
+            <line x1="12" y1="17" x2="12" y2="21"></line>
+          </svg>
+        </div>
+        <div>
+          <h2 class="card-title">Cấu hình hệ thống</h2>
+        </div>
       </div>
 
-      <!-- Tiền tệ -->
-      <div class="form-group">
-        <label for="select-currency" class="form-label">Đơn vị tiền tệ</label>
-        <select id="select-currency" class="form-control select-control" [(ngModel)]="settings.system.currency"
-          name="systemCurrency">
-          <option *ngFor="let curr of currencies" [value]="curr.code">
-            {{ curr.name }}
-          </option>
-        </select>
-      </div>
+      <div class="card-body">
+        <div class="form-grid form-grid-3">
+          <!-- Ngôn ngữ -->
+          <div class="form-group">
+            <label for="select-language" class="form-label">Ngôn ngữ mặc định</label>
+            <select id="select-language" class="form-control select-control" [(ngModel)]="settings.system.language"
+              name="systemLanguage">
+              <option *ngFor="let lang of languages" [value]="lang.code">
+                {{ lang.name }}
+              </option>
+            </select>
+          </div>
 
-      <!-- Múi giờ -->
-      <div class="form-group">
-        <label for="select-timezone" class="form-label">Múi giờ hệ thống</label>
-        <select id="select-timezone" class="form-control select-control" [(ngModel)]="settings.system.timezone"
-          name="systemTimezone">
-          <option *ngFor="let tz of timezones" [value]="tz.code">
-            {{ tz.name }}
-          </option>
-        </select>
+          <!-- Tiền tệ -->
+          <div class="form-group">
+            <label for="select-currency" class="form-label">Đơn vị tiền tệ</label>
+            <select id="select-currency" class="form-control select-control" [(ngModel)]="settings.system.currency"
+              name="systemCurrency">
+              <option *ngFor="let curr of currencies" [value]="curr.code">
+                {{ curr.name }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Múi giờ -->
+          <div class="form-group">
+            <label for="select-timezone" class="form-label">Múi giờ hệ thống</label>
+            <select id="select-timezone" class="form-control select-control" [(ngModel)]="settings.system.timezone"
+              name="systemTimezone">
+              <option *ngFor="let tz of timezones" [value]="tz.code">
+                {{ tz.name }}
+              </option>
+            </select>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-</div>
   </div>
 </div>
 

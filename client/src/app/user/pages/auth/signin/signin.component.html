@@ -62,7 +62,11 @@
         } @else {
         <!-- Login Form View -->
         <div class="auth-header">
-          <h3 class="auth-title">Đăng nhập</h3>
+          <h3 class="auth-title">{{ isRequestingAdmin ? 'Đăng nhập Quản trị viên' : 'Đăng nhập' }}</h3>
+          <p *ngIf="isRequestingAdmin && currentLoggedUser && !isAdminUser" class="auth-subtitle"
+            style="color: #b78103; font-size: 13px; margin: 6px 0 0; line-height: 1.5;">
+            Bạn đang đăng nhập tài khoản khách hàng ({{ currentLoggedUser.email }}). Vui lòng nhập tài khoản Quản trị viên để truy cập khu vực quản trị.
+          </p>
         </div>
 
         <form class="sign-form auth-inner-form" [formGroup]="signInForm" (ngSubmit)="submit()">

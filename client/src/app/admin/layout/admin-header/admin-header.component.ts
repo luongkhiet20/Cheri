@@ -1,11 +1,23 @@
-import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID, ChangeDetectorRef, Output, EventEmitter, HostListener } from '@angular/core';
-import { CommonModule, isPlatformBrowser } from '@angular/common';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  Inject,
+  PLATFORM_ID,
+  ChangeDetectorRef,
+  Output,
+  EventEmitter,
+  HostListener,
+  ViewChild
+} from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AdminService } from '../../services/admin.service';
 import { SignalStore } from '../../../store/signal.store';
 import { accessTokenKey } from '../../../user/shared/constants';
 import { SettingsService } from '../../pages/settings/settings.service';
+import { NotificationPopupComponent } from '../../shared/notification-popup/notification-popup.component';
 
 @Component({
   selector: 'app-admin-header',
@@ -15,43 +27,29 @@ import { SettingsService } from '../../pages/settings/settings.service';
 })
 export class AdminHeaderComponent implements OnInit, OnDestroy {
   @Output() toggleMenu = new EventEmitter<void>();
+  @ViewChild('notifPopup') notifPopup!: NotificationPopupComponent;
 
   isUserMenuOpen = false;
   currentUser: any = null;
   logoUrl: string = '';
   hasLogoError = false;
-
-  // ── Notification State ──────────────────────
-  isNotificationOpen = false;
-  notifications: any[] = [];
-  readNotifIds = new Set<string>();
-  loadingNotifs = false;
-  private notifInterval: any = null;
+  unreadCount = 0;
 
   private userSub: Subscription | null = null;
   private settingsSub: Subscription | null = null;
 
-  get unreadCount(): number {
-    return this.notifications.filter(n => !this.readNotifIds.has(n.id)).length;
-  }
-
-  get notificationGroups(): { key: string; label: string; items: any[] }[] {
-    const labels: Record<string, string> = {
-      orders: '🔔 Đơn hàng',
-      products: '🔔 Sản phẩm & kho',
-      users: '🔔 Người dùng',
-    };
-    return ['orders', 'products', 'users']
-      .map(key => ({
-        key,
-        label: labels[key],
-        items: this.notifications.filter(n => n.group === key),
-      }))
-      .filter(g => g.items.length > 0);
-  }
-
   onToggleMenu(): void {
     this.toggleMenu.emit();
+  }
+
+  onToggleNotification(): void {
+    this.closeUserMenu();
+    this.notifPopup?.toggle();
+  }
+
+  onUnreadCountChange(count: number): void {
+    this.unreadCount = count;
+    this.cdr.markForCheck();
   }
 
   constructor(
@@ -100,9 +98,6 @@ export class AdminHeaderComponent implements OnInit, OnDestroy {
         },
         error: () => { }
       });
-
-      this.fetchNotifications();
-      this.notifInterval = setInterval(() => this.fetchNotifications(), 60000);
     }
   }
 
@@ -118,127 +113,6 @@ export class AdminHeaderComponent implements OnInit, OnDestroy {
     if (this.settingsSub) {
       this.settingsSub.unsubscribe();
     }
-    if (this.notifInterval) {
-      clearInterval(this.notifInterval);
-    }
-  }
-
-  // ── Notification Handlers ───────────────────
-  toggleNotificationMenu(): void {
-    this.isNotificationOpen = !this.isNotificationOpen;
-    if (this.isNotificationOpen) {
-      this.closeUserMenu();
-      this.fetchNotifications();
-      this.notifications.forEach(n => this.readNotifIds.add(n.id));
-    }
-  }
-
-  closeNotificationMenu(): void {
-    this.isNotificationOpen = false;
-  }
-
-  markAllNotificationsRead(): void {
-    this.notifications.forEach(n => this.readNotifIds.add(n.id));
-    this.cdr.markForCheck();
-  }
-
-  refreshNotifications(): void {
-    this.fetchNotifications();
-  }
-
-  fetchNotifications(): void {
-    this.loadingNotifs = true;
-    this.cdr.markForCheck();
-    this.apiService.getNotifications().subscribe({
-      next: (data) => {
-        this.notifications = Array.isArray(data) ? data : [];
-        this.loadingNotifs = false;
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.loadingNotifs = false;
-        this.cdr.markForCheck();
-      }
-    });
-  }
-
-  isNotifRead(id: string): boolean {
-    return this.readNotifIds.has(id);
-  }
-
-  onNotificationItemClick(n: any): void {
-    if (!n) return;
-    this.readNotifIds.add(n.id);
-    this.closeNotificationMenu();
-
-    switch (n.id) {
-      // Đơn hàng mới chờ xác nhận
-      case 'orders-new':
-        this.router.navigate(['/admin/orders'], { queryParams: { status: 'PENDING' } });
-        break;
-
-      // Đơn đã xác nhận cần xuất kho
-      case 'orders-confirmed':
-        this.router.navigate(['/admin/orders'], { queryParams: { status: 'CONFIRMED' } });
-        break;
-
-      // Đơn hàng thanh toán thành công
-      case 'orders-paid':
-        this.router.navigate(['/admin/orders'], { queryParams: { status: 'CONFIRMED' } });
-        break;
-
-      // Đơn hàng bị hủy
-      case 'orders-canceled':
-        this.router.navigate(['/admin/orders'], { queryParams: { status: 'CANCELLED' } });
-        break;
-
-      // Đơn hàng yêu cầu đổi trả
-      case 'orders-return':
-        this.router.navigate(['/admin/orders'], { queryParams: { status: 'RETURNED' } });
-        break;
-
-      // Đơn hàng đã xuất kho
-      case 'stock-out-shipped':
-        this.router.navigate(['/admin/orders'], { queryParams: { status: 'SHIPPING' } });
-        break;
-
-      // Sản phẩm hết hàng
-      case 'stock-out':
-        this.router.navigate(['/admin/products'], { queryParams: { status: 'out' } });
-        break;
-
-      // Sản phẩm sắp hết hàng
-      case 'stock-low':
-        this.router.navigate(['/admin/products'], { queryParams: { status: 'out' } });
-        break;
-
-      // Nhập kho thành công
-      case 'stock-in':
-        this.router.navigate(['/admin/products']);
-        break;
-
-      // Người dùng mới đăng ký
-      case 'users-new':
-        this.router.navigate(['/admin/users']);
-        break;
-
-      // Người dùng bị khóa
-      case 'users-locked':
-        this.router.navigate(['/admin/users'], { queryParams: { status: 'inactive' } });
-        break;
-
-      default:
-        if (n.group === 'orders') {
-          this.router.navigate(['/admin/orders']);
-        } else if (n.group === 'products') {
-          this.router.navigate(['/admin/products']);
-        } else if (n.group === 'users') {
-          this.router.navigate(['/admin/users']);
-        } else {
-          this.router.navigate(['/admin']);
-        }
-        break;
-    }
   }
 
   get userInitial(): string {
@@ -251,6 +125,9 @@ export class AdminHeaderComponent implements OnInit, OnDestroy {
       event.stopPropagation();
     }
     this.isUserMenuOpen = !this.isUserMenuOpen;
+    if (this.isUserMenuOpen) {
+      this.notifPopup?.close();
+    }
     this.cdr.markForCheck();
   }
 
@@ -300,6 +177,3 @@ export class AdminHeaderComponent implements OnInit, OnDestroy {
     });
   }
 }
-
-
-

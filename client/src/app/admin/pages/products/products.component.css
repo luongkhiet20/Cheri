@@ -1,19 +1,5 @@
 /* Products component styles (Shared layout inherited from admin-shared.css & admin/styles.css) */
 
-/* ── Compact Spacing for Page Content ──────────────────────── */
-:host .page-content {
-  gap: 14px;
-}
-
-:host .page-top {
-  margin-bottom: 0;
-}
-
-:host .page-title {
-  margin: 0;
-  font-family: var(--font-sans);
-}
-
 /* ── Category Breadcrumb ────────────────────────────────────── */
 .category-breadcrumb {
   display: flex;

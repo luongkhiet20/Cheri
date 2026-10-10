@@ -6,6 +6,12 @@
   border-top: 1px solid var(--cheri-divider);
 }
 
+:host-context(.table-footer) .pagination {
+  border-top: none;
+  padding: 0;
+  background: transparent;
+}
+
 .pagination__info {
   font-size: var(--font-size-sm);
   color: var(--cheri-text-secondary);

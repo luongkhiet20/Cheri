@@ -1,27 +1,6 @@
-/* Inventory Page Styles */
-.page-content {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.page-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.page-title {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--cheri-text, #0f172a);
-  margin: 0;
-}
-
+/* Inventory Page Styles (Shared layout inherited from admin-shared.css & admin/styles.css) */
 .page-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-sm, 8px);
 }

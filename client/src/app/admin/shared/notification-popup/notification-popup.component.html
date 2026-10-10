@@ -1,0 +1,245 @@
+<div class="admin-notif-dropdown" [class.is-open]="isOpen" *ngIf="isOpen">
+  <!-- Header -->
+  <div class="admin-notif-header">
+    <div class="admin-notif-title">
+      <svg class="admin-notif-title-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#74070E"
+        stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+      </svg>
+      <span class="admin-notif-heading">Thông báo</span>
+      <span class="admin-notif-chip" *ngIf="unreadCount > 0">{{ unreadCount }} mới</span>
+    </div>
+
+    <div class="admin-notif-actions">
+      <!-- Nút làm mới -->
+      <button type="button" class="admin-notif-action-btn" (click)="onRefresh()" [disabled]="loading"
+        [class.is-loading]="loading" title="Làm mới thông báo" aria-label="Làm mới">
+        <svg class="admin-notif-icon-svg" [class.spinning]="loading" width="14" height="14" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21.5 2v6h-6"></path>
+          <path d="M2.5 22v-6h6"></path>
+          <path d="M2 11.5a10 10 0 0 1 18.8-4.3"></path>
+          <path d="M22 12.5a10 10 0 0 1-18.8 4.2"></path>
+        </svg>
+      </button>
+
+      <!-- Nút đánh dấu đã đọc -->
+      <button type="button" class="admin-notif-action-btn" (click)="onMarkAllRead()"
+        [disabled]="loading || unreadCount === 0" title="Đánh dấu tất cả đã đọc" aria-label="Đánh dấu tất cả đã đọc">
+        <svg class="admin-notif-icon-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 6L7 17l-5-5"></path>
+          <path d="M22 10l-7.5 7.5L13 16"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Trạng thái đang tải (Loading) -->
+  <div class="admin-notif-state admin-notif-loading" *ngIf="loading && (!notifications || notifications.length === 0)">
+    <svg class="admin-notif-spinner-svg" width="28" height="28" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" stroke="#E8DCDD" stroke-width="2.2"></circle>
+      <path d="M12 3a9 9 0 0 1 9 9" stroke="#74070E" stroke-width="2.2" stroke-linecap="round"></path>
+    </svg>
+    <span class="admin-notif-state-text">Đang tải thông báo...</span>
+  </div>
+
+  <!-- Trạng thái lỗi tải (Error) -->
+  <div class="admin-notif-state admin-notif-error" *ngIf="hasError && !loading">
+    <div class="admin-notif-state-icon admin-notif-state-icon--error">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#74070E" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+    </div>
+    <p class="admin-notif-state-text">{{ errorMessage }}</p>
+    <button type="button" class="admin-notif-retry-btn" (click)="onRefresh()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21.5 2v6h-6"></path>
+        <path d="M2.5 22v-6h6"></path>
+        <path d="M2 11.5a10 10 0 0 1 18.8-4.3"></path>
+        <path d="M22 12.5a10 10 0 0 1-18.8 4.2"></path>
+      </svg>
+      <span>Thử lại</span>
+    </button>
+  </div>
+
+  <!-- Trạng thái danh sách rỗng (Empty) -->
+  <div class="admin-notif-state admin-notif-empty"
+    *ngIf="!loading && !hasError && (!notifications || notifications.length === 0)">
+    <div class="admin-notif-state-icon">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#74070E" stroke-width="1.5"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+      </svg>
+    </div>
+    <div class="admin-notif-empty-title">Không có thông báo mới</div>
+    <p class="admin-notif-empty-desc">Tất cả thông tin cập nhật sẽ xuất hiện tại đây.</p>
+  </div>
+
+  <!-- Danh sách thông báo có dữ liệu -->
+  <div class="admin-notif-body" *ngIf="notifications && notifications.length > 0">
+    <div class="admin-notif-group" *ngFor="let group of notificationGroups">
+      <!-- Tiêu đề nhóm với SVG inline tương ứng -->
+      <div class="admin-notif-group-header">
+        <ng-container [ngSwitch]="group.key">
+          <svg *ngSwitchCase="'orders'" class="admin-notif-group-icon" width="13" height="13" viewBox="0 0 24 24"
+            fill="none" stroke="#74070E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <path d="M16 10a4 4 0 0 1-8 0"></path>
+          </svg>
+          <svg *ngSwitchCase="'products'" class="admin-notif-group-icon" width="13" height="13" viewBox="0 0 24 24"
+            fill="none" stroke="#74070E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path
+              d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+            </path>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+          </svg>
+          <svg *ngSwitchCase="'users'" class="admin-notif-group-icon" width="13" height="13" viewBox="0 0 24 24"
+            fill="none" stroke="#74070E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </ng-container>
+        <span class="admin-notif-group-label">{{ group.label }}</span>
+        <span class="admin-notif-group-count">{{ group.items.length }}</span>
+      </div>
+
+      <!-- Danh sách item của nhóm -->
+      <div class="admin-notif-item" *ngFor="let n of group.items" [class.is-unread]="!isNotifRead(n.id)"
+        (click)="onNotificationItemClick(n)" role="button" tabindex="0" (keydown.enter)="onNotificationItemClick(n)">
+        <!-- Icon sự kiện (SVG inline thủ công, stroke thanh mảnh) -->
+        <div class="admin-notif-item-icon" [ngClass]="'level-' + (n.level || 'info')">
+          <ng-container [ngSwitch]="n.icon">
+            <!-- Đơn hàng mới (Shopping Bag) -->
+            <svg *ngSwitchCase="'new-order'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <path d="M16 10a4 4 0 0 1-8 0"></path>
+            </svg>
+
+            <!-- Đã xác nhận / Cần xuất kho (Package Box) -->
+            <svg *ngSwitchCase="'confirmed'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path
+                d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+              </path>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+              <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+
+            <!-- Thanh toán thành công (Credit Card Check) -->
+            <svg *ngSwitchCase="'paid'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+              stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+              <line x1="2" y1="10" x2="22" y2="10"></line>
+              <path d="M6 15h3"></path>
+              <path d="M14 15l2 2 4-4"></path>
+            </svg>
+
+            <!-- Đơn hàng bị hủy (Circle X) -->
+            <svg *ngSwitchCase="'cancel'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+              stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"></circle>
+              <line x1="15" y1="9" x2="9" y2="15"></line>
+              <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+
+            <!-- Đơn hàng đổi trả (Return Arrow) -->
+            <svg *ngSwitchCase="'return'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 1 0 2.64-6.36L3 8"></path>
+              <path d="M3 3v5h5"></path>
+            </svg>
+
+            <!-- Hết hàng (Alert Octagon) -->
+            <svg *ngSwitchCase="'out-of-stock'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+
+            <!-- Sắp hết hàng (Alert Triangle) -->
+            <svg *ngSwitchCase="'low-stock'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+
+            <!-- Nhập kho (Package Arrow Down) -->
+            <svg *ngSwitchCase="'restock'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="8 17 12 21 16 17"></polyline>
+              <line x1="12" y1="12" x2="12" y2="21"></line>
+              <path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"></path>
+            </svg>
+
+            <!-- Xuất kho / Giao hàng (Delivery Van) -->
+            <svg *ngSwitchCase="'shipped'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+              stroke-linecap="round" stroke-linejoin="round">
+              <rect x="1" y="3" width="15" height="13" rx="1"></rect>
+              <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+              <circle cx="5.5" cy="18.5" r="2.5"></circle>
+              <circle cx="18.5" cy="18.5" r="2.5"></circle>
+            </svg>
+            <svg *ngSwitchCase="'stock-out-shipped'" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="1" y="3" width="15" height="13" rx="1"></rect>
+              <polygon points="16 8 20 8 23 11 23 16 16 16 8"></polygon>
+              <circle cx="5.5" cy="18.5" r="2.5"></circle>
+              <circle cx="18.5" cy="18.5" r="2.5"></circle>
+            </svg>
+
+            <!-- Người dùng mới (User Plus) -->
+            <svg *ngSwitchCase="'new-user'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="8.5" cy="7" r="4"></circle>
+              <line x1="20" y1="8" x2="20" y2="14"></line>
+              <line x1="23" y1="11" x2="17" y2="11"></line>
+            </svg>
+
+
+            <!-- Mặc định (Information) -->
+            <svg *ngSwitchDefault viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+              stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          </ng-container>
+        </div>
+
+        <!-- Nội dung thông báo -->
+        <div class="admin-notif-item-content">
+          <div class="admin-notif-item-top">
+            <span class="admin-notif-item-title">{{ n.title }}</span>
+            <span class="admin-notif-item-time" *ngIf="n.time">{{ formatTime(n.time) }}</span>
+          </div>
+
+          <p class="admin-notif-item-desc">{{ n.message }}</p>
+
+          <!-- Danh sách thẻ chi tiết nếu có -->
+          <div class="admin-notif-tags" *ngIf="n.items && n.items.length">
+            <span class="admin-notif-tag" *ngFor="let item of n.items">{{ item }}</span>
+          </div>
+        </div>
+
+        <!-- Chấm đỏ rượu vang chỉ hiển thị khi chưa đọc -->
+        <div class="admin-notif-dot-wrap" *ngIf="!isNotifRead(n.id)" title="Chưa đọc">
+          <span class="admin-notif-dot"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

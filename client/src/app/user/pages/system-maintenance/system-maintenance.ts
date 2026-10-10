@@ -3,9 +3,15 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { Title } from '@angular/platform-browser';
 import { Subscription } from 'rxjs';
+import { take } from 'rxjs/operators';
 
 import { SettingsService } from '../../../admin/pages/settings/settings.service';
 import { AppSettings, MaintenanceSettings, ContactSettings } from '../../../admin/pages/settings/settings.model';
+import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
+import { SignalStore } from '../../../store/signal.store';
+import { ApiService } from '../../../services/api.service';
+import { checkIsAdmin } from '../../../services/auth.guard';
+import { accessTokenKey } from '../../shared/constants';
 
 @Component({
   selector: 'app-system-maintenance',
@@ -31,6 +37,9 @@ export class SystemMaintenance implements OnInit, OnDestroy {
     private router: Router,
     private titleService: Title,
     private cdr: ChangeDetectorRef,
+    private selectors: SignalStoreSelectors,
+    private store: SignalStore,
+    private apiService: ApiService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {}
 
@@ -132,9 +141,46 @@ export class SystemMaintenance implements OnInit, OnDestroy {
   }
 
   /**
-   * Điều hướng nhanh tới trang đăng nhập quản trị
+   * Điều hướng nhanh tới trang quản trị hoặc trang đăng nhập Admin:
+   * - Nếu Admin đã đăng nhập & phiên hợp lệ: chuyển thẳng đến /admin
+   * - Nếu chưa đăng nhập, đã đăng xuất hoặc phiên hết hạn: chuyển đến trang đăng nhập Admin (/vi/authorize/signin?returnUrl=/admin)
+   * - Tránh việc coi là đã xác thực chỉ vì còn dữ liệu rác trong localStorage
    */
   onAdminLogin(): void {
-    this.router.navigate(['/admin']);
+    if (!isPlatformBrowser(this.platformId)) {
+      this.router.navigate(['/admin']);
+      return;
+    }
+
+    const token = localStorage.getItem(accessTokenKey);
+
+    // 1. Không có token -> chưa đăng nhập / đã đăng xuất -> chuyển ngay đến trang đăng nhập
+    if (!token) {
+      this.router.navigate(['/vi/authorize/signin'], { queryParams: { returnUrl: '/admin' } });
+      return;
+    }
+
+    // 2. Có token -> xác thực phiên thực tế từ server qua API getUser()
+    this.apiService.getUser().pipe(take(1)).subscribe({
+      next: (user: any) => {
+        if (user && !user.error && (user.email || user.accessToken) && checkIsAdmin(user)) {
+          this.store.storeUser(user);
+          this.router.navigate(['/admin']);
+        } else {
+          // Phiên không hợp lệ hoặc tài khoản không có quyền Admin
+          if (!user || user.error || !user.email) {
+            localStorage.removeItem(accessTokenKey);
+            sessionStorage.clear();
+          }
+          this.router.navigate(['/vi/authorize/signin'], { queryParams: { returnUrl: '/admin' } });
+        }
+      },
+      error: () => {
+        // Token lỗi / hết hạn 401
+        localStorage.removeItem(accessTokenKey);
+        sessionStorage.clear();
+        this.router.navigate(['/vi/authorize/signin'], { queryParams: { returnUrl: '/admin' } });
+      }
+    });
   }
 }

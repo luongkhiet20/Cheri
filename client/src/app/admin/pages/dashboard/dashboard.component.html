@@ -65,13 +65,20 @@
                   <div class="dp-weekdays">
                     <span *ngFor="let wd of WEEKDAYS">{{ wd }}</span>
                   </div>
-                  <div *ngFor="let week of leftCalendar" class="dp-week">
-                    <button *ngFor="let day of week" type="button" class="dp-day"
-                      [class.dp-day--other-month]="!day.inMonth" [class.dp-day--today]="day.isToday"
-                      [class.dp-day--start]="day.isStart" [class.dp-day--end]="day.isEnd"
-                      [class.dp-day--in-range]="day.inRange" [class.dp-day--start-edge]="day.isStart && !day.isEnd"
-                      [class.dp-day--end-edge]="day.isEnd && !day.isStart" (click)="onDayClick(day)"
-                      (mouseenter)="onDayHover(day)" [attr.aria-label]="day.date | date:'dd/MM/yyyy'">
+                  <div *ngFor="let week of leftCalendar; trackBy: trackByWeek" class="dp-week">
+                    <button *ngFor="let day of week; trackBy: trackByDay" type="button" class="dp-day"
+                      [class.dp-day--other-month]="!day.inMonth"
+                      [class.dp-day--today]="day.isToday"
+                      [class.dp-day--start]="day.isStart"
+                      [class.dp-day--end]="day.isEnd"
+                      [class.dp-day--in-range]="day.inRange"
+                      [class.dp-day--start-edge]="day.isStart && !day.isEnd"
+                      [class.dp-day--end-edge]="day.isEnd && !day.isStart"
+                      [class.dp-day--disabled]="!day.inMonth || day.isFuture"
+                      [disabled]="!day.inMonth || day.isFuture"
+                      (click)="onDayClick(day, $event)"
+                      (mouseenter)="onDayHover(day)"
+                      [attr.aria-label]="day.date | date:'dd/MM/yyyy'">
                       {{ day.day }}
                     </button>
                   </div>
@@ -93,13 +100,20 @@
                   <div class="dp-weekdays">
                     <span *ngFor="let wd of WEEKDAYS">{{ wd }}</span>
                   </div>
-                  <div *ngFor="let week of rightCalendar" class="dp-week">
-                    <button *ngFor="let day of week" type="button" class="dp-day"
-                      [class.dp-day--other-month]="!day.inMonth" [class.dp-day--today]="day.isToday"
-                      [class.dp-day--start]="day.isStart" [class.dp-day--end]="day.isEnd"
-                      [class.dp-day--in-range]="day.inRange" [class.dp-day--start-edge]="day.isStart && !day.isEnd"
-                      [class.dp-day--end-edge]="day.isEnd && !day.isStart" (click)="onDayClick(day)"
-                      (mouseenter)="onDayHover(day)" [attr.aria-label]="day.date | date:'dd/MM/yyyy'">
+                  <div *ngFor="let week of rightCalendar; trackBy: trackByWeek" class="dp-week">
+                    <button *ngFor="let day of week; trackBy: trackByDay" type="button" class="dp-day"
+                      [class.dp-day--other-month]="!day.inMonth"
+                      [class.dp-day--today]="day.isToday"
+                      [class.dp-day--start]="day.isStart"
+                      [class.dp-day--end]="day.isEnd"
+                      [class.dp-day--in-range]="day.inRange"
+                      [class.dp-day--start-edge]="day.isStart && !day.isEnd"
+                      [class.dp-day--end-edge]="day.isEnd && !day.isStart"
+                      [class.dp-day--disabled]="!day.inMonth || day.isFuture"
+                      [disabled]="!day.inMonth || day.isFuture"
+                      (click)="onDayClick(day, $event)"
+                      (mouseenter)="onDayHover(day)"
+                      [attr.aria-label]="day.date | date:'dd/MM/yyyy'">
                       {{ day.day }}
                     </button>
                   </div>
@@ -159,31 +173,22 @@
     <button type="button" class="btn btn-alert-retry" (click)="loadStats()">Thử lại ngay</button>
   </div>
 
-  <!-- LOADING SKELETON -->
-  <div *ngIf="isLoading && !stats" class="skeleton-wrap">
-    <div class="kpi-grid">
-      <div class="kpi-card skeleton-card" *ngFor="let i of [1,2,3,4]">
-        <div class="skeleton-line w-40 mb-2"></div>
-        <div class="skeleton-line w-70 mb-3 h-7"></div>
-        <div class="skeleton-line w-50"></div>
-      </div>
-    </div>
-    <div class="dash-grid-charts">
-      <div class="dash-card skeleton-card h-64"></div>
-      <div class="dash-card skeleton-card h-64"></div>
-    </div>
-  </div>
+  <!-- LOADING SKELETON (Tải lần đầu qua app-loading-state) -->
+  <app-loading-state *ngIf="isLoading && !stats" type="dashboard" message="Đang tải dữ liệu Dashboard..."></app-loading-state>
 
   <!-- ═══════════════════════════════════════════════════════
        MAIN CONTENT
        ═══════════════════════════════════════════════════════ -->
   <main *ngIf="stats" class="dash-content">
 
+    <!-- REFRESH OVERLAY (Khi nhấn Làm mới, giữ nguyên dữ liệu và hiển thị overlay trong vùng dash-content) -->
+    <app-loading-state *ngIf="isRefreshing" [overlay]="true" type="spinner" message="Đang cập nhật dữ liệu..."></app-loading-state>
+
     <!-- ── 1. KPI ──────────────────────────────────────────────────── -->
     <section class="kpi-grid">
 
-      <!-- Revenue KPI -->
-      <article class="kpi-card" (click)="navigateOrders()" tabindex="0" role="button" id="kpi-total-revenue">
+      <!-- Revenue KPI (Luxury Burgundy Gradient) -->
+      <article class="kpi-card kpi-card--revenue" (click)="navigateOrders()" tabindex="0" role="button" id="kpi-total-revenue">
         <div class="kpi-card__head">
           <span class="kpi-card__label">Tổng doanh thu</span>
           <div class="kpi-card__icon-box">
@@ -317,8 +322,9 @@
             (mouseleave)="onChartLeave()">
             <defs>
               <linearGradient id="lineAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#F3E4E5" stop-opacity="0.85" />
-                <stop offset="100%" stop-color="#F3E4E5" stop-opacity="0" />
+                <stop offset="0%" stop-color="#74070E" stop-opacity="0.22" />
+                <stop offset="65%" stop-color="#D96B76" stop-opacity="0.06" />
+                <stop offset="100%" stop-color="#FDF2F3" stop-opacity="0" />
               </linearGradient>
             </defs>
             <g>
@@ -362,43 +368,72 @@
       </div>
 
       <!-- Donut card -->
-      <div class="dash-card">
+      <div class="dash-card dash-card--orders-status">
         <div class="dash-card__header">
           <div>
             <h2 class="dash-card__title">Trạng thái đơn hàng</h2>
           </div>
+          <button type="button" class="dash-link" (click)="navigateOrders()">
+            Tất cả đơn
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
         </div>
-        <div *ngIf="donutTotal===0" class="empty-state-box">
+
+        <div *ngIf="donutSegments.length === 0" class="empty-state-box">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#8A8A8A" stroke-width="1.5">
             <circle cx="12" cy="12" r="10" />
             <path d="M8 12h8" />
           </svg>
-          <span>Chưa có đơn hàng trong kỳ này</span>
+          <span>Chưa có dữ liệu trạng thái đơn hàng</span>
         </div>
-        <div *ngIf="donutTotal > 0" class="donut-body">
+
+        <div *ngIf="donutSegments.length > 0" class="donut-body">
+          <!-- Donut chart wrap -->
           <div class="donut-chart-wrap">
             <svg viewBox="0 0 120 120" class="donut-svg" (mouseleave)="onDonutLeave()">
-              <circle cx="60" cy="60" r="54" fill="none" stroke="#F3F4F6" stroke-width="18" />
-              <circle *ngFor="let seg of donutSegments; let i=index" cx="60" cy="60" r="54" fill="none"
-                [attr.stroke]="seg.color" [attr.stroke-width]="hoveredSegmentIndex===i ? 22 : 18"
-                [attr.stroke-dasharray]="seg.dash + ' ' + (339.3-seg.dash)" [attr.stroke-dashoffset]="seg.offset"
-                [attr.opacity]="hoveredSegmentIndex>=0 && hoveredSegmentIndex!==i ? 0.35 : 1" class="donut-seg"
-                style="cursor:pointer" (mouseenter)="onDonutHover(i)" />
-              <text x="60" y="56" text-anchor="middle" class="donut-center-value">{{ donutTotal }}</text>
-              <text x="60" y="68" text-anchor="middle" class="donut-center-label">Tổng đơn</text>
+              <g transform="rotate(-90 60 60)">
+                <!-- Background ring -->
+                <circle cx="60" cy="60" [attr.r]="DONUT_R" fill="none" stroke="#F1F3F5" stroke-width="14" />
+                <!-- Donut segments -->
+                <circle *ngFor="let seg of donutSegments; let i=index" cx="60" cy="60" [attr.r]="DONUT_R" fill="none"
+                  [attr.stroke]="seg.color" [attr.stroke-width]="hoveredSegmentIndex===i ? 17 : 14"
+                  [attr.stroke-dasharray]="seg.dash + ' ' + (DONUT_CIRC - seg.dash)" [attr.stroke-dashoffset]="seg.offset"
+                  [attr.opacity]="hoveredSegmentIndex>=0 && hoveredSegmentIndex!==i ? 0.35 : 1" class="donut-seg"
+                  style="cursor:pointer" (mouseenter)="onDonutHover(i)" />
+              </g>
             </svg>
+
+            <!-- Center overlay -->
+            <div class="donut-center-info">
+              <span class="donut-center-value">{{ donutTotal | number }}</span>
+              <span class="donut-center-label">Tổng đơn</span>
+            </div>
+
+            <!-- Tooltip -->
             <div *ngIf="donutTooltip" class="donut-tooltip">
               <strong>{{ donutTooltip.label }}</strong>
-              <div>{{ donutTooltip.count }} đơn · {{ donutTooltip.pct }}%</div>
+              <div>{{ donutTooltip.count | number }} đơn · {{ donutTooltip.pct }}%</div>
             </div>
           </div>
+
+          <!-- Legend list -->
           <div class="donut-legend">
             <div *ngFor="let seg of donutSegments; let i=index" class="donut-legend-item"
-              [class.donut-legend-item--hover]="hoveredSegmentIndex===i" (mouseenter)="onDonutHover(i)"
-              (mouseleave)="onDonutLeave()" (click)="navigateOrdersByStatus(seg.variant)">
-              <span class="donut-legend-dot" [style.background]="seg.color"></span>
-              <span class="donut-legend-name">{{ seg.label }}</span>
-              <span class="donut-legend-count">{{ seg.count }}</span>
+              [class.donut-legend-item--hover]="hoveredSegmentIndex===i"
+              [class.donut-legend-item--zero]="seg.count===0"
+              (mouseenter)="onDonutHover(i)"
+              (mouseleave)="onDonutLeave()"
+              (click)="navigateOrdersByStatus(seg.code || seg.key || '')"
+              role="button"
+              tabindex="0"
+              [title]="'Xem danh sách đơn ' + seg.label">
+              <div class="donut-legend-col--name">
+                <span class="donut-legend-dot" [style.background]="seg.color"></span>
+                <span class="donut-legend-name">{{ seg.label }}</span>
+              </div>
+              <span class="donut-legend-count">{{ seg.count | number }}</span>
               <span class="donut-legend-pct">{{ seg.pct }}%</span>
             </div>
           </div>
@@ -423,8 +458,12 @@
         </div>
         <div class="product-row-list" *ngIf="stats.topSellingProducts?.length > 0">
           <div *ngFor="let prod of stats.topSellingProducts; let idx=index" class="product-row-item"
+            [class.product-row-item--first]="idx===0"
             (click)="navigateProductEdit(prod.id)" tabindex="0" role="button">
-            <span class="rank-index" [class.rank-index--top]="idx===0">#{{ idx+1 }}</span>
+            <span class="rank-index"
+              [class.rank-index--first]="idx===0"
+              [class.rank-index--second]="idx===1"
+              [class.rank-index--third]="idx===2">#{{ idx+1 }}</span>
             <div class="product-img-box">
               <img *ngIf="prod.image" [src]="prod.image" [alt]="prod.name" loading="lazy" />
               <div *ngIf="!prod.image" class="product-placeholder-svg">
@@ -468,10 +507,10 @@
             </svg>
           </button>
         </div>
-        <div class="alert-stock-notice" *ngIf="stats.outOfStockCount > 0" (click)="navigateProducts()" role="button"
+        <div class="alert-stock-notice" *ngIf="(stats.inventory?.outOfStockCount || stats.outOfStockCount || 0) > 0" (click)="navigateProducts()" role="button"
           tabindex="0">
           <span class="stock-badge-out">Hết hàng</span>
-          <span class="stock-notice-text">Hiện có <strong>{{ stats.outOfStockCount }}</strong> sản phẩm đã hết
+          <span class="stock-notice-text">Hiện có <strong>{{ stats.inventory?.outOfStockCount ?? stats.outOfStockCount ?? 0 }}</strong> sản phẩm đã hết
             hàng.</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#74070E" stroke-width="2">
             <polyline points="9 18 15 12 9 6" />
@@ -543,17 +582,17 @@
             <tbody>
               <tr *ngFor="let order of stats.recentOrders" class="dash-table-row"
                 (click)="navigateOrderDetail(order._id || order.id)" tabindex="0" role="button">
-                <td class="order-code-cell">{{ order.orderId || order._id }}</td>
+                <td class="order-code-cell">{{ order.orderId || order.code || order._id }}</td>
                 <td>
-                  <div class="order-customer-name">{{ order.customerName }}</div>
-                  <div class="order-customer-email">{{ order.customerEmail }}</div>
+                  <div class="order-customer-name">{{ order.customerName || order.customer || 'Khách hàng' }}</div>
+                  <div class="order-customer-email">{{ order.customerEmail || '' }}</div>
                 </td>
-                <td class="cell-align-right order-total-cell">{{ order.totalAmount | currency:'VND':'symbol':'1.0-0' }}
+                <td class="cell-align-right order-total-cell">{{ (order.totalAmount !== undefined ? order.totalAmount : order.total) | currency:'VND':'symbol':'1.0-0' }}
                 </td>
                 <td class="cell-align-center">
-                  <span class="order-status-pill pill--neutral">{{ order.status }}</span>
+                  <span class="order-status-pill" [ngClass]="'pill--' + (order.statusVariant || getStatusVariant(order.statusCode || order.status))">{{ order.statusLabel || order.status }}</span>
                 </td>
-                <td class="cell-align-right order-date-cell">{{ (order.createdAt | date:'dd/MM/yyyy') || '—' }}</td>
+                <td class="cell-align-right order-date-cell">{{ ((order.createdAt || order.date) | date:'dd/MM/yyyy') || '—' }}</td>
               </tr>
               <tr *ngIf="!stats.recentOrders || stats.recentOrders.length===0">
                 <td colspan="5" class="empty-table-cell">Chưa có đơn hàng nào</td>
@@ -581,10 +620,10 @@
             <div class="spec-item"><span class="spec-label">Tổng sản phẩm</span><strong class="spec-value">{{
                 stats.productsCount }}</strong></div>
             <div class="spec-item"><span class="spec-label">Hết hàng</span><strong class="spec-value"
-                [class.spec-value--alert]="stats.inventory?.outOfStockCount > 0">{{ stats.inventory?.outOfStockCount ||
+                [class.spec-value--alert]="(stats.inventory?.outOfStockCount || stats.outOfStockCount || 0) > 0">{{ stats.inventory?.outOfStockCount ?? stats.outOfStockCount ??
                 0 }}</strong></div>
             <div class="spec-item"><span class="spec-label">Tồn kho thấp</span><strong class="spec-value">{{
-                stats.inventory?.lowStockCount || 0 }}</strong></div>
+                stats.inventory?.lowStockCount ?? stats.lowStockCount ?? 0 }}</strong></div>
             <div class="spec-item"><span class="spec-label">Danh mục</span><strong class="spec-value">{{
                 stats.categoriesCount }}</strong></div>
             <div class="spec-item"><span class="spec-label">Tổng người dùng</span><strong

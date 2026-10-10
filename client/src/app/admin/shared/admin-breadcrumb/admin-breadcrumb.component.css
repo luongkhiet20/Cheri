@@ -4,7 +4,7 @@
   font-family: inherit;
   font-size: 13px;
   line-height: 1.4;
-  margin-bottom: var(--space-sm, 8px);
+  margin-bottom: 6px;
 }
 
 .admin-breadcrumb__list {

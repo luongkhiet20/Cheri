@@ -112,224 +112,384 @@ async function connectToMongo() {
 const LOW_STOCK_THRESHOLD = 5;
 
 const ORDER_STATUS_CONFIG = [
-  { code: 'PENDING', label: 'Chờ xác nhận', queryParam: 'Chờ xác nhận', variant: 'neutral' },
-  { code: 'PROCESSING', label: 'Đang xử lý', queryParam: 'Đang xử lý', variant: 'warning' },
-  { code: 'SHIPPING', label: 'Đang giao', queryParam: 'Đang giao', variant: 'primary' },
-  { code: 'DELIVERED', label: 'Đã giao', queryParam: 'Đã giao', variant: 'success' },
-  { code: 'CANCELLED', label: 'Đã hủy', queryParam: 'Đã hủy', variant: 'danger' },
-  { code: 'RETURNED', label: 'Đã hoàn trả', queryParam: 'Đã hoàn trả', variant: 'warning' }
+  { code: 'DELIVERED', label: 'Đã giao', key: 'delivered', queryParam: 'Đã giao', variant: 'success' },
+  { code: 'SHIPPING', label: 'Đang giao', key: 'shipping', queryParam: 'Đang giao', variant: 'primary' },
+  { code: 'PROCESSING', label: 'Đang xử lý', key: 'processing', queryParam: 'Đang xử lý', variant: 'warning' },
+  { code: 'PENDING', label: 'Chờ xác nhận', key: 'pending', queryParam: 'Chờ xác nhận', variant: 'neutral' },
+  { code: 'CANCELLED', label: 'Đã hủy', key: 'cancelled', queryParam: 'Đã hủy', variant: 'danger' },
+  { code: 'RETURNED', label: 'Đã hoàn trả', key: 'returned', queryParam: 'Đã hoàn trả', variant: 'neutral' },
 ];
 
-function getRevenueTimeline(orders, timeRange) {
-  const now = new Date();
-  let startDate = new Date(now);
-  let endDate = new Date(now);
+function normalizeOrderStatus(st) {
+  if (!st) return 'PENDING';
+  const upper = String(st).trim().toUpperCase();
+  if (upper === 'NEW') return 'PENDING';
+  if (upper === 'CONFIRMED') return 'PROCESSING';
+  if (upper === 'DELIVERY_FAILED') return 'RETURNED';
+  if (upper === 'COMPLETED') return 'DELIVERED';
+  if (upper === 'CANCELED') return 'CANCELLED';
+  if (upper === 'RETURN') return 'RETURNED';
+  return upper;
+}
+const normalizeStatus = normalizeOrderStatus;
 
-  if (timeRange === '30d') {
-    startDate.setDate(now.getDate() - 29);
-  } else if (timeRange === 'this_month') {
-    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-  } else if (timeRange === 'last_month') {
-    startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
-  } else {
-    // default: 7d
-    startDate.setDate(now.getDate() - 6);
+function getOrderTime(o) {
+  const d = o.createdAt || o.dateAdded;
+  if (d) {
+    const t = new Date(d).getTime();
+    if (!isNaN(t)) return t;
   }
-  startDate.setHours(0, 0, 0, 0);
-
-  const dailyMap = new Map();
-  const cur = new Date(startDate);
-  while (cur <= endDate) {
-    const key = `${String(cur.getDate()).padStart(2, '0')}/${String(cur.getMonth() + 1).padStart(2, '0')}`;
-    const keyFull = `${String(cur.getDate()).padStart(2, '0')}/${String(cur.getMonth() + 1).padStart(2, '0')}/${cur.getFullYear()}`;
-    dailyMap.set(key, { label: key, fullDate: keyFull, revenue: 0, ordersCount: 0 });
-    cur.setDate(cur.getDate() + 1);
+  if (o._id && typeof o._id.getTimestamp === 'function') {
+    return o._id.getTimestamp().getTime();
   }
+  return 0;
+}
 
-  for (const o of orders) {
-    const rawSt = (o.status || o.statusHistory?.[0]?.status || '').toUpperCase();
-    if (rawSt === 'DELIVERED') {
-      const oDate = new Date(o.dateAdded || o.createdAt || (o._id ? o._id.getTimestamp() : null));
-      if (!isNaN(oDate.getTime()) && oDate >= startDate && oDate <= endDate) {
-        const key = `${String(oDate.getDate()).padStart(2, '0')}/${String(oDate.getMonth() + 1).padStart(2, '0')}`;
-        const entry = dailyMap.get(key);
-        if (entry) {
-          const rev = Number(o.cart?.totalPrice !== undefined ? o.cart.totalPrice : (o.amount || 0));
-          entry.revenue += isNaN(rev) ? 0 : rev;
-          entry.ordersCount += 1;
-        }
-      }
-    }
-  }
+function getOrderAmount(o) {
+  const amt = Number(o.totalAmount !== undefined && o.totalAmount !== null ? o.totalAmount : (o.cart?.totalPrice !== undefined ? o.cart.totalPrice : (o.amount || 0)));
+  return isNaN(amt) ? 0 : amt;
+}
 
-  return Array.from(dailyMap.values());
+function isOrderRevenueEligible(o) {
+  const st = normalizeOrderStatus(o.status || o.statusHistory?.[0]?.status);
+  if (st === 'CANCELLED' || st === 'RETURNED' || st === 'DELIVERY_FAILED') return false;
+  const paySt = String(o.paymentStatus || o.payment?.status || '').toUpperCase();
+  return paySt === 'PAID' || st === 'DELIVERED' || paySt === 'COMPLETED';
 }
 
 const dashboardHandler = async (req, res) => {
   try {
+    const now = new Date();
     const timeRange = req.query.timeRange || '7d';
+    const startDateParam = req.query.startDate;
+    const endDateParam = req.query.endDate;
 
-    // 1. Concurrent queries to MongoDB Atlas for high performance & low latency
-    const [pingRes, orders, products, categoriesCount, users] = await Promise.all([
+    let periodStart;
+    let periodEnd;
+    let prevStart;
+    let prevEnd;
+    let days;
+
+    if (startDateParam && endDateParam) {
+      const s = new Date(startDateParam);
+      const e = new Date(endDateParam);
+      if (!isNaN(s.getTime()) && !isNaN(e.getTime()) && s <= e) {
+        periodStart = new Date(s);
+        periodStart.setHours(0, 0, 0, 0);
+        periodEnd = new Date(e);
+        periodEnd.setHours(23, 59, 59, 999);
+        days = Math.max(1, Math.ceil((periodEnd.getTime() - periodStart.getTime()) / 86400000) + 1);
+        prevEnd = new Date(periodStart.getTime() - 1);
+        prevStart = new Date(prevEnd.getTime() - (days - 1) * 86400000);
+        prevStart.setHours(0, 0, 0, 0);
+      }
+    }
+
+    if (!periodStart) {
+      if (timeRange === 'this_month') {
+        periodStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+        periodEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        const elapsed = now.getDate();
+        prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+        prevEnd = new Date(now.getFullYear(), now.getMonth() - 1, elapsed, 23, 59, 59, 999);
+        days = periodEnd.getDate();
+      } else if (timeRange === 'last_month') {
+        const lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        periodStart = new Date(lm.getFullYear(), lm.getMonth(), 1, 0, 0, 0, 0);
+        periodEnd = new Date(lm.getFullYear(), lm.getMonth() + 1, 0, 23, 59, 59, 999);
+        const pm = new Date(lm.getFullYear(), lm.getMonth() - 1, 1);
+        prevStart = new Date(pm.getFullYear(), pm.getMonth(), 1, 0, 0, 0, 0);
+        prevEnd = new Date(pm.getFullYear(), pm.getMonth() + 1, 0, 23, 59, 59, 999);
+        days = periodEnd.getDate();
+      } else if (timeRange === '30d') {
+        days = 30;
+        periodEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        periodStart = new Date(periodEnd.getTime() - (days - 1) * 86400000);
+        periodStart.setHours(0, 0, 0, 0);
+        prevEnd = new Date(periodStart.getTime() - 1);
+        prevStart = new Date(prevEnd.getTime() - (days - 1) * 86400000);
+        prevStart.setHours(0, 0, 0, 0);
+      } else if (timeRange === '15d') {
+        days = 15;
+        periodEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        periodStart = new Date(periodEnd.getTime() - (days - 1) * 86400000);
+        periodStart.setHours(0, 0, 0, 0);
+        prevEnd = new Date(periodStart.getTime() - 1);
+        prevStart = new Date(prevEnd.getTime() - (days - 1) * 86400000);
+        prevStart.setHours(0, 0, 0, 0);
+      } else {
+        // default 7d
+        days = 7;
+        periodEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        periodStart = new Date(periodEnd.getTime() - (days - 1) * 86400000);
+        periodStart.setHours(0, 0, 0, 0);
+        prevEnd = new Date(periodStart.getTime() - 1);
+        prevStart = new Date(prevEnd.getTime() - (days - 1) * 86400000);
+        prevStart.setHours(0, 0, 0, 0);
+      }
+    }
+
+    // Concurrent queries to MongoDB Atlas
+    const [pingRes, orders, products, categories, users] = await Promise.all([
       db.command({ ping: 1 }).then(() => 'Connected').catch((err) => {
         console.error('db.command ping failed:', err);
         return 'Disconnected';
       }),
-      db.collection('orders').find({}).sort({ dateAdded: -1, _id: -1 }).toArray(),
-      db.collection('products').find({}, {
-        projection: {
-          'vi.title': 1, 'vi.sku': 1, 'vi.quantity': 1, 'vi.stock': 1, 'vi.salePrice': 1, 'vi.regularPrice': 1, 'vi.categoryLevel1': 1,
-          title: 1, sku: 1, quantity: 1, variants: 1, mainImage: 1, images: 1, categoryLevel1: 1
-        }
-      }).toArray(),
-      db.collection('categories').countDocuments(),
-      db.collection('users').find({}, { projection: { createdAt: 1, dateAdded: 1 } }).toArray()
+      db.collection('orders').find({}).sort({ createdAt: -1, dateAdded: -1, _id: -1 }).toArray(),
+      db.collection('products').find({}).toArray(),
+      db.collection('categories').find({}).toArray(),
+      db.collection('users').find({}).toArray()
     ]);
 
     const mongoStatus = pingRes === 'Connected' ? 'Connected' : 'Disconnected';
     const mongoStatusText = pingRes === 'Connected' ? 'Đã kết nối thành công' : 'Mất kết nối MongoDB';
 
-    // Calculate Total Revenue (orders with status DELIVERED)
-    let totalRevenue = 0;
-    orders.forEach(o => {
-      const rawSt = (o.status || o.statusHistory?.[0]?.status || '').toUpperCase();
-      if (rawSt === 'DELIVERED') {
-        const p = Number(o.cart?.totalPrice !== undefined ? o.cart.totalPrice : (o.amount || 0));
-        if (!isNaN(p)) totalRevenue += p;
-      }
+    // Build category map (id/titleUrl -> title)
+    const categoryMap = new Map();
+    for (const c of categories) {
+      const title = c.vi?.title || c.title || c.titleUrl || 'Danh mục';
+      categoryMap.set(String(c._id), title);
+      if (c.titleUrl) categoryMap.set(c.titleUrl, title);
+    }
+
+    // Build user map for customer name lookup
+    const userMap = new Map();
+    for (const u of users) {
+      userMap.set(String(u._id), u.fullName || u.name || u.email);
+    }
+
+    // Filter period orders and previous period orders
+    const pStart = periodStart.getTime();
+    const pEnd = periodEnd.getTime();
+    const prevStartMs = prevStart.getTime();
+    const prevEndMs = prevEnd.getTime();
+
+    const periodOrders = orders.filter(o => {
+      const t = getOrderTime(o);
+      return t >= pStart && t <= pEnd;
     });
 
-    // 3. Orders by Status
+    const prevPeriodOrders = orders.filter(o => {
+      const t = getOrderTime(o);
+      return t >= prevStartMs && t <= prevEndMs;
+    });
+
+    const periodRevenue = periodOrders.filter(isOrderRevenueEligible).reduce((sum, o) => sum + getOrderAmount(o), 0);
+    const prevPeriodRevenue = prevPeriodOrders.filter(isOrderRevenueEligible).reduce((sum, o) => sum + getOrderAmount(o), 0);
+    const periodOrdersCount = periodOrders.length;
+    const prevPeriodOrdersCount = prevPeriodOrders.length;
+
+    // Timeline breakdown
+    const revenueTimeline = [];
+    const curDay = new Date(periodStart);
+    while (curDay <= periodEnd) {
+      const dStart = new Date(curDay.getFullYear(), curDay.getMonth(), curDay.getDate(), 0, 0, 0, 0).getTime();
+      const dEnd = new Date(curDay.getFullYear(), curDay.getMonth(), curDay.getDate(), 23, 59, 59, 999).getTime();
+
+      const dayOrders = orders.filter(o => {
+        const t = getOrderTime(o);
+        return t >= dStart && t <= dEnd;
+      });
+
+      const dayRevenue = dayOrders.filter(isOrderRevenueEligible).reduce((sum, o) => sum + getOrderAmount(o), 0);
+      const label = `${String(curDay.getDate()).padStart(2, '0')}/${String(curDay.getMonth() + 1).padStart(2, '0')}`;
+      const fullDate = `${label}/${curDay.getFullYear()}`;
+      const dateStr = `${curDay.getFullYear()}-${String(curDay.getMonth() + 1).padStart(2, '0')}-${String(curDay.getDate()).padStart(2, '0')}`;
+
+      revenueTimeline.push({
+        label,
+        date: dateStr,
+        fullDate,
+        revenue: dayRevenue,
+        ordersCount: dayOrders.length
+      });
+
+      curDay.setDate(curDay.getDate() + 1);
+    }
+
+    // Orders By Status (for periodOrders, and also overall counts)
     const statusCounts = {};
-    ORDER_STATUS_CONFIG.forEach(c => statusCounts[c.code] = 0);
-    orders.forEach(o => {
-      const rawSt = (o.status || o.statusHistory?.[0]?.status || '').toUpperCase();
-      if (statusCounts[rawSt] !== undefined) {
-        statusCounts[rawSt]++;
+    ORDER_STATUS_CONFIG.forEach(c => {
+      statusCounts[c.key] = 0;
+      statusCounts[c.code] = 0;
+    });
+
+    periodOrders.forEach(o => {
+      const norm = normalizeOrderStatus(o.status || o.statusHistory?.[0]?.status);
+      const cfg = ORDER_STATUS_CONFIG.find(c => c.code === norm);
+      if (cfg) {
+        statusCounts[cfg.key] = (statusCounts[cfg.key] || 0) + 1;
+        statusCounts[cfg.code] = (statusCounts[cfg.code] || 0) + 1;
       }
     });
 
-    const ordersByStatus = ORDER_STATUS_CONFIG.map(c => ({
+    const ordersByStatusList = ORDER_STATUS_CONFIG.map(c => ({
       code: c.code,
+      key: c.key,
       label: c.label,
       queryParam: c.queryParam,
-      count: statusCounts[c.code] || 0,
+      count: statusCounts[c.key] || 0,
       variant: c.variant
     }));
 
-    // 4. Revenue Timeline
-    const revenueTimeline = getRevenueTimeline(orders, timeRange);
+    // Customer Users calculation (Exclude Admin & staff)
+    const isCustomer = (u) => {
+      if (u.isAdmin === true) return false;
+      const roles = Array.isArray(u.roles) ? u.roles : (u.roles ? [u.roles] : (Array.isArray(u.role) ? u.role : (u.role ? [u.role] : [])));
+      const hasAdmin = roles.some(r => typeof r === 'string' && (r.toLowerCase() === 'admin' || r.toLowerCase() === 'super-admin'));
+      return !hasAdmin;
+    };
 
-    // 5. Top Selling Products (From orders.cart.items)
-    const topProductsMap = new Map();
-    orders.forEach(o => {
-      const items = o.cart?.items;
-      if (Array.isArray(items)) {
-        items.forEach(it => {
-          const pId = (it.id || it.item?._id || it.item?.id || '').toString();
-          const pName = it.item?.vi?.title || it.item?.title || it.name || 'Sản phẩm';
-          const pImg = it.item?.mainImage?.url || it.item?.image || (Array.isArray(it.item?.images) ? it.item.images[0] : '');
-          const pPrice = Number(it.price || it.item?.salePrice || it.item?.regularPrice || 0);
-          const qty = Number(it.qty || it.quantity || 1);
+    const customerUsers = users.filter(isCustomer);
+    const usersCount = customerUsers.length;
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000);
 
-          if (!topProductsMap.has(pId)) {
-            topProductsMap.set(pId, {
-              id: pId,
-              name: pName,
-              image: pImg,
-              price: pPrice,
-              totalSold: 0,
-              revenue: 0
-            });
-          }
-          const prod = topProductsMap.get(pId);
-          prod.totalSold += qty;
-          prod.revenue += qty * pPrice;
-        });
+    let new7Days = 0;
+    let new30Days = 0;
+    customerUsers.forEach(u => {
+      const d = u.createdAt || u.dateAdded;
+      if (d) {
+        const ud = new Date(d);
+        if (!isNaN(ud.getTime())) {
+          if (ud >= sevenDaysAgo) new7Days++;
+          if (ud >= thirtyDaysAgo) new30Days++;
+        }
       }
     });
 
-    const topSellingProducts = Array.from(topProductsMap.values())
-      .sort((a, b) => b.totalSold - a.totalSold)
-      .slice(0, 5);
-
-    // 6. Products, Low Stock and Out of Stock
-    const lowStockProducts = [];
+    // Inventory & Low Stock products
     let outOfStockCount = 0;
     let inStockCount = 0;
+    let totalStock = 0;
+    const lowStockProducts = [];
 
     products.forEach(p => {
       const vi = p.vi || {};
       let qty = 0;
       if (Array.isArray(p.variants) && p.variants.length > 0) {
-        qty = p.variants.reduce((acc, v) => acc + Number(v.stock || 0), 0);
-      } else if (vi.quantity !== undefined && !isNaN(Number(vi.quantity))) {
-        qty = Number(vi.quantity);
-      } else if (p.quantity !== undefined && !isNaN(Number(p.quantity))) {
-        qty = Number(p.quantity);
+        qty = p.variants.reduce((acc, v) => acc + (Number(v.stock) || 0), 0);
+      } else if (typeof p.quantity === 'number') {
+        qty = p.quantity;
+      } else if (typeof vi.quantity === 'number') {
+        qty = vi.quantity;
+      } else if (typeof p.stock === 'number') {
+        qty = p.stock;
+      } else if (typeof vi.stock === 'number') {
+        qty = vi.stock;
       }
 
-      if (qty === 0 || vi.stock === 'outOfStock') {
+      totalStock += qty;
+
+      if (qty === 0 || vi.stock === 'outOfStock' || p.stock === 'outOfStock') {
         outOfStockCount++;
       } else {
         inStockCount++;
-        if (qty <= LOW_STOCK_THRESHOLD) {
-          lowStockProducts.push({
-            id: p._id.toString(),
-            name: vi.title || p.title || p.titleUrl || 'Sản phẩm',
-            sku: p.variants?.[0]?.sku || vi.sku || ('SP-' + p._id.toString().slice(-6).toUpperCase()),
-            stock: qty,
-            price: vi.salePrice || vi.regularPrice || p.regularPrice || 0,
-            image: p.mainImage?.url || (Array.isArray(p.images) ? p.images[0] : ''),
-            category: vi.categoryLevel1 || p.categoryLevel1 || 'Thời trang'
-          });
-        }
+      }
+
+      if (qty <= LOW_STOCK_THRESHOLD) {
+        const rawCat = vi.categoryLevel1 || p.categoryLevel1;
+        const catKey = Array.isArray(rawCat) ? rawCat[0] : rawCat;
+        const catName = categoryMap.get(String(catKey)) || (typeof catKey === 'string' && catKey.trim() ? catKey.trim() : 'Thời trang nữ');
+
+        lowStockProducts.push({
+          id: String(p._id),
+          name: vi.title || p.title || p.titleUrl || 'Sản phẩm',
+          sku: p.variants?.[0]?.sku || vi.sku || p.sku || ('SP-' + String(p._id).slice(-6).toUpperCase()),
+          stock: qty,
+          price: vi.salePrice || vi.regularPrice || p.regularPrice || 0,
+          image: p.mainImage?.url || (Array.isArray(p.images) ? p.images[0] : ''),
+          category: catName
+        });
       }
     });
 
     lowStockProducts.sort((a, b) => a.stock - b.stock);
     const topLowStock = lowStockProducts.slice(0, 5);
 
-    // 7. Users & New Customers
-    const now = new Date();
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    // Top Selling Products (calculated from eligible orders)
+    const productSalesMap = new Map();
+    for (const o of orders) {
+      if (!isOrderRevenueEligible(o)) continue;
+      const items = (Array.isArray(o.items) && o.items.length > 0) ? o.items : (Array.isArray(o.cart?.items) ? o.cart.items : []);
+      for (const it of items) {
+        const pId = String(it.productId || it.productSnapshot?.sku || it.id || it.item?._id || it.item?.id || 'item');
+        const name = it.name || it.productSnapshot?.name || it.productSnapshot?.title || it.item?.vi?.title || it.item?.title || 'Sản phẩm';
+        const image = it.image || it.productSnapshot?.image || it.item?.mainImage?.url || (Array.isArray(it.item?.images) ? it.item.images[0] : '');
+        const sku = it.sku || it.productSnapshot?.sku || it.item?.vi?.sku || it.item?.sku || '';
+        const qty = Number(it.quantity || it.qty || 1);
+        const price = Number(it.unitPrice || it.price || it.item?.salePrice || 0);
 
-    let new7Days = 0;
-    let new30Days = 0;
-    users.forEach(u => {
-      const uDate = u.createdAt ? new Date(u.createdAt) : (u.dateAdded ? new Date(u.dateAdded) : (u._id ? u._id.getTimestamp() : null));
-      if (uDate && !isNaN(uDate.getTime())) {
-        if (uDate >= sevenDaysAgo) new7Days++;
-        if (uDate >= thirtyDaysAgo) new30Days++;
+        const existing = productSalesMap.get(pId) || {
+          id: pId,
+          name,
+          title: name,
+          sku,
+          image,
+          totalSold: 0,
+          revenue: 0
+        };
+        existing.totalSold += qty;
+        existing.revenue += qty * price;
+        productSalesMap.set(pId, existing);
       }
-    });
+    }
 
-    // 8. Recent Orders
-    const recentOrders = orders.slice(0, 6).map(o => {
-      const address = o.addresses?.[0] || {};
-      const statusHistory = o.statusHistory || [];
-      const rawStatus = (o.status || statusHistory[0]?.status || '').toUpperCase();
-      const statusCfg = ORDER_STATUS_CONFIG.find(c => c.code === rawStatus)
-        || { label: rawStatus || '—', variant: 'neutral' };
-      const totalPrice = o.cart?.totalPrice !== undefined ? o.cart.totalPrice : (o.amount || 0);
+    const topSellingProducts = Array.from(productSalesMap.values())
+      .sort((a, b) => b.totalSold - a.totalSold)
+      .slice(0, 5);
+
+    // Recent Orders (5 latest orders)
+    const recentOrders = orders.slice(0, 5).map(o => {
+      let customerName = 'Khách hàng';
+      if (o.customer?.name && o.customer.name.trim()) {
+        customerName = o.customer.name.trim();
+      } else if (o.shippingAddress?.fullName && o.shippingAddress.fullName.trim()) {
+        customerName = o.shippingAddress.fullName.trim();
+      } else if (typeof o.shippingAddress?.address === 'string' && o.shippingAddress.name) {
+        customerName = o.shippingAddress.name.trim();
+      } else if (Array.isArray(o.addresses) && o.addresses[0]?.name) {
+        customerName = o.addresses[0].name.trim();
+      } else if (o.userId && userMap.has(String(o.userId))) {
+        customerName = userMap.get(String(o.userId));
+      } else if (o._user && userMap.has(String(o._user))) {
+        customerName = userMap.get(String(o._user));
+      } else if (o.customerName && typeof o.customerName === 'string') {
+        customerName = o.customerName;
+      }
+
+      const customerEmail = o.customerEmail || o.customer?.email || o.shippingAddress?.email || (Array.isArray(o.addresses) ? o.addresses[0]?.email : '') || '';
+      const rawStatus = normalizeStatus(o.status || o.statusHistory?.[0]?.status);
+      const statusCfg = ORDER_STATUS_CONFIG.find(c => c.code === rawStatus) || { label: rawStatus, variant: 'neutral' };
+      const totalAmount = getOrderAmount(o);
+      const createdAt = new Date(getOrderTime(o)).toISOString();
 
       return {
-        id: o._id.toString(),
-        _id: o._id.toString(),
-        code: o.orderId || ('#DH' + o._id.toString().slice(-6).toUpperCase()),
-        customer: address.name || o.customerEmail || 'Khách mua hàng',
-        customerEmail: o.customerEmail || address.email || '',
-        total: totalPrice,
+        _id: String(o._id),
+        id: String(o._id),
+        orderId: o.orderId || ('#DH' + String(o._id).slice(-6).toUpperCase()),
+        code: o.orderId || ('#DH' + String(o._id).slice(-6).toUpperCase()),
+        customerName,
+        customer: customerName,
+        customerEmail,
+        totalAmount,
+        total: totalAmount,
         status: statusCfg.label,
-        statusVariant: statusCfg.variant,
+        statusLabel: statusCfg.label,
         statusCode: rawStatus,
-        date: o.dateAdded || o.createdAt || new Date().toISOString()
+        statusVariant: statusCfg.variant,
+        createdAt,
+        date: createdAt
       };
     });
 
-    // 9. System Info
+    const inventory = {
+      totalStock,
+      inStockCount,
+      outOfStockCount,
+      lowStockCount: lowStockProducts.length
+    };
+
     const system = {
       database: 'cheri',
       cluster: 'cluster0.cbvni8r.mongodb.net',
@@ -338,7 +498,7 @@ const dashboardHandler = async (req, res) => {
       backend: 'Online',
       serverUrl: 'http://localhost:5000',
       productsInStock: inStockCount,
-      activeCategories: categoriesCount,
+      activeCategories: categories.length,
       totalOrders: orders.length,
       totalUsers: users.length,
       lastUpdated: new Date().toISOString()
@@ -347,22 +507,26 @@ const dashboardHandler = async (req, res) => {
     res.json({
       success: true,
       stats: {
-        totalRevenue,
-        ordersCount: orders.length,
+        totalRevenue: periodRevenue,
+        prevPeriodRevenue,
+        ordersCount: periodOrdersCount,
+        prevPeriodOrdersCount,
         productsCount: products.length,
-        usersCount: users.length,
-        categoriesCount,
+        categoriesCount: categories.length,
+        usersCount,
         outOfStockCount,
         lowStockCount: lowStockProducts.length,
         lowStockThreshold: LOW_STOCK_THRESHOLD,
         revenueTimeline,
         timeRange,
-        ordersByStatus,
+        ordersByStatus: statusCounts,
+        ordersByStatusList,
         topSellingProducts,
         lowStockProducts: topLowStock,
         recentOrders,
+        inventory,
         customers: {
-          total: users.length,
+          total: usersCount,
           new7Days,
           new30Days
         },

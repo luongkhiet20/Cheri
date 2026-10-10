@@ -118,12 +118,8 @@
 
           <!-- EMPTY STATE WHEN NO SECTION SELECTED -->
           <div *ngIf="!selectedSection" class="preview-empty-state">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-            </svg>
-            <h3>Chưa chọn phân đoạn nào</h3>
-            <p>Chọn một phân đoạn bên danh sách phải hoặc bấm "+ Thêm Section" để bắt đầu.</p>
+
+            <p>Chọn một section từ danh sách bên phải hoặc nhấn "+ Thêm Section" để bắt đầu xem trước.</p>
           </div>
 
           <!-- ── RENDER PHÂN ĐOẠN ĐƯỢC CHỌN TRONG LIVE PREVIEW ── -->
@@ -724,7 +720,7 @@
 
         <!-- 0. TAB TOP ACTIONS BAR -->
         <div class="typo-tab-topbar mb-3">
-          <h4 class="typo-tab-title mb-0">Kiểu Chữ & Màu Sắc (Typography & Colors)</h4>
+          <h4 class="typo-tab-title mb-0">Kiểu chữ và màu sắc</h4>
           <button type="button" class="btn-link-action btn-link-reset" (click)="onResetEntireTab4()"
             title="Khôi phục toàn bộ Kiểu chữ & Màu sắc của phân đoạn về mặc định">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
@@ -935,38 +931,7 @@
             </div>
 
             <!-- Biến đổi chữ & Căn lề -->
-            <div class="form-row-2">
-              <!-- BIẾN ĐỔI CHỮ -->
-              <div class="form-group mb-0">
-                <label class="form-label">Biến đổi chữ (Text Transform)</label>
-                <div class="btn-group-segmented">
-                  <button type="button" class="btn-segmented"
-                    [class.is-active]="getActiveTypographyConfig().textTransform === 'none' || !getActiveTypographyConfig().textTransform"
-                    (click)="getActiveTypographyConfig().textTransform = 'none'; onTypographyPropChange()"
-                    title="Mặc định — Giữ nguyên">
-                    Mặc định
-                  </button>
-                  <button type="button" class="btn-segmented"
-                    [class.is-active]="getActiveTypographyConfig().textTransform === 'lowercase'"
-                    (click)="getActiveTypographyConfig().textTransform = 'lowercase'; onTypographyPropChange()"
-                    title="Chữ thường">
-                    thường
-                  </button>
-                  <button type="button" class="btn-segmented"
-                    [class.is-active]="getActiveTypographyConfig().textTransform === 'uppercase'"
-                    (click)="getActiveTypographyConfig().textTransform = 'uppercase'; onTypographyPropChange()"
-                    title="CHỮ HOA">
-                    CHỮ HOA
-                  </button>
-                  <button type="button" class="btn-segmented"
-                    [class.is-active]="getActiveTypographyConfig().textTransform === 'capitalize'"
-                    (click)="getActiveTypographyConfig().textTransform = 'capitalize'; onTypographyPropChange()"
-                    title="Viết hoa đầu từ">
-                    Đầu Từ
-                  </button>
-                </div>
-              </div>
-
+            <div>
               <!-- CĂN LỀ -->
               <div class="form-group mb-0">
                 <label class="form-label">Căn lề (Text Alignment)</label>
@@ -1262,10 +1227,12 @@
 
   <!-- ══════════════════════════════════════════════════════════
        4. ADD SECTION MODAL (HỘP THOẠI CHỌN LOẠI PHÂN ĐOẠN)
-       QUY TẮC BẮT BUỘC:
-       - CHỈ CÓ DUY NHẤT LỰA CHỌN "Phân Đoạn Mới".
-       - KHÔNG CÓ "Lưới sản phẩm".
-       - KHÔNG CÓ "Thêm Phân Đoạn Mới" thứ hai.
+       Hỗ trợ 5 loại phân đoạn chuẩn hóa cho About CMS:
+       1. editorial   - Câu chuyện thương hiệu
+       2. image-text  - Hình ảnh & Nội dung
+       3. quote       - Trích dẫn nghệ thuật
+       4. cta         - Kêu gọi hành động
+       5. spacer      - Khoảng cách bố cục
   ══════════════════════════════════════════════════════════ -->
   <div class="home-cms-modal-backdrop" *ngIf="isAddModalOpen" (click)="onCloseAddModal()">
     <div class="home-cms-modal-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true"
@@ -1282,7 +1249,7 @@
         </button>
       </div>
 
-      <!-- Type Options Grid: Đúng duy nhất 1 card "Phân Đoạn Mới" -->
+      <!-- Type Options Grid: 5 loại phân đoạn About -->
       <div class="home-cms-options-grid mt-3">
         <div *ngFor="let opt of sectionTypeOptions" class="home-cms-option-card" (click)="onSelectNewSectionType(opt)">
           <div class="home-cms-option-card__top">

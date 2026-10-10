@@ -1238,14 +1238,27 @@
       <!-- ── TAB 4: KIỂU CHỮ & MÀU SẮC (TYPOGRAPHY & COLORS) ── -->
       <div *ngIf="editorActiveTab === 'typography'" class="home-cms-form-tab">
 
+        <!-- 0. TAB TOP ACTIONS BAR -->
+        <div class="typo-tab-topbar mb-3">
+          <h4 class="typo-tab-title mb-0">Kiểu chữ và màu sắc</h4>
+          <button type="button" class="btn-link-action btn-link-reset" (click)="onResetEntireTab4()"
+            title="Khôi phục toàn bộ Kiểu chữ & Màu sắc của phân đoạn về mặc định">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+              <polyline points="1 4 1 10 7 10"></polyline>
+              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+            </svg>
+            <span>Khôi phục toàn bộ</span>
+          </button>
+        </div>
+
         <!-- ════════════════════════════════════════════════════════════════
-             PHẦN 1: CẤU HÌNH KIỂU CHỮ (TYPOGRAPHY)
+             KHU VỰC A: CẤU HÌNH KIỂU CHỮ (TYPOGRAPHY)
              ════════════════════════════════════════════════════════════════ -->
         <div class="cms-config-section mb-4">
           <div class="cms-config-section__header d-flex justify-content-between align-items-center mb-3">
             <h5 class="cms-config-section__title mb-0">Cấu hình kiểu chữ</h5>
-            <button type="button" class="btn-link-action btn-link-reset" (click)="onResetGlobalDefaultFonts()"
-              title="Khôi phục font mặc định cho toàn bộ các section trang chủ">
+            <button type="button" class="btn-link-action btn-link-reset" (click)="onResetSectionTypography()"
+              title="Khôi phục toàn bộ font mặc định của phân đoạn">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
                 <polyline points="1 4 1 10 7 10"></polyline>
                 <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
@@ -1254,15 +1267,13 @@
             </button>
           </div>
 
-          <!-- Danh sách preset kiểu chữ: Minimal, Editorial, Classic, Romantic, Modern (Grid phẳng) -->
+          <!-- Danh sách preset kiểu chữ: Minimal, Editorial, Classic, Romantic, Modern -->
           <div class="typo-preset-cards-grid">
             <button type="button" *ngFor="let p of typographyPresets" class="typo-preset-card"
               [class.is-active]="selectedPresetForQuickApply === p.value"
               (click)="selectedPresetForQuickApply = p.value">
               <div class="typo-preset-card__top">
-                <strong class="typo-preset-card__name"
-                  [style.font-family]="(p.previewFont || p.typography.heading.fontFamily) + ', sans-serif'">{{ p.name
-                  }}</strong>
+                <strong class="typo-preset-card__name" [style.font-family]="p.previewFont">{{ p.label || p.name }}</strong>
                 <span class="typo-preset-card__check" *ngIf="selectedPresetForQuickApply === p.value"
                   aria-hidden="true">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
@@ -1274,7 +1285,7 @@
             </button>
           </div>
 
-          <!-- Áp dụng nhanh toàn bộ -->
+          <!-- Nút chính: Áp dụng nhanh toàn bộ -->
           <div class="typo-preset-apply-wrap mt-3 d-flex justify-content-between align-items-center">
             <div class="typo-preset-apply-hint">
               <span>Đang chọn: </span>
@@ -1283,7 +1294,7 @@
             <button type="button" class="btn btn-cheri-primary btn-sm px-3" (click)="onApplyQuickPresetToAll()">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                 class="me-1">
-                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+                <polyline points="20 6 9 17 4 12"></polyline>
               </svg>
               <span>Áp dụng nhanh toàn bộ</span>
             </button>
@@ -1291,13 +1302,13 @@
         </div>
 
         <!-- ════════════════════════════════════════════════════════════════
-             PHẦN 2: TÙY CHỈNH TỪNG PHẦN TỬ
+             KHU VỰC B: TÙY CHỈNH TỪNG PHẦN TỬ
              ════════════════════════════════════════════════════════════════ -->
         <div class="cms-config-section mb-4">
           <div class="cms-config-section__header d-flex justify-content-between align-items-center mb-3">
             <h5 class="cms-config-section__title mb-0">Tùy chỉnh từng phần tử</h5>
-            <button type="button" class="btn-link-action btn-link-reset" (click)="onResetGlobalDefaultColors()"
-              title="Khôi phục toàn bộ màu chữ của các phần tử về mặc định">
+            <button type="button" class="btn-link-action btn-link-reset" (click)="onResetAllColors()"
+              title="Khôi phục toàn bộ màu sắc của phân đoạn về mặc định">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
                 <polyline points="1 4 1 10 7 10"></polyline>
                 <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
@@ -1306,8 +1317,9 @@
             </button>
           </div>
 
-          <!-- Pills chọn nhanh các trường của Section đang chọn (Phẳng, không lồng card) -->
+          <!-- Danh sách chọn trường nội dung: dạng tabs/pills phẳng, không emoji -->
           <div class="content-fields-selector mb-3">
+            <label class="form-label mb-2">Chọn trường nội dung:</label>
             <!-- Nếu là Carousel -->
             <div *ngIf="getSlidesForSection(activeTargetSectionId).length > 0" class="d-flex flex-column gap-2">
               <div *ngIf="getNonSlideTargets(activeTargetSectionId).length > 0" class="content-field-pills">
@@ -1338,70 +1350,52 @@
             </div>
           </div>
 
-          <!-- Toolbar trường đang chọn + Nút đặt lại -->
+          <!-- Thanh thông tin trường đang chọn + Nút reset phần tử: phẳng, trực tiếp -->
           <div class="element-field-toolbar d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom"
             *ngIf="activeTarget">
             <div class="d-flex align-items-center gap-2">
-
-              <strong class="field-title">{{ activeTarget.sectionName }} → {{ activeTarget.fieldLabel ||
-                activeTarget.label }}</strong>
-              <span class="field-desc text-muted d-none d-md-inline">({{ activeTarget.typoElementKey ||
-                activeTarget.role }})</span>
+              <span class="field-indicator-dot"></span>
+              <strong class="field-title">{{ activeTarget.sectionName }} → {{ activeTarget.fieldLabel || activeTarget.label }}</strong>
+              <span class="field-desc text-muted d-none d-md-inline">({{ activeTarget.typoElementKey || activeTarget.role }})</span>
             </div>
-            <div class="d-flex align-items-center gap-2">
-              <button type="button" class="btn-link-action" (click)="onResetCurrentTargetElement()"
-                title="Khôi phục font chữ trường này">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-                  <polyline points="1 4 1 10 7 10"></polyline>
-                  <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
-                </svg>
-                <span>Đặt lại font chữ</span>
-              </button>
-              <button type="button" class="btn-link-action" (click)="onResetCurrentTargetElementColor()"
-                title="Khôi phục màu sắc trường này">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-                  <polyline points="1 4 1 10 7 10"></polyline>
-                  <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
-                </svg>
-                <span>Đặt lại màu</span>
-              </button>
-            </div>
+            <button type="button" class="btn-link-action" (click)="onResetCurrentTargetElement()"
+              title="Khôi phục font và màu của trường này về mặc định">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                <polyline points="1 4 1 10 7 10"></polyline>
+                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+              </svg>
+              <span>Đặt lại phần tử này</span>
+            </button>
           </div>
 
           <!-- Các trường cấu hình chi tiết (Khi activeTarget được chọn) -->
           <div *ngIf="activeTarget">
-            <!-- NHÓM 1: KIỂU CHỮ (TYPOGRAPHY) -->
+            <!-- Nhóm 1: Kiểu chữ (Typography) -->
             <div class="element-config-group mb-4">
-              <!-- Phông chữ -->
               <div class="form-group mb-3">
                 <label class="form-label" for="homeActiveFontFamily">Phông chữ (Font Family)</label>
                 <div class="typo-font-select-wrap">
                   <select id="homeActiveFontFamily" class="form-control typo-font-select"
                     [ngModel]="getActiveTargetTypographyConfig().fontFamily"
                     (ngModelChange)="onTargetTypographyPropChange('fontFamily', $event)">
-                    <option *ngFor="let opt of fontOptions" [value]="opt.value || opt.fontFamily"
-                      [style.font-family]="(opt.value || opt.fontFamily) + ', sans-serif'">
-                      {{ opt.label || opt.name }} ({{ opt.style || opt.category }})
+                    <option *ngFor="let font of availableFonts" [value]="font.fontFamily"
+                      [style.font-family]="font.fontFamily">
+                      {{ font.name }} ({{ font.category }})
                     </option>
                   </select>
                 </div>
                 <span class="form-hint" *ngIf="getActiveTargetTypographyConfig().fontFamily">
-                  Font đang áp dụng: <strong>{{ getFontFamilyName(getActiveTargetTypographyConfig().fontFamily)
-                    }}</strong>
+                  Font đang áp dụng: <strong>{{ getFontFamilyName(getActiveTargetTypographyConfig().fontFamily) }}</strong>
                 </span>
-                <div class="font-sample-preview mt-1 px-2 py-1 bg-light border rounded small"
-                  [style.font-family]="getActiveTargetTypographyConfig().fontFamily + ', sans-serif'">
-                  Aa Bb Cc 0123456789 Chéri
-                </div>
               </div>
 
-              <!-- 4 Thanh trượt: Cỡ chữ, Độ đậm, Khoảng cách dòng, Giãn cách chữ -->
+              <!-- 4 Thanh trượt (Font Size, Font Weight, Line Height, Letter Spacing) — Phẳng, trực tiếp -->
               <div class="cms-slider-controls-group mb-3">
                 <!-- Cỡ chữ -->
                 <div class="cms-slider-row">
                   <div class="cms-slider-label-col">
                     <span class="cms-slider-prop-name">Cỡ chữ</span>
-                    <span class="cms-slider-curr-val">{{ getActiveTargetTypographyConfig().fontSize }} px</span>
+                    <span class="cms-slider-curr-val">{{ getActiveTargetTypographyConfig().fontSize || 16 }} px</span>
                   </div>
                   <div class="cms-slider-track-col">
                     <input type="range" class="cms-range-slider" min="8" max="96" step="1"
@@ -1423,8 +1417,7 @@
                 <div class="cms-slider-row">
                   <div class="cms-slider-label-col">
                     <span class="cms-slider-prop-name">Độ đậm</span>
-                    <span class="cms-slider-curr-val">{{ getFontWeightName(getActiveTargetTypographyConfig().fontWeight)
-                      }}</span>
+                    <span class="cms-slider-curr-val">{{ getFontWeightName(getActiveTargetTypographyConfig().fontWeight) }}</span>
                   </div>
                   <div class="cms-slider-track-col">
                     <input type="range" class="cms-range-slider" min="100" max="900" step="100"
@@ -1437,7 +1430,6 @@
                         [ngModel]="getActiveTargetTypographyConfig().fontWeight"
                         (ngModelChange)="onTargetTypographyPropChange('fontWeight', $event)"
                         (blur)="validateTargetNumericProp('fontWeight', 100, 900, 400)" />
-                      <span class="cms-unit-badge">w</span>
                     </div>
                   </div>
                 </div>
@@ -1446,8 +1438,7 @@
                 <div class="cms-slider-row">
                   <div class="cms-slider-label-col">
                     <span class="cms-slider-prop-name">Khoảng cách dòng</span>
-                    <span class="cms-slider-curr-val">{{ formatDecimal(getActiveTargetTypographyConfig().lineHeight, 1)
-                      }}</span>
+                    <span class="cms-slider-curr-val">{{ formatDecimal(getActiveTargetTypographyConfig().lineHeight || 1.5, 1) }}</span>
                   </div>
                   <div class="cms-slider-track-col">
                     <input type="range" class="cms-range-slider" min="1.0" max="2.5" step="0.1"
@@ -1461,7 +1452,6 @@
                         [ngModel]="getActiveTargetTypographyConfig().lineHeight"
                         (ngModelChange)="onTargetTypographyPropChange('lineHeight', $event)"
                         (blur)="validateTargetNumericProp('lineHeight', 1.0, 2.5, 1.5)" />
-                      <span class="cms-unit-badge">em</span>
                     </div>
                   </div>
                 </div>
@@ -1470,8 +1460,7 @@
                 <div class="cms-slider-row">
                   <div class="cms-slider-label-col">
                     <span class="cms-slider-prop-name">Giãn cách chữ</span>
-                    <span class="cms-slider-curr-val">{{ formatDecimal(getActiveTargetTypographyConfig().letterSpacing,
-                      1) }} px</span>
+                    <span class="cms-slider-curr-val">{{ formatDecimal(getActiveTargetTypographyConfig().letterSpacing || 0, 1) }} px</span>
                   </div>
                   <div class="cms-slider-track-col">
                     <input type="range" class="cms-range-slider" min="-2" max="10" step="0.1"
@@ -1491,46 +1480,18 @@
                 </div>
               </div>
 
-              <!-- Biến đổi chữ & Căn lề -->
-              <div class="form-row-2">
-                <!-- Biến đổi chữ -->
+              <!-- Căn lề -->
+              <div>
+                <!-- CĂN LỀ -->
                 <div class="form-group mb-0">
-                  <label class="form-label">Biến đổi chữ (Text Transform)</label>
-                  <div class="btn-group-segmented">
-                    <button type="button" class="btn-segmented"
-                      [class.is-active]="!getActiveTargetTypographyConfig().textTransform || getActiveTargetTypographyConfig().textTransform === 'none'"
-                      (click)="onTargetTypographyPropChange('textTransform', 'none')" title="Mặc định theo văn bản">
-                      Mặc định
-                    </button>
-                    <button type="button" class="btn-segmented"
-                      [class.is-active]="getActiveTargetTypographyConfig().textTransform === 'lowercase'"
-                      (click)="onTargetTypographyPropChange('textTransform', 'lowercase')"
-                      title="Chữ thường (lowercase)">
-                      abc
-                    </button>
-                    <button type="button" class="btn-segmented"
-                      [class.is-active]="getActiveTargetTypographyConfig().textTransform === 'uppercase'"
-                      (click)="onTargetTypographyPropChange('textTransform', 'uppercase')" title="CHỮ HOA (uppercase)">
-                      ABC
-                    </button>
-                    <button type="button" class="btn-segmented"
-                      [class.is-active]="getActiveTargetTypographyConfig().textTransform === 'capitalize'"
-                      (click)="onTargetTypographyPropChange('textTransform', 'capitalize')"
-                      title="Viết hoa chữ cái đầu (capitalize)">
-                      Abc
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Căn lề -->
-                <div class="form-group mb-0">
-                  <label class="form-label">Căn lề (Text Align)</label>
+                  <label class="form-label">Căn lề (Text Alignment)</label>
                   <div class="btn-group-segmented">
                     <button type="button" class="btn-segmented"
                       [class.is-active]="!getActiveTargetTypographyConfig().textAlign || getActiveTargetTypographyConfig().textAlign === 'left'"
-                      (click)="onTargetTypographyPropChange('textAlign', 'left')" title="Căn trái">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="1.8" class="me-1">
+                      (click)="onTargetTypographyPropChange('textAlign', 'left')"
+                      title="Căn lề trái">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                        class="me-1">
                         <line x1="17" y1="10" x2="3" y2="10"></line>
                         <line x1="21" y1="6" x2="3" y2="6"></line>
                         <line x1="21" y1="14" x2="3" y2="14"></line>
@@ -1540,21 +1501,23 @@
                     </button>
                     <button type="button" class="btn-segmented"
                       [class.is-active]="getActiveTargetTypographyConfig().textAlign === 'center'"
-                      (click)="onTargetTypographyPropChange('textAlign', 'center')" title="Căn giữa">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="1.8" class="me-1">
+                      (click)="onTargetTypographyPropChange('textAlign', 'center')"
+                      title="Căn lề giữa">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                        class="me-1">
                         <line x1="18" y1="10" x2="6" y2="10"></line>
                         <line x1="21" y1="6" x2="3" y2="6"></line>
-                        <line x1="21" y1="14" x2="3" y2="14"></line>
-                        <line x1="18" y1="18" x2="6" y2="18"></line>
+                        <line x1="18" y1="14" x2="6" y2="14"></line>
+                        <line x1="21" y1="18" x2="3" y2="18"></line>
                       </svg>
                       <span>Giữa</span>
                     </button>
                     <button type="button" class="btn-segmented"
                       [class.is-active]="getActiveTargetTypographyConfig().textAlign === 'right'"
-                      (click)="onTargetTypographyPropChange('textAlign', 'right')" title="Căn phải">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="1.8" class="me-1">
+                      (click)="onTargetTypographyPropChange('textAlign', 'right')"
+                      title="Căn lề phải">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                        class="me-1">
                         <line x1="21" y1="10" x2="7" y2="10"></line>
                         <line x1="21" y1="6" x2="3" y2="6"></line>
                         <line x1="21" y1="14" x2="3" y2="14"></line>
@@ -1564,11 +1527,12 @@
                     </button>
                     <button type="button" class="btn-segmented"
                       [class.is-active]="getActiveTargetTypographyConfig().textAlign === 'justify'"
-                      (click)="onTargetTypographyPropChange('textAlign', 'justify')" title="Căn đều">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="1.8" class="me-1">
-                        <line x1="21" y1="10" x2="3" y2="10"></line>
+                      (click)="onTargetTypographyPropChange('textAlign', 'justify')"
+                      title="Căn đều hai bên">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                        class="me-1">
                         <line x1="21" y1="6" x2="3" y2="6"></line>
+                        <line x1="21" y1="10" x2="3" y2="10"></line>
                         <line x1="21" y1="14" x2="3" y2="14"></line>
                         <line x1="21" y1="18" x2="3" y2="18"></line>
                       </svg>
@@ -1579,68 +1543,69 @@
               </div>
             </div>
 
-            <!-- NHÓM 2: MÀU SẮC (COLORS) — Phẳng, ngăn cách bằng border-top -->
-            <div class="element-color-section pt-3 border-top mb-4">
-              <div class="form-group mb-3">
-                <label class="form-label mb-1">Màu chữ (Text Color)</label>
-                <div class="d-flex align-items-center gap-2">
-                  <div class="color-swatch-box" [style.background-color]="getActiveTargetColor()"
-                    title="Xem trước màu chữ"></div>
-                  <label class="color-picker-btn mb-0" title="Mở bảng chọn màu trực quan">
-                    <input type="color" class="color-native-input" [value]="getActiveTargetColorPickerValue()"
-                      (input)="onTargetColorPickerChange($any($event.target).value)" />
-                    <span>Chọn màu</span>
-                  </label>
-                  <div class="hex-input-wrap flex-grow-1">
-                    <input type="text" class="form-control form-control-sm hex-text-input" placeholder="#74070E"
-                      maxlength="7" [value]="getActiveTargetColor()"
-                      (input)="onTargetHexChange($any($event.target).value)" />
-                  </div>
+            <!-- Nhóm 2: Màu sắc (Colors) — Hiển thị phẳng, bỏ hoàn toàn element-color-config-box lồng nhau -->
+            <div class="element-color-section pt-3 border-top">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="form-label mb-0">Màu chữ (Text Color)</label>
+                <button type="button" class="btn-link-action btn-link-reset" (click)="onResetCurrentTargetElementColor()"
+                  title="Khôi phục màu của trường này về mặc định">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                    <polyline points="1 4 1 10 7 10"></polyline>
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                  </svg>
+                  <span>Khôi phục màu</span>
+                </button>
+              </div>
+
+              <div class="color-prop-control-row">
+                <div class="color-swatch-box" [style.background-color]="getActiveTargetColor()" title="Xem trước màu">
                 </div>
-                <div class="color-error-text text-danger small mt-1" *ngIf="colorErrors[activeTarget.id]">
-                  {{ colorErrors[activeTarget.id] }}
+                <label class="color-picker-btn" title="Mở bảng chọn màu tùy chỉnh">
+                  <input type="color" class="color-native-input" [value]="getActiveTargetColorPickerValue()"
+                    (input)="onTargetColorPickerChange($any($event.target).value)" />
+                  <span>Chọn màu</span>
+                </label>
+                <div class="hex-input-wrap flex-grow-1">
+                  <input type="text" class="form-control form-control-sm hex-text-input" placeholder="#74070E"
+                    maxlength="7" [value]="getActiveTargetColor()"
+                    (input)="onTargetHexChange($any($event.target).value)" />
                 </div>
               </div>
 
-              <!-- Bảng màu Chéri -->
-              <div class="form-group mb-3">
-                <label class="form-label mb-1">Bảng màu thương hiệu Chéri</label>
-                <div class="brand-swatches-grid">
-                  <button type="button" *ngFor="let sw of brandColorPalette" class="brand-swatch-btn"
-                    [class.is-selected]="getActiveTargetColor().toLowerCase() === sw.hex.toLowerCase()"
-                    [style.background-color]="sw.hex" [title]="sw.label + ' (' + sw.hex + ')'"
-                    (click)="onApplyTargetBrandColor(sw.hex)">
-                    <span class="swatch-check" *ngIf="getActiveTargetColor().toLowerCase() === sw.hex.toLowerCase()">
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2.5">
-                        <polyline points="20 6 9 17 4 12"></polyline>
-                      </svg>
-                    </span>
+              <!-- Error message if HEX invalid (bỏ emoji) -->
+              <div class="color-error-msg mt-1" *ngIf="colorErrors[activeTarget.id]">
+                {{ colorErrors[activeTarget.id] }}
+              </div>
+
+              <!-- 8 GỢI Ý MÀU THƯƠNG HIỆU CHÉRI -->
+              <div class="cheri-brand-palette mt-3">
+                <span class="palette-title">Bảng màu nhận diện Chéri:</span>
+                <div class="cheri-presets-pills">
+                  <button type="button" *ngFor="let cp of cheriColorPresets" class="cheri-preset-pill"
+                    [title]="cp.name + ' (' + cp.hex + ')'" (click)="onApplyTargetBrandColor(cp.hex)">
+                    <span class="cheri-preset-dot" [style.background-color]="cp.hex"></span>
+                    <span class="cheri-preset-name">{{ cp.label }}</span>
+                    <span class="cheri-preset-hex">{{ cp.hex }}</span>
                   </button>
                 </div>
               </div>
 
-              <!-- Màu nền nút (Nếu trường là Button) -->
-              <div class="form-group mb-0" *ngIf="activeTarget.role === 'button' || activeTarget.isButton">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                  <label class="form-label mb-0">Màu nền nút (Button Background)</label>
-                  <button type="button" class="btn-link-action" (click)="onResetTargetButtonBg()"
-                    title="Đặt lại màu nền nút về mặc định">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                      stroke-width="1.6">
-                      <polyline points="1 4 1 10 7 10"></polyline>
-                      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
-                    </svg>
-                    <span>Đặt lại nền nút</span>
+              <!-- Nếu là Button, cho phép cấu hình màu nền nút CTA nữa -->
+              <div class="mt-3 pt-3 border-top" *ngIf="activeTarget.role === 'button' || activeTarget.isButton">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <label class="form-label mb-0">Màu nền nút liên kết (Button Background)</label>
+                  <button type="button" class="btn-link-action btn-link-reset"
+                    (click)="onResetTargetButtonBg()" title="Khôi phục màu nền nút về mặc định">
+                    <span>Mặc định</span>
                   </button>
                 </div>
-                <div class="d-flex align-items-center gap-2">
+                <div class="color-prop-control-row">
                   <div class="color-swatch-box" [style.background-color]="getActiveTargetButtonBg()"
-                    title="Xem trước màu nền nút"></div>
-                  <label class="color-picker-btn mb-0" title="Mở bảng chọn màu nền nút">
+                    title="Xem trước màu nền"></div>
+                  <label class="color-picker-btn" title="Mở bảng chọn màu nền">
                     <input type="color" class="color-native-input" [value]="getActiveTargetButtonBgPickerValue()"
                       (input)="onTargetButtonBgPickerChange($any($event.target).value)" />
-                    <span>Chọn màu nền</span>
+                    <span>Chọn màu</span>
                   </label>
                   <div class="hex-input-wrap flex-grow-1">
                     <input type="text" class="form-control form-control-sm hex-text-input" placeholder="#74070E"
@@ -1649,10 +1614,43 @@
                   </div>
                 </div>
               </div>
-            </div>
 
+            </div>
           </div>
         </div>
+
+        <!-- MÀU NỀN PHÂN ĐOẠN (BACKGROUND PHÂN ĐOẠN) -->
+        <div class="cms-config-section mb-4">
+          <div class="cms-config-section__header d-flex justify-content-between align-items-center mb-2">
+            <div>
+              <h5 class="cms-config-section__title mb-0">Màu nền phân đoạn</h5>
+            </div>
+            <button type="button" class="btn-link-action btn-link-reset"
+              (click)="onResetColorProperty('backgroundColor')" title="Khôi phục màu nền về mặc định">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                <polyline points="1 4 1 10 7 10"></polyline>
+                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+              </svg>
+              <span>Khôi phục màu nền</span>
+            </button>
+          </div>
+
+          <div class="color-prop-control-row mt-3">
+            <div class="color-swatch-box" [style.background-color]="getCurrentColor('backgroundColor')"
+              title="Xem trước màu nền"></div>
+            <label class="color-picker-btn" title="Mở bảng chọn màu nền">
+              <input type="color" class="color-native-input" [value]="getColorPickerValue('backgroundColor')"
+                (input)="onColorPickerChange('backgroundColor', $any($event.target).value)" />
+              <span>Chọn màu</span>
+            </label>
+            <div class="hex-input-wrap flex-grow-1">
+              <input type="text" class="form-control form-control-sm hex-text-input" placeholder="#FFFFFF" maxlength="7"
+                [value]="getCurrentColor('backgroundColor')"
+                (input)="onHexInputChange('backgroundColor', $any($event.target).value)" />
+            </div>
+          </div>
+        </div>
+
       </div>
 
       <!-- ── TAB 4: HIỆU ỨNG (ANIMATION & MOTION PRESETS) ── -->

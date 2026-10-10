@@ -119,6 +119,22 @@ export class AboutComponent implements OnInit, OnDestroy {
       description: 'Đoạn văn bản miêu tả chi tiết thông điệp',
     },
     {
+      key: 'eyebrow',
+      label: 'Dòng mở đầu (Eyebrow)',
+      typoElementKey: 'eyebrow',
+      colorKey: 'subtitleColor',
+      icon: 'T0',
+      description: 'Dòng chữ mở đầu trước tiêu đề chính',
+    },
+    {
+      key: 'author',
+      label: 'Tác giả / Người phát ngôn',
+      typoElementKey: 'subheading',
+      colorKey: 'subtitleColor',
+      icon: '—',
+      description: 'Tác giả trích dẫn hoặc người phát ngôn',
+    },
+    {
       key: 'buttonText',
       label: 'Văn bản nút liên kết',
       typoElementKey: 'button',
@@ -130,7 +146,7 @@ export class AboutComponent implements OnInit, OnDestroy {
 
   activeContentFieldKey: string = 'title';
 
-  // ── Modal Thêm Phân Đoạn Mới (QUY TẮC: Chỉ 1 lựa chọn duy nhất "Phân Đoạn Mới") ──
+  // ── Modal Thêm Phân Đoạn Mới (5 loại phân đoạn chuẩn hóa cho About CMS) ──
   isAddModalOpen = false;
   sectionTypeOptions: SectionTypeOption[] = ABOUT_SECTION_TYPE_OPTIONS;
 
@@ -273,6 +289,7 @@ export class AboutComponent implements OnInit, OnDestroy {
     }
 
     for (const sec of enabledSecs) {
+      if (sec.type === 'spacer') continue;
       const name = sec.name || 'Phân đoạn';
       const hasImg = !!sec.media?.desktop?.url?.trim();
       const hasTitle = !!sec.content?.title?.trim();
@@ -379,7 +396,8 @@ export class AboutComponent implements OnInit, OnDestroy {
   onDuplicateSection(section: AboutSection, event: MouseEvent): void {
     event.stopPropagation();
     const cloned: AboutSection = JSON.parse(JSON.stringify(section));
-    cloned.id = `sec-about-${Date.now().toString(36)}`;
+    const randSuffix = Math.random().toString(36).substring(2, 7);
+    cloned.id = `sec-about-${section.type}-${Date.now().toString(36)}-${randSuffix}`;
     cloned.name = `${section.name} (Bản sao)`;
     cloned.order = this.sections.length + 1;
     this.ensureSectionTypography(cloned);
@@ -809,7 +827,7 @@ export class AboutComponent implements OnInit, OnDestroy {
 
   getSectionTypeName(type: AboutSectionType): string {
     const opt = this.sectionTypeOptions.find((o) => o.type === type);
-    return opt ? opt.name : 'Phân Đoạn Mới';
+    return opt ? opt.name : 'Phân đoạn';
   }
 
   // ── Quản lý Cấu hình Typography (Font Chữ & Kiểu Chữ) ───────────
@@ -860,6 +878,8 @@ export class AboutComponent implements OnInit, OnDestroy {
           { key: 'body', label: 'Đoạn mô tả (Body)' },
           { key: 'button', label: 'Nút kêu gọi (CTA Button)' },
         ];
+      case 'spacer':
+        return [];
       default:
         return [
           { key: 'heading', label: 'Tiêu đề chính (Heading)' },
@@ -950,11 +970,11 @@ export class AboutComponent implements OnInit, OnDestroy {
     if (!section) return this.allContentFields;
     switch (section.type) {
       case 'editorial':
-        return this.allContentFields;
+        return this.allContentFields.filter((f) => f.key !== 'eyebrow' && f.key !== 'author');
       case 'image-text':
-      case 'hero':
-      case 'banner':
-        return this.allContentFields.filter((f) => f.key !== 'quote' && f.key !== 'tagline2');
+        return this.allContentFields.filter(
+          (f) => f.key === 'eyebrow' || f.key === 'title' || f.key === 'description' || f.key === 'buttonText'
+        );
       case 'quote':
         return [
           {
@@ -966,18 +986,20 @@ export class AboutComponent implements OnInit, OnDestroy {
             description: 'Khối trích dẫn nghệ thuật hoặc thông điệp',
           },
           {
-            key: 'tagline1',
-            label: 'Tác giả / Nguồn phát ngôn',
+            key: 'author',
+            label: 'Tác giả / Người phát ngôn',
             typoElementKey: 'subheading',
             colorKey: 'subtitleColor',
             icon: '—',
-            description: 'Tác giả trích dẫn hoặc nguồn phát ngôn',
+            description: 'Tác giả trích dẫn hoặc người phát ngôn',
           },
         ];
       case 'cta':
         return this.allContentFields.filter(
           (f) => f.key === 'title' || f.key === 'description' || f.key === 'buttonText'
         );
+      case 'spacer':
+        return [];
       default:
         return this.allContentFields;
     }

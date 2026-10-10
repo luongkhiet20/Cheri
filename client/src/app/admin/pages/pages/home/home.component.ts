@@ -256,7 +256,6 @@ export class HomeComponent implements OnInit, OnDestroy {
           this.sections = serverSections;
           this.lastPublishedAt = res.data?.publishedAt ? new Date(res.data.publishedAt) : null;
           this.hasUnsavedChanges = false;
-          this.notificationService.info('Đã tải cấu hình Trang chủ xuất bản từ cơ sở dữ liệu');
         } else {
           // Khởi tạo từ mẫu chuẩn nếu cơ sở dữ liệu hoàn toàn trống
           this.sections = JSON.parse(JSON.stringify(INITIAL_HOME_SECTIONS));
@@ -297,7 +296,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     });
 
     this.hasUnsavedChanges = true;
-    this.notificationService.info('Đã cập nhật thứ tự các section');
+    this.notificationService.success('Đã cập nhật thứ tự các section');
     this.triggerAnimationPreview();
     this.cdr.markForCheck();
   }
@@ -433,9 +432,10 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
 
     if (this.checkForLargeBase64(this.sections)) {
-      this.notificationService.warning(
-        'Phát hiện một số ảnh đang ở dạng dữ liệu tạm thời. Khuyến nghị tải ảnh lên máy chủ qua nút Tải ảnh để đảm bảo tốc độ tối ưu.'
+      this.notificationService.error(
+        'Phát hiện một số ảnh đang ở dạng dữ liệu tạm thời. Vui lòng tải ảnh lên máy chủ qua nút Tải ảnh trước khi xuất bản.'
       );
+      return;
     }
 
     this.isPublishing = true;
@@ -478,7 +478,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     const msg = section.enabled
       ? `Đã bật hiển thị "${section.name}"`
       : `Đã ẩn section "${section.name}"`;
-    this.notificationService.info(msg);
+    this.notificationService.success(msg);
     this.cdr.markForCheck();
   }
 
@@ -814,7 +814,6 @@ export class HomeComponent implements OnInit, OnDestroy {
       this.isUploadingMobile = true;
     }
     this.cdr.markForCheck();
-    this.notificationService.info(`Đang tải ảnh ${target === 'desktop' ? 'Desktop' : 'Mobile'} lên máy chủ...`);
 
     this.apiService.uploadImage({ fileToUpload: file, titleUrl: '' }).subscribe({
       next: (res: any) => {
@@ -876,7 +875,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       this.selectedSection.media.mobile = null;
     }
     this.hasUnsavedChanges = true;
-    this.notificationService.info('Đã gỡ bỏ ảnh');
+    this.notificationService.success('Đã gỡ bỏ ảnh');
     this.cdr.markForCheck();
   }
 
@@ -1118,7 +1117,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     };
     slides.push(newSlide);
     this.hasUnsavedChanges = true;
-    this.notificationService.info('Đã thêm 1 slide mới');
+    this.notificationService.success('Đã thêm 1 slide mới');
     this.triggerAnimationPreview();
     this.cdr.markForCheck();
   }
@@ -1133,7 +1132,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       this.activeSlideIndices[this.selectedSection.id] = Math.max(0, slides.length - 1);
     }
     this.hasUnsavedChanges = true;
-    this.notificationService.info('Đã xóa slide khỏi Carousel');
+    this.notificationService.success('Đã xóa slide khỏi Carousel');
     this.triggerAnimationPreview();
     this.cdr.markForCheck();
   }
@@ -1146,7 +1145,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     const [moved] = slides.splice(fromIndex, 1);
     slides.splice(toIndex, 0, moved);
     this.hasUnsavedChanges = true;
-    this.notificationService.info('Đã đổi thứ tự slide');
+    this.notificationService.success('Đã đổi thứ tự slide');
     this.triggerAnimationPreview();
     this.cdr.markForCheck();
   }
@@ -1157,7 +1156,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     if (event.previousIndex === event.currentIndex) return;
     moveItemInArray(slides, event.previousIndex, event.currentIndex);
     this.hasUnsavedChanges = true;
-    this.notificationService.info('Đã cập nhật thứ tự các slide');
+    this.notificationService.success('Đã cập nhật thứ tự các slide');
     this.triggerAnimationPreview();
     this.cdr.markForCheck();
   }
@@ -1178,7 +1177,6 @@ export class HomeComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.notificationService.info('Đang tải ảnh thay thế lên máy chủ...');
     this.apiService.uploadImage({ fileToUpload: file, titleUrl: '' }).subscribe({
       next: (res: any) => {
         const uploadedUrl = this.extractUploadedImageUrl(res);
@@ -1249,7 +1247,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   onToggleSlideEnabled(slide: CarouselSlideItem, event: MouseEvent): void {
     event.stopPropagation();
     slide.enabled = !slide.enabled;
-    this.notificationService.info(slide.enabled ? 'Đã bật hiển thị slide' : 'Đã ẩn slide');
+    this.notificationService.success(slide.enabled ? 'Đã bật hiển thị slide' : 'Đã ẩn slide');
     this.cdr.markForCheck();
   }
 
@@ -1822,7 +1820,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
     this.hasUnsavedChanges = true;
     this.triggerAnimationPreview();
-    this.notificationService.info('Đã khôi phục toàn bộ font chữ trang chủ về cấu hình mặc định Chéri.');
+    this.notificationService.success('Đã khôi phục toàn bộ font chữ trang chủ về cấu hình mặc định Chéri.');
     this.cdr.markForCheck();
   }
 
@@ -1855,7 +1853,7 @@ export class HomeComponent implements OnInit, OnDestroy {
 
     this.hasUnsavedChanges = true;
     this.triggerAnimationPreview();
-    this.notificationService.info('Đã khôi phục màu chữ của tất cả các phần tử về mặc định.');
+    this.notificationService.success('Đã khôi phục màu chữ của tất cả các phần tử về mặc định.');
     this.cdr.markForCheck();
   }
 
@@ -2059,7 +2057,7 @@ export class HomeComponent implements OnInit, OnDestroy {
         const colorKey = target.fieldKey === 'title' ? 'titleColor' : 'descriptionColor';
         if (slide.colors) delete slide.colors[colorKey];
         this.hasUnsavedChanges = true;
-        this.notificationService.info(`Đã đặt lại kiểu chữ & màu của ${target.fieldLabel}`);
+        this.notificationService.success(`Đã đặt lại kiểu chữ & màu của ${target.fieldLabel}`);
         this.triggerAnimationPreview();
         this.cdr.markForCheck();
         return;
@@ -2083,7 +2081,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
 
     this.hasUnsavedChanges = true;
-    this.notificationService.info(`Đã đặt lại kiểu chữ & màu của ${target.fieldLabel}`);
+    this.notificationService.success(`Đã đặt lại kiểu chữ & màu của ${target.fieldLabel}`);
     this.triggerAnimationPreview();
     this.cdr.markForCheck();
   }
@@ -2100,7 +2098,7 @@ export class HomeComponent implements OnInit, OnDestroy {
         const colorKey = target.fieldKey === 'title' ? 'titleColor' : 'descriptionColor';
         delete slide.colors[colorKey];
         this.hasUnsavedChanges = true;
-        this.notificationService.info(`Đã khôi phục màu mặc định cho ${target.fieldLabel}`);
+        this.notificationService.success(`Đã khôi phục màu mặc định cho ${target.fieldLabel}`);
         this.triggerAnimationPreview();
         this.cdr.markForCheck();
         return;
@@ -2116,7 +2114,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
 
     this.hasUnsavedChanges = true;
-    this.notificationService.info(`Đã khôi phục màu mặc định cho ${target.fieldLabel}`);
+    this.notificationService.success(`Đã khôi phục màu mặc định cho ${target.fieldLabel}`);
     this.triggerAnimationPreview();
     this.cdr.markForCheck();
   }
@@ -2178,7 +2176,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     const colors = this.ensureSectionColors(section);
     colors.buttonBackgroundColor = defaults.buttonBackgroundColor || '#74070E';
     this.hasUnsavedChanges = true;
-    this.notificationService.info('Đã đặt lại màu nền nút về mặc định');
+    this.notificationService.success('Đã đặt lại màu nền nút về mặc định');
     this.triggerAnimationPreview();
     this.cdr.markForCheck();
   }
@@ -2494,7 +2492,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     const colors = this.ensureSectionColors(this.selectedSection);
     colors[prop] = defaults[prop] || '#1A1A1A';
     delete this.colorErrors[prop as string];
-    this.notificationService.info(`Đã khôi phục ${this.getColorPropertyLabel(prop)} về mặc định`);
+    this.notificationService.success(`Đã khôi phục ${this.getColorPropertyLabel(prop)} về mặc định`);
     this.triggerAnimationPreview();
     this.cdr.markForCheck();
   }
@@ -2503,7 +2501,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     if (!this.selectedSection) return;
     this.selectedSection.colors = JSON.parse(JSON.stringify(getDefaultColorsForType(this.selectedSection.type)));
     this.colorErrors = {};
-    this.notificationService.info('Đã khôi phục tất cả màu sắc của section về mặc định');
+    this.notificationService.success('Đã khôi phục tất cả màu sắc của section về mặc định');
     this.triggerAnimationPreview();
     this.cdr.markForCheck();
   }
@@ -2522,7 +2520,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     if (!this.selectedSection) return;
     this.onResetSectionTypography();
     this.onResetAllColors();
-    this.notificationService.info('Đã khôi phục toàn bộ Kiểu chữ & Màu sắc về mặc định');
+    this.notificationService.success('Đã khôi phục toàn bộ Kiểu chữ & Màu sắc về mặc định');
     this.triggerAnimationPreview();
     this.cdr.markForCheck();
   }

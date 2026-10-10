@@ -204,7 +204,6 @@ export class AboutComponent implements OnInit, OnDestroy {
           this.sections = serverSections;
           this.lastPublishedAt = res.data?.publishedAt ? new Date(res.data.publishedAt) : null;
           this.hasUnsavedChanges = false;
-          this.notificationService.info('Đã tải cấu hình trang Giới thiệu (About) từ cơ sở dữ liệu');
         } else {
           this.sections = JSON.parse(JSON.stringify(INITIAL_ABOUT_SECTIONS));
           this.hasUnsavedChanges = false;
@@ -251,7 +250,7 @@ export class AboutComponent implements OnInit, OnDestroy {
     });
 
     this.hasUnsavedChanges = true;
-    this.notificationService.info('Đã cập nhật thứ tự các phân đoạn');
+    this.notificationService.success('Đã cập nhật thứ tự các phân đoạn');
     this.triggerAnimationPreview();
     this.cdr.markForCheck();
   }
@@ -295,9 +294,10 @@ export class AboutComponent implements OnInit, OnDestroy {
     }
 
     if (this.checkForLargeBase64(this.sections)) {
-      this.notificationService.warning(
-        'Phát hiện một số ảnh đang ở dạng tạm thời. Khuyến nghị tải ảnh lên máy chủ qua nút Tải ảnh để đảm bảo tốc độ tối ưu.'
+      this.notificationService.error(
+        'Phát hiện một số ảnh đang ở dạng tạm thời. Vui lòng tải ảnh lên máy chủ qua nút Tải ảnh trước khi xuất bản.'
       );
+      return;
     }
 
     this.isPublishing = true;
@@ -339,7 +339,7 @@ export class AboutComponent implements OnInit, OnDestroy {
     const msg = section.enabled
       ? `Đã bật hiển thị "${section.name}"`
       : `Đã ẩn phân đoạn "${section.name}"`;
-    this.notificationService.info(msg);
+    this.notificationService.success(msg);
     this.hasUnsavedChanges = true;
     this.cdr.markForCheck();
   }
@@ -667,7 +667,6 @@ export class AboutComponent implements OnInit, OnDestroy {
       this.isUploadingMobile = true;
     }
     this.cdr.markForCheck();
-    this.notificationService.info(`Đang tải ảnh ${target === 'desktop' ? 'Desktop' : 'Mobile'} lên máy chủ...`);
 
     this.apiService.uploadImage({ fileToUpload: file, titleUrl: '' }).subscribe({
       next: (res: any) => {
@@ -729,7 +728,7 @@ export class AboutComponent implements OnInit, OnDestroy {
       this.selectedSection.media.mobile = null;
     }
     this.hasUnsavedChanges = true;
-    this.notificationService.info(`Đã gỡ ảnh ${target === 'desktop' ? 'Desktop' : 'Mobile'}`);
+    this.notificationService.success(`Đã gỡ ảnh ${target === 'desktop' ? 'Desktop' : 'Mobile'}`);
     this.triggerAnimationPreview();
     this.cdr.markForCheck();
   }
@@ -1109,7 +1108,7 @@ export class AboutComponent implements OnInit, OnDestroy {
       JSON.stringify(getDefaultTypographyForType(this.selectedSection.type))
     );
     this.hasUnsavedChanges = true;
-    this.notificationService.info('Đã khôi phục cài đặt kiểu chữ mặc định cho phân đoạn');
+    this.notificationService.success('Đã khôi phục cài đặt kiểu chữ mặc định cho phân đoạn');
     this.triggerAnimationPreview();
     this.cdr.markForCheck();
   }
@@ -1125,7 +1124,7 @@ export class AboutComponent implements OnInit, OnDestroy {
       typo[key] = { fontFamily: 'inherit' };
     }
     this.hasUnsavedChanges = true;
-    this.notificationService.info(`Đã khôi phục font mặc định cho ${this.getElementLabel(key)}`);
+    this.notificationService.success(`Đã khôi phục font mặc định cho ${this.getElementLabel(key)}`);
     this.triggerAnimationPreview();
     this.cdr.markForCheck();
   }
@@ -1293,7 +1292,7 @@ export class AboutComponent implements OnInit, OnDestroy {
     colors[prop] = defaults[prop] || '#1A1A1A';
     delete this.colorErrors[prop as string];
     this.hasUnsavedChanges = true;
-    this.notificationService.info(`Đã khôi phục ${this.getColorPropertyLabel(prop)} về mặc định`);
+    this.notificationService.success(`Đã khôi phục ${this.getColorPropertyLabel(prop)} về mặc định`);
     this.triggerAnimationPreview();
     this.cdr.markForCheck();
   }
@@ -1303,7 +1302,7 @@ export class AboutComponent implements OnInit, OnDestroy {
     this.selectedSection.colors = JSON.parse(JSON.stringify(getDefaultColorsForType(this.selectedSection.type)));
     this.colorErrors = {};
     this.hasUnsavedChanges = true;
-    this.notificationService.info('Đã khôi phục tất cả màu sắc của phân đoạn về mặc định');
+    this.notificationService.success('Đã khôi phục tất cả màu sắc của phân đoạn về mặc định');
     this.triggerAnimationPreview();
     this.cdr.markForCheck();
   }
@@ -1313,7 +1312,7 @@ export class AboutComponent implements OnInit, OnDestroy {
     this.onResetSectionTypography();
     this.onResetAllColors();
     this.hasUnsavedChanges = true;
-    this.notificationService.info('Đã khôi phục toàn bộ Kiểu chữ & Màu sắc về mặc định');
+    this.notificationService.success('Đã khôi phục toàn bộ Kiểu chữ & Màu sắc về mặc định');
     this.triggerAnimationPreview();
     this.cdr.markForCheck();
   }

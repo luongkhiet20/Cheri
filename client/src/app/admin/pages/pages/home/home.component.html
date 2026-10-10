@@ -1310,33 +1310,6 @@
             </button>
           </div>
 
-          <!-- Bộ chọn phân đoạn & trường nội dung (2 Dropdowns phẳng) -->
-          <div class="form-row-2 mb-3">
-            <div class="form-group mb-0">
-              <label class="form-label" for="homeTargetSecSelect">Phân đoạn (Section)</label>
-              <select id="homeTargetSecSelect" class="form-control form-control-sm" [ngModel]="activeTargetSectionId"
-                (ngModelChange)="onSelectTargetSection($event)">
-                <option *ngFor="let sec of pageDoc.sections" [value]="sec.id">
-                  {{ sec.name || (sec.type | uppercase) }} ({{ sec.type }})
-                </option>
-              </select>
-            </div>
-
-            <div class="form-group mb-0">
-              <label class="form-label" for="homeTargetFieldSelect">Trường nội dung</label>
-              <select id="homeTargetFieldSelect" class="form-control form-control-sm" [ngModel]="activeTargetId"
-                (ngModelChange)="onSelectTarget($event)">
-                <ng-container *ngFor="let grp of configurableSectionGroups">
-                  <optgroup *ngIf="grp.sectionId === activeTargetSectionId" [label]="grp.sectionName">
-                    <option *ngFor="let t of grp.targets" [value]="t.id">
-                      {{ t.fieldLabel || t.label }} ({{ t.typoElementKey || t.role }})
-                    </option>
-                  </optgroup>
-                </ng-container>
-              </select>
-            </div>
-          </div>
-
           <!-- Pills chọn nhanh các trường của Section đang chọn (Phẳng, không lồng card) -->
           <div class="content-fields-selector mb-3">
             <!-- Nếu là Carousel -->
@@ -1373,7 +1346,7 @@
           <div class="element-field-toolbar d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom"
             *ngIf="activeTarget">
             <div class="d-flex align-items-center gap-2">
-              <span class="field-indicator-dot"></span>
+
               <strong class="field-title">{{ activeTarget.sectionName }} → {{ activeTarget.fieldLabel ||
                 activeTarget.label }}</strong>
               <span class="field-desc text-muted d-none d-md-inline">({{ activeTarget.typoElementKey ||
@@ -1422,7 +1395,7 @@
                 </span>
                 <div class="font-sample-preview mt-1 px-2 py-1 bg-light border rounded small"
                   [style.font-family]="getActiveTargetTypographyConfig().fontFamily + ', sans-serif'">
-                  Aa Bb Cc 0123456789 — Vẻ đẹp thanh lịch &amp; quyến rũ Chéri
+                  Aa Bb Cc 0123456789 Chéri
                 </div>
               </div>
 
@@ -1682,76 +1655,6 @@
               </div>
             </div>
 
-            <!-- NHÓM 3: BẢN XEM TRƯỚC TRỰC TIẾP (LIVE PREVIEW) — Phẳng, gọn -->
-            <div class="element-live-preview-box p-3 border rounded">
-              <div
-                class="element-live-preview-header d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
-                <div class="d-flex align-items-center gap-2">
-                  <span class="preview-dot"></span>
-                  <strong class="small text-uppercase text-wine">Bản xem trước trực tiếp</strong>
-                  <span class="badge badge-light border text-muted" style="font-size: 0.7rem;">{{
-                    activeTarget.fieldLabel || activeTarget.label }}</span>
-                </div>
-                <small class="text-muted" style="font-size: 0.72rem;">
-                  {{ getActiveTargetTypographyConfig().fontFamily }} • {{ getActiveTargetTypographyConfig().fontSize
-                  }}px • {{ getActiveTargetTypographyConfig().fontWeight }}
-                </small>
-              </div>
-
-              <!-- Live Preview Stage with Adaptive Background -->
-              <div class="element-live-preview-stage p-3 rounded text-center"
-                [style.background-color]="getPreviewStageBgColor()">
-                <!-- Hero / Heading Role -->
-                <div *ngIf="activeTarget.role === 'heading'" class="preview-role-heading">
-                  <h1 class="m-0" [ngStyle]="getActiveTargetStyle()">
-                    {{ getActiveTargetSampleText() }}
-                  </h1>
-                </div>
-
-                <!-- Eyebrow Role -->
-                <div *ngIf="activeTarget.role === 'eyebrow'" class="preview-role-eyebrow">
-                  <span class="text-uppercase" [ngStyle]="getActiveTargetStyle()">
-                    {{ getActiveTargetSampleText() }}
-                  </span>
-                </div>
-
-                <!-- Body / Description Role -->
-                <div *ngIf="activeTarget.role === 'body'" class="preview-role-body">
-                  <p class="m-0" [ngStyle]="getActiveTargetStyle()">
-                    {{ getActiveTargetSampleText() }}
-                  </p>
-                </div>
-
-                <!-- Quote Role -->
-                <div *ngIf="activeTarget.role === 'quote'" class="preview-role-quote">
-                  <blockquote class="m-0 fst-italic" [ngStyle]="getActiveTargetStyle()">
-                    “{{ getActiveTargetSampleText() }}”
-                  </blockquote>
-                </div>
-
-                <!-- Tagline Role -->
-                <div *ngIf="activeTarget.role === 'tagline'" class="preview-role-tagline">
-                  <div [ngStyle]="getActiveTargetStyle()">
-                    {{ getActiveTargetSampleText() }}
-                  </div>
-                </div>
-
-                <!-- Author Role -->
-                <div *ngIf="activeTarget.role === 'author'" class="preview-role-author">
-                  <cite class="m-0" [ngStyle]="getActiveTargetStyle()">
-                    — {{ getActiveTargetSampleText() }}
-                  </cite>
-                </div>
-
-                <!-- Button Role -->
-                <div *ngIf="activeTarget.role === 'button' || activeTarget.isButton" class="preview-role-button-wrap">
-                  <button type="button" class="btn-role-preview" [ngStyle]="getActiveTargetStyle()"
-                    [style.background-color]="getActiveTargetButtonBg()">
-                    {{ getActiveTargetSampleText() }}
-                  </button>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -1778,7 +1681,7 @@
         <!-- CUSTOM ANIMATION SELECTOR -->
         <div class="custom-anim-section mt-4">
           <div class="d-flex justify-content-between align-items-center mb-2">
-            <label class="form-label mb-0">Kiểu Hiệu Ứng (Animation Preset)</label>
+            <label class="form-label mb-0">Kiểu Hiệu Ứng </label>
             <button type="button" class="btn-link-action" (click)="onSwitchToCustomAnimation()">
               Tự chỉnh chi tiết
             </button>
@@ -1792,12 +1695,12 @@
 
         <div class="form-row-2 mt-3">
           <div class="form-group">
-            <label class="form-label" for="animDur">Thời lượng (Duration: ms)</label>
+            <label class="form-label" for="animDur">Thời lượng (ms)</label>
             <input type="number" id="animDur" class="form-control" [ngModel]="selectedSection.animation?.duration"
               min="200" max="3000" step="50" (ngModelChange)="onCustomAnimationDurationChange($event)" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="animDelay">Độ trễ (Delay: ms)</label>
+            <label class="form-label" for="animDelay">Độ trễ (ms)</label>
             <input type="number" id="animDelay" class="form-control" [ngModel]="selectedSection.animation?.delay"
               min="0" max="2000" step="50" (ngModelChange)="onCustomAnimationDelayChange($event)" />
           </div>

@@ -1,4 +1,4 @@
-export type NotificationType = 'success' | 'error' | 'warning' | 'info' | 'cart';
+export type NotificationType = 'success' | 'error';
 
 export interface AdminNotification {
   id: string;

@@ -7,8 +7,7 @@ import { AdminNotification } from './notification.model';
   selector: 'app-admin-notification',
   standalone: false,
   templateUrl: './notification.component.html',
-  styleUrls: ['./notification.component.css'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  styleUrls: ['./notification.component.css']
 })
 export class NotificationComponent implements OnInit, OnDestroy {
   notifications: AdminNotification[] = [];
@@ -22,7 +21,7 @@ export class NotificationComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.sub = this.notificationService.notifications$.subscribe((list) => {
       this.notifications = list;
-      this.cdr.markForCheck();
+      this.cdr.detectChanges();
     });
   }
 
@@ -32,6 +31,15 @@ export class NotificationComponent implements OnInit, OnDestroy {
 
   onDismiss(id: string): void {
     this.notificationService.dismiss(id);
+    this.cdr.detectChanges();
+  }
+
+  onMouseEnter(id: string): void {
+    this.notificationService.pauseTimer(id);
+  }
+
+  onMouseLeave(id: string): void {
+    this.notificationService.resumeTimer(id);
   }
 
   trackById(_index: number, item: AdminNotification): string {

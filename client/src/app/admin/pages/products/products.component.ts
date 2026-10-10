@@ -60,7 +60,6 @@ export class ProductsComponent implements OnInit {
   pagination: PaginationConfig = { page: 1, pageSize: 20, total: 0 };
   isLoading = false;
   errorMessage = '';
-  successMessage = '';
 
   // Search & Filter state
   searchQuery = '';
@@ -407,7 +406,6 @@ export class ProductsComponent implements OnInit {
   }
 
   showSuccess(msg: string): void {
-    this.successMessage = msg;
     this.notificationService.success(msg);
     this.cdr.markForCheck();
   }

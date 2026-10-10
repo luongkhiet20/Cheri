@@ -13,8 +13,10 @@
     <div class="footer-col">
       <h4 class="footer-col-title">Hỗ trợ</h4>
       <ul class="footer-list">
-        <li *ngIf="isPageVisible('ordering-guide')"><a class="footer-link" [routerLink]="['/' + lang + '/ordering-guide']">Hướng dẫn đặt hàng</a></li>
-        <li *ngIf="isPageVisible('faqs')"><a class="footer-link" [routerLink]="['/' + lang + '/faqs']">Câu hỏi thường gặp</a></li>
+        <li *ngIf="isPageVisible('ordering-guide')"><a class="footer-link"
+            [routerLink]="['/' + lang + '/ordering-guide']">Hướng dẫn đặt hàng</a></li>
+        <li *ngIf="isPageVisible('faqs')"><a class="footer-link" [routerLink]="['/' + lang + '/faqs']">Câu hỏi thường
+            gặp</a></li>
         <li><a class="footer-link" [routerLink]="['/' + lang + '/tracking']">Theo dõi đơn hàng</a></li>
       </ul>
     </div>
@@ -23,12 +25,17 @@
     <div class="footer-col">
       <h4 class="footer-col-title">Chính sách</h4>
       <ul class="footer-list">
-        <li *ngIf="isPageVisible('return-policy')"><a class="footer-link" [routerLink]="['/' + lang + '/return-policy']">Chính sách đổi trả</a></li>
-        <li *ngIf="isPageVisible('warranty-policy')"><a class="footer-link" [routerLink]="['/' + lang + '/warranty-policy']">Chính sách bảo hành</a></li>
-        <li *ngIf="isPageVisible('privacy-policy')"><a class="footer-link" [routerLink]="['/' + lang + '/privacy-policy']">Chính sách bảo mật</a></li>
-        <li *ngIf="isPageVisible('shipping-policy')"><a class="footer-link" [routerLink]="['/' + lang + '/shipping-policy']">Chính sách vận chuyển - giao
+        <li *ngIf="isPageVisible('return-policy')"><a class="footer-link"
+            [routerLink]="['/' + lang + '/return-policy']">Chính sách đổi trả</a></li>
+        <li *ngIf="isPageVisible('warranty-policy')"><a class="footer-link"
+            [routerLink]="['/' + lang + '/warranty-policy']">Chính sách bảo hành</a></li>
+        <li *ngIf="isPageVisible('privacy-policy')"><a class="footer-link"
+            [routerLink]="['/' + lang + '/privacy-policy']">Chính sách bảo mật</a></li>
+        <li *ngIf="isPageVisible('shipping-policy')"><a class="footer-link"
+            [routerLink]="['/' + lang + '/shipping-policy']">Chính sách vận chuyển - giao
             hàng</a></li>
-        <li *ngIf="isPageVisible('terms-of-service')"><a class="footer-link" [routerLink]="['/' + lang + '/terms-of-service']">Điều khoản sử dụng</a></li>
+        <li *ngIf="isPageVisible('terms-of-service')"><a class="footer-link"
+            [routerLink]="['/' + lang + '/terms-of-service']">Điều khoản sử dụng</a></li>
       </ul>
     </div>
 

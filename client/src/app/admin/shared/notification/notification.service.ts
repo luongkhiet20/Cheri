@@ -10,64 +10,34 @@ export class NotificationService {
   public notifications$: Observable<AdminNotification[]> = this.notificationsSubject.asObservable();
 
   // Map to hold dismiss timers for each active notification
-  private timers = new Map<string, any>();
+  private timers = new Map<string, ReturnType<typeof setTimeout>>();
 
   // Anti-duplicate tracker: stores key -> timestamp
   private recentMessages = new Map<string, number>();
   private readonly DEDUPE_WINDOW_MS = 1500;
 
-  // Default display durations as requested
+  // Default display durations
   private readonly DEFAULT_DURATIONS: Record<NotificationType, number> = {
     success: 4000,
-    info: 4000,
-    warning: 5000,
-    error: 5000,
-    cart: 2300
+    error: 5000
   };
 
   /**
-   * Hiển thị Toast thêm giỏ hàng Chéri (2.3s)
-   */
-  cartSuccess(message: string = '✨Đã thêm sản phẩm vào giỏ✨', duration = 2300): string {
-    // Tự động dismiss cart toast cũ nếu đang hiển thị để tránh chồng chéo
-    const currentList = this.notificationsSubject.getValue();
-    const existingCart = currentList.find(n => n.type === 'cart');
-    if (existingCart) {
-      this.dismiss(existingCart.id);
-    }
-    return this.show('cart', message, duration);
-  }
-
-  /**
-   * Hiển thị thông báo thành công (4s)
+   * Hiển thị thông báo thành công (mặc định 4s)
    */
   success(message: string, duration?: number): string {
     return this.show('success', message, duration);
   }
 
   /**
-   * Hiển thị thông báo lỗi (5s)
+   * Hiển thị thông báo lỗi / thất bại (mặc định 5s)
    */
   error(message: string, duration?: number): string {
     return this.show('error', message, duration);
   }
 
   /**
-   * Hiển thị thông báo cảnh báo (5s)
-   */
-  warning(message: string, duration?: number): string {
-    return this.show('warning', message, duration);
-  }
-
-  /**
-   * Hiển thị thông báo thông tin (4s)
-   */
-  info(message: string, duration?: number): string {
-    return this.show('info', message, duration);
-  }
-
-  /**
-   * Core show method
+   * Core show method - Chuẩn hóa chỉ nhận 'success' hoặc 'error'
    */
   show(type: NotificationType, message: string, customDuration?: number): string {
     if (!message || message.trim() === '') return '';
@@ -79,7 +49,7 @@ export class NotificationService {
     // Check anti-duplicate within window
     const lastSent = this.recentMessages.get(dedupeKey);
     if (lastSent && now - lastSent < this.DEDUPE_WINDOW_MS) {
-      return ''; // Ignore duplicate
+      return ''; // Ignore duplicate spam
     }
     this.recentMessages.set(dedupeKey, now);
 
@@ -102,7 +72,7 @@ export class NotificationService {
       isLeaving: false
     };
 
-    // Prepend new notification so it appears at the top
+    // Prepend new notification so it appears at top
     const currentList = this.notificationsSubject.getValue();
     this.notificationsSubject.next([newNotification, ...currentList]);
 
@@ -117,7 +87,32 @@ export class NotificationService {
   }
 
   /**
-   * Start exit animation and remove from DOM after slide-up + fade-out
+   * Tạm dừng đếm ngược khi hover chuột
+   */
+  pauseTimer(id: string): void {
+    const timer = this.timers.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      this.timers.delete(id);
+    }
+  }
+
+  /**
+   * Tiếp tục đếm ngược khi rời chuột
+   */
+  resumeTimer(id: string, remainingMs = 2500): void {
+    if (this.timers.has(id)) return;
+    const currentList = this.notificationsSubject.getValue();
+    if (!currentList.some(n => n.id === id && !n.isLeaving)) return;
+
+    const timer = setTimeout(() => {
+      this.dismiss(id);
+    }, remainingMs);
+    this.timers.set(id, timer);
+  }
+
+  /**
+   * Bắt đầu animation thoát (250ms) và gỡ khỏi DOM
    */
   dismiss(id: string): void {
     const timer = this.timers.get(id);

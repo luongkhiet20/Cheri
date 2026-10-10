@@ -1,72 +1,100 @@
-/* =============================================
-   CHÉRI ADMIN — UNIFIED NOTIFICATION / TOAST SYSTEM
-   ============================================= */
+/* ==========================================================================
+   CHÉRI ADMIN — NOTIFICATION TOAST SYSTEM (MINIMAL & UNIFIED)
+   Only 2 variants: 'success' (#16803D) & 'error' (#C62828)
+   ========================================================================== */
 
+:host {
+  display: block;
+}
+
+/* Toast Container: Fixed top-right, transparent to clicks */
 .notification-container {
   position: fixed;
-  top: 24px;
-  right: 24px;
+  top: 20px;
+  right: 20px;
   z-index: 999999;
   display: flex;
   flex-direction: column;
   gap: 10px;
   pointer-events: none;
-  max-width: 440px;
-  width: calc(100vw - 48px);
+  max-width: 420px;
+  width: calc(100vw - 40px);
 }
 
 /* Base Toast Item */
 .notification-toast {
   pointer-events: auto;
-  min-width: 300px;
-  max-width: 440px;
-  padding: 12px 16px;
-  border-radius: 8px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-left: 4px solid #74070e;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: flex-start;
   gap: 12px;
+  min-width: 280px;
+  max-width: 420px;
+  padding: 12px 14px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid transparent;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07), 0 1px 3px rgba(0, 0, 0, 0.04);
   font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
-  animation: notifSlideDownIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  will-change: transform, opacity;
   box-sizing: border-box;
   overflow: hidden;
+  animation: notifSlideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+  transition: box-shadow 0.15s ease;
 }
 
-/* Leaving Animation */
+.notification-toast:focus-visible {
+  outline: 2px solid #94a3b8;
+  outline-offset: 2px;
+}
+
+/* Exit Animation */
 .notification-toast.is-leaving {
-  animation: notifSlideUpOut 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: notifSlideOut 0.22s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
-/* Body (Message + Sparkle) */
-.notification-body {
-  display: flex;
+/* Variant 1: SUCCESS (#16803D) */
+.notification-toast--success {
+  border-left-color: #16803d;
+}
+
+.notification-toast--success .notification-icon {
+  color: #16803d;
+}
+
+/* Variant 2: ERROR (#C62828) */
+.notification-toast--error {
+  border-left-color: #c62828;
+}
+
+.notification-toast--error .notification-icon {
+  color: #c62828;
+}
+
+/* Status Icon Container */
+.notification-icon {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+}
+
+/* Body / Message */
+.notification-body {
   flex: 1;
   min-width: 0;
 }
 
 .notification-message {
+  margin: 0;
   font-size: 13.5px;
   font-weight: 500;
   line-height: 1.45;
-  color: #1f1f1f;
+  color: #1e293b;
   word-break: break-word;
-}
-
-/* 4-pointed Sparkle Flower */
-.notification-sparkle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: #74070e;
-  animation: sparklePulse 2s ease-in-out infinite;
 }
 
 /* Close Button */
@@ -74,153 +102,33 @@
   background: transparent;
   border: none;
   padding: 4px;
-  margin: -4px -4px -4px 0;
+  margin: -2px -2px -2px 0;
   cursor: pointer;
   color: #94a3b8;
   border-radius: 4px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s ease;
   flex-shrink: 0;
   line-height: 1;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .notification-close-btn:hover {
-  color: #1f1f1f;
-  background: #f1f5f9;
+  color: #0f172a;
+  background-color: #f1f5f9;
 }
 
-/* Type Variants */
-/* 1. SUCCESS */
-.notification-toast--success {
-  border-color: #d1fae5;
-  border-left-color: #10b981;
-}
-.notification-toast--success .notification-sparkle {
-  color: #10b981;
+.notification-close-btn:focus-visible {
+  outline: 2px solid #94a3b8;
+  outline-offset: 1px;
 }
 
-/* 2. ERROR */
-.notification-toast--error {
-  border-color: #fee2e2;
-  border-left-color: #ef4444;
-}
-.notification-toast--error .notification-sparkle {
-  color: #ef4444;
-}
-
-/* 3. WARNING */
-.notification-toast--warning {
-  border-color: #fef3c7;
-  border-left-color: #f59e0b;
-}
-.notification-toast--warning .notification-sparkle {
-  color: #f59e0b;
-}
-
-/* 4. INFO */
-.notification-toast--info {
-  border-color: #e2e8f0;
-  border-left-color: #74070e;
-}
-.notification-toast--info .notification-sparkle {
-  color: #74070e;
-}
-
-/* 5. CART TOAST (PILL SHAPED CHÉRI BURGUNDY #74070E) */
-.notification-container:has(.notification-toast--cart) {
-  top: 30px;
-  right: 0;
-  left: 0;
-  margin: 0 auto;
-  align-items: center;
-  max-width: none;
-  width: 100%;
-}
-
-.notification-toast--cart {
-  background-color: #74070e !important;
-  color: #ffffff !important;
-  border-radius: 999px !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  border-left: 1px solid rgba(255, 255, 255, 0.12) !important;
-  height: 46px !important;
-  min-height: 46px !important;
-  max-height: 46px !important;
-  padding: 0 24px !important;
-  min-width: unset !important;
-  width: auto !important;
-  max-width: calc(100vw - 24px) !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  box-shadow: 0 4px 16px rgba(116, 7, 14, 0.28), 0 2px 6px rgba(0, 0, 0, 0.08) !important;
-  animation: notifCartSlideDownIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
-  box-sizing: border-box !important;
-}
-
-.notification-toast--cart.is-leaving {
-  animation: notifCartSlideUpOut 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
-}
-
-.notification-body--cart {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  gap: 0;
-}
-
-.notification-message--cart {
-  color: #ffffff !important;
-  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif) !important;
-  font-size: 13.5px !important;
-  font-weight: 500 !important;
-  line-height: 46px !important;
-  letter-spacing: 0.2px !important;
-  text-align: center !important;
-  white-space: nowrap !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
-@keyframes notifCartSlideDownIn {
+/* Entrance & Exit Keyframes */
+@keyframes notifSlideIn {
   0% {
     opacity: 0;
-    transform: translateY(-12px) scale(0.98);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes notifCartSlideUpOut {
-  0% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-12px) scale(0.98);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .notification-toast--cart,
-  .notification-toast--cart.is-leaving {
-    animation-duration: 0.01ms !important;
-  }
-}
-
-
-/* Keyframes */
-@keyframes notifSlideDownIn {
-  0% {
-    opacity: 0;
-    transform: translateY(-20px);
+    transform: translateY(-12px);
   }
   100% {
     opacity: 1;
@@ -228,16 +136,16 @@
   }
 }
 
-@keyframes notifSlideUpOut {
+@keyframes notifSlideOut {
   0% {
     opacity: 1;
     transform: translateY(0);
-    max-height: 100px;
+    max-height: 140px;
     margin-bottom: 0;
   }
   100% {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(-8px);
     max-height: 0;
     margin-bottom: -10px;
     padding-top: 0;
@@ -246,26 +154,24 @@
   }
 }
 
-@keyframes sparklePulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 0.9;
-  }
-  50% {
-    transform: scale(1.15);
-    opacity: 1;
+/* Accessibility: Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .notification-toast,
+  .notification-toast.is-leaving {
+    animation-duration: 0.01ms !important;
   }
 }
 
-/* Responsive */
+/* Responsive: Mobile Screens */
 @media (max-width: 640px) {
   .notification-container {
-    top: 16px;
-    right: 16px;
-    left: 16px;
+    top: 12px;
+    right: 12px;
+    left: 12px;
     width: auto;
     max-width: none;
   }
+
   .notification-toast {
     min-width: 0;
     width: 100%;

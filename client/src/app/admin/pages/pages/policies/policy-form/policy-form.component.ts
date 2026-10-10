@@ -5,11 +5,11 @@ import { NotificationService } from '../../../../shared/notification/notificatio
 import { ADMIN_PAGES_URLS } from '../../pages.routes';
 
 export interface PolicyFormData {
-  title: string;
-  slug: string;
-  isPublished: boolean;
-  metaDescription: string;
-  contentHTML: string;
+  title: string;              // vi.title
+  slug: string;               // titleUrl (readonly)
+  isPublished: boolean;       // status / visibility
+  metaDescription: string;    // vi.metaDescription
+  contentHTML: string;        // vi.contentHTML
 }
 
 @Component({
@@ -20,12 +20,14 @@ export interface PolicyFormData {
 })
 export class PolicyFormComponent implements OnInit {
   readonly adminPagesUrls = ADMIN_PAGES_URLS;
-  isEditMode = false;
+  isEditMode = true;
   pageId: string | null = null;
   isLoading = false;
   isSubmitting = false;
   isDirty = false;
-  isSlugCustomized = false;
+
+  private existingSlug = '';
+  private existingEnData: any = null;
 
   formData: PolicyFormData = {
     title: '',
@@ -38,7 +40,6 @@ export class PolicyFormComponent implements OnInit {
   errors: Record<string, string> = {};
   errorMessage = '';
   successMessage = '';
-  confirmDeleteOpen = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -50,11 +51,14 @@ export class PolicyFormComponent implements OnInit {
 
   ngOnInit(): void {
     this.pageId = this.route.snapshot.paramMap.get('id');
-    this.isEditMode = !!this.pageId;
-
-    if (this.isEditMode && this.pageId) {
-      this.loadPolicyDetail(this.pageId);
+    // Module chỉ phục vụ xem và chỉnh sửa các trang Policies đã tồn tại, không cho phép tạo mới
+    if (!this.pageId) {
+      this.router.navigate([ADMIN_PAGES_URLS.POLICIES]);
+      return;
     }
+
+    this.isEditMode = true;
+    this.loadPolicyDetail(this.pageId);
   }
 
   markDirty(): void {
@@ -70,14 +74,15 @@ export class PolicyFormComponent implements OnInit {
         this.isLoading = false;
         if (res.success && res.data) {
           const page = res.data;
+          this.existingSlug = page.titleUrl || page.rawSlug || (page.slug ? page.slug.replace(/^\/+/, '') : '');
+          this.existingEnData = page.en || null;
           this.formData = {
-            title: page.title || '',
-            slug: page.rawSlug || (page.slug ? page.slug.replace(/^\/+/, '') : ''),
-            isPublished: page.isPublished !== false,
-            metaDescription: page.metaDescription || '',
-            contentHTML: page.contentHTML || ''
+            title: page.vi?.title || page.title || '',
+            slug: this.existingSlug,
+            isPublished: page.isPublished !== false && page.status !== 'draft',
+            metaDescription: page.vi?.metaDescription || page.metaDescription || '',
+            contentHTML: page.vi?.contentHTML || page.contentHTML || ''
           };
-          this.isSlugCustomized = true;
           this.isDirty = false;
         } else {
           this.errorMessage = res.message || 'Không tìm thấy chính sách để chỉnh sửa';
@@ -95,27 +100,14 @@ export class PolicyFormComponent implements OnInit {
   onTitleChange(): void {
     this.markDirty();
     delete this.errors['title'];
-    if (!this.isSlugCustomized) {
-      this.formData.slug = this.slugify(this.formData.title);
-    }
-  }
-
-  onSlugChange(): void {
-    this.markDirty();
-    delete this.errors['slug'];
-    this.isSlugCustomized = true;
-    this.formData.slug = this.slugify(this.formData.slug);
+    // titleUrl bị khóa để bảo toàn liên kết URL, không tự động sinh slug mới từ tiêu đề
   }
 
   validate(): boolean {
     this.errors = {};
 
     if (!this.formData.title || !this.formData.title.trim()) {
-      this.errors['title'] = 'Tiêu đề chính sách không được để trống';
-    }
-
-    if (this.formData.slug && !/^[a-z0-9-]+$/.test(this.formData.slug)) {
-      this.errors['slug'] = 'Mã slug chỉ được chứa chữ thường không dấu, số và dấu gạch ngang (-)';
+      this.errors['title'] = 'Tiêu đề chính sách (tiếng Việt) không được để trống';
     }
 
     return Object.keys(this.errors).length === 0;
@@ -125,6 +117,11 @@ export class PolicyFormComponent implements OnInit {
     this.errorMessage = '';
     this.successMessage = '';
 
+    if (!this.pageId) {
+      this.router.navigate([ADMIN_PAGES_URLS.POLICIES]);
+      return;
+    }
+
     if (!this.validate()) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
@@ -132,9 +129,10 @@ export class PolicyFormComponent implements OnInit {
 
     this.isSubmitting = true;
     const title = this.formData.title.trim();
-    const slug = (this.formData.slug || this.slugify(title)).trim();
+    // Luôn bảo toàn titleUrl hiện có
+    const slug = this.existingSlug || this.formData.slug;
 
-    const payload = {
+    const payload: any = {
       titleUrl: slug,
       status: this.formData.isPublished ? 'published' : 'draft',
       isPublished: this.formData.isPublished,
@@ -147,70 +145,38 @@ export class PolicyFormComponent implements OnInit {
       }
     };
 
-    if (this.isEditMode && this.pageId) {
-      // UPDATE
-      this.apiService.updatePage(this.pageId, payload).subscribe({
-        next: (res) => {
-          this.isSubmitting = false;
-          if (res.success) {
-            const msg = 'Cập nhật chính sách thành công!';
-            this.successMessage = msg;
-            this.notificationService.success(msg);
-            this.isDirty = false;
-            setTimeout(() => {
-              this.router.navigate([ADMIN_PAGES_URLS.POLICIES, this.pageId]);
-            }, 600);
-          } else {
-            const msg = res.message || 'Lỗi cập nhật chính sách';
-            this.errorMessage = msg;
-            this.notificationService.error(msg);
-          }
-          this.cdr.markForCheck();
-        },
-        error: (err) => {
-          this.isSubmitting = false;
-          const msg = err.error?.message || 'Lỗi khi cập nhật chính sách vào MongoDB';
-          this.errorMessage = msg;
-          this.notificationService.error(msg);
-          this.cdr.markForCheck();
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-      });
-    } else {
-      // CREATE
-      this.apiService.createPage(payload).subscribe({
-        next: (res) => {
-          this.isSubmitting = false;
-          if (res.success) {
-            const msg = 'Tạo chính sách mới thành công!';
-            this.successMessage = msg;
-            this.notificationService.success(msg);
-            this.isDirty = false;
-            const newId = res.id || res.data?.id || res.data?._id;
-            setTimeout(() => {
-              if (newId) {
-                this.router.navigate([ADMIN_PAGES_URLS.POLICIES, newId]);
-              } else {
-                this.router.navigate([ADMIN_PAGES_URLS.POLICIES]);
-              }
-            }, 600);
-          } else {
-            const msg = res.message || 'Lỗi tạo chính sách mới';
-            this.errorMessage = msg;
-            this.notificationService.error(msg);
-          }
-          this.cdr.markForCheck();
-        },
-        error: (err) => {
-          this.isSubmitting = false;
-          const msg = err.error?.message || 'Lỗi khi tạo chính sách mới trong MongoDB';
-          this.errorMessage = msg;
-          this.notificationService.error(msg);
-          this.cdr.markForCheck();
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-      });
+    // Giữ nguyên dữ liệu tiếng Anh sẵn có từ MongoDB, không ghi đè hay làm mất
+    if (this.existingEnData) {
+      payload.en = this.existingEnData;
     }
+
+    this.apiService.updatePage(this.pageId, payload).subscribe({
+      next: (res) => {
+        this.isSubmitting = false;
+        if (res.success) {
+          const msg = 'Cập nhật chính sách thành công!';
+          this.successMessage = msg;
+          this.notificationService.success(msg);
+          this.isDirty = false;
+          setTimeout(() => {
+            this.router.navigate([ADMIN_PAGES_URLS.POLICIES, this.pageId]);
+          }, 600);
+        } else {
+          const msg = res.message || 'Lỗi cập nhật chính sách';
+          this.errorMessage = msg;
+          this.notificationService.error(msg);
+        }
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.isSubmitting = false;
+        const msg = err.error?.message || 'Lỗi khi cập nhật chính sách vào MongoDB';
+        this.errorMessage = msg;
+        this.notificationService.error(msg);
+        this.cdr.markForCheck();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
   }
 
   onCancel(): void {
@@ -218,60 +184,11 @@ export class PolicyFormComponent implements OnInit {
       const confirmLeave = confirm('Bạn có thay đổi chưa được lưu. Bạn có chắc chắn muốn hủy?');
       if (!confirmLeave) return;
     }
-    if (this.isEditMode && this.pageId) {
+    if (this.pageId) {
       this.router.navigate([ADMIN_PAGES_URLS.POLICIES, this.pageId]);
     } else {
       this.router.navigate([ADMIN_PAGES_URLS.POLICIES]);
     }
-  }
-
-  openConfirmDelete(): void {
-    this.confirmDeleteOpen = true;
-    this.cdr.markForCheck();
-  }
-
-  onConfirmDelete(): void {
-    if (!this.pageId) return;
-    this.apiService.deletePage(this.pageId).subscribe({
-      next: (res) => {
-        this.confirmDeleteOpen = false;
-        if (res.success) {
-          this.notificationService.success('Xóa chính sách thành công');
-          this.router.navigate([ADMIN_PAGES_URLS.POLICIES]);
-        } else {
-          const msg = res.message || 'Lỗi khi xóa chính sách';
-          this.errorMessage = msg;
-          this.notificationService.error(msg);
-          this.cdr.markForCheck();
-        }
-      },
-      error: (err) => {
-        this.confirmDeleteOpen = false;
-        const msg = err.error?.message || 'Lỗi khi xóa chính sách khỏi MongoDB';
-        this.errorMessage = msg;
-        this.notificationService.error(msg);
-        this.cdr.markForCheck();
-      }
-    });
-  }
-
-  onCancelDelete(): void {
-    this.confirmDeleteOpen = false;
-    this.cdr.markForCheck();
-  }
-
-  slugify(text: string): string {
-    if (!text) return '';
-    return text
-      .toString()
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[đĐ]/g, 'd')
-      .replace(/[^a-z0-9\s-]/g, '')
-      .trim()
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-');
   }
 }
 

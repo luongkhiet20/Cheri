@@ -482,7 +482,7 @@
    PREVIEW COMPONENTS (ĐỒNG BỘ STOREFRONT VÀ LIVE PREVIEW)
    ══════════════════════════════════════════════════════════════════════════ */
 
-/* HERO PREVIEW */
+/* HERO PREVIEW (ĐỒNG BỘ 1:1 VỚI STOREFRONT .dynamic-hero-section) */
 .preview-hero {
   position: relative;
   display: flex;
@@ -493,8 +493,7 @@
   color: #ffffff;
   padding: 40px 24px;
   width: 100%;
-  aspect-ratio: 2.35 / 1;
-  min-height: 320px;
+  min-height: 480px;
   transition: all 0.3s ease;
 }
 
@@ -508,6 +507,8 @@
 .preview-hero__bg img {
   width: 100%;
   height: 100%;
+  min-height: 480px;
+  max-height: 800px;
   object-fit: cover;
   object-position: center;
   display: block;
@@ -516,14 +517,14 @@
 .preview-hero__overlay {
   position: absolute;
   inset: 0;
-  background: #000000;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.6) 100%);
   pointer-events: none;
 }
 
 .preview-hero__content {
   position: relative;
   z-index: 2;
-  max-width: 640px;
+  max-width: 800px;
   width: 100%;
 }
 
@@ -538,44 +539,51 @@
 }
 
 .preview-hero.align-left .preview-hero__content {
-  margin-left: clamp(12px, 3vw, 40px);
+  margin-left: clamp(16px, 4vw, 48px);
 }
 
 .preview-hero__eyebrow {
   display: inline-block;
   font-size: 13px;
   text-transform: uppercase;
-  letter-spacing: 2px;
-  font-weight: 500;
-  margin-bottom: 10px;
-  opacity: 0.9;
+  letter-spacing: 0.25em;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #f3f4f6;
 }
 
 .preview-hero__title {
-  font-size: clamp(22px, 3.2vw, 36px);
+  font-size: 42px;
   font-weight: 700;
-  line-height: 1.22;
-  margin: 0 0 14px 0;
+  line-height: 1.2;
+  margin: 0 0 16px 0;
+  color: #ffffff;
+  max-width: 800px;
 }
 
 .preview-hero__desc {
-  font-size: clamp(13px, 1.6vw, 15px);
+  font-size: 16px;
   line-height: 1.6;
-  opacity: 0.9;
-  margin: 0 0 22px 0;
+  color: rgba(255, 255, 255, 0.9);
+  max-width: 640px;
+  margin: 0 0 24px 0;
 }
 
 .btn-preview-primary {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: var(--sec-btn-bg, var(--cheri-primary, #74070E));
   color: var(--sec-btn-color, #ffffff) !important;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 600;
-  padding: 10px 24px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 12px 28px;
   border-radius: 4px;
   text-decoration: none;
   cursor: pointer;
-  letter-spacing: 0.5px;
+  box-shadow: 0 4px 14px rgba(116, 7, 14, 0.35);
   transition: background 0.2s ease, transform 0.2s ease, color 0.2s ease;
 }
 
@@ -585,31 +593,44 @@
   transform: translateY(-1px);
 }
 
-/* Mobile responsive for Hero Preview */
+/* Mobile responsive for Hero Preview (Đồng bộ breakpoint Mobile storefront) */
 .is-mobile-view .preview-hero,
 .is-mobile-frame .preview-hero {
-  aspect-ratio: 16 / 9;
-  min-height: 220px !important;
-  padding: 24px 16px;
+  min-height: 320px !important;
+  padding: 32px 18px;
+}
+
+.is-mobile-view .preview-hero__bg img,
+.is-mobile-frame .preview-hero__bg img {
+  min-height: 320px;
+  max-height: 520px;
+}
+
+.is-mobile-view .preview-hero__eyebrow,
+.is-mobile-frame .preview-hero__eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  margin-bottom: 8px;
 }
 
 .is-mobile-view .preview-hero__title,
 .is-mobile-frame .preview-hero__title {
-  font-size: 19px !important;
-  margin-bottom: 8px;
+  font-size: 26px !important;
+  margin-bottom: 10px;
+  line-height: 1.25;
 }
 
 .is-mobile-view .preview-hero__desc,
 .is-mobile-frame .preview-hero__desc {
-  font-size: 12.5px !important;
-  margin-bottom: 14px;
-  line-height: 1.45;
+  font-size: 14px !important;
+  margin-bottom: 18px;
+  line-height: 1.5;
 }
 
 .is-mobile-view .btn-preview-primary,
 .is-mobile-frame .btn-preview-primary {
   font-size: 12px;
-  padding: 7px 16px;
+  padding: 10px 20px;
 }
 
 /* PRODUCT SLIDER & GRID PREVIEW (ĐỒNG BỘ ASPECT RATIO 3:4) */
@@ -1046,36 +1067,95 @@
 /* ══════════════════════════════════════════════════════════════════════════
    4. ANIMATION KEYFRAMES & PRESETS
    ══════════════════════════════════════════════════════════════════════════ */
+.anim-intensity-subtle {
+  --anim-distance: 14px;
+  --anim-scale-from: 0.96;
+}
+
+.anim-intensity-normal {
+  --anim-distance: 30px;
+  --anim-scale-from: 0.92;
+}
+
+.anim-intensity-strong {
+  --anim-distance: 52px;
+  --anim-scale-from: 0.85;
+}
+
+.anim-none {
+  animation: none !important;
+}
+
 .anim-fade {
-  animation: animFade 0.6s ease-out forwards;
+  animation: animFade var(--anim-duration, 750ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
 }
 
 .anim-fade-up {
-  animation: animFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: animFadeUp var(--anim-duration, 750ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
 }
 
 .anim-fade-down {
-  animation: animFadeDown 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: animFadeDown var(--anim-duration, 750ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
 }
 
 .anim-fade-left {
-  animation: animFadeLeft 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: animFadeLeft var(--anim-duration, 750ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
 }
 
 .anim-fade-right {
-  animation: animFadeRight 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: animFadeRight var(--anim-duration, 750ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
+}
+
+.anim-slide-left {
+  animation: animSlideLeft var(--anim-duration, 750ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
+}
+
+.anim-slide-right {
+  animation: animSlideRight var(--anim-duration, 750ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
 }
 
 .anim-zoom-in {
-  animation: animZoomIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: animZoomIn var(--anim-duration, 750ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
+}
+
+.anim-zoom-out {
+  animation: animZoomOut var(--anim-duration, 750ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
+}
+
+.anim-scale {
+  animation: animZoomIn var(--anim-duration, 750ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
+}
+
+.anim-reveal {
+  animation: animReveal var(--anim-duration, 850ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
+}
+
+.anim-image-reveal {
+  animation: animImageReveal var(--anim-duration, 900ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
 }
 
 .anim-split-reveal {
-  animation: animSplitReveal 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: animSplitReveal var(--anim-duration, 850ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
+}
+
+.anim-stagger {
+  animation: animStagger var(--anim-duration, 800ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
+}
+
+.anim-parallax {
+  animation: animParallax var(--anim-duration, 950ms) ease-out var(--anim-delay, 0ms) both;
+}
+
+.anim-image-zoom {
+  animation: animFade var(--anim-duration, 750ms) ease-out var(--anim-delay, 0ms) both;
 }
 
 .anim-image-zoom img {
-  animation: animImgScale 1.4s ease-out forwards;
+  animation: animImgScale var(--anim-duration, 1200ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
+}
+
+.anim-text-reveal {
+  animation: animTextReveal var(--anim-duration, 800ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
 }
 
 @keyframes animFade {
@@ -1084,51 +1164,197 @@
 }
 
 @keyframes animFadeUp {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(var(--anim-distance, 30px));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes animFadeDown {
-  from { opacity: 0; transform: translateY(-30px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(calc(-1 * var(--anim-distance, 30px)));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes animFadeLeft {
-  from { opacity: 0; transform: translateX(30px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(var(--anim-distance, 30px));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes animFadeRight {
-  from { opacity: 0; transform: translateX(-30px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(calc(-1 * var(--anim-distance, 30px)));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes animSlideLeft {
+  from {
+    opacity: 0;
+    transform: translateX(calc(1.5 * var(--anim-distance, 45px)));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes animSlideRight {
+  from {
+    opacity: 0;
+    transform: translateX(calc(-1.5 * var(--anim-distance, 45px)));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes animZoomIn {
-  from { opacity: 0; transform: scale(0.92); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(var(--anim-scale-from, 0.92));
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes animZoomOut {
+  from {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes animReveal {
+  0% {
+    opacity: 0;
+    clip-path: inset(0 100% 0 0);
+  }
+  100% {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes animImageReveal {
+  0% {
+    opacity: 0;
+    filter: blur(8px);
+    transform: scale(1.06);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1);
+  }
 }
 
 @keyframes animSplitReveal {
-  0% { opacity: 0; transform: translateY(20px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0% {
+    opacity: 0;
+    transform: translateY(var(--anim-distance, 25px));
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes animStagger {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes animParallax {
+  0% {
+    opacity: 0.3;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes animImgScale {
-  0% { transform: scale(1.08); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes animTextReveal {
+  0% {
+    opacity: 0;
+    letter-spacing: 2px;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    letter-spacing: inherit;
+    transform: translateY(0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .anim-none,
   .anim-fade,
   .anim-fade-up,
   .anim-fade-down,
   .anim-fade-left,
   .anim-fade-right,
+  .anim-slide-left,
+  .anim-slide-right,
   .anim-zoom-in,
+  .anim-zoom-out,
+  .anim-scale,
+  .anim-reveal,
+  .anim-image-reveal,
   .anim-split-reveal,
-  .anim-image-zoom img {
+  .anim-stagger,
+  .anim-parallax,
+  .anim-image-zoom,
+  .anim-image-zoom img,
+  .anim-text-reveal {
     animation: none !important;
     transform: none !important;
+    filter: none !important;
+    clip-path: none !important;
+    opacity: 1 !important;
   }
 }
 
@@ -2278,8 +2504,7 @@
 .preview-carousel {
   position: relative;
   width: 100%;
-  aspect-ratio: 2.35 / 1;
-  min-height: 320px;
+  min-height: 480px;
   background: #111111;
   overflow: hidden;
   user-select: none;
@@ -2316,6 +2541,7 @@
   width: 100%;
   height: 100%;
   min-height: inherit;
+  max-height: 800px;
   object-fit: cover;
   object-position: center;
   display: block;
@@ -2362,7 +2588,7 @@
 
 .preview-carousel__title {
   margin: 0 0 8px 0;
-  font-size: clamp(22px, 3vw, 32px);
+  font-size: clamp(22px, 3vw, 36px);
   font-weight: 700;
   color: #ffffff;
   line-height: 1.25;
@@ -2383,8 +2609,13 @@
 /* Mobile responsive for Carousel */
 .is-mobile-view .preview-carousel,
 .is-mobile-frame .preview-carousel {
-  aspect-ratio: 16 / 9;
-  min-height: 220px !important;
+  min-height: 320px !important;
+}
+
+.is-mobile-view .preview-carousel__img,
+.is-mobile-frame .preview-carousel__img {
+  min-height: 320px;
+  max-height: 520px;
 }
 
 .is-mobile-view .preview-carousel__caption,
@@ -2396,13 +2627,13 @@
 
 .is-mobile-view .preview-carousel__title,
 .is-mobile-frame .preview-carousel__title {
-  font-size: 19px !important;
+  font-size: 22px !important;
   margin-bottom: 4px;
 }
 
 .is-mobile-view .preview-carousel__desc,
 .is-mobile-frame .preview-carousel__desc {
-  font-size: 12px !important;
+  font-size: 13px !important;
   line-height: 1.4;
   margin-bottom: 10px;
 }

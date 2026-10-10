@@ -60,11 +60,6 @@ export class PoliciesComponent implements OnInit {
   errorMessage = '';
   successMessage = '';
 
-  confirmOpen = false;
-  confirmMessage = '';
-  pendingDeleteId: any = null;
-  isBulkDelete = false;
-
   currentSearch = '';
   currentStatusFilter = '';
 
@@ -147,93 +142,6 @@ export class PoliciesComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
-  onDeleteSelected(): void {
-    const c = this.selectedCount;
-    if (c === 0) return;
-    this.isBulkDelete = true;
-    this.pendingDeleteId = null;
-    this.confirmMessage = `Bạn có chắc chắn muốn xóa ${c} chính sách đã chọn khỏi MongoDB?`;
-    this.confirmOpen = true;
-    this.cdr.markForCheck();
-  }
-
-  onConfirmDelete(): void {
-    if (this.isBulkDelete) {
-      const idsToDelete = Array.from(this.selectedIds);
-      this.confirmOpen = false;
-      this.cdr.markForCheck();
-      let completed = 0;
-      idsToDelete.forEach(id => {
-        this.apiService.deletePage(id).subscribe({
-          next: () => {
-            completed++;
-            if (completed === idsToDelete.length) {
-              this.selectedIds.clear();
-              const msg = `Đã xóa thành công ${completed} chính sách`;
-              this.successMessage = msg;
-              this.notificationService.success(msg);
-              this.cdr.markForCheck();
-              setTimeout(() => {
-                this.successMessage = '';
-                this.cdr.markForCheck();
-              }, 3000);
-              this.loadPolicies();
-            }
-          },
-          error: (err) => {
-            console.error('Lỗi khi xóa chính sách:', err);
-            const msg = err.error?.message || 'Lỗi khi xóa một số chính sách';
-            this.notificationService.error(msg);
-            this.cdr.markForCheck();
-          }
-        });
-      });
-    } else if (this.pendingDeleteId) {
-      this.apiService.deletePage(this.pendingDeleteId).subscribe({
-        next: (res) => {
-          this.confirmOpen = false;
-          this.pendingDeleteId = null;
-          if (res.success) {
-            this.successMessage = 'Xóa chính sách thành công';
-            this.notificationService.success('Xóa chính sách thành công');
-            this.loadPolicies();
-          } else {
-            this.errorMessage = res.message || 'Lỗi khi xóa chính sách';
-            this.notificationService.error(res.message || 'Lỗi khi xóa chính sách');
-          }
-          this.cdr.markForCheck();
-          setTimeout(() => {
-            this.successMessage = '';
-            this.errorMessage = '';
-            this.cdr.markForCheck();
-          }, 3000);
-        },
-        error: (err) => {
-          this.confirmOpen = false;
-          this.pendingDeleteId = null;
-          const msg = err.error?.message || 'Lỗi khi xóa chính sách khỏi MongoDB';
-          this.errorMessage = msg;
-          this.notificationService.error(msg);
-          this.cdr.markForCheck();
-          setTimeout(() => {
-            this.errorMessage = '';
-            this.cdr.markForCheck();
-          }, 3000);
-        }
-      });
-    } else {
-      this.confirmOpen = false;
-      this.cdr.markForCheck();
-    }
-  }
-
-  onCancelDelete(): void {
-    this.confirmOpen = false;
-    this.pendingDeleteId = null;
-    this.isBulkDelete = false;
-    this.cdr.markForCheck();
-  }
-
   onAction(e: ActionEvent): void {
     if (e.action === 'view' || e.action === 'preview') {
       this.router.navigate([ADMIN_PAGES_URLS.POLICIES, e.row.id]);
@@ -274,7 +182,7 @@ export class PoliciesComponent implements OnInit {
                 Object.assign(itemInAll, res.data);
               }
             }
-            const msg = res.message || `Chính sách đã chuyển sang trạng thái "${nextIsPublished ? 'Đã xuất bản' : 'Bản nháp'}"`;
+            const msg = res.message || `Chính sách    cn sang trạng thái "${nextIsPublished ? 'Đã xuất bản' : 'Bản nháp'}"`;
             this.successMessage = msg;
             this.notificationService.success(msg);
             this.loadPolicies();
@@ -323,12 +231,6 @@ export class PoliciesComponent implements OnInit {
           }, 3000);
         }
       });
-    } else if (e.action === 'delete') {
-      this.isBulkDelete = false;
-      this.pendingDeleteId = e.row.id;
-      this.confirmMessage = `Bạn có chắc muốn xóa chính sách "${e.row.title}" khỏi MongoDB không?`;
-      this.confirmOpen = true;
-      this.cdr.markForCheck();
     }
   }
 

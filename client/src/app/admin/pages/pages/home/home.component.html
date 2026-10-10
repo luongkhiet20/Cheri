@@ -46,17 +46,6 @@
         <span>Xem Preview Toàn Trang</span>
       </button>
 
-      <button type="button" class="btn btn-outline" (click)="onOpenTypographyTab()"
-        title="Cấu hình Kiểu chữ & Màu sắc (Typography & Colors) toàn trang">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="4 7 4 4 20 4 20 7"></polyline>
-          <line x1="9" y1="20" x2="15" y2="20"></line>
-          <line x1="12" y1="4" x2="12" y2="20"></line>
-        </svg>
-        <span>Kiểu chữ & Màu sắc</span>
-      </button>
-
       <button type="button" class="btn btn-primary btn-publish" (click)="onPublish()"
         [disabled]="isPublishing || isLoadingDraft" [class.is-loading]="isPublishing"
         title="Xuất bản giao diện mới lên trang chủ khách hàng">
@@ -130,8 +119,9 @@
 
           <!-- ═════ PREVIEW: CAROUSEL BANNER TRÌNH CHIẾU ═════ -->
           <div *ngIf="selectedSection.layout.variant === 'carousel'" class="preview-carousel"
-            [class.anim-fade]="isAnimationPlaying" [ngStyle]="getBannerStyle(selectedSection, previewViewport)"
-            (touchstart)="onTouchStart($event)" (touchend)="onTouchEnd(selectedSection, $event)">
+            [ngClass]="getSectionAnimationClass(selectedSection)"
+            [ngStyle]="getBannerStyle(selectedSection, previewViewport)" (touchstart)="onTouchStart($event)"
+            (touchend)="onTouchEnd(selectedSection, $event)">
 
             <ng-container *ngIf="getEnabledSlides(selectedSection).length > 0; else noSlidesPreview">
               <!-- Active Slide Frame -->
@@ -234,7 +224,7 @@
             class="preview-hero" [ngClass]="[
                  'layout-' + selectedSection.layout.variant,
                  'align-' + (selectedSection.layout.alignment || 'center'),
-                 isAnimationPlaying ? ('anim-' + selectedSection.animation.preset) : ''
+                 getSectionAnimationClass(selectedSection)
                ]" [ngStyle]="getBannerStyle(selectedSection, previewViewport)">
             <div class="preview-hero__bg" *ngIf="selectedSection.media.desktop?.url; else noHeroBg">
               <img
@@ -254,16 +244,14 @@
               </div>
             </ng-template>
 
-            <div class="preview-hero__content">
+            <div class="preview-hero__content"
+              *ngIf="selectedSection.content.title || selectedSection.content.eyebrow || selectedSection.content.description || selectedSection.content.buttonText">
               <span class="preview-hero__eyebrow" *ngIf="selectedSection.content.eyebrow"
                 [ngStyle]="getTypographyStyle(selectedSection, 'eyebrow')">{{
                 selectedSection.content.eyebrow }}</span>
-              <h2 class="preview-hero__title" *ngIf="selectedSection.content.title; else noHeroTitle"
+              <h2 class="preview-hero__title" *ngIf="selectedSection.content.title"
                 [ngStyle]="getTypographyStyle(selectedSection, 'heading')">{{ selectedSection.content.title }}
               </h2>
-              <ng-template #noHeroTitle>
-                <h2 class="preview-hero__title preview-placeholder-text">Chưa có tiêu đề Hero</h2>
-              </ng-template>
               <p class="preview-hero__desc" *ngIf="selectedSection.content.description"
                 [ngStyle]="getTypographyStyle(selectedSection, 'body')">{{
                 selectedSection.content.description }}</p>
@@ -276,16 +264,12 @@
 
           <!-- ═════ PREVIEW: PRODUCT SLIDER / GRID ═════ -->
           <div *ngIf="selectedSection.type === 'product-slider' || selectedSection.type === 'product-grid'"
-            class="preview-products"
-            [ngClass]="[isAnimationPlaying ? ('anim-' + selectedSection.animation.preset) : '']"
+            class="preview-products" [ngClass]="getSectionAnimationClass(selectedSection)"
             [ngStyle]="getSectionContainerStyle(selectedSection)">
             <div class="preview-products__header">
               <div>
-                <h3 class="preview-products__title" *ngIf="selectedSection.content.title; else noProdTitle"
+                <h3 class="preview-products__title" *ngIf="selectedSection.content.title"
                   [ngStyle]="getTypographyStyle(selectedSection, 'heading')">{{ selectedSection.content.title }}</h3>
-                <ng-template #noProdTitle>
-                  <h3 class="preview-products__title preview-placeholder-text">Chưa có tiêu đề khối sản phẩm</h3>
-                </ng-template>
                 <span class="preview-products__tagline">Nguồn: {{ selectedSection.settings.source || 'featured' |
                   uppercase }} (Tối đa {{ selectedSection.settings.limit || 10 }} sản phẩm)</span>
               </div>
@@ -372,7 +356,7 @@
           <!-- ═════ PREVIEW: EDITORIAL NÀNG THƠ ═════ -->
           <div *ngIf="selectedSection.type === 'editorial'" class="preview-editorial" [ngClass]="[
                  'variant-' + (selectedSection.layout.variant || 'image-left'),
-                 isAnimationPlaying ? ('anim-' + selectedSection.animation.preset) : ''
+                 getSectionAnimationClass(selectedSection)
                ]" [ngStyle]="getSectionContainerStyle(selectedSection)">
             <div class="preview-editorial__col-image">
               <div class="preview-editorial__img-wrapper" [class.has-glow]="selectedSection.settings.enableGlow">
@@ -393,23 +377,21 @@
               </div>
             </div>
             <div class="preview-editorial__col-content">
-              <h2 class="preview-editorial__title" *ngIf="selectedSection.content.title; else noEditorialTitle"
+              <h2 class="preview-editorial__title" *ngIf="selectedSection.content.title"
                 [ngStyle]="getTypographyStyle(selectedSection, 'heading')">{{ selectedSection.content.title }}</h2>
-              <ng-template #noEditorialTitle>
-                <h2 class="preview-editorial__title preview-placeholder-text">Chưa có tiêu đề Editorial</h2>
-              </ng-template>
 
-              <p class="preview-editorial__quote" *ngIf="selectedSection.content.quote; else noEditorialQuote"
+              <p class="preview-editorial__quote" *ngIf="selectedSection.content.quote"
                 [ngStyle]="getTypographyStyle(selectedSection, 'quote')">{{ selectedSection.content.quote }}</p>
-              <ng-template #noEditorialQuote>
-                <p class="preview-editorial__quote preview-placeholder-text">Chưa có nội dung trích dẫn</p>
-              </ng-template>
 
               <div class="preview-editorial__taglines"
                 *ngIf="selectedSection.content.tagline1 || selectedSection.content.tagline2">
-                <span *ngIf="selectedSection.content.tagline1" [ngStyle]="getTypographyStyle(selectedSection, 'tagline1')">{{ selectedSection.content.tagline1 }}</span>
+                <span *ngIf="selectedSection.content.tagline1"
+                  [ngStyle]="getTypographyStyle(selectedSection, 'tagline1')">{{ selectedSection.content.tagline1
+                  }}</span>
                 <span class="dot" *ngIf="selectedSection.content.tagline1 && selectedSection.content.tagline2">•</span>
-                <span *ngIf="selectedSection.content.tagline2" [ngStyle]="getTypographyStyle(selectedSection, 'tagline2')">{{ selectedSection.content.tagline2 }}</span>
+                <span *ngIf="selectedSection.content.tagline2"
+                  [ngStyle]="getTypographyStyle(selectedSection, 'tagline2')">{{ selectedSection.content.tagline2
+                  }}</span>
               </div>
               <div class="preview-editorial__action" *ngIf="selectedSection.content.buttonText">
                 <a class="btn-preview-primary" role="button"
@@ -420,17 +402,14 @@
 
           <!-- ═════ PREVIEW: BANNER ═════ -->
           <div *ngIf="selectedSection.type === 'banner' && selectedSection.layout.variant !== 'carousel'"
-            class="preview-banner" [ngClass]="[isAnimationPlaying ? ('anim-' + selectedSection.animation.preset) : '']"
+            class="preview-banner" [ngClass]="getSectionAnimationClass(selectedSection)"
             [ngStyle]="getSectionContainerStyle(selectedSection)">
             <div class="preview-banner__inner">
               <span class="preview-banner__eyebrow" *ngIf="selectedSection.content.eyebrow"
                 [ngStyle]="getTypographyStyle(selectedSection, 'eyebrow')">{{
                 selectedSection.content.eyebrow }}</span>
-              <h2 class="preview-banner__title" *ngIf="selectedSection.content.title; else noBannerTitle"
+              <h2 class="preview-banner__title" *ngIf="selectedSection.content.title"
                 [ngStyle]="getTypographyStyle(selectedSection, 'heading')">{{ selectedSection.content.title }}</h2>
-              <ng-template #noBannerTitle>
-                <h2 class="preview-banner__title preview-placeholder-text">Chưa có tiêu đề Banner</h2>
-              </ng-template>
               <p class="preview-banner__desc" *ngIf="selectedSection.content.description"
                 [ngStyle]="getTypographyStyle(selectedSection, 'body')">{{
                 selectedSection.content.description }}</p>
@@ -443,7 +422,7 @@
           <!-- ═════ PREVIEW: IMAGE + TEXT ═════ -->
           <div *ngIf="selectedSection.type === 'image-text'" class="preview-editorial" [ngClass]="[
                  'variant-' + (selectedSection.layout.variant || 'image-right'),
-                 isAnimationPlaying ? ('anim-' + selectedSection.animation.preset) : ''
+                 getSectionAnimationClass(selectedSection)
                ]" [ngStyle]="getSectionContainerStyle(selectedSection)">
             <div class="preview-editorial__col-image">
               <img *ngIf="selectedSection.media.desktop?.url; else noImgText" [src]="selectedSection.media.desktop.url"
@@ -463,18 +442,12 @@
               <span class="preview-hero__eyebrow" *ngIf="selectedSection.content.eyebrow"
                 [ngStyle]="getTypographyStyle(selectedSection, 'eyebrow')">{{
                 selectedSection.content.eyebrow }}</span>
-              <h3 class="preview-editorial__title" *ngIf="selectedSection.content.title; else noImgTextTitle"
+              <h3 class="preview-editorial__title" *ngIf="selectedSection.content.title"
                 [ngStyle]="getTypographyStyle(selectedSection, 'heading')">{{
                 selectedSection.content.title }}</h3>
-              <ng-template #noImgTextTitle>
-                <h3 class="preview-editorial__title preview-placeholder-text">Chưa có tiêu đề</h3>
-              </ng-template>
-              <p class="preview-editorial__quote" *ngIf="selectedSection.content.description; else noImgTextDesc"
+              <p class="preview-editorial__quote" *ngIf="selectedSection.content.description"
                 [ngStyle]="getTypographyStyle(selectedSection, 'body')">{{
                 selectedSection.content.description }}</p>
-              <ng-template #noImgTextDesc>
-                <p class="preview-editorial__quote preview-placeholder-text">Chưa có nội dung mô tả</p>
-              </ng-template>
               <a class="btn-preview-primary" *ngIf="selectedSection.content.buttonText"
                 [ngStyle]="getTypographyStyle(selectedSection, 'button')">{{
                 selectedSection.content.buttonText }}</a>
@@ -483,14 +456,10 @@
 
           <!-- ═════ PREVIEW: QUOTE ═════ -->
           <div *ngIf="selectedSection.type === 'quote'" class="preview-quote"
-            [ngClass]="[isAnimationPlaying ? ('anim-' + selectedSection.animation.preset) : '']"
-            [ngStyle]="getSectionContainerStyle(selectedSection)">
-            <blockquote class="preview-quote__text" *ngIf="selectedSection.content.quote; else noQuoteText"
+            [ngClass]="getSectionAnimationClass(selectedSection)" [ngStyle]="getSectionContainerStyle(selectedSection)">
+            <blockquote class="preview-quote__text" *ngIf="selectedSection.content.quote"
               [ngStyle]="getTypographyStyle(selectedSection, 'quote')">{{
               selectedSection.content.quote }}</blockquote>
-            <ng-template #noQuoteText>
-              <blockquote class="preview-quote__text preview-placeholder-text">Chưa có nội dung trích dẫn</blockquote>
-            </ng-template>
             <cite class="preview-quote__author" *ngIf="selectedSection.content.author"
               [ngStyle]="getTypographyStyle(selectedSection, 'subheading')">— {{
               selectedSection.content.author }}</cite>
@@ -498,14 +467,10 @@
 
           <!-- ═════ PREVIEW: CTA ═════ -->
           <div *ngIf="selectedSection.type === 'cta'" class="preview-cta"
-            [ngClass]="[isAnimationPlaying ? ('anim-' + selectedSection.animation.preset) : '']"
-            [ngStyle]="getSectionContainerStyle(selectedSection)">
-            <h3 class="preview-cta__title" *ngIf="selectedSection.content.title; else noCtaTitle"
+            [ngClass]="getSectionAnimationClass(selectedSection)" [ngStyle]="getSectionContainerStyle(selectedSection)">
+            <h3 class="preview-cta__title" *ngIf="selectedSection.content.title"
               [ngStyle]="getTypographyStyle(selectedSection, 'heading')">{{
               selectedSection.content.title }}</h3>
-            <ng-template #noCtaTitle>
-              <h3 class="preview-cta__title preview-placeholder-text">Chưa có tiêu đề CTA</h3>
-            </ng-template>
             <p class="preview-cta__desc" *ngIf="selectedSection.content.description"
               [ngStyle]="getTypographyStyle(selectedSection, 'body')">{{
               selectedSection.content.description }}</p>
@@ -1299,8 +1264,11 @@
               [class.is-active]="selectedPresetForQuickApply === p.value"
               (click)="selectedPresetForQuickApply = p.value">
               <div class="typo-preset-card__top">
-                <strong class="typo-preset-card__name" [style.font-family]="p.headingFont + ', sans-serif'">{{ p.name }}</strong>
-                <span class="typo-preset-card__check" *ngIf="selectedPresetForQuickApply === p.value" aria-hidden="true">
+                <strong class="typo-preset-card__name"
+                  [style.font-family]="(p.previewFont || p.typography.heading.fontFamily) + ', sans-serif'">{{ p.name
+                  }}</strong>
+                <span class="typo-preset-card__check" *ngIf="selectedPresetForQuickApply === p.value"
+                  aria-hidden="true">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                     <polyline points="20 6 9 17 4 12"></polyline>
                   </svg>
@@ -1317,7 +1285,8 @@
               <strong>{{ getSelectedPresetLabel() }}</strong>
             </div>
             <button type="button" class="btn btn-cheri-primary btn-sm px-3" (click)="onApplyQuickPresetToAll()">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="me-1">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                class="me-1">
                 <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
               </svg>
               <span>Áp dụng nhanh toàn bộ</span>
@@ -1345,8 +1314,7 @@
           <div class="form-row-2 mb-3">
             <div class="form-group mb-0">
               <label class="form-label" for="homeTargetSecSelect">Phân đoạn (Section)</label>
-              <select id="homeTargetSecSelect" class="form-control form-control-sm"
-                [ngModel]="activeTargetSectionId"
+              <select id="homeTargetSecSelect" class="form-control form-control-sm" [ngModel]="activeTargetSectionId"
                 (ngModelChange)="onSelectTargetSection($event)">
                 <option *ngFor="let sec of pageDoc.sections" [value]="sec.id">
                   {{ sec.name || (sec.type | uppercase) }} ({{ sec.type }})
@@ -1356,8 +1324,7 @@
 
             <div class="form-group mb-0">
               <label class="form-label" for="homeTargetFieldSelect">Trường nội dung</label>
-              <select id="homeTargetFieldSelect" class="form-control form-control-sm"
-                [ngModel]="activeTargetId"
+              <select id="homeTargetFieldSelect" class="form-control form-control-sm" [ngModel]="activeTargetId"
                 (ngModelChange)="onSelectTarget($event)">
                 <ng-container *ngFor="let grp of configurableSectionGroups">
                   <optgroup *ngIf="grp.sectionId === activeTargetSectionId" [label]="grp.sectionName">
@@ -1376,8 +1343,7 @@
             <div *ngIf="getSlidesForSection(activeTargetSectionId).length > 0" class="d-flex flex-column gap-2">
               <div *ngIf="getNonSlideTargets(activeTargetSectionId).length > 0" class="content-field-pills">
                 <button type="button" *ngFor="let t of getNonSlideTargets(activeTargetSectionId)"
-                  class="content-field-pill" [class.is-active]="activeTargetId === t.id"
-                  (click)="onSelectTarget(t.id)">
+                  class="content-field-pill" [class.is-active]="activeTargetId === t.id" (click)="onSelectTarget(t.id)">
                   <span class="content-field-pill__label">{{ t.fieldLabel || t.label }}</span>
                 </button>
               </div>
@@ -1397,29 +1363,33 @@
             <!-- Nếu là Section thông thường -->
             <div *ngIf="getSlidesForSection(activeTargetSectionId).length === 0" class="content-field-pills">
               <button type="button" *ngFor="let t of getTargetsForSection(activeTargetSectionId)"
-                class="content-field-pill" [class.is-active]="activeTargetId === t.id"
-                (click)="onSelectTarget(t.id)">
+                class="content-field-pill" [class.is-active]="activeTargetId === t.id" (click)="onSelectTarget(t.id)">
                 <span class="content-field-pill__label">{{ t.fieldLabel || t.label }}</span>
               </button>
             </div>
           </div>
 
           <!-- Toolbar trường đang chọn + Nút đặt lại -->
-          <div class="element-field-toolbar d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom" *ngIf="activeTarget">
+          <div class="element-field-toolbar d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom"
+            *ngIf="activeTarget">
             <div class="d-flex align-items-center gap-2">
               <span class="field-indicator-dot"></span>
-              <strong class="field-title">{{ activeTarget.sectionName }} → {{ activeTarget.fieldLabel || activeTarget.label }}</strong>
-              <span class="field-desc text-muted d-none d-md-inline">({{ activeTarget.typoElementKey || activeTarget.role }})</span>
+              <strong class="field-title">{{ activeTarget.sectionName }} → {{ activeTarget.fieldLabel ||
+                activeTarget.label }}</strong>
+              <span class="field-desc text-muted d-none d-md-inline">({{ activeTarget.typoElementKey ||
+                activeTarget.role }})</span>
             </div>
             <div class="d-flex align-items-center gap-2">
-              <button type="button" class="btn-link-action" (click)="onResetCurrentTargetElement()" title="Khôi phục font chữ trường này">
+              <button type="button" class="btn-link-action" (click)="onResetCurrentTargetElement()"
+                title="Khôi phục font chữ trường này">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
                   <polyline points="1 4 1 10 7 10"></polyline>
                   <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
                 </svg>
                 <span>Đặt lại font chữ</span>
               </button>
-              <button type="button" class="btn-link-action" (click)="onResetCurrentTargetElementColor()" title="Khôi phục màu sắc trường này">
+              <button type="button" class="btn-link-action" (click)="onResetCurrentTargetElementColor()"
+                title="Khôi phục màu sắc trường này">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
                   <polyline points="1 4 1 10 7 10"></polyline>
                   <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
@@ -1440,12 +1410,16 @@
                   <select id="homeActiveFontFamily" class="form-control typo-font-select"
                     [ngModel]="getActiveTargetTypographyConfig().fontFamily"
                     (ngModelChange)="onTargetTypographyPropChange('fontFamily', $event)">
-                    <option *ngFor="let opt of fontOptions" [value]="opt.value"
-                      [style.font-family]="opt.value + ', sans-serif'">
-                      {{ opt.label }} ({{ opt.style }})
+                    <option *ngFor="let opt of fontOptions" [value]="opt.value || opt.fontFamily"
+                      [style.font-family]="(opt.value || opt.fontFamily) + ', sans-serif'">
+                      {{ opt.label || opt.name }} ({{ opt.style || opt.category }})
                     </option>
                   </select>
                 </div>
+                <span class="form-hint" *ngIf="getActiveTargetTypographyConfig().fontFamily">
+                  Font đang áp dụng: <strong>{{ getFontFamilyName(getActiveTargetTypographyConfig().fontFamily)
+                    }}</strong>
+                </span>
                 <div class="font-sample-preview mt-1 px-2 py-1 bg-light border rounded small"
                   [style.font-family]="getActiveTargetTypographyConfig().fontFamily + ', sans-serif'">
                   Aa Bb Cc 0123456789 — Vẻ đẹp thanh lịch &amp; quyến rũ Chéri
@@ -1463,8 +1437,7 @@
                   <div class="cms-slider-track-col">
                     <input type="range" class="cms-range-slider" min="8" max="96" step="1"
                       [ngModel]="getActiveTargetTypographyConfig().fontSize"
-                      (ngModelChange)="onTargetTypographyPropChange('fontSize', $event)"
-                      aria-label="Cỡ chữ" />
+                      (ngModelChange)="onTargetTypographyPropChange('fontSize', $event)" aria-label="Cỡ chữ" />
                   </div>
                   <div class="cms-slider-input-col">
                     <div class="cms-number-input-wrap">
@@ -1481,13 +1454,13 @@
                 <div class="cms-slider-row">
                   <div class="cms-slider-label-col">
                     <span class="cms-slider-prop-name">Độ đậm</span>
-                    <span class="cms-slider-curr-val">{{ getFontWeightName(getActiveTargetTypographyConfig().fontWeight) }}</span>
+                    <span class="cms-slider-curr-val">{{ getFontWeightName(getActiveTargetTypographyConfig().fontWeight)
+                      }}</span>
                   </div>
                   <div class="cms-slider-track-col">
                     <input type="range" class="cms-range-slider" min="100" max="900" step="100"
                       [ngModel]="getActiveTargetTypographyConfig().fontWeight"
-                      (ngModelChange)="onTargetTypographyPropChange('fontWeight', $event)"
-                      aria-label="Độ đậm" />
+                      (ngModelChange)="onTargetTypographyPropChange('fontWeight', $event)" aria-label="Độ đậm" />
                   </div>
                   <div class="cms-slider-input-col">
                     <div class="cms-number-input-wrap">
@@ -1504,7 +1477,8 @@
                 <div class="cms-slider-row">
                   <div class="cms-slider-label-col">
                     <span class="cms-slider-prop-name">Khoảng cách dòng</span>
-                    <span class="cms-slider-curr-val">{{ formatDecimal(getActiveTargetTypographyConfig().lineHeight, 1) }}</span>
+                    <span class="cms-slider-curr-val">{{ formatDecimal(getActiveTargetTypographyConfig().lineHeight, 1)
+                      }}</span>
                   </div>
                   <div class="cms-slider-track-col">
                     <input type="range" class="cms-range-slider" min="1.0" max="2.5" step="0.1"
@@ -1527,7 +1501,8 @@
                 <div class="cms-slider-row">
                   <div class="cms-slider-label-col">
                     <span class="cms-slider-prop-name">Giãn cách chữ</span>
-                    <span class="cms-slider-curr-val">{{ formatDecimal(getActiveTargetTypographyConfig().letterSpacing, 1) }} px</span>
+                    <span class="cms-slider-curr-val">{{ formatDecimal(getActiveTargetTypographyConfig().letterSpacing,
+                      1) }} px</span>
                   </div>
                   <div class="cms-slider-track-col">
                     <input type="range" class="cms-range-slider" min="-2" max="10" step="0.1"
@@ -1555,8 +1530,7 @@
                   <div class="btn-group-segmented">
                     <button type="button" class="btn-segmented"
                       [class.is-active]="!getActiveTargetTypographyConfig().textTransform || getActiveTargetTypographyConfig().textTransform === 'none'"
-                      (click)="onTargetTypographyPropChange('textTransform', 'none')"
-                      title="Mặc định theo văn bản">
+                      (click)="onTargetTypographyPropChange('textTransform', 'none')" title="Mặc định theo văn bản">
                       Mặc định
                     </button>
                     <button type="button" class="btn-segmented"
@@ -1567,8 +1541,7 @@
                     </button>
                     <button type="button" class="btn-segmented"
                       [class.is-active]="getActiveTargetTypographyConfig().textTransform === 'uppercase'"
-                      (click)="onTargetTypographyPropChange('textTransform', 'uppercase')"
-                      title="CHỮ HOA (uppercase)">
+                      (click)="onTargetTypographyPropChange('textTransform', 'uppercase')" title="CHỮ HOA (uppercase)">
                       ABC
                     </button>
                     <button type="button" class="btn-segmented"
@@ -1586,9 +1559,9 @@
                   <div class="btn-group-segmented">
                     <button type="button" class="btn-segmented"
                       [class.is-active]="!getActiveTargetTypographyConfig().textAlign || getActiveTargetTypographyConfig().textAlign === 'left'"
-                      (click)="onTargetTypographyPropChange('textAlign', 'left')"
-                      title="Căn trái">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="me-1">
+                      (click)="onTargetTypographyPropChange('textAlign', 'left')" title="Căn trái">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="1.8" class="me-1">
                         <line x1="17" y1="10" x2="3" y2="10"></line>
                         <line x1="21" y1="6" x2="3" y2="6"></line>
                         <line x1="21" y1="14" x2="3" y2="14"></line>
@@ -1598,9 +1571,9 @@
                     </button>
                     <button type="button" class="btn-segmented"
                       [class.is-active]="getActiveTargetTypographyConfig().textAlign === 'center'"
-                      (click)="onTargetTypographyPropChange('textAlign', 'center')"
-                      title="Căn giữa">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="me-1">
+                      (click)="onTargetTypographyPropChange('textAlign', 'center')" title="Căn giữa">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="1.8" class="me-1">
                         <line x1="18" y1="10" x2="6" y2="10"></line>
                         <line x1="21" y1="6" x2="3" y2="6"></line>
                         <line x1="21" y1="14" x2="3" y2="14"></line>
@@ -1610,9 +1583,9 @@
                     </button>
                     <button type="button" class="btn-segmented"
                       [class.is-active]="getActiveTargetTypographyConfig().textAlign === 'right'"
-                      (click)="onTargetTypographyPropChange('textAlign', 'right')"
-                      title="Căn phải">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="me-1">
+                      (click)="onTargetTypographyPropChange('textAlign', 'right')" title="Căn phải">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="1.8" class="me-1">
                         <line x1="21" y1="10" x2="7" y2="10"></line>
                         <line x1="21" y1="6" x2="3" y2="6"></line>
                         <line x1="21" y1="14" x2="3" y2="14"></line>
@@ -1622,9 +1595,9 @@
                     </button>
                     <button type="button" class="btn-segmented"
                       [class.is-active]="getActiveTargetTypographyConfig().textAlign === 'justify'"
-                      (click)="onTargetTypographyPropChange('textAlign', 'justify')"
-                      title="Căn đều">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="me-1">
+                      (click)="onTargetTypographyPropChange('textAlign', 'justify')" title="Căn đều">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="1.8" class="me-1">
                         <line x1="21" y1="10" x2="3" y2="10"></line>
                         <line x1="21" y1="6" x2="3" y2="6"></line>
                         <line x1="21" y1="14" x2="3" y2="14"></line>
@@ -1642,17 +1615,16 @@
               <div class="form-group mb-3">
                 <label class="form-label mb-1">Màu chữ (Text Color)</label>
                 <div class="d-flex align-items-center gap-2">
-                  <div class="color-swatch-box" [style.background-color]="getActiveTargetColor()" title="Xem trước màu chữ"></div>
+                  <div class="color-swatch-box" [style.background-color]="getActiveTargetColor()"
+                    title="Xem trước màu chữ"></div>
                   <label class="color-picker-btn mb-0" title="Mở bảng chọn màu trực quan">
-                    <input type="color" class="color-native-input"
-                      [value]="getActiveTargetColorPickerValue()"
+                    <input type="color" class="color-native-input" [value]="getActiveTargetColorPickerValue()"
                       (input)="onTargetColorPickerChange($any($event.target).value)" />
                     <span>Chọn màu</span>
                   </label>
                   <div class="hex-input-wrap flex-grow-1">
-                    <input type="text" class="form-control form-control-sm hex-text-input"
-                      placeholder="#74070E" maxlength="7"
-                      [value]="getActiveTargetColor()"
+                    <input type="text" class="form-control form-control-sm hex-text-input" placeholder="#74070E"
+                      maxlength="7" [value]="getActiveTargetColor()"
                       (input)="onTargetHexChange($any($event.target).value)" />
                   </div>
                 </div>
@@ -1665,14 +1637,13 @@
               <div class="form-group mb-3">
                 <label class="form-label mb-1">Bảng màu thương hiệu Chéri</label>
                 <div class="brand-swatches-grid">
-                  <button type="button" *ngFor="let sw of brandColorPalette"
-                    class="brand-swatch-btn"
+                  <button type="button" *ngFor="let sw of brandColorPalette" class="brand-swatch-btn"
                     [class.is-selected]="getActiveTargetColor().toLowerCase() === sw.hex.toLowerCase()"
-                    [style.background-color]="sw.hex"
-                    [title]="sw.label + ' (' + sw.hex + ')'"
+                    [style.background-color]="sw.hex" [title]="sw.label + ' (' + sw.hex + ')'"
                     (click)="onApplyTargetBrandColor(sw.hex)">
                     <span class="swatch-check" *ngIf="getActiveTargetColor().toLowerCase() === sw.hex.toLowerCase()">
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.5">
                         <polyline points="20 6 9 17 4 12"></polyline>
                       </svg>
                     </span>
@@ -1684,8 +1655,10 @@
               <div class="form-group mb-0" *ngIf="activeTarget.role === 'button' || activeTarget.isButton">
                 <div class="d-flex justify-content-between align-items-center mb-1">
                   <label class="form-label mb-0">Màu nền nút (Button Background)</label>
-                  <button type="button" class="btn-link-action" (click)="onResetTargetButtonBg()" title="Đặt lại màu nền nút về mặc định">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <button type="button" class="btn-link-action" (click)="onResetTargetButtonBg()"
+                    title="Đặt lại màu nền nút về mặc định">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                      stroke-width="1.6">
                       <polyline points="1 4 1 10 7 10"></polyline>
                       <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
                     </svg>
@@ -1693,17 +1666,16 @@
                   </button>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                  <div class="color-swatch-box" [style.background-color]="getActiveTargetButtonBg()" title="Xem trước màu nền nút"></div>
+                  <div class="color-swatch-box" [style.background-color]="getActiveTargetButtonBg()"
+                    title="Xem trước màu nền nút"></div>
                   <label class="color-picker-btn mb-0" title="Mở bảng chọn màu nền nút">
-                    <input type="color" class="color-native-input"
-                      [value]="getActiveTargetButtonBgPickerValue()"
+                    <input type="color" class="color-native-input" [value]="getActiveTargetButtonBgPickerValue()"
                       (input)="onTargetButtonBgPickerChange($any($event.target).value)" />
                     <span>Chọn màu nền</span>
                   </label>
                   <div class="hex-input-wrap flex-grow-1">
-                    <input type="text" class="form-control form-control-sm hex-text-input"
-                      placeholder="#74070E" maxlength="7"
-                      [value]="getActiveTargetButtonBg()"
+                    <input type="text" class="form-control form-control-sm hex-text-input" placeholder="#74070E"
+                      maxlength="7" [value]="getActiveTargetButtonBg()"
                       (input)="onTargetButtonBgHexChange($any($event.target).value)" />
                   </div>
                 </div>
@@ -1712,14 +1684,17 @@
 
             <!-- NHÓM 3: BẢN XEM TRƯỚC TRỰC TIẾP (LIVE PREVIEW) — Phẳng, gọn -->
             <div class="element-live-preview-box p-3 border rounded">
-              <div class="element-live-preview-header d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+              <div
+                class="element-live-preview-header d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
                 <div class="d-flex align-items-center gap-2">
                   <span class="preview-dot"></span>
                   <strong class="small text-uppercase text-wine">Bản xem trước trực tiếp</strong>
-                  <span class="badge badge-light border text-muted" style="font-size: 0.7rem;">{{ activeTarget.fieldLabel || activeTarget.label }}</span>
+                  <span class="badge badge-light border text-muted" style="font-size: 0.7rem;">{{
+                    activeTarget.fieldLabel || activeTarget.label }}</span>
                 </div>
                 <small class="text-muted" style="font-size: 0.72rem;">
-                  {{ getActiveTargetTypographyConfig().fontFamily }} • {{ getActiveTargetTypographyConfig().fontSize }}px • {{ getActiveTargetTypographyConfig().fontWeight }}
+                  {{ getActiveTargetTypographyConfig().fontFamily }} • {{ getActiveTargetTypographyConfig().fontSize
+                  }}px • {{ getActiveTargetTypographyConfig().fontWeight }}
                 </small>
               </div>
 
@@ -1770,8 +1745,7 @@
 
                 <!-- Button Role -->
                 <div *ngIf="activeTarget.role === 'button' || activeTarget.isButton" class="preview-role-button-wrap">
-                  <button type="button" class="btn-role-preview"
-                    [ngStyle]="getActiveTargetStyle()"
+                  <button type="button" class="btn-role-preview" [ngStyle]="getActiveTargetStyle()"
                     [style.background-color]="getActiveTargetButtonBg()">
                     {{ getActiveTargetSampleText() }}
                   </button>
@@ -1810,8 +1784,8 @@
             </button>
           </div>
 
-          <select class="form-control" [(ngModel)]="selectedSection.animation.preset"
-            (ngModelChange)="triggerAnimationPreview()">
+          <select class="form-control" [ngModel]="selectedSection.animation?.preset"
+            (ngModelChange)="onCustomAnimationPresetChange($event)">
             <option *ngFor="let ap of animationPresets" [value]="ap.value">{{ ap.label }}</option>
           </select>
         </div>
@@ -1819,13 +1793,13 @@
         <div class="form-row-2 mt-3">
           <div class="form-group">
             <label class="form-label" for="animDur">Thời lượng (Duration: ms)</label>
-            <input type="number" id="animDur" class="form-control" [(ngModel)]="selectedSection.animation.duration"
-              min="200" max="3000" step="50" (ngModelChange)="triggerAnimationPreview()" />
+            <input type="number" id="animDur" class="form-control" [ngModel]="selectedSection.animation?.duration"
+              min="200" max="3000" step="50" (ngModelChange)="onCustomAnimationDurationChange($event)" />
           </div>
           <div class="form-group">
             <label class="form-label" for="animDelay">Độ trễ (Delay: ms)</label>
-            <input type="number" id="animDelay" class="form-control" [(ngModel)]="selectedSection.animation.delay"
-              min="0" max="2000" step="50" (ngModelChange)="triggerAnimationPreview()" />
+            <input type="number" id="animDelay" class="form-control" [ngModel]="selectedSection.animation?.delay"
+              min="0" max="2000" step="50" (ngModelChange)="onCustomAnimationDelayChange($event)" />
           </div>
         </div>
 
@@ -1833,14 +1807,14 @@
           <label class="form-label">Cường độ chuyển động</label>
           <div class="btn-group-segmented">
             <button type="button" class="btn-segmented"
-              [class.is-active]="selectedSection.animation.intensity === 'subtle'"
-              (click)="selectedSection.animation.intensity = 'subtle'; triggerAnimationPreview()">Êm dịu</button>
+              [class.is-active]="selectedSection.animation?.intensity === 'subtle'"
+              (click)="onCustomAnimationIntensityChange('subtle')">Êm dịu</button>
             <button type="button" class="btn-segmented"
-              [class.is-active]="selectedSection.animation.intensity === 'normal'"
-              (click)="selectedSection.animation.intensity = 'normal'; triggerAnimationPreview()">Tiêu chuẩn</button>
+              [class.is-active]="selectedSection.animation?.intensity === 'normal'"
+              (click)="onCustomAnimationIntensityChange('normal')">Tiêu chuẩn</button>
             <button type="button" class="btn-segmented"
-              [class.is-active]="selectedSection.animation.intensity === 'strong'"
-              (click)="selectedSection.animation.intensity = 'strong'; triggerAnimationPreview()">Mạnh mẽ</button>
+              [class.is-active]="selectedSection.animation?.intensity === 'strong'"
+              (click)="onCustomAnimationIntensityChange('strong')">Mạnh mẽ</button>
           </div>
         </div>
 
@@ -2030,7 +2004,8 @@
 
       <!-- Scrolling Content of All Enabled Sections -->
       <div class="full-preview-scroll-body">
-        <div *ngFor="let sec of enabledSections" class="full-preview-section-wrapper">
+        <div *ngFor="let sec of enabledSections" class="full-preview-section-wrapper"
+          [ngClass]="getSectionAnimationClass(sec)" [ngStyle]="getSectionAnimationStyle(sec)">
           <div class="full-preview-section-tag">Section #{{ sec.order }}: {{ sec.name }}</div>
 
           <!-- Carousel in Full Preview -->
@@ -2104,15 +2079,12 @@
                 <span>Chưa chọn hình ảnh nền Hero Banner</span>
               </div>
             </ng-template>
-            <div class="preview-hero__content">
+            <div class="preview-hero__content"
+              *ngIf="sec.content.title || sec.content.eyebrow || sec.content.description || sec.content.buttonText">
               <span class="preview-hero__eyebrow" *ngIf="sec.content.eyebrow"
                 [ngStyle]="getTypographyStyle(sec, 'eyebrow')">{{ sec.content.eyebrow }}</span>
-              <h2 class="preview-hero__title" *ngIf="sec.content.title; else noFullHeroTitle"
-                [ngStyle]="getTypographyStyle(sec, 'heading')">
+              <h2 class="preview-hero__title" *ngIf="sec.content.title" [ngStyle]="getTypographyStyle(sec, 'heading')">
                 {{ sec.content.title }}</h2>
-              <ng-template #noFullHeroTitle>
-                <h2 class="preview-hero__title preview-placeholder-text">Chưa có tiêu đề Hero</h2>
-              </ng-template>
               <p class="preview-hero__desc" *ngIf="sec.content.description" [ngStyle]="getTypographyStyle(sec, 'body')">
                 {{ sec.content.description }}</p>
               <div class="preview-hero__actions" *ngIf="sec.content.buttonText">
@@ -2124,15 +2096,12 @@
 
           <!-- Product Slider in Full Preview -->
           <div *ngIf="sec.type === 'product-slider' || sec.type === 'product-grid'" class="preview-products">
-            <div class="preview-products__header">
+            <div class="preview-products__header" *ngIf="sec.content.title || sec.content.viewAllText">
               <div>
-                <h3 class="preview-products__title" *ngIf="sec.content.title; else noFullProdTitle"
+                <h3 class="preview-products__title" *ngIf="sec.content.title"
                   [ngStyle]="getTypographyStyle(sec, 'heading')">
                   {{ sec.content.title }}
                 </h3>
-                <ng-template #noFullProdTitle>
-                  <h3 class="preview-products__title preview-placeholder-text">Chưa có tiêu đề khối sản phẩm</h3>
-                </ng-template>
                 <span class="preview-products__tagline">Nguồn: {{ sec.settings.source || 'featured' | uppercase
                   }}</span>
               </div>
@@ -2226,26 +2195,22 @@
               </div>
             </div>
             <div class="preview-editorial__col-content">
-              <h2 class="preview-editorial__title" *ngIf="sec.content.title; else noFullEdTitle"
+              <h2 class="preview-editorial__title" *ngIf="sec.content.title"
                 [ngStyle]="getTypographyStyle(sec, 'heading')">
                 {{ sec.content.title }}
               </h2>
-              <ng-template #noFullEdTitle>
-                <h2 class="preview-editorial__title preview-placeholder-text">Chưa có tiêu đề Editorial</h2>
-              </ng-template>
 
-              <p class="preview-editorial__quote" *ngIf="sec.content.quote; else noFullEdQuote"
+              <p class="preview-editorial__quote" *ngIf="sec.content.quote"
                 [ngStyle]="getTypographyStyle(sec, 'quote')">
                 {{ sec.content.quote }}
               </p>
-              <ng-template #noFullEdQuote>
-                <p class="preview-editorial__quote preview-placeholder-text">Chưa có nội dung trích dẫn</p>
-              </ng-template>
 
               <div class="preview-editorial__taglines" *ngIf="sec.content.tagline1 || sec.content.tagline2">
-                <span *ngIf="sec.content.tagline1" [ngStyle]="getTypographyStyle(sec, 'tagline1')">{{ sec.content.tagline1 }}</span>
+                <span *ngIf="sec.content.tagline1" [ngStyle]="getTypographyStyle(sec, 'tagline1')">{{
+                  sec.content.tagline1 }}</span>
                 <span class="dot" *ngIf="sec.content.tagline1 && sec.content.tagline2">•</span>
-                <span *ngIf="sec.content.tagline2" [ngStyle]="getTypographyStyle(sec, 'tagline2')">{{ sec.content.tagline2 }}</span>
+                <span *ngIf="sec.content.tagline2" [ngStyle]="getTypographyStyle(sec, 'tagline2')">{{
+                  sec.content.tagline2 }}</span>
               </div>
               <div class="preview-editorial__action" *ngIf="sec.content.buttonText">
                 <a class="btn-preview-primary" role="button" [ngStyle]="getTypographyStyle(sec, 'button')">{{
@@ -2256,16 +2221,14 @@
 
           <!-- Banner in Full Preview -->
           <div *ngIf="sec.type === 'banner' && sec.layout.variant !== 'carousel'" class="preview-banner">
-            <div class="preview-banner__inner">
+            <div class="preview-banner__inner"
+              *ngIf="sec.content.title || sec.content.eyebrow || sec.content.description || sec.content.buttonText">
               <span class="preview-banner__eyebrow" *ngIf="sec.content.eyebrow"
                 [ngStyle]="getTypographyStyle(sec, 'eyebrow')">{{ sec.content.eyebrow }}</span>
-              <h2 class="preview-banner__title" *ngIf="sec.content.title; else noFullBannerTitle"
+              <h2 class="preview-banner__title" *ngIf="sec.content.title"
                 [ngStyle]="getTypographyStyle(sec, 'heading')">
                 {{ sec.content.title }}
               </h2>
-              <ng-template #noFullBannerTitle>
-                <h2 class="preview-banner__title preview-placeholder-text">Chưa có tiêu đề Banner</h2>
-              </ng-template>
               <p class="preview-banner__desc" *ngIf="sec.content.description"
                 [ngStyle]="getTypographyStyle(sec, 'body')">{{ sec.content.description }}
               </p>
@@ -2293,20 +2256,14 @@
             <div class="preview-editorial__col-content">
               <span class="preview-hero__eyebrow" *ngIf="sec.content.eyebrow"
                 [ngStyle]="getTypographyStyle(sec, 'eyebrow')">{{ sec.content.eyebrow }}</span>
-              <h3 class="preview-editorial__title" *ngIf="sec.content.title; else noFullImgTextTitle"
+              <h3 class="preview-editorial__title" *ngIf="sec.content.title"
                 [ngStyle]="getTypographyStyle(sec, 'heading')">
                 {{ sec.content.title }}
               </h3>
-              <ng-template #noFullImgTextTitle>
-                <h3 class="preview-editorial__title preview-placeholder-text">Chưa có tiêu đề</h3>
-              </ng-template>
-              <p class="preview-editorial__quote" *ngIf="sec.content.description; else noFullImgTextDesc"
+              <p class="preview-editorial__quote" *ngIf="sec.content.description"
                 [ngStyle]="getTypographyStyle(sec, 'body')">
                 {{ sec.content.description }}
               </p>
-              <ng-template #noFullImgTextDesc>
-                <p class="preview-editorial__quote preview-placeholder-text">Chưa có nội dung mô tả</p>
-              </ng-template>
               <a class="btn-preview-primary" *ngIf="sec.content.buttonText"
                 [ngStyle]="getTypographyStyle(sec, 'button')">{{ sec.content.buttonText }}</a>
             </div>
@@ -2314,26 +2271,19 @@
 
           <!-- Quote in Full Preview -->
           <div *ngIf="sec.type === 'quote'" class="preview-quote">
-            <blockquote class="preview-quote__text" *ngIf="sec.content.quote; else noFullQuoteText"
+            <blockquote class="preview-quote__text" *ngIf="sec.content.quote"
               [ngStyle]="getTypographyStyle(sec, 'quote')">
               {{ sec.content.quote }}
             </blockquote>
-            <ng-template #noFullQuoteText>
-              <blockquote class="preview-quote__text preview-placeholder-text">Chưa có nội dung trích dẫn</blockquote>
-            </ng-template>
             <cite class="preview-quote__author" *ngIf="sec.content.author"
               [ngStyle]="getTypographyStyle(sec, 'subheading')">— {{ sec.content.author }}</cite>
           </div>
 
           <!-- CTA in Full Preview -->
           <div *ngIf="sec.type === 'cta'" class="preview-cta">
-            <h3 class="preview-cta__title" *ngIf="sec.content.title; else noFullCtaTitle"
-              [ngStyle]="getTypographyStyle(sec, 'heading')">
+            <h3 class="preview-cta__title" *ngIf="sec.content.title" [ngStyle]="getTypographyStyle(sec, 'heading')">
               {{ sec.content.title }}
             </h3>
-            <ng-template #noFullCtaTitle>
-              <h3 class="preview-cta__title preview-placeholder-text">Chưa có tiêu đề CTA</h3>
-            </ng-template>
             <p class="preview-cta__desc" *ngIf="sec.content.description" [ngStyle]="getTypographyStyle(sec, 'body')">{{
               sec.content.description }}</p>
             <a class="btn-preview-primary" *ngIf="sec.content.buttonText" [ngStyle]="getTypographyStyle(sec, 'button')">

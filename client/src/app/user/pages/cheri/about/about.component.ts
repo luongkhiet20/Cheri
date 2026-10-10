@@ -4,8 +4,10 @@ import {
   OnDestroy,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
+  Inject,
+  PLATFORM_ID,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { Title, Meta } from '@angular/platform-browser';
 import { Subject, Subscription } from 'rxjs';
@@ -27,10 +29,13 @@ import {
 export class AboutComponent implements OnInit, OnDestroy {
   sections: AboutSection[] = [];
   isLoading = true;
+  visibleSectionIds = new Set<string>();
 
   private destroy$ = new Subject<void>();
   private requestSub?: Subscription;
+  private observer?: IntersectionObserver;
   private isDestroyed = false;
+  private isBrowser: boolean;
 
   constructor(
     private apiService: ApiService,
@@ -38,7 +43,10 @@ export class AboutComponent implements OnInit, OnDestroy {
     private titleService: Title,
     private metaService: Meta,
     private cdr: ChangeDetectorRef,
-  ) {}
+    @Inject(PLATFORM_ID) platformId: Object,
+  ) {
+    this.isBrowser = isPlatformBrowser(platformId);
+  }
 
   ngOnInit(): void {
     this.titleService.setTitle('Giới thiệu về Chéri | Câu Chuyện Thương Hiệu');
@@ -56,6 +64,7 @@ export class AboutComponent implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
     this.requestSub?.unsubscribe();
+    this.observer?.disconnect();
   }
 
   /**
@@ -113,6 +122,7 @@ export class AboutComponent implements OnInit, OnDestroy {
           // Trường hợp A: Có dữ liệu hợp lệ xuất bản từ CMS
           this.sections = validSections;
           if (!this.isDestroyed) {
+            this.initIntersectionObserver();
             this.cdr.markForCheck();
           }
         },
@@ -218,6 +228,95 @@ export class AboutComponent implements OnInit, OnDestroy {
     if (section.colors?.buttonHoverBackgroundColor) {
       style['--sec-btn-hover-bg'] = section.colors.buttonHoverBackgroundColor;
     }
+    Object.assign(style, this.getSectionAnimationStyle(section));
     return style;
+  }
+
+  private initIntersectionObserver(): void {
+    if (!this.isBrowser) {
+      this.sections.forEach((s) => this.visibleSectionIds.add(s.id));
+      return;
+    }
+
+    if (!('IntersectionObserver' in window)) {
+      this.sections.forEach((s) => this.visibleSectionIds.add(s.id));
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.observer?.disconnect();
+    this.observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const sectionId = entry.target.getAttribute('id');
+            if (sectionId) {
+              this.visibleSectionIds.add(sectionId);
+              const sec = this.sections.find((s) => s.id === sectionId);
+              if (sec?.animation?.once !== false) {
+                this.observer?.unobserve(entry.target);
+              }
+              this.cdr.markForCheck();
+            }
+          }
+        });
+      },
+      {
+        threshold: 0.1,
+        rootMargin: '0px 0px -40px 0px',
+      },
+    );
+
+    setTimeout(() => {
+      this.sections.forEach((sec) => {
+        const el = document.getElementById(sec.id);
+        if (el) {
+          this.observer?.observe(el);
+        } else {
+          this.visibleSectionIds.add(sec.id);
+        }
+      });
+      this.cdr.markForCheck();
+    }, 60);
+
+    // Failsafe: After 1.5s, if no section was marked visible (or observer stalled), reveal all
+    setTimeout(() => {
+      if (this.visibleSectionIds.size === 0 && this.sections.length > 0) {
+        this.sections.forEach((s) => this.visibleSectionIds.add(s.id));
+        this.cdr.markForCheck();
+      }
+    }, 1500);
+  }
+
+  getSectionAnimationClass(section: AboutSection | null | undefined): string {
+    if (!section?.animation || !section.animation.preset || section.animation.preset === 'none') {
+      return '';
+    }
+    const isVisible = this.visibleSectionIds.has(section.id);
+    if (!isVisible) {
+      return 'about-anim-pending';
+    }
+    return `anim-${section.animation.preset} anim-intensity-${section.animation.intensity || 'normal'}`;
+  }
+
+  getSectionAnimationStyle(section: AboutSection | null | undefined): Record<string, string> {
+    if (!section?.animation || section.animation.preset === 'none') {
+      return {};
+    }
+    const duration =
+      typeof section.animation.duration === 'number' && section.animation.duration > 0
+        ? `${section.animation.duration}ms`
+        : '750ms';
+    const delay =
+      typeof section.animation.delay === 'number' && section.animation.delay >= 0
+        ? `${section.animation.delay}ms`
+        : '0ms';
+
+    return {
+      'animation-duration': duration,
+      'animation-delay': delay,
+      '--anim-duration': duration,
+      '--anim-delay': delay,
+    };
   }
 }

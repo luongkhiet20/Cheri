@@ -1047,36 +1047,95 @@
 /* ══════════════════════════════════════════════════════════════════════════
    4. ANIMATION KEYFRAMES & PRESETS
    ══════════════════════════════════════════════════════════════════════════ */
+.anim-intensity-subtle {
+  --anim-distance: 14px;
+  --anim-scale-from: 0.96;
+}
+
+.anim-intensity-normal {
+  --anim-distance: 30px;
+  --anim-scale-from: 0.92;
+}
+
+.anim-intensity-strong {
+  --anim-distance: 52px;
+  --anim-scale-from: 0.85;
+}
+
+.anim-none {
+  animation: none !important;
+}
+
 .anim-fade {
-  animation: animFade 0.6s ease-out forwards;
+  animation: animFade var(--anim-duration, 750ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
 }
 
 .anim-fade-up {
-  animation: animFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: animFadeUp var(--anim-duration, 750ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
 }
 
 .anim-fade-down {
-  animation: animFadeDown 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: animFadeDown var(--anim-duration, 750ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
 }
 
 .anim-fade-left {
-  animation: animFadeLeft 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: animFadeLeft var(--anim-duration, 750ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
 }
 
 .anim-fade-right {
-  animation: animFadeRight 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: animFadeRight var(--anim-duration, 750ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
+}
+
+.anim-slide-left {
+  animation: animSlideLeft var(--anim-duration, 750ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
+}
+
+.anim-slide-right {
+  animation: animSlideRight var(--anim-duration, 750ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
 }
 
 .anim-zoom-in {
-  animation: animZoomIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: animZoomIn var(--anim-duration, 750ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
+}
+
+.anim-zoom-out {
+  animation: animZoomOut var(--anim-duration, 750ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
+}
+
+.anim-scale {
+  animation: animZoomIn var(--anim-duration, 750ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
+}
+
+.anim-reveal {
+  animation: animReveal var(--anim-duration, 850ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
+}
+
+.anim-image-reveal {
+  animation: animImageReveal var(--anim-duration, 900ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
 }
 
 .anim-split-reveal {
-  animation: animSplitReveal 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: animSplitReveal var(--anim-duration, 850ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
+}
+
+.anim-stagger {
+  animation: animStagger var(--anim-duration, 800ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
+}
+
+.anim-parallax {
+  animation: animParallax var(--anim-duration, 950ms) ease-out var(--anim-delay, 0ms) both;
+}
+
+.anim-image-zoom {
+  animation: animFade var(--anim-duration, 750ms) ease-out var(--anim-delay, 0ms) both;
 }
 
 .anim-image-zoom img {
-  animation: animImgScale 1.4s ease-out forwards;
+  animation: animImgScale var(--anim-duration, 1200ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
+}
+
+.anim-text-reveal {
+  animation: animTextReveal var(--anim-duration, 800ms) cubic-bezier(0.16, 1, 0.3, 1) var(--anim-delay, 0ms) both;
 }
 
 @keyframes animFade {
@@ -1085,51 +1144,197 @@
 }
 
 @keyframes animFadeUp {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(var(--anim-distance, 30px));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes animFadeDown {
-  from { opacity: 0; transform: translateY(-30px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(calc(-1 * var(--anim-distance, 30px)));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes animFadeLeft {
-  from { opacity: 0; transform: translateX(30px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(var(--anim-distance, 30px));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes animFadeRight {
-  from { opacity: 0; transform: translateX(-30px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(calc(-1 * var(--anim-distance, 30px)));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes animSlideLeft {
+  from {
+    opacity: 0;
+    transform: translateX(calc(1.5 * var(--anim-distance, 45px)));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes animSlideRight {
+  from {
+    opacity: 0;
+    transform: translateX(calc(-1.5 * var(--anim-distance, 45px)));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes animZoomIn {
-  from { opacity: 0; transform: scale(0.92); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(var(--anim-scale-from, 0.92));
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes animZoomOut {
+  from {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes animReveal {
+  0% {
+    opacity: 0;
+    clip-path: inset(0 100% 0 0);
+  }
+  100% {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes animImageReveal {
+  0% {
+    opacity: 0;
+    filter: blur(8px);
+    transform: scale(1.06);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1);
+  }
 }
 
 @keyframes animSplitReveal {
-  0% { opacity: 0; transform: translateY(20px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0% {
+    opacity: 0;
+    transform: translateY(var(--anim-distance, 25px));
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes animStagger {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes animParallax {
+  0% {
+    opacity: 0.3;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes animImgScale {
-  0% { transform: scale(1.08); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes animTextReveal {
+  0% {
+    opacity: 0;
+    letter-spacing: 2px;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    letter-spacing: inherit;
+    transform: translateY(0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .anim-none,
   .anim-fade,
   .anim-fade-up,
   .anim-fade-down,
   .anim-fade-left,
   .anim-fade-right,
+  .anim-slide-left,
+  .anim-slide-right,
   .anim-zoom-in,
+  .anim-zoom-out,
+  .anim-scale,
+  .anim-reveal,
+  .anim-image-reveal,
   .anim-split-reveal,
-  .anim-image-zoom img {
+  .anim-stagger,
+  .anim-parallax,
+  .anim-image-zoom,
+  .anim-image-zoom img,
+  .anim-text-reveal {
     animation: none !important;
     transform: none !important;
+    filter: none !important;
+    clip-path: none !important;
+    opacity: 1 !important;
   }
 }
 
@@ -2255,80 +2460,7 @@
   line-height: 1.4;
 }
 
-/* FULL PREVIEW MODAL */
-.home-cms-modal-backdrop.is-full-preview {
-  padding: 20px;
-}
-
-.full-preview-container {
-  width: 100%;
-  max-width: 1200px;
-  height: 90vh;
-  background: #ffffff;
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
-  transition: max-width 0.3s ease;
-}
-
-.full-preview-container.is-mobile-frame {
-  max-width: 410px;
-  border-radius: 36px;
-  border: 10px solid #1e293b;
-}
-
-.full-preview-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 20px;
-  background: #0f172a;
-  color: #ffffff;
-}
-
-.full-preview-topbar__info h4 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.full-preview-topbar__info span {
-  font-size: 11.5px;
-  opacity: 0.7;
-}
-
-.full-preview-topbar__actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.full-preview-scroll-body {
-  flex: 1;
-  overflow-y: auto;
-  background: #ffffff;
-}
-
-.full-preview-section-wrapper {
-  position: relative;
-  border-bottom: 1px dashed #cbd5e1;
-}
-
-.full-preview-section-tag {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  background: rgba(15, 23, 42, 0.75);
-  color: #ffffff;
-  font-size: 10.5px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 3px;
-  z-index: 5;
-  pointer-events: none;
-}
+/* Note: Full Page Preview Modal styles are defined in section 6 below */
 
 /* ══════════════════════════════════════════════════════════════════════════
    7. TYPOGRAPHY / KIỂU CHỮ STYLES
@@ -3627,7 +3759,7 @@
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   6. FULL PAGE PREVIEW MODAL STYLES
+   6. FULL PAGE PREVIEW MODAL STYLES & RESPONSIVE TOOLBAR
    ══════════════════════════════════════════════════════════════════════════ */
 .home-cms-modal-backdrop.is-full-preview {
   position: fixed;
@@ -3652,33 +3784,41 @@
   overflow: hidden;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              border-radius 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              border-width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Mobile Frame trong Full Preview */
 .full-preview-container.is-mobile-frame {
   max-width: 410px;
   height: 90vh;
-  border-radius: 40px;
-  border: 12px solid #1e293b;
+  border-radius: 36px;
+  border: 10px solid #1e293b;
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45);
 }
 
+/* Topbar cơ bản (Desktop view) */
 .full-preview-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 24px;
+  padding: 12px 24px;
   background: #ffffff;
   border-bottom: 1px solid #e2e8f0;
   flex-shrink: 0;
-  z-index: 10;
+  z-index: 20;
+  position: sticky;
+  top: 0;
+  gap: 12px;
 }
 
-.full-preview-container.is-mobile-frame .full-preview-topbar {
-  padding: 10px 16px;
+.full-preview-topbar__info {
+  display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .full-preview-topbar__info h4 {
@@ -3686,17 +3826,256 @@
   font-size: 15px;
   font-weight: 700;
   color: #1e293b;
+  line-height: 1.3;
 }
 
 .full-preview-topbar__info span {
   font-size: 12px;
   color: #64748b;
+  line-height: 1.3;
 }
 
 .full-preview-topbar__actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Device Switcher (Desktop / Mobile Toggle) */
+.home-cms-device-toggle {
+  display: inline-flex;
+  align-items: center;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.home-cms-device-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: #475569;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 6px 12px;
+  min-height: 36px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.home-cms-device-btn:hover {
+  color: #1e293b;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.home-cms-device-btn.is-active {
+  background: #74070E;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(116, 7, 14, 0.25);
+}
+
+.home-cms-device-btn.is-active svg {
+  stroke: #ffffff;
+}
+
+/* Các nút trong Preview Toolbar */
+.preview-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.preview-btn__icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: block;
+}
+
+/* Nút Chạy lại hiệu ứng */
+.preview-btn--replay {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+}
+
+.preview-btn--replay:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+/* Nút Đóng xem trước */
+.preview-btn--close {
+  background: #74070E;
+  border: 1px solid #74070E;
+  color: #ffffff;
+}
+
+.preview-btn--close:hover {
+  background: #5a050b;
+  border-color: #5a050b;
+  color: #ffffff;
+}
+
+.preview-btn--close svg {
+  stroke: #ffffff;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MOBILE FRAME & NARROW SCREEN RESPONSIVE (ICON-ONLY MODE)
+   ══════════════════════════════════════════════════════════════════════════ */
+/* 1. Khi container ở chế độ Mobile Frame (.is-mobile-frame) */
+.full-preview-container.is-mobile-frame .full-preview-topbar {
+  padding: 10px 12px;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.full-preview-container.is-mobile-frame .full-preview-topbar__info {
+  text-align: center;
+  width: 100%;
+}
+
+.full-preview-container.is-mobile-frame .full-preview-topbar__info h4 {
+  font-size: 13.5px;
+}
+
+.full-preview-container.is-mobile-frame .full-preview-topbar__info span {
+  font-size: 11px;
+}
+
+.full-preview-container.is-mobile-frame .full-preview-topbar__actions {
+  width: 100%;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.full-preview-container.is-mobile-frame .preview-btn__text {
+  display: none !important;
+}
+
+.full-preview-container.is-mobile-frame .home-cms-device-toggle {
+  padding: 2px;
+  gap: 3px;
+  border-radius: 8px;
+}
+
+.full-preview-container.is-mobile-frame .home-cms-device-btn {
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: 6px;
+}
+
+.full-preview-container.is-mobile-frame .preview-btn--replay,
+.full-preview-container.is-mobile-frame .preview-btn--close {
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  min-height: 42px;
+  padding: 0;
+  border-radius: 8px;
+}
+
+/* 2. Khi viewport màn hình thực tế thu nhỏ (@media max-width: 640px) */
+@media (max-width: 640px) {
+  .home-cms-modal-backdrop.is-full-preview {
+    padding: 8px;
+  }
+
+  .full-preview-container {
+    height: 96vh;
+    border-radius: 12px;
+  }
+
+  .full-preview-container.is-mobile-frame {
+    border-width: 6px;
+    border-radius: 24px;
+    height: 94vh;
+  }
+
+  .full-preview-topbar {
+    padding: 10px 10px;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .full-preview-topbar__info {
+    text-align: center;
+    width: 100%;
+  }
+
+  .full-preview-topbar__info h4 {
+    font-size: 13px;
+  }
+
+  .full-preview-topbar__info span {
+    font-size: 11px;
+  }
+
+  .full-preview-topbar__actions {
+    width: 100%;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+
+  /* Ẩn chữ trên tất cả nút khi ở màn hình nhỏ */
+  .preview-btn__text {
+    display: none !important;
+  }
+
+  .home-cms-device-toggle {
+    padding: 2px;
+    gap: 2px;
+    border-radius: 8px;
+  }
+
+  .home-cms-device-btn {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+    padding: 0;
+    border-radius: 6px;
+  }
+
+  .preview-btn--replay,
+  .preview-btn--close {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+    padding: 0;
+    border-radius: 8px;
+  }
 }
 
 .full-preview-scroll-body {

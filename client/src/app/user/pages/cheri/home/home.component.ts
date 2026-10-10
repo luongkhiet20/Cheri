@@ -22,6 +22,7 @@ import { TranslatePipe } from '../../../../pipes/translate.pipe';
 import { SignalStore } from '../../../../store/signal.store';
 import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
 import { ThemeService } from '../../../../services/theme.service';
+import { CartToastService } from '../../../../services/cart-toast.service';
 import { WishlistButtonComponent } from '../../../shared/wishlist-button/wishlist-button.component';
 import {
   HomeSection,
@@ -95,6 +96,7 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     private title: Title,
     private translate: TranslateService,
     private snackBar: MatSnackBar,
+    private cartToast: CartToastService,
     private store: SignalStore,
     private selectors: SignalStoreSelectors,
     private themeService: ThemeService,
@@ -158,20 +160,7 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
       return;
     }
     this.store.addToCart('?id=' + id);
-
-    this.translate.getTranslations$()
-      .pipe(map(translations => translations
-        ? { message: translations['ADDED_TO_CART'] || 'Added to cart', action: translations['TO_CART'] || 'To Cart' }
-        : { message: 'Added to cart', action: 'To Cart' }
-      ), take(1))
-      .subscribe(({ message, action }) => {
-        let snackBarRef = this.snackBar.open(message, action, { duration: 3000 });
-        snackBarRef.onAction().pipe(
-          take(1))
-          .subscribe(() => {
-            this.router.navigate(['/' + this.lang() + '/cart'])
-          });
-      });
+    this.cartToast.show();
   }
 
   removeFromCart(id: string): void {
@@ -511,6 +500,31 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     return style;
   }
 
+  getSectionAnimationClass(section: HomeSection | null | undefined): string {
+    if (!section?.animation || !section.animation.preset || section.animation.preset === 'none') {
+      return '';
+    }
+    return `anim-${section.animation.preset} anim-intensity-${section.animation.intensity || 'normal'}`;
+  }
+
+  getSectionAnimationStyle(section: HomeSection | null | undefined): Record<string, string> {
+    if (!section?.animation || section.animation.preset === 'none') {
+      return {};
+    }
+    const duration = (typeof section.animation.duration === 'number' && section.animation.duration > 0)
+      ? `${section.animation.duration}ms`
+      : '750ms';
+    const delay = (typeof section.animation.delay === 'number' && section.animation.delay >= 0)
+      ? `${section.animation.delay}ms`
+      : '0ms';
+    return {
+      'animation-duration': duration,
+      'animation-delay': delay,
+      '--anim-duration': duration,
+      '--anim-delay': delay,
+    };
+  }
+
   getSectionContainerStyle(section: HomeSection | null | undefined): Record<string, string> {
     if (!section) return {};
     const style: Record<string, string> = {};
@@ -531,6 +545,7 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     if (section.colors?.buttonHoverBackgroundColor) {
       style['--sec-btn-hover-bg'] = section.colors.buttonHoverBackgroundColor;
     }
+    Object.assign(style, this.getSectionAnimationStyle(section));
     return style;
   }
 

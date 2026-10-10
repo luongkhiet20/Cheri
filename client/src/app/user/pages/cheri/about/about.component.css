@@ -508,3 +508,22 @@
     color: #777;
     margin: 0 0 24px;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   VIEWPORT SCROLL ANIMATION HELPERS
+   ══════════════════════════════════════════════════════════════════════════ */
+.about-anim-pending {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.about-section {
+    will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .about-anim-pending {
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+}

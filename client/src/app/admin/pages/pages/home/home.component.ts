@@ -18,6 +18,7 @@ import {
   CarouselConfig,
   CarouselSlideItem,
   ConfigurableTypographyTarget,
+  SectionAnimation,
 } from './home-cms.models';
 import {
   INITIAL_HOME_SECTIONS,
@@ -79,7 +80,12 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   get fontOptions(): FontOption[] {
-    return this.availableFonts;
+    return this.availableFonts.map((f) => ({
+      ...f,
+      label: f.label || f.name,
+      value: f.value || f.fontFamily,
+      style: f.style || f.category,
+    }));
   }
 
   get brandColorPalette(): ColorPreset[] {
@@ -660,6 +666,7 @@ export class HomeComponent implements OnInit, OnDestroy {
         break;
     }
 
+    this.hasUnsavedChanges = true;
     this.triggerAnimationPreview();
     this.cdr.markForCheck();
   }
@@ -667,7 +674,120 @@ export class HomeComponent implements OnInit, OnDestroy {
   onSwitchToCustomAnimation(): void {
     if (!this.selectedSection) return;
     this.selectedSection.isCustomAnimation = true;
+    this.hasUnsavedChanges = true;
+    this.triggerAnimationPreview();
     this.cdr.markForCheck();
+  }
+
+  onCustomAnimationChange(): void {
+    if (!this.selectedSection) return;
+    this.ensureSectionAnimation(this.selectedSection);
+    this.selectedSection.isCustomAnimation = true;
+    this.hasUnsavedChanges = true;
+    this.triggerAnimationPreview();
+    this.cdr.markForCheck();
+  }
+
+  onCustomAnimationPresetChange(preset: AnimationPreset): void {
+    if (!this.selectedSection) return;
+    const anim = this.ensureSectionAnimation(this.selectedSection);
+    anim.preset = preset;
+    this.selectedSection.isCustomAnimation = true;
+    this.hasUnsavedChanges = true;
+    this.triggerAnimationPreview();
+    this.cdr.markForCheck();
+  }
+
+  onCustomAnimationDurationChange(duration: any): void {
+    if (!this.selectedSection) return;
+    const anim = this.ensureSectionAnimation(this.selectedSection);
+    const parsed = Number(duration);
+    anim.duration = !isNaN(parsed) && parsed > 0 ? parsed : 750;
+    this.selectedSection.isCustomAnimation = true;
+    this.hasUnsavedChanges = true;
+    this.triggerAnimationPreview();
+    this.cdr.markForCheck();
+  }
+
+  onCustomAnimationDelayChange(delay: any): void {
+    if (!this.selectedSection) return;
+    const anim = this.ensureSectionAnimation(this.selectedSection);
+    const parsed = Number(delay);
+    anim.delay = !isNaN(parsed) && parsed >= 0 ? parsed : 0;
+    this.selectedSection.isCustomAnimation = true;
+    this.hasUnsavedChanges = true;
+    this.triggerAnimationPreview();
+    this.cdr.markForCheck();
+  }
+
+  onCustomAnimationIntensityChange(intensity: 'subtle' | 'normal' | 'strong'): void {
+    if (!this.selectedSection) return;
+    const anim = this.ensureSectionAnimation(this.selectedSection);
+    anim.intensity = intensity;
+    this.selectedSection.isCustomAnimation = true;
+    this.hasUnsavedChanges = true;
+    this.triggerAnimationPreview();
+    this.cdr.markForCheck();
+  }
+
+  ensureSectionAnimation(section: HomeSection | null | undefined): SectionAnimation {
+    if (!section) {
+      return {
+        preset: 'fade-up',
+        duration: 750,
+        delay: 100,
+        intensity: 'normal',
+        once: true,
+      };
+    }
+    if (!section.animation) {
+      section.animation = {
+        preset: 'fade-up',
+        duration: 750,
+        delay: 100,
+        intensity: 'normal',
+        once: true,
+      };
+    }
+    if (!section.animation.preset) {
+      section.animation.preset = 'fade-up';
+    }
+    if (typeof section.animation.duration !== 'number' || isNaN(section.animation.duration)) {
+      section.animation.duration = 750;
+    }
+    if (typeof section.animation.delay !== 'number' || isNaN(section.animation.delay)) {
+      section.animation.delay = 0;
+    }
+    if (!section.animation.intensity) {
+      section.animation.intensity = 'normal';
+    }
+    return section.animation;
+  }
+
+  getSectionAnimationClass(section: HomeSection | null | undefined): string {
+    if (!section || !this.isAnimationPlaying) return '';
+    const anim = section.animation;
+    if (!anim || !anim.preset || anim.preset === 'none') return '';
+    return `anim-${anim.preset} anim-intensity-${anim.intensity || 'normal'}`;
+  }
+
+  getSectionAnimationStyle(section: HomeSection | null | undefined): Record<string, string> {
+    if (!section || !section.animation || section.animation.preset === 'none') {
+      return {};
+    }
+    const duration = (typeof section.animation.duration === 'number' && section.animation.duration > 0)
+      ? `${section.animation.duration}ms`
+      : '750ms';
+    const delay = (typeof section.animation.delay === 'number' && section.animation.delay >= 0)
+      ? `${section.animation.delay}ms`
+      : '0ms';
+
+    return {
+      'animation-duration': duration,
+      'animation-delay': delay,
+      '--anim-duration': duration,
+      '--anim-delay': delay,
+    };
   }
 
   // ── Media Upload (Thực tế qua Backend API & Cloudinary/Server) ───
@@ -2510,28 +2630,26 @@ export class HomeComponent implements OnInit, OnDestroy {
     if (section.colors?.buttonHoverBackgroundColor) {
       style['--sec-btn-hover-bg'] = section.colors.buttonHoverBackgroundColor;
     }
+    Object.assign(style, this.getSectionAnimationStyle(section));
     return style;
   }
 
   /**
    * Tính toán kích thước, tỷ lệ và chiều cao tối ưu cho Banner/Carousel
-   * đảm bảo Live Preview đồng bộ với Storefront thực tế và responsive.
+   * đảm bảo Live Preview đồng bộ 100% với Storefront thực tế và responsive.
    */
   getBannerStyle(section: HomeSection | null, viewport: 'desktop' | 'mobile'): Record<string, string> {
     if (!section) return {};
     const containerStyle = this.getSectionContainerStyle(section);
-    if (viewport === 'mobile') {
-      return {
-        ...containerStyle,
-        'aspect-ratio': '16 / 9',
-        'min-height': '220px',
-      };
+    const style: Record<string, string> = { ...containerStyle };
+    if (section.settings?.textColor) {
+      style['color'] = section.settings.textColor;
     }
-    // Desktop preview: giữ tỷ lệ banner panorama 2.35:1 như storefront
-    return {
-      ...containerStyle,
-      'aspect-ratio': '2.35 / 1',
-      'min-height': section.layout?.minHeight ? `min(${section.layout.minHeight}, 480px)` : '360px',
-    };
+    if (viewport === 'mobile') {
+      style['min-height'] = section.layout?.mobileMinHeight || '320px';
+    } else {
+      style['min-height'] = section.layout?.minHeight || '480px';
+    }
+    return style;
   }
 }

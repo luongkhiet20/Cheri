@@ -6,12 +6,12 @@
       <div class="breadcrumbs">
         <a [routerLink]="adminPagesUrls.POLICIES" class="breadcrumb-link">Chính sách</a>
         <span class="breadcrumb-sep">/</span>
-        <a *ngIf="isEditMode && pageId" [routerLink]="[adminPagesUrls.POLICIES, pageId]" class="breadcrumb-link">{{
+        <a *ngIf="pageId" [routerLink]="[adminPagesUrls.POLICIES, pageId]" class="breadcrumb-link">{{
           formData.title || 'Chi tiết' }}</a>
-        <span *ngIf="isEditMode && pageId" class="breadcrumb-sep">/</span>
-        <span class="breadcrumb-current">{{ isEditMode ? 'Chỉnh sửa chính sách' : 'Tạo chính sách mới' }}</span>
+        <span *ngIf="pageId" class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current">Chỉnh sửa chính sách</span>
       </div>
-      <h1 class="page-title">{{ isEditMode ? 'Chỉnh sửa chính sách' : 'Tạo chính sách mới' }}</h1>
+      <h1 class="page-title">Chỉnh sửa chính sách</h1>
     </div>
 
     <div class="page-actions">
@@ -21,7 +21,7 @@
       <button type="button" class="btn btn-primary" (click)="onSubmit()" [disabled]="isSubmitting || isLoading"
         id="btn-save-top">
         <span *ngIf="isSubmitting" class="spinner-inline"></span>
-        {{ isSubmitting ? 'Đang lưu...' : (isEditMode ? 'Lưu thay đổi' : 'Lưu chính sách') }}
+        {{ isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi' }}
       </button>
     </div>
   </div>
@@ -65,55 +65,53 @@
 
       <!-- 1. Policy Info -->
       <div class="form-card">
-        <h2 class="card-section-title">Thông tin cơ bản</h2>
+        <div class="card-header-flex">
+          <h2 class="card-section-title mb-0">Thông tin cơ bản</h2>
+        </div>
 
-        <!-- Tiêu đề chính sách -->
+        <!-- Tiêu đề & SEO Meta (Tiếng Việt) -->
         <div class="form-group">
-          <label class="form-label required" for="pageTitle">Tiêu đề chính sách (vi.title)</label>
+          <label class="form-label required" for="pageTitle">Tiêu đề chính sách</label>
           <input type="text" id="pageTitle" class="form-control" [class.is-invalid]="errors['title']"
             [(ngModel)]="formData.title" (ngModelChange)="onTitleChange()" name="title"
             placeholder="Ví dụ: Giới thiệu thương hiệu, Chính sách đổi trả..." required />
           <div *ngIf="errors['title']" class="invalid-feedback">
             {{ errors['title'] }}
           </div>
-          <span class="form-hint">Tên hiển thị chính của chính sách trên website</span>
+          <span class="form-hint">Tên hiển thị chính của chính sách bằng tiếng Việt</span>
         </div>
 
-        <!-- Đường dẫn Slug -->
         <div class="form-group">
-          <label class="form-label" for="pageSlug">Mã đường dẫn / URL Slug (titleUrl)</label>
-          <div class="input-slug-wrapper">
-            <span class="slug-prefix">/pages/</span>
-            <input type="text" id="pageSlug" class="form-control slug-input font-mono"
-              [class.is-invalid]="errors['slug']" [(ngModel)]="formData.slug" (ngModelChange)="onSlugChange()"
-              name="slug" placeholder="gioi-thieu, chinh-sach-doi-tra..." />
-          </div>
-          <div *ngIf="errors['slug']" class="invalid-feedback">
-            {{ errors['slug'] }}
-          </div>
-          <span class="form-hint">Đường dẫn truy cập chính sách (tự động tạo từ tiêu đề nếu để trống)</span>
-        </div>
-
-        <!-- Meta Description -->
-        <div class="form-group mb-0">
           <label class="form-label" for="pageMeta">Mô tả tóm tắt (SEO Meta Description)</label>
           <textarea id="pageMeta" class="form-control" rows="2" [(ngModel)]="formData.metaDescription"
             (ngModelChange)="markDirty()" name="metaDescription"
             placeholder="Mô tả ngắn gọn về nội dung chính sách phục vụ tìm kiếm SEO..."></textarea>
         </div>
 
+        <!-- Đường dẫn Slug dùng chung cho chính sách (Readonly) -->
+        <div class="form-group mb-0">
+          <label class="form-label" for="pageSlug">Mã đường dẫn / URL Slug (titleUrl)</label>
+          <div class="input-slug-wrapper">
+            <span class="slug-prefix">/pages/</span>
+            <input type="text" id="pageSlug" class="form-control slug-input font-mono readonly-slug"
+              [value]="formData.slug" name="slug" readonly />
+          </div>
+          <span class="form-hint">Mã đường dẫn (titleUrl) được cố định để bảo vệ liên kết trang, không thể chỉnh sửa.</span>
+        </div>
+
       </div>
 
-      <!-- 2. Content HTML -->
+      <!-- 2. Content HTML (Tiếng Việt) -->
       <div class="form-card">
         <div class="card-header-flex">
-          <h2 class="card-section-title mb-0">Nội dung chính sách (contentHTML)</h2>
+          <h2 class="card-section-title mb-0">Nội dung chính sách</h2>
         </div>
 
         <div class="form-group mb-0">
+          <label class="form-label" for="pageContentHTML">Nội dung bài viết (HTML)</label>
           <textarea id="pageContentHTML" class="form-control font-mono content-textarea" rows="16"
             [(ngModel)]="formData.contentHTML" (ngModelChange)="markDirty()" name="contentHTML"
-            placeholder="Nhập nội dung bài viết dạng HTML (Ví dụ: <h2>Giới thiệu</h2><p>Chéri là thương hiệu...</p>)"></textarea>
+            placeholder="Nhập nội dung bài viết tiếng Việt dạng HTML (Ví dụ: <h2>Giới thiệu</h2><p>Chéri là thương hiệu...</p>)"></textarea>
           <span class="form-hint mt-2">Hỗ trợ các thẻ định dạng HTML: &lt;p&gt;, &lt;h2&gt;, &lt;h3&gt;, &lt;ul&gt;,
             &lt;li&gt;, &lt;strong&gt;, &lt;img&gt;...</span>
         </div>
@@ -129,7 +127,7 @@
         <h2 class="card-section-title">Trạng thái phát hành</h2>
 
         <div class="form-group">
-          <label class="form-label" for="pageStatus">Trạng thái hiển thị (status)</label>
+          <label class="form-label" for="pageStatus">Trạng thái hiển thị</label>
           <select id="pageStatus" class="form-control" [(ngModel)]="formData.isPublished" (ngModelChange)="markDirty()"
             name="isPublished">
             <option [ngValue]="true">Đã xuất bản (Công khai)</option>

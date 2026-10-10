@@ -21,8 +21,22 @@ export class NotificationService {
     success: 4000,
     info: 4000,
     warning: 5000,
-    error: 5000
+    error: 5000,
+    cart: 2300
   };
+
+  /**
+   * Hiển thị Toast thêm giỏ hàng Chéri (2.3s)
+   */
+  cartSuccess(message: string = '✨Đã thêm sản phẩm vào giỏ✨', duration = 2300): string {
+    // Tự động dismiss cart toast cũ nếu đang hiển thị để tránh chồng chéo
+    const currentList = this.notificationsSubject.getValue();
+    const existingCart = currentList.find(n => n.type === 'cart');
+    if (existingCart) {
+      this.dismiss(existingCart.id);
+    }
+    return this.show('cart', message, duration);
+  }
 
   /**
    * Hiển thị thông báo thành công (4s)

@@ -72,8 +72,8 @@ export function createAdminPagesRoutes(components: AdminPagesComponents): Routes
   return [
     // Quản lý chính sách (Policies)
     { path: ADMIN_PAGES_ROUTE_PATHS.POLICIES, component: components.policies },
-    { path: ADMIN_PAGES_ROUTE_PATHS.POLICIES_NEW, component: components.policyForm },
-    { path: ADMIN_PAGES_ROUTE_PATHS.POLICIES_ADD, component: components.policyForm },
+    { path: ADMIN_PAGES_ROUTE_PATHS.POLICIES_NEW, redirectTo: ADMIN_PAGES_ROUTE_PATHS.POLICIES, pathMatch: 'full' },
+    { path: ADMIN_PAGES_ROUTE_PATHS.POLICIES_ADD, redirectTo: ADMIN_PAGES_ROUTE_PATHS.POLICIES, pathMatch: 'full' },
     { path: ADMIN_PAGES_ROUTE_PATHS.POLICIES_DETAIL, component: components.policyEdit },
     { path: ADMIN_PAGES_ROUTE_PATHS.POLICIES_EDIT, component: components.policyForm },
 
@@ -86,8 +86,8 @@ export function createAdminPagesRoutes(components: AdminPagesComponents): Routes
     { path: PAGES_ROUTES.ABOUT, redirectTo: ADMIN_PAGES_ROUTE_PATHS.PAGE_ABOUT, pathMatch: 'full' },
     { path: ADMIN_PAGES_ROUTE_PATHS.PAGES_ROOT, redirectTo: ADMIN_PAGES_ROUTE_PATHS.PAGE_HOME, pathMatch: 'full' },
     { path: ADMIN_PAGES_ROUTE_PATHS.PAGE_POLICIES, redirectTo: ADMIN_PAGES_ROUTE_PATHS.POLICIES, pathMatch: 'full' },
-    { path: ADMIN_PAGES_ROUTE_PATHS.PAGES_NEW, redirectTo: ADMIN_PAGES_ROUTE_PATHS.POLICIES_NEW, pathMatch: 'full' },
-    { path: ADMIN_PAGES_ROUTE_PATHS.PAGES_ADD, redirectTo: ADMIN_PAGES_ROUTE_PATHS.POLICIES_ADD, pathMatch: 'full' },
+    { path: ADMIN_PAGES_ROUTE_PATHS.PAGES_NEW, redirectTo: ADMIN_PAGES_ROUTE_PATHS.POLICIES, pathMatch: 'full' },
+    { path: ADMIN_PAGES_ROUTE_PATHS.PAGES_ADD, redirectTo: ADMIN_PAGES_ROUTE_PATHS.POLICIES, pathMatch: 'full' },
     { path: ADMIN_PAGES_ROUTE_PATHS.PAGES_DETAIL, redirectTo: ADMIN_PAGES_ROUTE_PATHS.POLICIES_DETAIL, pathMatch: 'full' },
     { path: ADMIN_PAGES_ROUTE_PATHS.PAGES_EDIT, redirectTo: ADMIN_PAGES_ROUTE_PATHS.POLICIES_EDIT, pathMatch: 'full' },
   ];

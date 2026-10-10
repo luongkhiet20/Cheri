@@ -5861,32 +5861,74 @@ app.post('/api/products/:id/inventory', handleInventoryImport);
 
 
 // ─────────────────────────────────────────────────────────────
-// 9. PAGES API (QUẢN LÝ TRANG TĨNH)
+// 9. POLICIES / PAGES API (QUẢN LÝ CHÍNH SÁCH - COLLECTION: pages_policies)
+// Đồng bộ 100% với MongoDB collection 'pages_policies' & mirror 'pages'
 // ─────────────────────────────────────────────────────────────
 function formatPage(p) {
-  const title = p.vi?.title || p.en?.title || p.title || p.titleUrl || 'Trang tĩnh';
-  const rawSlug = (p.titleUrl || p.slug || '').replace(/^\/+/, '');
+  if (!p) return null;
+  const vi = p.vi || {};
+  const en = p.en || {};
+  const viTitle = (vi.title || p.title || '').trim();
+  const enTitle = (en.title || '').trim();
+  const title = viTitle || enTitle || p.titleUrl || 'Chính sách';
+
+  const rawSlug = (p.titleUrl || p.slug || '').toString().trim().replace(/^\/+/, '');
   const slug = '/' + rawSlug;
-  const isPublished = p.status === 'published' || p.status === 'active' || (p.vi?.visibility !== false && p.visibility !== false && p.status !== 'draft');
+
+  const isPublished = p.status === 'published' || p.status === 'active' || p.status === 'Đã xuất bản'
+    || (p.status !== 'draft' && p.status !== 'inactive' && p.status !== 'Bản nháp' && vi.visibility !== false && p.isPublished !== false);
+
+  const viContent = vi.contentHTML !== undefined ? vi.contentHTML : (p.contentHTML || '');
+  const enContent = en.contentHTML !== undefined ? en.contentHTML : '';
+  const contentHTML = viContent || enContent;
+
+  const viMeta = vi.metaDescription !== undefined ? vi.metaDescription : (p.metaDescription || '');
+  const enMeta = en.metaDescription !== undefined ? en.metaDescription : '';
+  const metaDescription = viMeta || enMeta;
+
+  const docId = p._id ? p._id.toString() : (p.id ? p.id.toString() : '');
+
   return {
-    id: p._id.toString(),
-    _id: p._id.toString(),
-    title,
+    id: docId,
+    _id: docId,
+    titleUrl: rawSlug,
     slug,
     rawSlug,
-    contentHTML: p.vi?.contentHTML || p.en?.contentHTML || p.contentHTML || '',
+    title,
+    contentHTML,
+    metaDescription,
     status: isPublished ? 'Đã xuất bản' : 'Bản nháp',
     statusVariant: isPublished ? 'success' : 'neutral',
     isPublished: isPublished,
     statusCode: isPublished ? 'published' : 'draft',
     dateAdded: p.dateAdded || p.createdAt || '',
-    updatedAt: (p.updatedAt || p.dateAdded || new Date().toISOString()).toString().slice(0, 10),
-    metaDescription: p.vi?.metaDescription || p.metaDescription || '',
+    updatedAt: p.updatedAt || p.dateAdded || '',
+    vi: {
+      title: viTitle || title,
+      contentHTML: viContent,
+      visibility: vi.visibility !== undefined ? !!vi.visibility : isPublished,
+      metaDescription: viMeta
+    },
+    en: {
+      title: enTitle || viTitle || title,
+      contentHTML: enContent || viContent,
+      visibility: en.visibility !== undefined ? !!en.visibility : isPublished,
+      metaDescription: enMeta || viMeta
+    },
+    __v: typeof p.__v === 'number' ? p.__v : 0,
     raw: p
   };
 }
 
-// 9.1 GET /api/pages - List all pages
+function buildPageIdQuery(id) {
+  if (!id) return { _id: null };
+  if (ObjectId.isValid(id)) {
+    return { $or: [{ _id: new ObjectId(id) }, { _id: id }] };
+  }
+  return { _id: id };
+}
+
+// 9.1 GET /api/pages - Danh sách tất cả chính sách
 app.get('/api/pages', async (req, res) => {
   try {
     const search = req.query.search ? req.query.search.trim() : '';
@@ -5909,7 +5951,8 @@ app.get('/api/pages', async (req, res) => {
           $or: [
             { status: 'published' },
             { status: 'active' },
-            { $and: [{ status: { $ne: 'draft' } }, { 'vi.visibility': { $ne: false } }] }
+            { status: 'Đã xuất bản' },
+            { $and: [{ status: { $ne: 'draft' } }, { status: { $ne: 'inactive' } }, { 'vi.visibility': { $ne: false } }] }
           ]
         });
       } else if (status === 'Bản nháp' || status === 'draft' || status === 'inactive') {
@@ -5917,6 +5960,7 @@ app.get('/api/pages', async (req, res) => {
           $or: [
             { status: 'draft' },
             { status: 'inactive' },
+            { status: 'Bản nháp' },
             { 'vi.visibility': false }
           ]
         });
@@ -5924,7 +5968,13 @@ app.get('/api/pages', async (req, res) => {
     }
 
     const query = queryConditions.length > 0 ? { $and: queryConditions } : {};
-    const pagesRaw = await db.collection('pages').find(query).sort({ _id: -1 }).toArray();
+    let pagesRaw = await db.collection('pages_policies').find(query).sort({ _id: -1 }).toArray();
+
+    // Fallback sang pages collection nếu pages_policies đang rỗng
+    if (!pagesRaw || pagesRaw.length === 0) {
+      pagesRaw = await db.collection('pages').find(query).sort({ _id: -1 }).toArray();
+    }
+
     const data = pagesRaw.map(formatPage);
 
     res.json({
@@ -5938,20 +5988,17 @@ app.get('/api/pages', async (req, res) => {
   }
 });
 
-// 9.2 GET /api/pages/:id - Get page detail
+// 9.2 GET /api/pages/:id - Chi tiết chính sách
 app.get('/api/pages/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    let query;
-    if (ObjectId.isValid(id)) {
-      query = { _id: new ObjectId(id) };
-    } else {
-      query = { _id: id };
-    }
+    const query = buildPageIdQuery(id);
 
-    const page = await db.collection('pages').findOne(query);
+    const page = await db.collection('pages_policies').findOne(query)
+      || await db.collection('pages').findOne(query);
+
     if (!page) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy trang' });
+      return res.status(404).json({ success: false, message: 'Không tìm thấy chính sách' });
     }
 
     res.json({
@@ -5963,111 +6010,144 @@ app.get('/api/pages/:id', async (req, res) => {
   }
 });
 
-// 9.3 POST /api/pages - Create new page
+// 9.3 POST /api/pages - Thêm chính sách mới vào MongoDB (pages_policies)
 app.post('/api/pages', async (req, res) => {
   try {
     const body = req.body || {};
     const vi = body.vi || {};
-    const title = (vi.title || body.title || '').trim();
+    const en = body.en || {};
+
+    const viTitle = (vi.title || body.title || '').trim();
+    const enTitle = (en.title || '').trim();
+    const title = viTitle || enTitle;
 
     if (!title) {
-      return res.status(400).json({ success: false, message: 'Tiêu đề trang không được để trống' });
+      return res.status(400).json({ success: false, message: 'Tiêu đề chính sách không được để trống' });
     }
 
     let slug = (body.titleUrl || body.slug || generateSlug(title)).trim().replace(/^\/+/, '');
     slug = generateSlug(slug);
 
-    // Unique slug & title check
-    const dup = await db.collection('pages').findOne({
+    if (!slug) {
+      slug = generateSlug(title);
+    }
+
+    // Kiểm tra trùng lặp titleUrl hoặc tiêu đề tiếng Việt trong pages_policies
+    const dup = await db.collection('pages_policies').findOne({
       $or: [
         { titleUrl: slug },
-        { 'vi.title': { $regex: `^${title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } }
+        { 'vi.title': { $regex: `^${viTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } }
       ]
     });
 
     if (dup) {
-      return res.status(400).json({ success: false, message: 'Tiêu đề trang hoặc đường dẫn (slug) đã tồn tại' });
+      return res.status(400).json({ success: false, message: 'Tiêu đề chính sách hoặc đường dẫn (slug) đã tồn tại' });
     }
 
     const isPublished = body.isPublished !== undefined
       ? !!body.isPublished
       : (body.status === 'published' || body.status === 'active' || body.status === 'Đã xuất bản' || vi.visibility !== false);
 
-    const contentHTML = vi.contentHTML !== undefined
+    const viVisibility = vi.visibility !== undefined ? !!vi.visibility : isPublished;
+    const enVisibility = en.visibility !== undefined ? !!en.visibility : isPublished;
+
+    const viContent = vi.contentHTML !== undefined
       ? vi.contentHTML
       : (body.contentHTML !== undefined ? body.contentHTML : (body.content || ''));
+    const enContent = en.contentHTML !== undefined
+      ? en.contentHTML
+      : (enTitle ? viContent : '');
+
+    const viMeta = (vi.metaDescription !== undefined ? vi.metaDescription : (body.metaDescription || '')).trim();
+    const enMeta = (en.metaDescription !== undefined ? en.metaDescription : '').trim();
+
+    const now = new Date();
 
     const newPage = {
       titleUrl: slug,
       status: isPublished ? 'published' : 'draft',
-      dateAdded: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      dateAdded: now,
+      updatedAt: now,
       vi: {
-        title: title,
-        contentHTML: contentHTML,
-        visibility: isPublished,
-        metaDescription: (body.metaDescription || vi.metaDescription || '').trim()
+        title: viTitle,
+        contentHTML: viContent,
+        visibility: viVisibility,
+        metaDescription: viMeta
       },
       en: {
-        title: title,
-        contentHTML: contentHTML
+        title: enTitle || viTitle,
+        contentHTML: enContent || viContent,
+        visibility: enVisibility,
+        metaDescription: enMeta || viMeta
       },
       __v: 0
     };
 
-    const result = await db.collection('pages').insertOne(newPage);
-    const created = await db.collection('pages').findOne({ _id: result.insertedId });
+    // 1. Lưu chính thức vào collection 'pages_policies'
+    const result = await db.collection('pages_policies').insertOne(newPage);
+    const newDocId = result.insertedId;
+
+    // 2. Đồng bộ song song sang collection 'pages' để đảm bảo toàn vẹn dữ liệu
+    try {
+      await db.collection('pages').updateOne(
+        { _id: newDocId },
+        { $set: newPage },
+        { upsert: true }
+      );
+    } catch (mirrorErr) {
+      console.warn('Warning mirroring to pages collection:', mirrorErr);
+    }
+
+    const created = await db.collection('pages_policies').findOne({ _id: newDocId });
 
     res.status(201).json({
       success: true,
-      message: 'Tạo trang mới thành công',
-      id: result.insertedId.toString(),
+      message: 'Tạo chính sách mới thành công',
+      id: newDocId.toString(),
       data: formatPage(created)
     });
   } catch (error) {
     console.error('Error creating page:', error);
-    res.status(500).json({ success: false, message: error.message || 'Lỗi hệ thống khi tạo trang' });
+    res.status(500).json({ success: false, message: error.message || 'Lỗi hệ thống khi tạo chính sách' });
   }
 });
 
-// 9.4 PUT / PATCH /api/pages/:id - Update page
+// 9.4 PUT / PATCH /api/pages/:id - Cập nhật chính sách trong MongoDB
 const updatePageHandler = async (req, res) => {
   try {
     const { id } = req.params;
-    let query;
-    if (ObjectId.isValid(id)) {
-      query = { _id: new ObjectId(id) };
-    } else {
-      query = { _id: id };
-    }
+    const query = buildPageIdQuery(id);
 
-    const existing = await db.collection('pages').findOne(query);
+    const existing = await db.collection('pages_policies').findOne(query)
+      || await db.collection('pages').findOne(query);
+
     if (!existing) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy trang để chỉnh sửa' });
+      return res.status(404).json({ success: false, message: 'Không tìm thấy chính sách để chỉnh sửa' });
     }
 
     const body = req.body || {};
     const vi = body.vi || {};
-    const title = (vi.title !== undefined ? vi.title : (body.title !== undefined ? body.title : existing.vi?.title || existing.en?.title || '')).trim();
+    const en = body.en || {};
+
+    const viTitle = (vi.title !== undefined ? vi.title : (body.title !== undefined ? body.title : existing.vi?.title || '')).trim();
+    const enTitle = (en.title !== undefined ? en.title : (existing.en?.title || '')).trim();
+    const title = viTitle || enTitle || existing.vi?.title || existing.en?.title || '';
 
     if (!title) {
-      return res.status(400).json({ success: false, message: 'Tiêu đề trang không được để trống' });
+      return res.status(400).json({ success: false, message: 'Tiêu đề chính sách không được để trống' });
     }
 
-    let slug = (body.titleUrl || body.slug || existing.titleUrl || generateSlug(title)).trim().replace(/^\/+/, '');
-    slug = generateSlug(slug);
+    // Luôn giữ nguyên titleUrl hiện có từ cơ sở dữ liệu MongoDB, bỏ qua mọi thay đổi slug từ client
+    const slug = existing.titleUrl || (existing.slug ? existing.slug.replace(/^\/+/, '') : '') || generateSlug(title);
 
-    // Unique check against other pages
-    const dup = await db.collection('pages').findOne({
+    // Kiểm tra trùng lặp tiêu đề với các chính sách khác
+    const dup = await db.collection('pages_policies').findOne({
       _id: { $ne: existing._id },
-      $or: [
-        { titleUrl: slug },
-        { 'vi.title': { $regex: `^${title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } }
-      ]
+      'vi.title': { $regex: `^${viTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' }
     });
 
     if (dup) {
-      return res.status(400).json({ success: false, message: 'Tiêu đề trang hoặc đường dẫn (slug) đã tồn tại' });
+      return res.status(400).json({ success: false, message: 'Tiêu đề chính sách đã tồn tại' });
     }
 
     const isPublished = body.isPublished !== undefined
@@ -6076,51 +6156,76 @@ const updatePageHandler = async (req, res) => {
           ? (body.status === 'published' || body.status === 'active' || body.status === 'Đã xuất bản')
           : (existing.status === 'published' || existing.vi?.visibility !== false));
 
-    const contentHTML = vi.contentHTML !== undefined
+    const viVisibility = vi.visibility !== undefined ? !!vi.visibility : isPublished;
+    const enVisibility = existing.en?.visibility !== undefined
+      ? existing.en.visibility
+      : (en.visibility !== undefined ? !!en.visibility : isPublished);
+
+    const viContent = vi.contentHTML !== undefined
       ? vi.contentHTML
-      : (body.contentHTML !== undefined ? body.contentHTML : (body.content !== undefined ? body.content : existing.vi?.contentHTML || existing.en?.contentHTML || ''));
+      : (body.contentHTML !== undefined ? body.contentHTML : (existing.vi?.contentHTML || ''));
+    const enContent = existing.en?.contentHTML !== undefined
+      ? existing.en.contentHTML
+      : (en.contentHTML !== undefined ? en.contentHTML : '');
+
+    const viMeta = (vi.metaDescription !== undefined ? vi.metaDescription : (body.metaDescription !== undefined ? body.metaDescription : (existing.vi?.metaDescription || ''))).trim();
+    const enMeta = existing.en?.metaDescription !== undefined
+      ? existing.en.metaDescription
+      : (en.metaDescription !== undefined ? en.metaDescription : '').trim();
+
+    const now = new Date();
 
     const updateFields = {
       titleUrl: slug,
       status: isPublished ? 'published' : 'draft',
-      updatedAt: new Date().toISOString(),
-      'vi.title': title,
-      'vi.contentHTML': contentHTML,
-      'vi.visibility': isPublished,
-      'vi.metaDescription': (body.metaDescription !== undefined ? body.metaDescription : (vi.metaDescription || existing.vi?.metaDescription || '')).trim()
+      updatedAt: now,
+      'vi.title': viTitle,
+      'vi.contentHTML': viContent,
+      'vi.visibility': viVisibility,
+      'vi.metaDescription': viMeta,
+      'en.title': existing.en?.title || enTitle || viTitle,
+      'en.contentHTML': enContent || viContent,
+      'en.visibility': enVisibility,
+      'en.metaDescription': enMeta || viMeta
     };
 
-    await db.collection('pages').updateOne(query, { $set: updateFields });
-    const updated = await db.collection('pages').findOne(query);
+    // 1. Cập nhật trong 'pages_policies'
+    await db.collection('pages_policies').updateOne({ _id: existing._id }, { $set: updateFields });
+
+    // 2. Đồng bộ sang 'pages'
+    try {
+      await db.collection('pages').updateOne({ _id: existing._id }, { $set: updateFields });
+    } catch (mirrorErr) {
+      console.warn('Warning mirroring update to pages collection:', mirrorErr);
+    }
+
+    const updated = await db.collection('pages_policies').findOne({ _id: existing._id });
 
     res.json({
       success: true,
-      message: 'Cập nhật trang thành công',
+      message: 'Cập nhật chính sách thành công',
       data: formatPage(updated)
     });
   } catch (error) {
     console.error('Error updating page:', error);
-    res.status(500).json({ success: false, message: error.message || 'Lỗi hệ thống khi cập nhật trang' });
+    res.status(500).json({ success: false, message: error.message || 'Lỗi hệ thống khi cập nhật chính sách' });
   }
 };
 
 app.put('/api/pages/:id', updatePageHandler);
 app.patch('/api/pages/:id', updatePageHandler);
 
-// 9.5 PATCH /api/pages/:id/status - Toggle / update status
+// 9.5 PATCH /api/pages/:id/status - Đổi trạng thái hiển thị
 const togglePageStatusHandler = async (req, res) => {
   try {
     const { id } = req.params;
-    let query;
-    if (ObjectId.isValid(id)) {
-      query = { _id: new ObjectId(id) };
-    } else {
-      query = { _id: id };
-    }
+    const query = buildPageIdQuery(id);
 
-    const existing = await db.collection('pages').findOne(query);
+    const existing = await db.collection('pages_policies').findOne(query)
+      || await db.collection('pages').findOne(query);
+
     if (!existing) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy trang' });
+      return res.status(404).json({ success: false, message: 'Không tìm thấy chính sách' });
     }
 
     const currentPublished = existing.status === 'published' || existing.status === 'active' || existing.vi?.visibility !== false;
@@ -6134,20 +6239,30 @@ const togglePageStatusHandler = async (req, res) => {
     }
 
     const newStatus = newPublished ? 'published' : 'draft';
+    const now = new Date();
 
-    await db.collection('pages').updateOne(query, {
-      $set: {
-        status: newStatus,
-        'vi.visibility': newPublished,
-        updatedAt: new Date().toISOString()
-      }
-    });
+    const updateFields = {
+      status: newStatus,
+      'vi.visibility': newPublished,
+      'en.visibility': newPublished,
+      updatedAt: now
+    };
 
-    const updated = await db.collection('pages').findOne(query);
+    // 1. Cập nhật trong 'pages_policies'
+    await db.collection('pages_policies').updateOne({ _id: existing._id }, { $set: updateFields });
+
+    // 2. Đồng bộ sang 'pages'
+    try {
+      await db.collection('pages').updateOne({ _id: existing._id }, { $set: updateFields });
+    } catch (mirrorErr) {
+      console.warn('Warning mirroring status toggle to pages:', mirrorErr);
+    }
+
+    const updated = await db.collection('pages_policies').findOne({ _id: existing._id });
 
     res.json({
       success: true,
-      message: `Trang đã được chuyển sang trạng thái "${newPublished ? 'Đã xuất bản' : 'Bản nháp'}"`,
+      message: `Chính sách đã chuyển sang trạng thái "${newPublished ? 'Đã xuất bản' : 'Bản nháp'}"`,
       data: formatPage(updated)
     });
   } catch (error) {
@@ -6159,28 +6274,119 @@ const togglePageStatusHandler = async (req, res) => {
 app.patch('/api/pages/:id/status', togglePageStatusHandler);
 app.put('/api/pages/:id/toggle', togglePageStatusHandler);
 
-// 9.6 DELETE /api/pages/:id - Delete page
+// 9.6 DELETE /api/pages/:id - Xóa chính sách khỏi MongoDB
 app.delete('/api/pages/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    let query;
-    if (ObjectId.isValid(id)) {
-      query = { _id: new ObjectId(id) };
-    } else {
-      query = { _id: id };
+    const query = buildPageIdQuery(id);
+
+    const existing = await db.collection('pages_policies').findOne(query)
+      || await db.collection('pages').findOne(query);
+
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy chính sách hoặc đã bị xóa' });
     }
 
-    const result = await db.collection('pages').deleteOne(query);
+    // 1. Xóa trong 'pages_policies'
+    const result = await db.collection('pages_policies').deleteOne({ _id: existing._id });
+
+    // 2. Xóa trong 'pages'
+    try {
+      await db.collection('pages').deleteOne({ _id: existing._id });
+    } catch (mirrorErr) {
+      console.warn('Warning mirroring delete to pages:', mirrorErr);
+    }
+
     if (result.deletedCount === 0) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy trang hoặc đã bị xóa' });
+      return res.status(404).json({ success: false, message: 'Không tìm thấy chính sách hoặc đã bị xóa' });
     }
 
     res.json({
       success: true,
-      message: 'Xóa trang thành công'
+      message: 'Xóa chính sách thành công'
     });
   } catch (error) {
+    console.error('Error deleting page:', error);
     res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// 9.7 STOREFRONT COMPATIBILITY ENDPOINTS (Dành cho trang người dùng Chéri trên Vercel / Express)
+app.get('/api/cheri/page/all', async (req, res) => {
+  try {
+    const lang = req.headers.lang || req.query.lang || 'vi';
+    const titles = req.query.titles === 'true' || req.query.titles === true;
+    const selectQuery = titles ? { titleUrl: 1, [`${lang}.title`]: 1, status: 1, isPublished: 1 } : {};
+    let pages = await db.collection('pages_policies').find({}, { projection: selectQuery }).toArray();
+    if (!pages || pages.length === 0) {
+      pages = await db.collection('pages').find({}, { projection: selectQuery }).toArray();
+    }
+    res.json(pages);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/cheri/page/:titleUrl', async (req, res) => {
+  try {
+    const { titleUrl } = req.params;
+    const lang = req.headers.lang || req.query.lang || 'vi';
+    let page = await db.collection('pages_policies').findOne(
+      { titleUrl },
+      { projection: { titleUrl: 1, [lang]: 1, status: 1, isPublished: 1 } }
+    );
+    if (!page) {
+      page = await db.collection('pages').findOne(
+        { titleUrl },
+        { projection: { titleUrl: 1, [lang]: 1, status: 1, isPublished: 1 } }
+      );
+    }
+    if (!page) {
+      return res.status(404).json({ statusCode: 404, message: `Page with title ${titleUrl} not found` });
+    }
+    res.json(page);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/cheri/page', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const { titleUrl } = body;
+    if (!titleUrl) {
+      return res.status(400).json({ statusCode: 400, message: 'titleUrl is required' });
+    }
+    const existing = await db.collection('pages_policies').findOne({ titleUrl });
+    const now = new Date();
+    if (!existing) {
+      const newDoc = { ...body, dateAdded: now, updatedAt: now };
+      const r = await db.collection('pages_policies').insertOne(newDoc);
+      await db.collection('pages').updateOne({ _id: r.insertedId }, { $set: newDoc }, { upsert: true });
+      return res.json(newDoc);
+    } else {
+      const updateDoc = { ...body, updatedAt: now };
+      await db.collection('pages_policies').updateOne({ _id: existing._id }, { $set: updateDoc });
+      await db.collection('pages').updateOne({ _id: existing._id }, { $set: updateDoc });
+      const updated = await db.collection('pages_policies').findOne({ _id: existing._id });
+      return res.json(updated);
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/cheri/page/:titleUrl', async (req, res) => {
+  try {
+    const { titleUrl } = req.params;
+    const result = await db.collection('pages_policies').deleteOne({ titleUrl });
+    await db.collection('pages').deleteOne({ titleUrl });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ statusCode: 404, message: `Page with title ${titleUrl} not found` });
+    }
+    res.json({ success: true, message: 'Deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 

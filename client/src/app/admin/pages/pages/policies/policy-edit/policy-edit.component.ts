@@ -18,9 +18,23 @@ export class PolicyEditComponent implements OnInit {
   isToggling = false;
   errorMessage = '';
   successMessage = '';
-  confirmDeleteOpen = false;
 
   activeTab: 'preview' | 'html' = 'preview';
+
+  get displayTitle(): string {
+    if (!this.page) return '';
+    return this.page.vi?.title || this.page.title || '';
+  }
+
+  get displayContentHTML(): string {
+    if (!this.page) return '';
+    return this.page.vi?.contentHTML || this.page.contentHTML || '';
+  }
+
+  get displayMetaDescription(): string {
+    if (!this.page) return '';
+    return this.page.vi?.metaDescription || this.page.metaDescription || '';
+  }
 
   constructor(
     private route: ActivatedRoute,
@@ -102,41 +116,6 @@ export class PolicyEditComponent implements OnInit {
     if (this.pageId) {
       this.router.navigate([ADMIN_PAGES_URLS.POLICIES, this.pageId, 'edit']);
     }
-  }
-
-  openConfirmDelete(): void {
-    this.confirmDeleteOpen = true;
-    this.cdr.markForCheck();
-  }
-
-  onConfirmDelete(): void {
-    if (!this.pageId) return;
-    this.apiService.deletePage(this.pageId).subscribe({
-      next: (res) => {
-        this.confirmDeleteOpen = false;
-        if (res.success) {
-          this.notificationService.success('Xóa chính sách thành công');
-          this.router.navigate([ADMIN_PAGES_URLS.POLICIES]);
-        } else {
-          const msg = res.message || 'Lỗi khi xóa chính sách';
-          this.errorMessage = msg;
-          this.notificationService.error(msg);
-          this.cdr.markForCheck();
-        }
-      },
-      error: (err) => {
-        this.confirmDeleteOpen = false;
-        const msg = err.error?.message || 'Lỗi khi xóa chính sách khỏi MongoDB';
-        this.errorMessage = msg;
-        this.notificationService.error(msg);
-        this.cdr.markForCheck();
-      }
-    });
-  }
-
-  onCancelDelete(): void {
-    this.confirmDeleteOpen = false;
-    this.cdr.markForCheck();
   }
 }
 

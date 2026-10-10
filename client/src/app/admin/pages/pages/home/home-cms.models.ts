@@ -112,6 +112,7 @@ export interface SectionLayout {
   gap?: number;
   fullWidth?: boolean;
   minHeight?: string;
+  mobileMinHeight?: string;
   carouselConfig?: CarouselConfig;
 }
 
@@ -219,6 +220,9 @@ export interface FontOption {
   fontFamily: string;
   category: 'Serif' | 'Sans-Serif' | 'System';
   description?: string;
+  label?: string;
+  value?: string;
+  style?: string;
 }
 
 export interface HomeSection {

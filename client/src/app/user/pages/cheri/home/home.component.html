@@ -30,7 +30,7 @@
             <!-- Sub-type Carousel -->
             @if (section.layout?.variant === 'carousel') {
               @if (getCarouselSlides(section).length > 0) {
-                <section class="dynamic-carousel-section" [id]="section.id" [ngStyle]="getSectionContainerStyle(section)">
+                <section class="dynamic-carousel-section" [id]="section.id" [ngClass]="getSectionAnimationClass(section)" [ngStyle]="getSectionContainerStyle(section)">
                   <div class="dynamic-carousel"
                     (touchstart)="onTouchStart($event)"
                     (touchend)="onTouchEnd(section, $event)">
@@ -76,7 +76,7 @@
             } @else {
               <!-- Static Hero Banner -->
               @if (section.media?.desktop?.url || section.content?.title) {
-                <section class="dynamic-hero-section" [id]="section.id" [ngStyle]="getSectionContainerStyle(section)">
+                <section class="dynamic-hero-section" [id]="section.id" [ngClass]="getSectionAnimationClass(section)" [ngStyle]="getSectionContainerStyle(section)">
                   <picture *ngIf="section.media?.desktop?.url">
                     <source *ngIf="section.media?.mobile?.url" [srcset]="section.media.mobile.url" media="(max-width: 768px)">
                     <img [src]="section.media.desktop.url"
@@ -106,7 +106,7 @@
           @if (section.type === 'product-slider') {
             @if (getFilteredProducts(section); as prods) {
               @if (prods.length > 0) {
-                <section class="home-featured" [id]="section.id" [ngStyle]="getSectionContainerStyle(section)">
+                <section class="home-featured" [id]="section.id" [ngClass]="getSectionAnimationClass(section)" [ngStyle]="getSectionContainerStyle(section)">
                   <div class="home-featured-header">
                     <div class="home-featured-heading" *ngIf="section.content?.title">
                       <h3 class="home-featured-title" [ngStyle]="getTypographyStyle(section, 'heading')">
@@ -188,7 +188,7 @@
           @if (section.type === 'product-grid') {
             @if (getFilteredProducts(section); as prods) {
               @if (prods.length > 0) {
-                <section class="home-grid-section" [id]="section.id" [ngStyle]="getSectionContainerStyle(section)">
+                <section class="home-grid-section" [id]="section.id" [ngClass]="getSectionAnimationClass(section)" [ngStyle]="getSectionContainerStyle(section)">
                   <div class="home-featured-heading text-center mb-4" *ngIf="section.content?.title || section.content?.description">
                     <h3 *ngIf="section.content?.title" class="home-featured-title" [ngStyle]="getTypographyStyle(section, 'heading')">
                       {{ section.content.title }}
@@ -244,7 +244,7 @@
           <!-- 4. EDITORIAL SECTION (NÀNG THƠ) -->
           @if (section.type === 'editorial') {
             @if (section.media?.desktop?.url || section.content?.title || section.content?.quote || section.content?.description) {
-              <section class="home-muse-section is-visible" [id]="section.id" [ngStyle]="getSectionContainerStyle(section)">
+              <section class="home-muse-section is-visible" [id]="section.id" [ngClass]="getSectionAnimationClass(section)" [ngStyle]="getSectionContainerStyle(section)">
                 <div class="home-muse-container">
                   <div class="home-muse-grid">
                     <div class="home-muse-image-col" *ngIf="section.media?.desktop?.url" [routerLink]="[section.content?.buttonLink || ('/' + (lang() || 'vi') + '/product/all')]" role="button" tabindex="0">
@@ -281,7 +281,7 @@
 
           <!-- 5. BANNER HOẶC IMAGE-TEXT SECTION -->
           @if (section.type === 'banner' || section.type === 'image-text') {
-            <section class="dynamic-banner-section" [id]="section.id" [ngStyle]="getBannerStyle(section)">
+            <section class="dynamic-banner-section" [id]="section.id" [ngClass]="getSectionAnimationClass(section)" [ngStyle]="getBannerStyle(section)">
               <div class="dynamic-banner-inner">
                 <picture *ngIf="section.media?.desktop?.url">
                   <source *ngIf="section.media?.mobile?.url" [srcset]="section.media.mobile.url" media="(max-width: 768px)">
@@ -309,7 +309,7 @@
           <!-- 6. QUOTE SECTION -->
           @if (section.type === 'quote') {
             @if (section.content?.quote || section.content?.title) {
-              <section class="dynamic-quote-section" [id]="section.id" [ngStyle]="getSectionContainerStyle(section)">
+              <section class="dynamic-quote-section" [id]="section.id" [ngClass]="getSectionAnimationClass(section)" [ngStyle]="getSectionContainerStyle(section)">
                 <div class="container text-center">
                   <blockquote class="dynamic-quote-text" [ngStyle]="getTypographyStyle(section, 'quote')">
                     "{{ section.content?.quote || section.content?.title }}"
@@ -325,7 +325,7 @@
           <!-- 7. CTA SECTION -->
           @if (section.type === 'cta') {
             @if (section.content?.title || section.content?.description || section.content?.buttonText) {
-              <section class="dynamic-cta-section" [id]="section.id" [ngStyle]="getSectionContainerStyle(section)">
+              <section class="dynamic-cta-section" [id]="section.id" [ngClass]="getSectionAnimationClass(section)" [ngStyle]="getSectionContainerStyle(section)">
                 <div class="container text-center">
                   <h3 *ngIf="section.content?.title" class="dynamic-cta-title" [ngStyle]="getTypographyStyle(section, 'heading')">
                     {{ section.content.title }}

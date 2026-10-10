@@ -128,6 +128,94 @@
   color: #74070e;
 }
 
+/* 5. CART TOAST (PILL SHAPED CHÉRI BURGUNDY #74070E) */
+.notification-container:has(.notification-toast--cart) {
+  top: 30px;
+  right: 0;
+  left: 0;
+  margin: 0 auto;
+  align-items: center;
+  max-width: none;
+  width: 100%;
+}
+
+.notification-toast--cart {
+  background-color: #74070e !important;
+  color: #ffffff !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.12) !important;
+  height: 46px !important;
+  min-height: 46px !important;
+  max-height: 46px !important;
+  padding: 0 24px !important;
+  min-width: unset !important;
+  width: auto !important;
+  max-width: calc(100vw - 24px) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 4px 16px rgba(116, 7, 14, 0.28), 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+  animation: notifCartSlideDownIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  box-sizing: border-box !important;
+}
+
+.notification-toast--cart.is-leaving {
+  animation: notifCartSlideUpOut 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+}
+
+.notification-body--cart {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  gap: 0;
+}
+
+.notification-message--cart {
+  color: #ffffff !important;
+  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif) !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  line-height: 46px !important;
+  letter-spacing: 0.2px !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+@keyframes notifCartSlideDownIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes notifCartSlideUpOut {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notification-toast--cart,
+  .notification-toast--cart.is-leaving {
+    animation-duration: 0.01ms !important;
+  }
+}
+
+
 /* Keyframes */
 @keyframes notifSlideDownIn {
   0% {

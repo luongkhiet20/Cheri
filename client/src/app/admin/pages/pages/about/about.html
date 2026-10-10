@@ -97,15 +97,22 @@
           </div>
 
           <!-- Replay Animation Button -->
-          <button type="button" class="btn btn-outline btn-sm" (click)="triggerAnimationPreview()"
-            title="Kích hoạt lại hiệu ứng chuyển động">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="1 4 1 10 7 10"></polyline>
-              <polyline points="23 20 23 14 17 14"></polyline>
-              <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+
+          <button type="button" class="btn btn-outline btn-sm btn-replay-anim" (click)="triggerAnimationPreview()"
+            title="Chạy lại hiệu ứng chuyển động">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
             </svg>
-            <span>Hiệu ứng</span>
+            <span>Preview Animation</span>
           </button>
+
+          <!-- Nút mở Editor nếu đang đóng -->
+          <button type="button" class="btn btn-primary btn-sm" *ngIf="selectedSection && !isEditorOpen"
+            (click)="onEditSection(selectedSection)">
+            <span>Mở Bảng Chỉnh Sửa</span>
+          </button>
+
+
         </div>
       </div>
 
@@ -125,8 +132,7 @@
 
           <!-- ── RENDER PHÂN ĐOẠN ĐƯỢC CHỌN TRONG LIVE PREVIEW ── -->
           <div *ngIf="selectedSection" class="preview-section-container"
-            [ngStyle]="getSectionContainerStyle(selectedSection)" [class.preview-anim-active]="isAnimationPlaying"
-            [attr.data-animation]="selectedSection.animation.preset">
+            [ngStyle]="getSectionContainerStyle(selectedSection)" [ngClass]="getSectionAnimationClass(selectedSection)">
 
             <!-- EDITORIAL / NÀNG THƠ / PHÂN ĐOẠN CÂU CHUYỆN -->
             <div *ngIf="selectedSection.type === 'editorial'" class="preview-editorial"
@@ -871,7 +877,8 @@
               <div class="cms-slider-row">
                 <div class="cms-slider-label-col">
                   <span class="cms-slider-prop-name">Độ đậm</span>
-                  <span class="cms-slider-curr-val">{{ getFontWeightName(getActiveTypographyConfig().fontWeight) }}</span>
+                  <span class="cms-slider-curr-val">{{ getFontWeightName(getActiveTypographyConfig().fontWeight)
+                    }}</span>
                 </div>
                 <div class="cms-slider-track-col">
                   <input type="range" class="cms-range-slider" min="100" max="900" step="100"
@@ -891,7 +898,8 @@
               <div class="cms-slider-row">
                 <div class="cms-slider-label-col">
                   <span class="cms-slider-prop-name">Khoảng cách dòng</span>
-                  <span class="cms-slider-curr-val">{{ formatDecimal(getActiveTypographyConfig().lineHeight || 1.5, 1) }}</span>
+                  <span class="cms-slider-curr-val">{{ formatDecimal(getActiveTypographyConfig().lineHeight || 1.5, 1)
+                    }}</span>
                 </div>
                 <div class="cms-slider-track-col">
                   <input type="range" class="cms-range-slider" min="1.0" max="2.5" step="0.1"
@@ -911,7 +919,8 @@
               <div class="cms-slider-row">
                 <div class="cms-slider-label-col">
                   <span class="cms-slider-prop-name">Giãn cách chữ</span>
-                  <span class="cms-slider-curr-val">{{ formatDecimal(getActiveTypographyConfig().letterSpacing || 0, 1) }} px</span>
+                  <span class="cms-slider-curr-val">{{ formatDecimal(getActiveTypographyConfig().letterSpacing || 0, 1)
+                    }} px</span>
                 </div>
                 <div class="cms-slider-track-col">
                   <input type="range" class="cms-range-slider" min="-2" max="10" step="0.1"
@@ -921,8 +930,7 @@
                 <div class="cms-slider-input-col">
                   <div class="cms-number-input-wrap">
                     <input type="number" class="cms-number-input" min="-2" max="10" step="0.1"
-                      [(ngModel)]="getActiveTypographyConfig().letterSpacing"
-                      (ngModelChange)="onTypographyPropChange()"
+                      [(ngModel)]="getActiveTypographyConfig().letterSpacing" (ngModelChange)="onTypographyPropChange()"
                       (blur)="validateNumericProp('letterSpacing', -2, 10, 0)" />
                     <span class="cms-unit-badge">px</span>
                   </div>
@@ -1039,7 +1047,8 @@
             </div>
 
             <div class="color-prop-control-row">
-              <div class="color-swatch-box" [style.background-color]="getActiveColorValue()" title="Xem trước màu"></div>
+              <div class="color-swatch-box" [style.background-color]="getActiveColorValue()" title="Xem trước màu">
+              </div>
               <label class="color-picker-btn" title="Mở bảng chọn màu tùy chỉnh">
                 <input type="color" class="color-native-input"
                   [value]="getColorPickerValue(getActiveFieldConfig()?.colorKey || 'titleColor')"
@@ -1084,8 +1093,7 @@
                 <div class="color-swatch-box" [style.background-color]="getCurrentColor('buttonBackgroundColor')"
                   title="Xem trước màu nền"></div>
                 <label class="color-picker-btn" title="Mở bảng chọn màu nền">
-                  <input type="color" class="color-native-input"
-                    [value]="getColorPickerValue('buttonBackgroundColor')"
+                  <input type="color" class="color-native-input" [value]="getColorPickerValue('buttonBackgroundColor')"
                     (input)="onColorPickerChange('buttonBackgroundColor', $any($event.target).value)" />
                   <span>Chọn màu</span>
                 </label>
@@ -1153,22 +1161,37 @@
               Tùy chỉnh sâu
             </button>
           </div>
-          <select class="form-control" [(ngModel)]="selectedSection.animation.preset"
-            (ngModelChange)="selectedSection.isCustomAnimation = true; hasUnsavedChanges = true; triggerAnimationPreview()">
+          <select class="form-control" [ngModel]="selectedSection.animation?.preset"
+            (ngModelChange)="onCustomAnimationPresetChange($event)">
             <option *ngFor="let a of animationPresets" [value]="a.value">{{ a.label }}</option>
           </select>
         </div>
 
         <div class="form-row-2">
           <div class="form-group">
-            <label class="form-label">Thời lượng: {{ selectedSection.animation.duration || 750 }}ms</label>
-            <input type="range" class="form-range" [(ngModel)]="selectedSection.animation.duration"
-              (ngModelChange)="hasUnsavedChanges = true; triggerAnimationPreview()" min="200" max="2000" step="50" />
+            <label class="form-label">Thời lượng: {{ selectedSection.animation?.duration || 750 }}ms</label>
+            <input type="range" class="form-range" [ngModel]="selectedSection.animation?.duration"
+              (ngModelChange)="onCustomAnimationDurationChange($event)" min="200" max="2500" step="50" />
           </div>
           <div class="form-group">
-            <label class="form-label">Độ trễ: {{ selectedSection.animation.delay || 0 }}ms</label>
-            <input type="range" class="form-range" [(ngModel)]="selectedSection.animation.delay"
-              (ngModelChange)="hasUnsavedChanges = true; triggerAnimationPreview()" min="0" max="1000" step="50" />
+            <label class="form-label">Độ trễ: {{ selectedSection.animation?.delay || 0 }}ms</label>
+            <input type="range" class="form-range" [ngModel]="selectedSection.animation?.delay"
+              (ngModelChange)="onCustomAnimationDelayChange($event)" min="0" max="1500" step="50" />
+          </div>
+        </div>
+
+        <div class="form-group mt-3">
+          <label class="form-label">Cường độ chuyển động</label>
+          <div class="btn-group-segmented">
+            <button type="button" class="btn-segmented"
+              [class.is-active]="selectedSection.animation?.intensity === 'subtle'"
+              (click)="onCustomAnimationIntensityChange('subtle')">Êm dịu</button>
+            <button type="button" class="btn-segmented"
+              [class.is-active]="selectedSection.animation?.intensity === 'normal'"
+              (click)="onCustomAnimationIntensityChange('normal')">Tiêu chuẩn</button>
+            <button type="button" class="btn-segmented"
+              [class.is-active]="selectedSection.animation?.intensity === 'strong'"
+              (click)="onCustomAnimationIntensityChange('strong')">Mạnh mẽ</button>
           </div>
         </div>
 
@@ -1183,6 +1206,13 @@
             <span>Không lặp lại hiệu ứng mỗi lần cuộn qua lại.</span>
           </div>
         </div>
+
+        <button type="button" class="btn btn-outline w-100 mt-3" (click)="triggerAnimationPreview()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          <span class="ms-1">Chạy thử hiệu ứng trên Live Preview</span>
+        </button>
       </div>
 
       <!-- ── TAB 6: CÀI ĐẶT (SETTINGS) ── -->
@@ -1195,7 +1225,7 @@
           </label>
           <div class="switch-label-box">
             <strong>Hiệu ứng vầng sáng nghệ thuật (Glow)</strong>
-            <span>Tạo hào quang sang trọng bao quanh hình ảnh câu chuyện thương hiệu.</span>
+            <span>Tạo hào quang sang trọng bao quanh hình ảnh.</span>
           </div>
         </div>
 
@@ -1282,23 +1312,53 @@
         </div>
 
         <div class="full-preview-topbar__actions">
-          <div class="home-cms-device-toggle">
-            <button type="button" class="home-cms-device-btn" [class.is-active]="fullPreviewViewport === 'desktop'"
-              (click)="fullPreviewViewport = 'desktop'">
-              Desktop
+          <!-- Viewport Toggle: Desktop / Mobile -->
+          <div class="home-cms-device-toggle" role="group" aria-label="Chọn thiết bị xem trước">
+            <button type="button" class="home-cms-device-btn preview-btn"
+              [class.is-active]="fullPreviewViewport === 'desktop'" (click)="fullPreviewViewport = 'desktop'"
+              aria-label="Xem giao diện Desktop" title="Xem giao diện Desktop">
+              <svg class="preview-btn__icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+                aria-hidden="true">
+                <rect x="2" y="3" width="20" height="14" rx="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+              <span class="preview-btn__text">Desktop</span>
             </button>
-            <button type="button" class="home-cms-device-btn" [class.is-active]="fullPreviewViewport === 'mobile'"
-              (click)="fullPreviewViewport = 'mobile'">
-              Mobile
+            <button type="button" class="home-cms-device-btn preview-btn"
+              [class.is-active]="fullPreviewViewport === 'mobile'" (click)="fullPreviewViewport = 'mobile'"
+              aria-label="Xem giao diện Mobile" title="Xem giao diện Mobile">
+              <svg class="preview-btn__icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+                aria-hidden="true">
+                <rect x="5" y="2" width="14" height="20" rx="2.5"></rect>
+                <line x1="12" y1="18" x2="12.01" y2="18"></line>
+              </svg>
+              <span class="preview-btn__text">Mobile</span>
             </button>
           </div>
 
-          <button type="button" class="btn btn-outline btn-sm" (click)="triggerAnimationPreview()">
-            <span>▶ Chạy lại hiệu ứng</span>
+          <!-- Replay Animation Button -->
+          <button type="button" class="btn btn-outline btn-sm preview-btn preview-btn--replay"
+            (click)="triggerAnimationPreview()" aria-label="Chạy lại hiệu ứng" title="Chạy lại hiệu ứng">
+            <svg class="preview-btn__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+            </svg>
+            <span class="preview-btn__text">Chạy lại hiệu ứng</span>
           </button>
 
-          <button type="button" class="btn btn-primary btn-sm" (click)="onCloseFullPreview()">
-            <span>Đóng xem trước</span>
+          <!-- Close Preview Button -->
+          <button type="button" class="btn btn-primary btn-sm preview-btn preview-btn--close"
+            (click)="onCloseFullPreview()" aria-label="Đóng xem trước" title="Đóng xem trước">
+            <svg class="preview-btn__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+            <span class="preview-btn__text">Đóng xem trước</span>
           </button>
         </div>
       </div>
@@ -1306,7 +1366,7 @@
       <!-- Scrolling Content of All Enabled Sections -->
       <div class="full-preview-scroll-body">
         <div *ngFor="let sec of enabledSections" class="full-preview-section-wrapper"
-          [ngStyle]="getSectionContainerStyle(sec)">
+          [ngStyle]="getSectionContainerStyle(sec)" [ngClass]="getSectionAnimationClass(sec)">
           <div class="full-preview-section-tag">Phân đoạn #{{ sec.order }}: {{ sec.name }}</div>
 
           <!-- Editorial in Full Preview -->

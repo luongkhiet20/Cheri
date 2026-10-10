@@ -30,6 +30,7 @@ export type AnimationPreset =
   | 'slide-down'
   | 'zoom-in'
   | 'zoom-out'
+  | 'scale'
   | 'reveal'
   | 'image-reveal'
   | 'split-reveal'
@@ -162,6 +163,9 @@ export interface FontOption {
   fontFamily: string;
   category: 'Serif' | 'Sans-Serif' | 'System';
   description?: string;
+  label?: string;
+  value?: string;
+  style?: string;
 }
 
 export interface AboutSection {

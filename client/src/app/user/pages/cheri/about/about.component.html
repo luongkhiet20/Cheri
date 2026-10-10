@@ -20,7 +20,7 @@
                 <!-- ── SECTION LOẠI: EDITORIAL / PHÂN ĐOẠN NÀNG THƠ ── -->
                 <section *ngIf="section.type === 'editorial'" class="about-section about-section--editorial"
                     [id]="section.id" [ngStyle]="getSectionContainerStyle(section)"
-                    [ngClass]="['variant-' + (section.layout.variant || 'image-left'), 'align-' + (section.layout.alignment || 'center')]">
+                    [ngClass]="['variant-' + (section.layout.variant || 'image-left'), 'align-' + (section.layout.alignment || 'center'), getSectionAnimationClass(section)]">
                     <div class="about-container">
                         <div class="about-editorial-grid">
 
@@ -92,7 +92,7 @@
                 <!-- ── SECTION LOẠI: IMAGE + TEXT (HÌNH ẢNH & NỘI DUNG) ── -->
                 <section *ngIf="section.type === 'image-text'" class="about-section about-section--image-text"
                     [id]="section.id" [ngStyle]="getSectionContainerStyle(section)"
-                    [ngClass]="['variant-' + (section.layout.variant || 'image-right')]">
+                    [ngClass]="['variant-' + (section.layout.variant || 'image-right'), getSectionAnimationClass(section)]">
                     <div class="about-container">
                         <div class="about-image-text-grid">
                             <div class="about-image-text-col-media">
@@ -130,7 +130,8 @@
 
                 <!-- ── SECTION LOẠI: QUOTE (TRÍCH DẪN NGHỆ THUẬT) ── -->
                 <section *ngIf="section.type === 'quote'" class="about-section about-section--quote" [id]="section.id"
-                    [ngStyle]="getSectionContainerStyle(section)">
+                    [ngStyle]="getSectionContainerStyle(section)"
+                    [ngClass]="getSectionAnimationClass(section)">
                     <div class="about-container-narrow">
                         <div class="about-quote-box">
                             <div class="about-quote-mark" aria-hidden="true">“</div>
@@ -148,7 +149,8 @@
 
                 <!-- ── SECTION LOẠI: CTA (KÊU GỌI HÀNH ĐỘNG) ── -->
                 <section *ngIf="section.type === 'cta'" class="about-section about-section--cta" [id]="section.id"
-                    [ngStyle]="getSectionContainerStyle(section)">
+                    [ngStyle]="getSectionContainerStyle(section)"
+                    [ngClass]="getSectionAnimationClass(section)">
                     <div class="about-container-narrow">
                         <div class="about-cta-card">
                             <h2 class="about-cta-title" *ngIf="section.content.title"
@@ -167,6 +169,29 @@
                                 </a>
                             </div>
                         </div>
+                    </div>
+                </section>
+
+                <!-- ── SECTION LOẠI: HERO BANNER ── -->
+                <section *ngIf="section.type === 'hero'" class="about-section about-section--hero"
+                    [id]="section.id" [ngStyle]="getSectionContainerStyle(section)"
+                    [ngClass]="getSectionAnimationClass(section)">
+                    <div class="about-container">
+                        <div class="about-media-frame mb-3" *ngIf="section.media.desktop?.url">
+                            <img [src]="section.media.desktop?.url" [alt]="section.media.desktop?.alt || section.name" class="about-editorial-img" />
+                        </div>
+                        <h1 class="about-editorial-title" *ngIf="section.content.title" [ngStyle]="getTypographyStyle(section, 'heading')">{{ section.content.title }}</h1>
+                        <p class="about-editorial-desc" *ngIf="section.content.description" [ngStyle]="getTypographyStyle(section, 'body')">{{ section.content.description }}</p>
+                    </div>
+                </section>
+
+                <!-- ── SECTION LOẠI: BANNER ── -->
+                <section *ngIf="section.type === 'banner'" class="about-section about-section--banner"
+                    [id]="section.id" [ngStyle]="getSectionContainerStyle(section)"
+                    [ngClass]="getSectionAnimationClass(section)">
+                    <div class="about-container text-center">
+                        <h2 class="about-editorial-title" *ngIf="section.content.title" [ngStyle]="getTypographyStyle(section, 'heading')">{{ section.content.title }}</h2>
+                        <p class="about-editorial-desc" *ngIf="section.content.description" [ngStyle]="getTypographyStyle(section, 'body')">{{ section.content.description }}</p>
                     </div>
                 </section>
 

@@ -15,6 +15,7 @@ import {
   SectionTypography,
   SectionColors,
   FontOption,
+  SectionAnimation,
 } from './about-cms.models';
 import {
   INITIAL_ABOUT_SECTIONS,
@@ -225,6 +226,7 @@ export class AboutComponent implements OnInit, OnDestroy {
     this.sections.forEach((sec, idx) => {
       sec.order = idx + 1;
       this.ensureSectionTypography(sec);
+      this.ensureSectionAnimation(sec);
     });
 
     if (this.sections.length > 0) {
@@ -532,8 +534,113 @@ export class AboutComponent implements OnInit, OnDestroy {
 
   onSwitchToCustomAnimation(): void {
     if (!this.selectedSection) return;
+    this.ensureSectionAnimation(this.selectedSection);
     this.selectedSection.isCustomAnimation = true;
+    this.hasUnsavedChanges = true;
+    this.triggerAnimationPreview();
     this.cdr.markForCheck();
+  }
+
+  onCustomAnimationPresetChange(preset: AnimationPreset): void {
+    if (!this.selectedSection) return;
+    const anim = this.ensureSectionAnimation(this.selectedSection);
+    anim.preset = preset;
+    this.selectedSection.isCustomAnimation = true;
+    this.hasUnsavedChanges = true;
+    this.triggerAnimationPreview();
+    this.cdr.markForCheck();
+  }
+
+  onCustomAnimationDurationChange(duration: any): void {
+    if (!this.selectedSection) return;
+    const anim = this.ensureSectionAnimation(this.selectedSection);
+    const parsed = Number(duration);
+    anim.duration = !isNaN(parsed) && parsed > 0 ? parsed : 750;
+    this.selectedSection.isCustomAnimation = true;
+    this.hasUnsavedChanges = true;
+    this.triggerAnimationPreview();
+    this.cdr.markForCheck();
+  }
+
+  onCustomAnimationDelayChange(delay: any): void {
+    if (!this.selectedSection) return;
+    const anim = this.ensureSectionAnimation(this.selectedSection);
+    const parsed = Number(delay);
+    anim.delay = !isNaN(parsed) && parsed >= 0 ? parsed : 0;
+    this.selectedSection.isCustomAnimation = true;
+    this.hasUnsavedChanges = true;
+    this.triggerAnimationPreview();
+    this.cdr.markForCheck();
+  }
+
+  onCustomAnimationIntensityChange(intensity: 'subtle' | 'normal' | 'strong'): void {
+    if (!this.selectedSection) return;
+    const anim = this.ensureSectionAnimation(this.selectedSection);
+    anim.intensity = intensity;
+    this.selectedSection.isCustomAnimation = true;
+    this.hasUnsavedChanges = true;
+    this.triggerAnimationPreview();
+    this.cdr.markForCheck();
+  }
+
+  ensureSectionAnimation(section: AboutSection | null | undefined): SectionAnimation {
+    if (!section) {
+      return {
+        preset: 'fade-up',
+        duration: 750,
+        delay: 100,
+        intensity: 'normal',
+        once: true,
+      };
+    }
+    if (!section.animation) {
+      section.animation = {
+        preset: 'fade-up',
+        duration: 750,
+        delay: 100,
+        intensity: 'normal',
+        once: true,
+      };
+    }
+    if (!section.animation.preset) {
+      section.animation.preset = 'fade-up';
+    }
+    if (typeof section.animation.duration !== 'number' || isNaN(section.animation.duration)) {
+      section.animation.duration = 750;
+    }
+    if (typeof section.animation.delay !== 'number' || isNaN(section.animation.delay)) {
+      section.animation.delay = 0;
+    }
+    if (!section.animation.intensity) {
+      section.animation.intensity = 'normal';
+    }
+    return section.animation;
+  }
+
+  getSectionAnimationClass(section: AboutSection | null | undefined): string {
+    if (!section || !this.isAnimationPlaying) return '';
+    const anim = section.animation;
+    if (!anim || !anim.preset || anim.preset === 'none') return '';
+    return `anim-${anim.preset} anim-intensity-${anim.intensity || 'normal'}`;
+  }
+
+  getSectionAnimationStyle(section: AboutSection | null | undefined): Record<string, string> {
+    if (!section || !section.animation || section.animation.preset === 'none') {
+      return {};
+    }
+    const duration = (typeof section.animation.duration === 'number' && section.animation.duration > 0)
+      ? `${section.animation.duration}ms`
+      : '750ms';
+    const delay = (typeof section.animation.delay === 'number' && section.animation.delay >= 0)
+      ? `${section.animation.delay}ms`
+      : '0ms';
+
+    return {
+      'animation-duration': duration,
+      'animation-delay': delay,
+      '--anim-duration': duration,
+      '--anim-delay': delay,
+    };
   }
 
   // ── Media Upload (Thực tế qua Backend API) ──────────────────────
@@ -1314,6 +1421,7 @@ export class AboutComponent implements OnInit, OnDestroy {
     if (section.colors?.buttonHoverBackgroundColor) {
       style['--sec-btn-hover-bg'] = section.colors.buttonHoverBackgroundColor;
     }
+    Object.assign(style, this.getSectionAnimationStyle(section));
     return style;
   }
 }

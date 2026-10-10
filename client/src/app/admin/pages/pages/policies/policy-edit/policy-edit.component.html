@@ -82,38 +82,46 @@
       <div class="form-card">
         <div class="card-header-flex">
           <h2 class="card-section-title mb-0">Nội dung chính sách</h2>
-          <div class="tab-toggle-group">
-            <button type="button" class="btn-tab" [class.active]="activeTab === 'preview'"
-              (click)="activeTab = 'preview'">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
-                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                <circle cx="12" cy="12" r="3"></circle>
-              </svg>
-              Xem trước
-            </button>
-            <button type="button" class="btn-tab" [class.active]="activeTab === 'html'" (click)="activeTab = 'html'">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
-                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <polyline points="16 18 22 12 16 6"></polyline>
-                <polyline points="8 6 2 12 8 18"></polyline>
-              </svg>
-              Mã nguồn HTML
-            </button>
+          <div style="display: flex; gap: 8px; align-items: center;">
+
+            <!-- Mode switcher -->
+            <div class="tab-toggle-group">
+              <button type="button" class="btn-tab" [class.active]="activeTab === 'preview'"
+                (click)="activeTab = 'preview'">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                Xem trước
+              </button>
+              <button type="button" class="btn-tab" [class.active]="activeTab === 'html'" (click)="activeTab = 'html'">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="16 18 22 12 16 6"></polyline>
+                  <polyline points="8 6 2 12 8 18"></polyline>
+                </svg>
+                Mã nguồn HTML
+              </button>
+            </div>
           </div>
         </div>
 
         <!-- Rendered Preview -->
         <div *ngIf="activeTab === 'preview'" class="html-preview-body">
-          <div *ngIf="page.contentHTML" [innerHTML]="page.contentHTML"></div>
-          <div *ngIf="!page.contentHTML" class="no-content-notice">
+          <h3 class="preview-heading"
+            style="margin-top: 0; margin-bottom: 16px; font-size: 1.25rem; font-weight: 600; color: #0f172a;">
+            {{ displayTitle }}
+          </h3>
+          <div *ngIf="displayContentHTML" [innerHTML]="displayContentHTML"></div>
+          <div *ngIf="!displayContentHTML" class="no-content-notice">
             Chính sách này chưa có nội dung bài viết.
           </div>
         </div>
 
         <!-- Raw HTML Source -->
         <div *ngIf="activeTab === 'html'" class="html-raw-code">
-          <pre><code>{{ page.contentHTML || 'Chưa có nội dung HTML' }}</code></pre>
+          <pre><code>{{ displayContentHTML || 'Chưa có nội dung HTML' }}</code></pre>
         </div>
       </div>
 
@@ -148,7 +156,7 @@
 
         <div class="meta-item">
           <span class="meta-label">Cập nhật lần cuối:</span>
-          <span class="meta-value">{{ page.updatedAt ? (page.updatedAt | date:'dd/MM/yyyy') : '—' }}</span>
+          <span class="meta-value">{{ page.updatedAt ? (page.updatedAt | date:'dd/MM/yyyy HH:mm') : '—' }}</span>
         </div>
 
         <div class="meta-item">
@@ -159,9 +167,9 @@
 
       <!-- SEO Meta Card -->
       <div class="form-card">
-        <h2 class="card-section-title">SEO Meta Description</h2>
+        <h2 class="card-section-title">Mô tả SEO (Meta Description)</h2>
         <p class="meta-desc-text">
-          {{ page.metaDescription || 'Chưa thiết lập mô tả tóm tắt cho chính sách này.' }}
+          {{ displayMetaDescription || 'Chưa thiết lập mô tả tóm tắt cho chính sách này.' }}
         </p>
       </div>
 

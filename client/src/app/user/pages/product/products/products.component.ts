@@ -9,6 +9,7 @@ import { Meta, Title } from '@angular/platform-browser';
 
 import { TranslateService } from '../../../../services/translate.service';
 import { WishlistService } from '../../../../services/wishlist.service';
+import { CartToastService } from '../../../../services/cart-toast.service';
 import { sortOptions } from '../../../shared/constants';
 import { Product, Category, Pagination, Cart } from '../../../shared/models';
 import { SignalStore } from '../../../../store/signal.store';
@@ -135,6 +136,7 @@ export class ProductsComponent implements OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private snackBar: MatSnackBar,
+    private cartToast: CartToastService,
     private meta: Meta,
     private title: Title,
     private translate: TranslateService,
@@ -203,20 +205,7 @@ export class ProductsComponent implements OnDestroy {
       return;
     }
     this.store.addToCart('?id=' + id);
-
-    this.translate.getTranslations$()
-      .pipe(map(translations => translations
-        ? { message: translations['ADDED_TO_CART'] || 'Added to cart', action: translations['TO_CART'] || 'To Cart' }
-        : { message: 'Added to cart', action: 'To Cart' }
-      ), take(1))
-      .subscribe(({ message, action }) => {
-        let snackBarRef = this.snackBar.open(message, action, { duration: 3000 });
-        snackBarRef.onAction().pipe(
-          take(1))
-          .subscribe(() => {
-            this.router.navigate(['/' + this.lang() + '/cart'])
-          });
-      });
+    this.cartToast.show();
   }
 
   removeFromCart(id: string): void {

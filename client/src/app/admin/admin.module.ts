@@ -50,8 +50,8 @@ import { InventoryImportComponent } from './pages/inventory/inventory-import/inv
 import { PoliciesComponent } from './pages/pages/policies/policies.component';
 import { PolicyFormComponent } from './pages/pages/policies/policy-form/policy-form.component';
 import { PolicyEditComponent } from './pages/pages/policies/policy-edit/policy-edit.component';
-import { HomeComponent } from './pages/pages/home/home.component';
-import { AboutComponent } from './pages/pages/about/about';
+import { HomeComponent } from './pages/pages/home-about/home/home.component';
+import { AboutComponent } from './pages/pages/home-about/about/about.component';
 import { createAdminPagesRoutes } from './pages/pages/pages.routes';
 import { AccountComponent } from './pages/account/account.component';
 import { SettingsComponent } from './pages/settings/settings.component';

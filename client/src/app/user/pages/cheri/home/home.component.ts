@@ -29,7 +29,7 @@ import {
   CarouselSlideItem,
   CarouselConfig,
   TypographyElementKey,
-} from '../../../../admin/pages/pages/home/home-cms.models';
+} from '../../../../admin/pages/pages/home-about/cms-core/cms.models';
 
 @Component({
   selector: 'app-home',

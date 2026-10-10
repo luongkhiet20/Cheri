@@ -1879,28 +1879,61 @@
     <div class="full-preview-container" [class.is-mobile-frame]="fullPreviewViewport === 'mobile'">
       <div class="full-preview-topbar">
         <div class="full-preview-topbar__info">
-          <h4>Preview Toàn Trang Chủ</h4>
-          <span>(Chỉ render {{ enabledSections.length }} section đang ở trạng thái Hiện)</span>
+          <h4>
+            <span class="preview-title-full">Preview Toàn Trang Chủ</span>
+            <span class="preview-title-short">Preview</span>
+          </h4>
+          <span class="preview-subtitle-desc">(Chỉ render {{ enabledSections.length }} section đang ở trạng thái Hiện)</span>
         </div>
 
         <div class="full-preview-topbar__actions">
-          <div class="home-cms-device-toggle">
-            <button type="button" class="home-cms-device-btn" [class.is-active]="fullPreviewViewport === 'desktop'"
-              (click)="fullPreviewViewport = 'desktop'">
-              Desktop
+          <!-- Viewport Toggle: Desktop / Mobile -->
+          <div class="home-cms-device-toggle" role="group" aria-label="Chọn thiết bị xem trước">
+            <button type="button" class="home-cms-device-btn preview-btn"
+              [class.is-active]="fullPreviewViewport === 'desktop'" (click)="fullPreviewViewport = 'desktop'"
+              aria-label="Xem trước desktop" title="Xem trước desktop">
+              <svg class="preview-btn__icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+                aria-hidden="true">
+                <rect x="2" y="3" width="20" height="14" rx="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+              <span class="preview-btn__text">Desktop</span>
             </button>
-            <button type="button" class="home-cms-device-btn" [class.is-active]="fullPreviewViewport === 'mobile'"
-              (click)="fullPreviewViewport = 'mobile'">
-              Mobile
+            <button type="button" class="home-cms-device-btn preview-btn"
+              [class.is-active]="fullPreviewViewport === 'mobile'" (click)="fullPreviewViewport = 'mobile'"
+              aria-label="Xem trước mobile" title="Xem trước mobile">
+              <svg class="preview-btn__icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+                aria-hidden="true">
+                <rect x="5" y="2" width="14" height="20" rx="2.5"></rect>
+                <line x1="12" y1="18" x2="12.01" y2="18"></line>
+              </svg>
+              <span class="preview-btn__text">Mobile</span>
             </button>
           </div>
 
-          <button type="button" class="btn btn-outline btn-sm" (click)="triggerAnimationPreview()">
-            <span>▶ Chạy lại hiệu ứng</span>
+          <!-- Replay Animation Button -->
+          <button type="button" class="btn btn-outline btn-sm preview-btn preview-btn--replay"
+            (click)="triggerAnimationPreview()" aria-label="Chạy lại hiệu ứng" title="Chạy lại hiệu ứng">
+            <svg class="preview-btn__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+            </svg>
+            <span class="preview-btn__text">Chạy lại hiệu ứng</span>
           </button>
 
-          <button type="button" class="btn btn-primary btn-sm" (click)="onCloseFullPreview()">
-            <span>Đóng xem trước</span>
+          <!-- Close Preview Button -->
+          <button type="button" class="btn btn-primary btn-sm preview-btn preview-btn--close"
+            (click)="onCloseFullPreview()" aria-label="Đóng xem trước" title="Đóng xem trước">
+            <svg class="preview-btn__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+            <span class="preview-btn__text">Đóng xem trước</span>
           </button>
         </div>
       </div>

@@ -1312,9 +1312,61 @@ export class OrdersService {
     return notifications;
   }
 
-  async getDashboardDetailedStats(period: 'week' | 'month' = 'week'): Promise<any> {
+  async getDashboardDetailedStats(
+    period: '7d' | '30d' | 'this_month' | 'last_month' | 'custom' = '7d',
+    customStart?: Date,
+    customEnd?: Date,
+  ): Promise<any> {
     const now = new Date();
-    const days = period === 'week' ? 7 : 30;
+
+    // Compute period boundaries
+    let periodStart: Date;
+    let periodEnd: Date;
+    let prevStart: Date;
+    let prevEnd: Date;
+    let days: number;
+
+    if (period === 'this_month') {
+      periodStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      periodEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      const elapsed = now.getDate();
+      prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+      prevEnd   = new Date(now.getFullYear(), now.getMonth() - 1, elapsed, 23, 59, 59, 999);
+      days = periodEnd.getDate();
+    } else if (period === 'last_month') {
+      const lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      periodStart = new Date(lm.getFullYear(), lm.getMonth(), 1, 0, 0, 0, 0);
+      periodEnd   = new Date(lm.getFullYear(), lm.getMonth() + 1, 0, 23, 59, 59, 999);
+      const pm = new Date(lm.getFullYear(), lm.getMonth() - 1, 1);
+      prevStart = new Date(pm.getFullYear(), pm.getMonth(), 1, 0, 0, 0, 0);
+      prevEnd   = new Date(pm.getFullYear(), pm.getMonth() + 1, 0, 23, 59, 59, 999);
+      days = periodEnd.getDate();
+    } else if (period === '30d') {
+      days = 30;
+      periodEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      periodStart = new Date(periodEnd.getTime() - (days - 1) * 86400000);
+      periodStart.setHours(0, 0, 0, 0);
+      prevEnd   = new Date(periodStart.getTime() - 1);
+      prevStart = new Date(prevEnd.getTime() - (days - 1) * 86400000);
+      prevStart.setHours(0, 0, 0, 0);
+    } else if (period === 'custom' && customStart && customEnd) {
+      periodStart = new Date(customStart);
+      periodStart.setHours(0, 0, 0, 0);
+      periodEnd = new Date(customEnd);
+      periodEnd.setHours(23, 59, 59, 999);
+      days = Math.max(1, Math.ceil((periodEnd.getTime() - periodStart.getTime()) / 86400000) + 1);
+      prevEnd   = new Date(periodStart.getTime() - 1);
+      prevStart = new Date(prevEnd.getTime() - (days - 1) * 86400000);
+      prevStart.setHours(0, 0, 0, 0);
+    } else {
+      days = 7;
+      periodEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      periodStart = new Date(periodEnd.getTime() - (days - 1) * 86400000);
+      periodStart.setHours(0, 0, 0, 0);
+      prevEnd   = new Date(periodStart.getTime() - 1);
+      prevStart = new Date(prevEnd.getTime() - (days - 1) * 86400000);
+      prevStart.setHours(0, 0, 0, 0);
+    }
 
     const sevenDaysAgo = new Date(now);
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -1372,7 +1424,7 @@ export class OrdersService {
         .filter(isPaid)
         .reduce((sum, o) => sum + (o.totalAmount || (o as any).amount || 0), 0);
 
-      const label = period === 'week'
+      const label = period === '7d'
         ? dayNames[d.getDay()]
         : `${d.getDate()}/${d.getMonth() + 1}`;
 
@@ -1386,15 +1438,26 @@ export class OrdersService {
       });
     }
 
-    // 5. Đơn hàng theo trạng thái
+    // 5. Đơn hàng trong kỳ (period) + theo trạng thái
+    const pStart = periodStart.getTime();
+    const pEnd   = periodEnd.getTime();
+    const periodOrders = allOrders.filter(o => { const t = getOrderTime(o); return t >= pStart && t <= pEnd; });
+    const prevOrders   = allOrders.filter(o => { const t = getOrderTime(o); return t >= prevStart.getTime() && t <= prevEnd.getTime(); });
+
+    const periodRevenue      = periodOrders.filter(isPaid).reduce((s, o) => s + (o.totalAmount || (o as any).amount || 0), 0);
+    const prevPeriodRevenue  = prevOrders.filter(isPaid).reduce((s, o) => s + (o.totalAmount || (o as any).amount || 0), 0);
+    const periodOrdersCount  = periodOrders.length;
+    const prevPeriodOrdersCount = prevOrders.length;
+
+    const fst = (orders: any[], ...st: string[]) => orders.filter(o => st.includes(o.status) || st.includes((o as any).type)).length;
     const ordersByStatus = {
-      pending: allOrders.filter(o => o.status === OrderStatus.PENDING || (o as any).status === 'NEW').length,
-      confirmed: allOrders.filter(o => o.status === OrderStatus.CONFIRMED).length,
-      processing: allOrders.filter(o => o.status === OrderStatus.PROCESSING).length,
-      shipping: allOrders.filter(o => o.status === OrderStatus.SHIPPING).length,
-      delivered: allOrders.filter(o => o.status === OrderStatus.DELIVERED || (o as any).status === 'COMPLETED').length,
-      cancelled: allOrders.filter(o => o.status === OrderStatus.CANCELLED || (o as any).status === 'CANCELED').length,
-      returned: allOrders.filter(o => o.status === OrderStatus.RETURNED || (o as any).type === 'RETURN').length,
+      pending:    fst(periodOrders, OrderStatus.PENDING, 'NEW'),
+      confirmed:  fst(periodOrders, OrderStatus.CONFIRMED),
+      processing: fst(periodOrders, OrderStatus.PROCESSING),
+      shipping:   fst(periodOrders, OrderStatus.SHIPPING),
+      delivered:  fst(periodOrders, OrderStatus.DELIVERED, 'COMPLETED'),
+      cancelled:  fst(periodOrders, OrderStatus.CANCELLED, 'CANCELED'),
+      returned:   fst(periodOrders, OrderStatus.RETURNED, 'RETURN'),
     };
 
     // 6. Tồn kho
@@ -1446,8 +1509,10 @@ export class OrdersService {
     }));
 
     return {
-      totalRevenue,
-      ordersCount,
+      totalRevenue: periodRevenue,
+      prevPeriodRevenue,
+      ordersCount: periodOrdersCount,
+      prevPeriodOrdersCount,
       productsCount,
       categoriesCount,
       usersCount,

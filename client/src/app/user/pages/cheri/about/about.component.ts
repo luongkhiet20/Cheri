@@ -16,7 +16,7 @@ import { ApiService } from '../../../../services/api.service';
 import {
   AboutSection,
   TypographyElementKey,
-} from '../../../../admin/pages/pages/about/about-cms.models';
+} from '../../../../admin/pages/pages/home-about/cms-core/cms.models';
 
 @Component({
   selector: 'app-user-about',

@@ -1,9 +1,10 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
-import { NotificationService } from '../../../shared/notification/notification.service';
-import { ApiService } from '../../../../services/api.service';
+import { NotificationService } from '../../../../shared/notification/notification.service';
+import { ApiService } from '../../../../../services/api.service';
 import {
   HomeSection,
+  HomeSectionType,
   SectionType,
   SectionCategory,
   AnimationPreset,
@@ -19,7 +20,7 @@ import {
   CarouselSlideItem,
   ConfigurableTypographyTarget,
   SectionAnimation,
-} from './home-cms.models';
+} from '../cms-core/cms.models';
 import {
   INITIAL_HOME_SECTIONS,
   SECTION_TYPE_OPTIONS,
@@ -31,7 +32,7 @@ import {
   getDefaultColorsForType,
   getDefaultCarouselConfig,
   createDefaultSection,
-} from './home-cms.constants';
+} from '../cms-core/cms.constants';
 
 @Component({
   selector: 'app-home',
@@ -590,7 +591,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   onSelectNewSectionType(option: SectionTypeOption): void {
-    const newSec = createDefaultSection(option.type, this.sections.length + 1);
+    const newSec = createDefaultSection(option.type as HomeSectionType, this.sections.length + 1);
     this.ensureSectionTypography(newSec);
     this.updateActiveTypographyElementForSection(newSec);
     this.sections.push(newSec);

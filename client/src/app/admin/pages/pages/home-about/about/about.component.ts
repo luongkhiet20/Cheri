@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
-import { NotificationService } from '../../../shared/notification/notification.service';
-import { ApiService } from '../../../../services/api.service';
+import { NotificationService } from '../../../../shared/notification/notification.service';
+import { ApiService } from '../../../../../services/api.service';
 import {
   AboutSection,
   AboutSectionType,
@@ -16,7 +16,7 @@ import {
   SectionColors,
   FontOption,
   SectionAnimation,
-} from './about-cms.models';
+} from '../cms-core/cms.models';
 import {
   INITIAL_ABOUT_SECTIONS,
   ABOUT_SECTION_TYPE_OPTIONS,
@@ -26,7 +26,7 @@ import {
   getDefaultColorsForType,
   getDefaultTypographyForType,
   createDefaultAboutSection,
-} from './about-cms.constants';
+} from '../cms-core/cms.constants';
 
 @Component({
   selector: 'app-about',
@@ -448,7 +448,7 @@ export class AboutComponent implements OnInit, OnDestroy {
 
   onSelectNewSectionType(option: SectionTypeOption): void {
     // Chỉ tạo Phân Đoạn Mới với cấu trúc chuẩn
-    const newSec = createDefaultAboutSection(option.type, this.sections.length + 1);
+    const newSec = createDefaultAboutSection(option.type as AboutSectionType, this.sections.length + 1);
     this.ensureSectionTypography(newSec);
     this.updateActiveTypographyElementForSection(newSec);
     this.updateActiveContentFieldForSection(newSec);

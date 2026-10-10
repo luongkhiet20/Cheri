@@ -15,9 +15,13 @@ export class AdminService {
   constructor(private http: HttpClient) {}
 
   // ── Dashboard ──────────────────────────────
-  getDashboardStats(timeRange?: string): Observable<any> {
+  getDashboardStats(timeRange?: string, startDate?: string, endDate?: string): Observable<any> {
     let params = new HttpParams();
-    if (timeRange) params = params.set('timeRange', timeRange);
+    if (startDate && endDate) {
+      params = params.set('startDate', startDate).set('endDate', endDate);
+    } else if (timeRange) {
+      params = params.set('timeRange', timeRange);
+    }
     return this.http.get(`${this.baseUrl}/dashboard/stats`, { params });
   }
 

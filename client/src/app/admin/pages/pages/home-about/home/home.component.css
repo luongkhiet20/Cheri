@@ -1874,38 +1874,6 @@
   transition: max-width 0.3s ease;
 }
 
-.full-preview-container.is-mobile-frame {
-  max-width: 410px;
-  border-radius: 36px;
-  border: 10px solid #1e293b;
-}
-
-.full-preview-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 20px;
-  background: #0f172a;
-  color: #ffffff;
-}
-
-.full-preview-topbar__info h4 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.full-preview-topbar__info span {
-  font-size: 11.5px;
-  opacity: 0.7;
-}
-
-.full-preview-topbar__actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
 .full-preview-scroll-body {
   flex: 1;
   overflow-y: auto;
@@ -3243,7 +3211,171 @@
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Mobile Frame trong Full Preview */
+/* ══════════════════════════════════════════════════════════
+   FULL PAGE PREVIEW MODAL & RESPONSIVE TOOLBAR
+   ══════════════════════════════════════════════════════════ */
+
+/* Topbar cơ bản (Desktop view) */
+.full-preview-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+  z-index: 20;
+  position: sticky;
+  top: 0;
+  gap: 12px;
+}
+
+.full-preview-topbar__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.full-preview-topbar__info h4 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.3;
+}
+
+.preview-title-full {
+  display: inline;
+}
+
+.preview-title-short {
+  display: none;
+}
+
+.preview-subtitle-desc {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.3;
+}
+
+.full-preview-topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Device Switcher (Desktop / Mobile Toggle) trong Full Preview */
+.full-preview-topbar .home-cms-device-toggle {
+  display: inline-flex;
+  align-items: center;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.full-preview-topbar .home-cms-device-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: #475569;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 6px 12px;
+  min-height: 38px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.full-preview-topbar .home-cms-device-btn:hover {
+  color: #1e293b;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.full-preview-topbar .home-cms-device-btn.is-active {
+  background: #74070E;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(116, 7, 14, 0.25);
+}
+
+.full-preview-topbar .home-cms-device-btn.is-active svg {
+  stroke: #ffffff;
+}
+
+/* Các nút thao tác trong Preview Toolbar (.preview-btn) */
+.preview-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.preview-btn__icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: block;
+  pointer-events: none;
+}
+
+.preview-btn__text {
+  display: inline;
+}
+
+/* Nút Chạy lại hiệu ứng */
+.preview-btn--replay {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+}
+
+.preview-btn--replay:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+/* Nút Đóng xem trước */
+.preview-btn--close {
+  background: #74070E;
+  border: 1px solid #74070E;
+  color: #ffffff;
+}
+
+.preview-btn--close:hover {
+  background: #5a050b;
+  border-color: #5a050b;
+  color: #ffffff;
+}
+
+.preview-btn--close svg {
+  stroke: #ffffff;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   1. KHUNG GIẢ LẬP MOBILE FRAME TRÊN DESKTOP (.is-mobile-frame)
+   ══════════════════════════════════════════════════════════════════════════ */
 .full-preview-container.is-mobile-frame {
   max-width: 410px;
   height: 90vh;
@@ -3252,39 +3384,194 @@
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45);
 }
 
-.full-preview-topbar {
-  display: flex;
+.full-preview-container.is-mobile-frame .full-preview-topbar {
+  padding: 10px 12px;
+  flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 24px;
-  background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
-  flex-shrink: 0;
-  z-index: 10;
-}
-
-.full-preview-container.is-mobile-frame .full-preview-topbar {
-  padding: 10px 16px;
-  flex-direction: column;
   gap: 8px;
 }
 
-.full-preview-topbar__info h4 {
-  margin: 0;
-  font-size: 15px;
+.full-preview-container.is-mobile-frame .preview-title-full {
+  display: none !important;
+}
+
+.full-preview-container.is-mobile-frame .preview-title-short {
+  display: inline !important;
+  font-size: 13.5px;
   font-weight: 700;
-  color: #1e293b;
 }
 
-.full-preview-topbar__info span {
-  font-size: 12px;
-  color: #64748b;
+.full-preview-container.is-mobile-frame .preview-subtitle-desc {
+  display: none !important;
 }
 
-.full-preview-topbar__actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.full-preview-container.is-mobile-frame .full-preview-topbar__actions {
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* Mobile Frame: ẩn toàn bộ chữ, chỉ giữ SVG icon */
+.full-preview-container.is-mobile-frame .preview-btn__text {
+  display: none !important;
+}
+
+.full-preview-container.is-mobile-frame .home-cms-device-toggle {
+  padding: 2px;
+  gap: 3px;
+  border-radius: 8px;
+}
+
+.full-preview-container.is-mobile-frame .home-cms-device-btn {
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: 6px;
+}
+
+.full-preview-container.is-mobile-frame .preview-btn--replay,
+.full-preview-container.is-mobile-frame .preview-btn--close {
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: 8px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   2. VIEWPORT RESPONSIVE (@media max-width: 768px & max-width: 480px)
+   ══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .home-cms-modal-backdrop.is-full-preview {
+    padding: 8px;
+  }
+
+  .full-preview-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 96vh;
+    border-radius: 12px;
+  }
+
+  .full-preview-container.is-mobile-frame {
+    border-width: 6px;
+    border-radius: 24px;
+    height: 94vh;
+  }
+
+  .full-preview-topbar {
+    padding: 10px 10px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .full-preview-topbar__info {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+  }
+
+  /* Rút gọn tiêu đề thành "Preview", ẩn mô tả phụ */
+  .preview-title-full {
+    display: none !important;
+  }
+
+  .preview-title-short {
+    display: inline !important;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .preview-subtitle-desc {
+    display: none !important;
+  }
+
+  .full-preview-topbar__actions {
+    flex-shrink: 0;
+    gap: 6px;
+    align-items: center;
+  }
+
+  /* Mobile screen: ẩn toàn bộ chữ, chỉ giữ SVG icon */
+  .preview-btn__text {
+    display: none !important;
+  }
+
+  .full-preview-topbar .home-cms-device-toggle {
+    padding: 2px;
+    gap: 2px;
+    border-radius: 8px;
+  }
+
+  .full-preview-topbar .home-cms-device-btn {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+    padding: 0;
+    border-radius: 6px;
+  }
+
+  .preview-btn--replay,
+  .preview-btn--close {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+    padding: 0;
+    border-radius: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .home-cms-modal-backdrop.is-full-preview {
+    padding: 4px;
+  }
+
+  .full-preview-container {
+    height: 98vh;
+    border-radius: 8px;
+  }
+
+  .full-preview-container.is-mobile-frame {
+    border-width: 4px;
+    border-radius: 16px;
+    height: 97vh;
+  }
+
+  .full-preview-topbar {
+    padding: 8px 8px;
+    gap: 6px;
+  }
+
+  .full-preview-topbar__actions {
+    gap: 4px;
+  }
+
+  .full-preview-topbar .home-cms-device-btn {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    min-height: 36px;
+  }
+
+  .preview-btn--replay,
+  .preview-btn--close {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    min-height: 36px;
+  }
+
+  .preview-btn__icon {
+    width: 16px;
+    height: 16px;
+  }
 }
 
 .full-preview-scroll-body {

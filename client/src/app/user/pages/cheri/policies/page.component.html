@@ -1,0 +1,8 @@
+<div class="main">
+  <div class="container-mid">
+    <div class="page" *ngIf="page && currentLang">
+      <h2 class="page-title">{{ (page[currentLang] || page['vi'] || page['en'])?.title }}</h2>
+      <div class="page-content" [innerHTML]="(page[currentLang] || page['vi'] || page['en'])?.contentHTML"></div>
+    </div>
+  </div>
+</div>

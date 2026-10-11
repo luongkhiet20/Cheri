@@ -7,9 +7,9 @@ import { GoogleUserDto } from '../dto/google-user.dto';
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   constructor() {
     super({
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.SERVER_URL + '/api/auth/google/callback',
+      clientID: process.env.GOOGLE_CLIENT_ID || 'not_configured',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || 'not_configured',
+      callbackURL: (process.env.SERVER_URL || 'http://localhost:4000') + '/api/auth/google/callback',
       passReqToCallback: true,
       scope: ['profile', 'email'],
     });

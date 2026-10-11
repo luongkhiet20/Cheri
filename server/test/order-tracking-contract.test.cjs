@@ -2,7 +2,6 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const { buildPublicTrackingResponse } = require('../src/orders/tracking-response.cjs');
-const { buildDemoOrders } = require('../src/scripts/demo-order-seed-core.cjs');
 const {
   getTrackingIdentifierFromQuery,
   hasSensitiveTrackingQueryParams,
@@ -70,16 +69,29 @@ test('public tracking response supports legacy cart/address/tracking shapes with
   assert.equal(JSON.stringify(result).includes('Internal note'), false);
 });
 
-test('demo seed builder records produce a tracking-safe returned/refunded response', () => {
-  const [pending, shipping, returned] = buildDemoOrders({
-    product: { _id: 'synthetic-product', title: 'Demo item', regularPrice: 20 },
-    paymentMethods: [{ _id: 'synthetic-payment', name: 'Demo pay', code: 'DEMO', paymentType: 'TEST', status: 'ACTIVE' }],
-    shippingMethod: { _id: 'synthetic-shipping', name: 'Demo ship', code: 'DEMO', baseFee: 3 },
-  });
+test('a synthetic demo order produces a tracking-safe returned/refunded response', () => {
+  // Keep the tracking contract independent of the retired Mongo seed runner.
+  const returned = {
+    orderId: 'DEMO-ORDER-2026-003',
+    status: 'RETURNED',
+    paymentStatus: 'REFUNDED',
+    refundedAmount: 23,
+    customerEmail: 'demo@example.invalid',
+    customerPhone: '0000000000',
+    shippingAddress: { line1: 'Đơn giả lập, không giao hàng' },
+    notes: 'DEMO-SEED:v1:003',
+    items: [{
+      productId: 'synthetic-product',
+      productSnapshot: { title: 'Demo item', sku: 'DEMO', image: '' },
+      quantity: 1, unitPrice: 20, subtotal: 20,
+    }],
+    subtotal: 20, shippingFee: 3, totalAmount: 23,
+    paymentMethodSnapshot: { name: 'Demo pay', code: 'DEMO', paymentType: 'TEST' },
+    shippingMethodSnapshot: { name: 'Demo ship', code: 'DEMO' },
+    statusHistory: [{ status: 'RETURNED', updatedAt: '2026-10-06T00:00:00.000Z' }],
+  };
   const response = buildPublicTrackingResponse(returned);
 
-  assert.equal(pending.status, 'PENDING');
-  assert.equal(shipping.trackingNumber, 'DEMO-TRACK-2026-002');
   assert.equal(response.orderId, 'DEMO-ORDER-2026-003');
   assert.equal(response.status, 'RETURNED');
   assert.equal(response.paymentStatus, 'REFUNDED');

@@ -13,7 +13,12 @@ import { AdminSidebarComponent } from '../admin-sidebar/admin-sidebar.component'
 })
 export class AdminLayout implements OnInit, OnDestroy {
   @ViewChild('sidebar') sidebar!: AdminSidebarComponent;
+  isSidebarCollapsed = false;
   private routerSub?: Subscription;
+
+  onSidebarCollapsedChange(collapsed: boolean): void {
+    this.isSidebarCollapsed = collapsed;
+  }
 
   constructor(
     private router: Router,

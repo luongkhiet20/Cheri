@@ -12,15 +12,21 @@ import { ContactDto } from './dto/contact.dto';
 import { PageDto } from './dto/page.dto';
 import { Cart } from '../cart/utils/cart';
 import { Page } from './models/page.model';
+import { PageHome } from './models/page-home.model';
+import { PageAbout } from './models/page-about.model';
 import { Theme } from './models/theme.model';
 import { Config } from './models/config.model';
 import { Translation } from '../translations/translation.model';
+import { SaveHomeDraftDto, PublishHomeDto } from './dto/home-page.dto';
+import { SaveAboutDraftDto, PublishAboutDto } from './dto/about-page.dto';
 import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class CheriService {
   constructor(
     @InjectModel('Page') private pageModel: Model<Page>,
+    @InjectModel('PageHome') private pageHomeModel: Model<PageHome>,
+    @InjectModel('PageAbout') private pageAboutModel: Model<PageAbout>,
     @InjectModel('Theme') private themeModel: Model<Theme>,
     @InjectModel('Config') private configModel: Model<Config>,
     @InjectModel('Translation') private translationModel: Model<Translation>,
@@ -83,7 +89,7 @@ export class CheriService {
   }
 
   async getPages(lang: string, titles?: boolean): Promise<Page[]> {
-    const selectQuery = titles ? { titleUrl: 1, [`${lang}.title`]: 1 } : {};
+    const selectQuery = titles ? { titleUrl: 1, [`${lang}.title`]: 1, status: 1, isPublished: 1 } : {};
     const pages = await this.pageModel.find({}, selectQuery);
     return pages;
   }
@@ -91,7 +97,7 @@ export class CheriService {
   async getPage(titleUrl: string, lang: string): Promise<Page> {
     const found = await this.pageModel.findOne(
       { titleUrl },
-      { titleUrl: 1, [lang]: 1 },
+      { titleUrl: 1, [lang]: 1, status: 1, isPublished: 1 },
     );
 
     if (!found) {
@@ -253,4 +259,254 @@ export class CheriService {
     const mailSended = await sendMsg(email, emailType, translations);
     return mailSended;
   };
+
+  /**
+   * Lấy cấu hình trang chủ công khai đã xuất bản (Public API)
+   * Chỉ trả về các section đang bật (enabled !== false), sắp xếp theo order
+   */
+  async getHomePublished(): Promise<{
+    success: boolean;
+    data: any;
+    sections: any[];
+  }> {
+    try {
+      const homeDoc: any = await this.pageHomeModel
+        .findOne({ key: 'home_page', status: 'published' })
+        .lean();
+
+      if (!homeDoc || !Array.isArray(homeDoc.sections)) {
+        return {
+          success: true,
+          data: null,
+          sections: [],
+        };
+      }
+
+      const activeSections = homeDoc.sections
+        .filter((sec: any) => sec && sec.enabled !== false)
+        .sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
+
+      return {
+        success: true,
+        data: {
+          ...homeDoc,
+          sections: activeSections,
+        },
+        sections: activeSections,
+      };
+    } catch (err) {
+      console.error('Error fetching published home configuration:', err);
+      return {
+        success: true,
+        data: null,
+        sections: [],
+      };
+    }
+  }
+
+  /**
+   * Lấy cấu hình trang chủ dành cho Quản trị viên (Admin API)
+   * Đọc cấu hình xuất bản hiện hành duy nhất từ database
+   */
+  async getHomeAdmin(): Promise<{
+    success: boolean;
+    data: any;
+    sections: any[];
+  }> {
+    const homeDoc: any = await this.pageHomeModel
+      .findOne({ key: 'home_page', status: 'published' })
+      .lean();
+
+    if (!homeDoc || !Array.isArray(homeDoc.sections)) {
+      return {
+        success: true,
+        data: null,
+        sections: [],
+      };
+    }
+
+    const sortedSections = [...homeDoc.sections].sort(
+      (a: any, b: any) => (a.order ?? 0) - (b.order ?? 0),
+    );
+
+    return {
+      success: true,
+      data: {
+        ...homeDoc,
+        sections: sortedSections,
+      },
+      sections: sortedSections,
+    };
+  }
+
+  /**
+   * Xuất bản cấu hình trang chủ (Admin API) - Cập nhật cấu hình duy nhất
+   */
+  async publishHome(
+    publishDto: PublishHomeDto,
+    userEmail?: string,
+  ): Promise<{
+    success: boolean;
+    message: string;
+    data: any;
+  }> {
+    const sectionsToPublish = publishDto?.sections;
+
+    if (!sectionsToPublish || !Array.isArray(sectionsToPublish) || sectionsToPublish.length === 0) {
+      throw new BadRequestException('Dữ liệu phân đoạn (sections) không hợp lệ hoặc rỗng để xuất bản');
+    }
+
+    try {
+      const editorEmail = userEmail || publishDto?.updatedBy || 'admin';
+
+      const publishedDoc = await this.pageHomeModel.findOneAndUpdate(
+        { key: 'home_page', status: 'published' },
+        {
+          $set: {
+            key: 'home_page',
+            status: 'published',
+            sections: sectionsToPublish,
+            publishedAt: new Date(),
+            updatedBy: editorEmail,
+          },
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true },
+      );
+
+      return {
+        success: true,
+        message: 'Xuất bản cấu hình trang chủ thành công',
+        data: publishedDoc,
+      };
+    } catch (err) {
+      console.error('Error publishing home configuration:', err);
+      throw new BadRequestException('Không thể xuất bản cấu hình trang chủ: ' + (err?.message || 'Lỗi server'));
+    }
+  }
+
+  /**
+   * Lấy cấu hình trang Giới thiệu (About) đã xuất bản (Client API)
+   * Đọc trực tiếp từ collection pages_about
+   */
+  async getAboutPublished(): Promise<{
+    success: boolean;
+    data: any;
+    sections: any[];
+  }> {
+    try {
+      const aboutDoc: any = await this.pageAboutModel
+        .findOne({ key: 'about_page', status: 'published' })
+        .lean();
+
+      if (!aboutDoc || !Array.isArray(aboutDoc.sections)) {
+        return {
+          success: true,
+          data: null,
+          sections: [],
+        };
+      }
+
+      const activeSections = aboutDoc.sections
+        .filter((sec: any) => sec && sec.enabled !== false)
+        .sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
+
+      return {
+        success: true,
+        data: {
+          ...aboutDoc,
+          sections: activeSections,
+        },
+        sections: activeSections,
+      };
+    } catch (err) {
+      console.error('Error fetching published about configuration:', err);
+      return {
+        success: true,
+        data: null,
+        sections: [],
+      };
+    }
+  }
+
+  /**
+   * Lấy cấu hình trang Giới thiệu dành cho Quản trị viên (Admin API)
+   * Đọc cấu hình từ collection pages_about
+   */
+  async getAboutAdmin(): Promise<{
+    success: boolean;
+    data: any;
+    sections: any[];
+  }> {
+    const aboutDoc: any = await this.pageAboutModel
+      .findOne({ key: 'about_page', status: 'published' })
+      .lean();
+
+    if (!aboutDoc || !Array.isArray(aboutDoc.sections)) {
+      return {
+        success: true,
+        data: null,
+        sections: [],
+      };
+    }
+
+    const sortedSections = [...aboutDoc.sections].sort(
+      (a: any, b: any) => (a.order ?? 0) - (b.order ?? 0),
+    );
+
+    return {
+      success: true,
+      data: {
+        ...aboutDoc,
+        sections: sortedSections,
+      },
+      sections: sortedSections,
+    };
+  }
+
+  /**
+   * Xuất bản cấu hình trang Giới thiệu (Admin API)
+   * Lưu trực tiếp vào collection pages_about
+   */
+  async publishAbout(
+    publishDto: PublishAboutDto,
+    userEmail?: string,
+  ): Promise<{
+    success: boolean;
+    message: string;
+    data: any;
+  }> {
+    const sectionsToPublish = publishDto?.sections;
+
+    if (!sectionsToPublish || !Array.isArray(sectionsToPublish) || sectionsToPublish.length === 0) {
+      throw new BadRequestException('Dữ liệu phân đoạn (sections) không hợp lệ hoặc rỗng để xuất bản');
+    }
+
+    try {
+      const editorEmail = userEmail || publishDto?.updatedBy || 'admin';
+
+      const publishedDoc = await this.pageAboutModel.findOneAndUpdate(
+        { key: 'about_page', status: 'published' },
+        {
+          $set: {
+            key: 'about_page',
+            status: 'published',
+            sections: sectionsToPublish,
+            publishedAt: new Date(),
+            updatedBy: editorEmail,
+          },
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true },
+      );
+
+      return {
+        success: true,
+        message: 'Xuất bản cấu hình trang Giới thiệu thành công',
+        data: publishedDoc,
+      };
+    } catch (err) {
+      console.error('Error publishing about configuration:', err);
+      throw new BadRequestException('Không thể xuất bản cấu hình trang Giới thiệu: ' + (err?.message || 'Lỗi server'));
+    }
+  }
 }
+

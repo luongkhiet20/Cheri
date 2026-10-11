@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
 import { environment } from '../../../../../environments/environment';
+import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 @Component({
   selector: 'app-users-detail',
@@ -13,10 +14,15 @@ import { environment } from '../../../../../environments/environment';
 export class UsersDetailComponent implements OnInit {
   userId: string | null = null;
   user: any = null;
+
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Quản lý tài khoản', url: '/admin/users' },
+    { label: 'Chi tiết tài khoản' }
+  ];
+
   isLoading = false;
   isNotFound = false;
   errorMessage = '';
-  successMessage = '';
 
   // Orders section state
   orders: any[] = [];
@@ -151,6 +157,11 @@ export class UsersDetailComponent implements OnInit {
           this.avatarHasError = false;
           this.isAvatarExpanded = false;
           this.resolveCartItems();
+          const name = this.user?.fullName || this.user?.name || this.user?.email || '';
+          this.breadcrumbItems = [
+            { label: 'Quản lý tài khoản', url: '/admin/users' },
+            { label: name ? name : 'Chi tiết tài khoản' }
+          ];
         } else {
           this.isNotFound = true;
         }
@@ -279,8 +290,8 @@ export class UsersDetailComponent implements OnInit {
         this.isStatusUpdating = false;
         this.confirmOpen = false;
         if (res.success) {
-          this.successMessage = res.message || (newStatus ? 'Đã mở khóa tài khoản thành công' : 'Đã khóa tài khoản thành công');
-          this.notificationService.success(this.successMessage);
+          const msg = res.message || (newStatus ? 'Đã mở khóa tài khoản thành công' : 'Đã khóa tài khoản thành công');
+          this.notificationService.success(msg);
           this.loadUser();
         } else {
           this.errorMessage = res.message || 'Thao tác không thành công';

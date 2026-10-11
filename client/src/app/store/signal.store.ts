@@ -33,11 +33,12 @@ export class SignalStore {
   getUser = () => {
     this.selectors.userState.update((state) => ({ ...state, loading: true }));
     this.apiService.getUser().subscribe((response: any) => {
-      if (response.error) {
+      if (!response || response.error) {
         this.selectors.userState.update((state) => ({ ...state, loading: false }));
         return;
       }
-      this.selectors.userState.update((state) => ({ ...state, user: response, loading: false }));
+      const user = response.data || response;
+      this.selectors.userState.update((state) => ({ ...state, user, loading: false }));
     });
   };
 
@@ -444,7 +445,10 @@ export class SignalStore {
 
   getUserOrders = () => {
     this.apiService.getUserOrders().subscribe((response: any) => {
-      this.selectors.productState.update((state) => ({ ...state, userOrders: response }));
+      const orders = Array.isArray(response)
+        ? response
+        : (Array.isArray(response?.data) ? response.data : (Array.isArray(response?.orders) ? response.orders : []));
+      this.selectors.productState.update((state) => ({ ...state, userOrders: orders }));
     });
   }
 

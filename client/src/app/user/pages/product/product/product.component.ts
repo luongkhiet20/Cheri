@@ -12,6 +12,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { Cart, Product, Category, ProductVariant } from '../../../shared/models';
 import { ImagesDialogComponent } from '../../../shared/images-dialog/images-dialog.component';
 import { TranslateService } from '../../../../services/translate.service';
+import { CartToastService } from '../../../../services/cart-toast.service';
 import { SignalStore } from '../../../../store/signal.store';
 import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
 
@@ -81,6 +82,7 @@ export class ProductComponent implements OnDestroy {
     private title: Title,
     public dialog: MatDialog,
     private snackBar: MatSnackBar,
+    private cartToast: CartToastService,
     private router: Router,
     private translate: TranslateService,
     private jsonLDService: JsonLDService,
@@ -400,11 +402,7 @@ export class ProductComponent implements OnDestroy {
 
     const params = this.buildAddToCartParams(product);
     this.store.addToCart(params);
-
-    const snackBarRef = this.snackBar.open('Đã thêm vào giỏ hàng', 'Xem giỏ hàng', { duration: 3000 });
-    snackBarRef.onAction().pipe(take(1)).subscribe(() => {
-      this.router.navigate(['/' + this.currentLang + '/cart']);
-    });
+    this.cartToast.show();
   }
 
   handleBuyNow(): void {

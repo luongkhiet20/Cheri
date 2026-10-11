@@ -10,8 +10,11 @@ import { accessTokenKey } from '../user/shared/constants';
 
 export const checkIsAdmin = (user: any): boolean => {
   if (!user) return false;
+  if (user.isAdmin === true) return true;
+  if (typeof user.role === 'string' && user.role.toLowerCase() === 'admin') return true;
+  if (typeof user.roles === 'string' && user.roles.toLowerCase() === 'admin') return true;
   const roles = user.roles || (user.role ? [user.role] : []);
-  if (Array.isArray(roles) && roles.some((r: string) => r && r.toLowerCase() === 'admin')) {
+  if (Array.isArray(roles) && roles.some((r: string) => typeof r === 'string' && r.toLowerCase() === 'admin')) {
     return true;
   }
   return false;
@@ -72,14 +75,17 @@ export const AdminGuard: CanActivateFn = (_route: ActivatedRouteSnapshot): Obser
   if (currentUser) {
     const isAdmin = checkIsAdmin(currentUser);
     if (!isAdmin) {
-      router.navigate(['/']);
+      // Tài khoản User thông thường đã đăng nhập -> chuyển về trang đăng nhập Admin để chuyển sang tài khoản Admin
+      router.navigate(['/vi/authorize/signin'], { queryParams: { returnUrl: '/admin' } });
+      return false;
     }
-    return isAdmin;
+    return true;
   }
 
   const token = localStorage.getItem(accessTokenKey);
   if (!token) {
-    router.navigate(['/']);
+    // Chưa đăng nhập hoặc đã đăng xuất -> chuyển về trang đăng nhập Admin kèm returnUrl
+    router.navigate(['/vi/authorize/signin'], { queryParams: { returnUrl: '/admin' } });
     return false;
   }
 
@@ -90,15 +96,23 @@ export const AdminGuard: CanActivateFn = (_route: ActivatedRouteSnapshot): Obser
         store.storeUser(user);
         const isAdmin = checkIsAdmin(user);
         if (!isAdmin) {
-          router.navigate(['/']);
+          // Tài khoản hợp lệ nhưng không phải Admin -> đưa về trang đăng nhập Admin
+          router.navigate(['/vi/authorize/signin'], { queryParams: { returnUrl: '/admin' } });
+          return false;
         }
-        return isAdmin;
+        return true;
       }
-      router.navigate(['/']);
+      // Phiên không hợp lệ hoặc hết hạn -> dọn dẹp token và chuyển về trang đăng nhập Admin
+      localStorage.removeItem(accessTokenKey);
+      sessionStorage.clear();
+      router.navigate(['/vi/authorize/signin'], { queryParams: { returnUrl: '/admin' } });
       return false;
     }),
     catchError(() => {
-      router.navigate(['/']);
+      // Lỗi xác thực token với backend -> dọn dẹp token và chuyển về trang đăng nhập Admin
+      localStorage.removeItem(accessTokenKey);
+      sessionStorage.clear();
+      router.navigate(['/vi/authorize/signin'], { queryParams: { returnUrl: '/admin' } });
       return of(false);
     })
   );

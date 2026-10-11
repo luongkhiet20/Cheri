@@ -1,0 +1,63 @@
+<div class="page-content">
+
+  <!-- Page Header -->
+  <div class="page-top">
+    <div>
+      <app-admin-breadcrumb [items]="breadcrumbItems"></app-admin-breadcrumb>
+      <h1 class="page-title">Quản lý mã giảm giá</h1>
+    </div>
+
+    <div class="page-actions">
+      <button type="button" class="btn btn-primary" id="btn-add-coupon" (click)="onAddCoupon()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Thêm mã giảm giá
+      </button>
+    </div>
+  </div>
+
+
+
+  <div *ngIf="errorMessage" class="alert-box alert-error">
+    <div class="alert-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+    </div>
+    <div class="alert-content">
+      {{ errorMessage }}
+    </div>
+  </div>
+
+  <!-- Reusable Toolbar -->
+  <app-admin-toolbar searchPlaceholder="Tìm kiếm theo mã, mô tả..." [filterFields]="filterFields"
+    [selectable]="true" [allSelected]="allSelected" [indeterminate]="isIndeterminate" [selectedCount]="selectedCount"
+    [showDeleteSelected]="true" [total]="displayTotal" [isLoading]="isLoading" (searchChange)="onSearch($event)"
+    (filterChange)="onFilter($event)" (refresh)="onRefresh()" (selectAllChange)="onToolbarSelectAll()"
+    (deleteSelected)="onDeleteSelected()">
+  </app-admin-toolbar>
+
+  <!-- Reusable Table -->
+  <app-admin-table [columns]="columns" [data]="data" [loading]="isLoading" [actions]="actions" [pagination]="pagination"
+    [selectable]="true" [selectedIds]="selectedIds" totalLabel="mã giảm giá" (actionClick)="onAction($event)"
+    (selectionChange)="onSelectionChange($event)" (pageChange)="onPageChange($event)">
+  </app-admin-table>
+
+</div>
+
+<!-- Reusable Confirm Dialog -->
+<app-confirm-dialog
+  [isOpen]="confirmOpen"
+  [title]="confirmTitle"
+  [message]="confirmMessage"
+  [confirmLabel]="confirmLabel"
+  [variant]="confirmVariant"
+  (confirmed)="confirmDialogAction()"
+  (cancelled)="cancelDialogAction()">
+</app-confirm-dialog>
+

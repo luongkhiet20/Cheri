@@ -728,7 +728,7 @@ export class ApiService {
     );
   }
 
-  uploadImage({ fileToUpload, titleUrl }) {
+  uploadImage({ fileToUpload, titleUrl }: { fileToUpload: any; titleUrl?: string }) {
     if (isPlatformBrowser(this.platformId)) {
       const titleUrlQuery = titleUrl ? '?titleUrl=' + titleUrl : '';
       const accessToken = localStorage.getItem(accessTokenKey);
@@ -841,6 +841,81 @@ export class ApiService {
     return this.http.delete(configUrl, this.getRequestOptions()).pipe(
       map((response: any) => response),
       catchError((error: Error) => of({ error })),
+    );
+  }
+
+  getHomePublished(): Observable<any> {
+    const homeUrl = this.apiUrl + '/api/cheri/home';
+    return this.http.get(homeUrl, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  getHomeAdmin(): Observable<any> {
+    const homeUrl = this.apiUrl + '/api/cheri/home/admin';
+    return this.http.get(homeUrl, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  publishHome(publishReq?: { sections?: any[]; updatedBy?: string }): Observable<any> {
+    const homeUrl = this.apiUrl + '/api/cheri/home/publish';
+    return this.http.post(homeUrl, publishReq || {}, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  getAboutPublished(): Observable<any> {
+    const aboutUrl = this.apiUrl + '/api/cheri/about';
+    return this.http.get(aboutUrl, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  getAboutAdmin(): Observable<any> {
+    const aboutUrl = this.apiUrl + '/api/cheri/about/admin';
+    return this.http.get(aboutUrl, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  publishAbout(publishReq?: { sections?: any[]; updatedBy?: string }): Observable<any> {
+    const aboutUrl = this.apiUrl + '/api/cheri/about/publish';
+    return this.http.post(aboutUrl, publishReq || {}, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  // ── Admin Notifications (MongoDB notification-popup) ──
+  getNotifications(recipientId: string = 'admin'): Observable<any[]> {
+    const params = new HttpParams().set('recipientId', recipientId);
+    return this.http.get<any[]>(`${this.apiUrl}/api/orders/notifications`, { ...this.getRequestOptions(), params }).pipe(
+      catchError(() => of([]))
+    );
+  }
+
+  getUnreadNotificationCount(recipientId: string = 'admin'): Observable<{ success: boolean; unreadCount: number }> {
+    const params = new HttpParams().set('recipientId', recipientId);
+    return this.http.get<{ success: boolean; unreadCount: number }>(`${this.apiUrl}/api/orders/notifications/unread-count`, { ...this.getRequestOptions(), params }).pipe(
+      catchError(() => of({ success: false, unreadCount: 0 }))
+    );
+  }
+
+  markNotificationAsRead(id: string, recipientId: string = 'admin'): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/api/orders/notifications/${id}/read`, { recipientId }, this.getRequestOptions()).pipe(
+      catchError((error) => of({ success: false, error }))
+    );
+  }
+
+  markAllNotificationsAsRead(recipientId: string = 'admin'): Observable<any> {
+    return this.http.post(`${this.apiUrl}/api/orders/notifications/read-all`, { recipientId }, this.getRequestOptions()).pipe(
+      catchError((error) => of({ success: false, error }))
     );
   }
 

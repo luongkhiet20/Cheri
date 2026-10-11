@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
+import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 export interface CategoryFormData {
   title: string;
@@ -37,10 +38,14 @@ export class CategoryFormComponent implements OnInit {
     visibility: true
   };
 
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Quản lý danh mục', url: '/admin/categories' },
+    { label: 'Thêm danh mục' }
+  ];
+
   parentCategories: any[] = [];
   errors: Record<string, string> = {};
   errorMessage = '';
-  successMessage = '';
 
   constructor(
     private route: ActivatedRoute,
@@ -53,6 +58,11 @@ export class CategoryFormComponent implements OnInit {
   ngOnInit(): void {
     this.categoryId = this.route.snapshot.paramMap.get('id');
     this.isEditMode = !!this.categoryId;
+
+    this.breadcrumbItems = [
+      { label: 'Quản lý danh mục', url: '/admin/categories' },
+      { label: this.isEditMode ? 'Chỉnh sửa danh mục' : 'Thêm danh mục' }
+    ];
 
     this.loadParentCategories();
 
@@ -107,6 +117,10 @@ export class CategoryFormComponent implements OnInit {
           };
           this.isSlugCustomized = !!this.formData.slug;
           this.isDirty = false;
+          this.breadcrumbItems = [
+            { label: 'Quản lý danh mục', url: '/admin/categories' },
+            { label: this.formData.title ? ('Chỉnh sửa: ' + this.formData.title) : 'Chỉnh sửa danh mục' }
+          ];
         } else {
           this.errorMessage = res.message || 'Không tìm thấy thông tin danh mục';
         }
@@ -252,7 +266,6 @@ export class CategoryFormComponent implements OnInit {
 
   onSubmit(): void {
     this.errorMessage = '';
-    this.successMessage = '';
 
     if (!this.validate()) {
       const fieldOrder = ['title', 'slug', 'position'];
@@ -292,7 +305,6 @@ export class CategoryFormComponent implements OnInit {
         next: (res) => {
           this.isSubmitting = false;
           if (res.success) {
-            this.successMessage = 'Cập nhật danh mục thành công!';
             this.notificationService.success('Cập nhật danh mục thành công!');
             this.isDirty = false;
             this.cdr.markForCheck();
@@ -319,7 +331,6 @@ export class CategoryFormComponent implements OnInit {
         next: (res) => {
           this.isSubmitting = false;
           if (res.success) {
-            this.successMessage = 'Thêm danh mục thành công!';
             this.notificationService.success('Thêm danh mục thành công!');
             this.isDirty = false;
             this.cdr.markForCheck();

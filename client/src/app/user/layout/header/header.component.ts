@@ -10,6 +10,7 @@ import { Cart, User, Order } from '../../shared/models';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { SignalStore } from '../../../store/signal.store';
 import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
+import { checkIsAdmin } from '../../../services/auth.guard';
 
 import { MatIconModule } from '@angular/material/icon';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
@@ -150,14 +151,7 @@ export class HeaderComponent implements OnInit {
 
   isAdmin(): boolean {
     const user = typeof this.user$ === 'function' ? this.user$() : null;
-    if (!user) {
-      console.log('[HeaderComponent] isAdmin(): false (Guest/No user)');
-      return false;
-    }
-    const roles = user.roles || (user.role ? [user.role] : []);
-    const isAdm = Array.isArray(roles) && roles.some((r: string) => r && r.toLowerCase() === 'admin');
-    console.log('[HeaderComponent] isAdmin():', isAdm, 'Roles:', roles);
-    return isAdm;
+    return checkIsAdmin(user);
   }
 
   isRegularUser(): boolean {

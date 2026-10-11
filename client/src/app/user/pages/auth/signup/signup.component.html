@@ -77,8 +77,23 @@
 
             <label class="form-checkbox-label terms-label">
               <input type="checkbox" formControlName="agreeTerms" class="form-checkbox" />
-              <span>Chấp nhận Điều khoản sử dụng và Chính sách bảo mật <span class="required-star">*</span></span>
+              <span>
+                Tôi đồng ý với
+                <a
+                  class="terms-link"
+                  [routerLink]="['/' + lang + '/terms-of-service']"
+                  (click)="$event.stopPropagation()"
+                >Điều khoản sử dụng</a>
+                và
+                <a
+                  class="terms-link"
+                  [routerLink]="['/' + lang + '/privacy-policy']"
+                  (click)="$event.stopPropagation()"
+                >Chính sách bảo mật</a>
+                <span class="required-star">*</span>
+              </span>
             </label>
+
           </div>
 
           <!-- Submit -->

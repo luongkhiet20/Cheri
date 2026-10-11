@@ -9,7 +9,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
-  padding: var(--space-md) var(--space-lg);
+  padding: 14px var(--space-lg, 24px);
   border-bottom: 1px solid var(--cheri-divider);
 }
 .admin-card__title {
@@ -24,7 +24,7 @@
   margin-top: 2px;
 }
 .admin-card__body {
-  padding: var(--space-lg);
+  padding: 18px var(--space-lg, 24px);
 }
 .admin-card--no-padding .admin-card__body {
   padding: 0;

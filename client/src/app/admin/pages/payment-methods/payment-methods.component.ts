@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
 import { NotificationService } from '../../shared/notification/notification.service';
+import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 @Component({
   selector: 'app-payment-methods',
@@ -11,6 +12,10 @@ import { NotificationService } from '../../shared/notification/notification.serv
   styleUrls: ['./payment-methods.component.css']
 })
 export class PaymentMethodsComponent implements OnInit {
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Phương thức thanh toán' }
+  ];
+
   columns: TableColumn[] = [
     { key: 'name', label: 'Tên phương thức', type: 'text', sortable: true },
     { key: 'code', label: 'Mã phương thức', type: 'text', sortable: true },
@@ -58,7 +63,6 @@ export class PaymentMethodsComponent implements OnInit {
   pendingTargetActive = false;
 
   // Alerts
-  successMessage = '';
   errorMessage = '';
 
   get selectedCount(): number { return this.selectedIds.size; }
@@ -203,10 +207,8 @@ export class PaymentMethodsComponent implements OnInit {
         .then(() => {
           this.isLoading = false;
           this.selectedIds.clear();
-          this.successMessage = `Đã xóa ${ids.length} phương thức thanh toán thành công.`;
-          this.notificationService.success(this.successMessage);
+          this.notificationService.success(`Đã xóa ${ids.length} phương thức thanh toán thành công.`);
           this.loadPaymentMethods();
-          setTimeout(() => this.successMessage = '', 4000);
         })
         .catch((err) => {
           this.isLoading = false;
@@ -233,10 +235,9 @@ export class PaymentMethodsComponent implements OnInit {
 
       this.apiService.updatePaymentMethodStatus(targetId, targetActive).subscribe({
         next: (res) => {
-          this.successMessage = res.message || (targetActive ? 'Đã bật phương thức thanh toán' : 'Đã tắt phương thức thanh toán');
-          this.notificationService.success(this.successMessage);
+          const msg = res.message || (targetActive ? 'Đã bật phương thức thanh toán' : 'Đã tắt phương thức thanh toán');
+          this.notificationService.success(msg);
           this.loadPaymentMethods();
-          setTimeout(() => this.successMessage = '', 4000);
         },
         error: (err) => {
           this.errorMessage = err.error?.message || 'Lỗi khi cập nhật trạng thái';
@@ -253,10 +254,9 @@ export class PaymentMethodsComponent implements OnInit {
 
       this.apiService.deletePaymentMethod(targetId).subscribe({
         next: (res) => {
-          this.successMessage = res.message || 'Xóa phương thức thanh toán thành công';
-          this.notificationService.success(this.successMessage);
+          const msg = res.message || 'Xóa phương thức thanh toán thành công';
+          this.notificationService.success(msg);
           this.loadPaymentMethods();
-          setTimeout(() => this.successMessage = '', 4000);
         },
         error: (err) => {
           this.errorMessage = err.error?.message || 'Lỗi khi xóa phương thức thanh toán';

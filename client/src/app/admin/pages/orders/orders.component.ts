@@ -4,6 +4,7 @@ import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } fr
 import { AdminService } from '../../services/admin.service';
 import { NotificationService } from '../../shared/notification/notification.service';
 import { escapeCsvTextField, paymentStatusLabel } from './orders-report-csv.cjs';
+import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 @Component({
   selector: 'app-orders',
@@ -12,6 +13,10 @@ import { escapeCsvTextField, paymentStatusLabel } from './orders-report-csv.cjs'
   styleUrls: ['./orders.component.css']
 })
 export class OrdersComponent implements OnInit {
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Quản lý đơn hàng' }
+  ];
+
   columns: TableColumn[] = [
     { key: 'code', label: 'Mã đơn', type: 'text', sortable: true },
     { key: 'customer', label: 'Khách hàng', type: 'text', sortable: true },
@@ -30,10 +35,10 @@ export class OrdersComponent implements OnInit {
       key: 'status', label: 'Trạng thái', type: 'select', value: '', options: [
         { value: 'DELIVERED', label: 'Đã giao' },
         { value: 'SHIPPING', label: 'Đang giao' },
-        { value: 'DELIVERY_FAILED', label: 'Giao hàng không thành công' },
+
         { value: 'PROCESSING', label: 'Đang xử lý' },
         { value: 'PENDING', label: 'Chờ xác nhận' },
-        { value: 'CONFIRMED', label: 'Đã xác nhận' },
+
         { value: 'CANCELLED', label: 'Đã hủy' },
         { value: 'RETURNED', label: 'Đã hoàn trả' },
       ]
@@ -50,7 +55,6 @@ export class OrdersComponent implements OnInit {
   isExporting = false;
   isLoadingPaymentMethods = false;
   isDeleting = false;
-  successMessage = '';
   errorMessage = '';
   searchTerm = '';
   selectedStatus = '';
@@ -59,7 +63,7 @@ export class OrdersComponent implements OnInit {
   private skipNextResetFilterLoad = false;
   private ordersRequestId = 0;
   private readonly orderStatusCodes = new Set([
-    'PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPING', 'DELIVERY_FAILED', 'DELIVERED', 'CANCELLED', 'RETURNED'
+    'DELIVERED', 'SHIPPING', 'PROCESSING', 'PENDING', 'CANCELLED', 'RETURNED'
   ]);
 
   selectedIds: Set<any> = new Set();
@@ -230,7 +234,6 @@ export class OrdersComponent implements OnInit {
     if (this.isExporting || this.isLoading) return;
 
     this.isExporting = true;
-    this.successMessage = '';
     this.errorMessage = '';
 
     // Nếu người dùng đã tick chọn một số đơn hàng cụ thể trên bảng
@@ -238,7 +241,7 @@ export class OrdersComponent implements OnInit {
       const selectedOrders = this.data.filter((r: any) => this.selectedIds.has(r.id));
       this.generateAndDownloadReport(selectedOrders);
       this.isExporting = false;
-      this.successMessage = `Đã xuất báo cáo thành công cho ${selectedOrders.length} đơn hàng đã chọn.`;
+      this.notificationService.success(`Đã xuất báo cáo thành công cho ${selectedOrders.length} đơn hàng đã chọn.`);
       this.cdr.markForCheck();
       return;
     }
@@ -281,7 +284,7 @@ export class OrdersComponent implements OnInit {
 
         this.generateAndDownloadReport(allOrders);
         this.isExporting = false;
-        this.successMessage = `Đã xuất báo cáo thành công cho ${allOrders.length} đơn hàng.`;
+        this.notificationService.success(`Đã xuất báo cáo thành công cho ${allOrders.length} đơn hàng.`);
         this.cdr.markForCheck();
       },
       error: (err) => {
@@ -482,7 +485,6 @@ export class OrdersComponent implements OnInit {
       page: this.pagination.page,
       pageSize: this.pagination.pageSize
     };
-    this.successMessage = '';
     this.errorMessage = '';
     this.confirmMessage = `Bạn có chắc chắn muốn xóa ${count} đơn hàng đã chọn không?`;
     this.confirmOpen = true;
@@ -496,7 +498,6 @@ export class OrdersComponent implements OnInit {
       this.isDeleting = true;
       this.ordersRequestId += 1;
       this.isLoading = false;
-      this.successMessage = '';
       this.errorMessage = '';
       this.apiService.deleteOrder(deleteId).subscribe({
         next: (res) => {
@@ -513,8 +514,7 @@ export class OrdersComponent implements OnInit {
           }
           this.selectedIds.delete(deleteId);
           this.selectedIds = new Set(this.selectedIds);
-          this.successMessage = 'Xóa đơn hàng thành công.';
-          this.notificationService.success(this.successMessage);
+          this.notificationService.success('Xóa đơn hàng thành công.');
           this.loadOrders();
           this.cdr.markForCheck();
         },
@@ -535,7 +535,6 @@ export class OrdersComponent implements OnInit {
       this.isDeleting = true;
       this.ordersRequestId += 1;
       this.isLoading = false;
-      this.successMessage = '';
       this.errorMessage = '';
       this.apiService.bulkDeleteOrders(deleteIds).subscribe({
         next: (res) => {
@@ -556,8 +555,7 @@ export class OrdersComponent implements OnInit {
           this.pendingBulkDeleteIds = [];
           this.pendingBulkQueryState = null;
           this.selectedIds.clear();
-          this.successMessage = 'Xóa các đơn hàng đã chọn thành công.';
-          this.notificationService.success(this.successMessage);
+          this.notificationService.success('Xóa các đơn hàng đã chọn thành công.');
           this.loadOrders();
           this.cdr.markForCheck();
         },
@@ -615,7 +613,6 @@ export class OrdersComponent implements OnInit {
       this.isBulkDelete = false;
       this.confirmMessage = 'Bạn có chắc muốn xóa đơn hàng này?';
       this.confirmOpen = true;
-      this.successMessage = '';
       this.errorMessage = '';
       this.cdr.markForCheck();
     }

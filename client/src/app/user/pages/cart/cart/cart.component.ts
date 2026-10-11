@@ -19,7 +19,13 @@ export interface AppliedCoupon {
   description?: string;
   discountType: 'PERCENTAGE' | 'FIXED' | string;
   discountValue: number;
-  discountAmount: number;
+  discountAmount?: number;
+  maxDiscount?: number;
+  minOrderValue?: number;
+  startDate?: string | Date;
+  endDate?: string | Date;
+  usageLimit?: number;
+  usedCount?: number;
 }
 
 export interface ShippingOption {
@@ -1148,14 +1154,28 @@ export class CartComponent implements OnInit, OnDestroy {
 
     let discount = 0;
     if (this.appliedCoupon.discountType === 'PERCENTAGE') {
-      discount = Math.round((subtotal * this.appliedCoupon.discountValue) / 100);
-      if (this.appliedCoupon.discountAmount > 0 && discount > this.appliedCoupon.discountAmount) {
-        discount = this.appliedCoupon.discountAmount;
+      // Trường hợp 1 — Giảm theo phần trăm:
+      // D = min(B * (r / 100), M)
+      // B: tổng tiền hàng đủ điều kiện áp dụng mã
+      // r: tỷ lệ giảm phần trăm (discountValue)
+      // M: mức giảm tối đa, chỉ áp dụng khi maxDiscount > 0. Nếu maxDiscount = 0, không bị giới hạn bởi M.
+      const r = Number(this.appliedCoupon.discountValue) || 0;
+      discount = Math.round((subtotal * r) / 100);
+      const M = Number(this.appliedCoupon.maxDiscount || 0);
+      if (M > 0 && discount > M) {
+        discount = M;
       }
     } else {
-      discount = this.appliedCoupon.discountValue;
+      // Trường hợp 2 — Giảm số tiền cố định:
+      // D = min(F, B)
+      // Trong đó F là discountValue tính bằng VNĐ.
+      // Với mã FIXED, số tiền giảm không vượt quá B. maxDiscount không cần áp dụng.
+      const F = Number(this.appliedCoupon.discountValue) || 0;
+      discount = Math.min(F, subtotal);
     }
-    return Math.min(discount, subtotal);
+
+    // Đảm bảo số tiền giảm D không vượt quá tổng tiền hàng B và không âm
+    return Math.max(0, Math.min(discount, subtotal));
   }
 
   // ─── PHẦN 9: PHƯƠNG THỨC THANH TOÁN LOGIC (DATABASE API) ───
@@ -1306,13 +1326,26 @@ export class CartComponent implements OnInit, OnDestroy {
 
   // ─── PHẦN 6: MÃ GIẢM GIÁ (COUPON) ───
 
+  onCouponInputChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input) {
+      this.couponInput = input.value.toUpperCase();
+    }
+    this.couponError = '';
+  }
+
   applyCoupon(cart: Cart): void {
     this.couponError = '';
     this.couponSuccess = '';
 
-    const code = this.couponInput.trim().toUpperCase();
+    const code = (this.couponInput || '').trim().toUpperCase();
     if (!code) {
       this.couponError = 'Vui lòng nhập mã giảm giá';
+      return;
+    }
+
+    if (this.appliedCoupon && this.appliedCoupon.code === code) {
+      this.couponError = `Mã ${code} đang được áp dụng cho giỏ hàng của bạn`;
       return;
     }
 
@@ -1333,17 +1366,24 @@ export class CartComponent implements OnInit, OnDestroy {
             discountType: res.discountType,
             discountValue: res.discountValue,
             discountAmount: res.discountAmount,
+            maxDiscount: res.maxDiscount || 0,
+            minOrderValue: res.minOrderValue || 0,
+            startDate: res.startDate,
+            endDate: res.endDate,
+            usageLimit: res.usageLimit || 0,
+            usedCount: res.usedCount || 0,
           };
           this.couponSuccess = res.message || `Đã áp dụng mã giảm giá ${res.code}`;
+          this.couponInput = '';
           this.snackBar.open(this.couponSuccess, 'Đóng', { duration: 3000 });
         } else {
           this.appliedCoupon = null;
           this.couponError = res.message || 'Mã giảm giá không hợp lệ hoặc không đủ điều kiện';
         }
       },
-      error: () => {
+      error: (err: any) => {
         this.isApplyingCoupon = false;
-        this.couponError = 'Lỗi kết nối khi kiểm tra mã giảm giá';
+        this.couponError = err?.error?.message || 'Lỗi kết nối khi kiểm tra mã giảm giá';
       }
     });
   }
@@ -1365,6 +1405,14 @@ export class CartComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (this.appliedCoupon.minOrderValue && this.appliedCoupon.minOrderValue > 0 && subtotal < this.appliedCoupon.minOrderValue) {
+      const minV = this.appliedCoupon.minOrderValue.toLocaleString('vi-VN');
+      const removedCode = this.appliedCoupon.code;
+      this.appliedCoupon = null;
+      this.couponError = `Mã ${removedCode} yêu cầu đơn hàng từ ${minV} ₫ trở lên`;
+      return;
+    }
+
     this.apiService.validateCoupon(this.appliedCoupon.code, subtotal).subscribe({
       next: (res: any) => {
         if (res.valid) {
@@ -1374,6 +1422,12 @@ export class CartComponent implements OnInit, OnDestroy {
             discountType: res.discountType,
             discountValue: res.discountValue,
             discountAmount: res.discountAmount,
+            maxDiscount: res.maxDiscount || 0,
+            minOrderValue: res.minOrderValue || 0,
+            startDate: res.startDate,
+            endDate: res.endDate,
+            usageLimit: res.usageLimit || 0,
+            usedCount: res.usedCount || 0,
           };
         } else {
           this.appliedCoupon = null;

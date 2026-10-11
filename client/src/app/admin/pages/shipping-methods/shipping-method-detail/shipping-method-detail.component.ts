@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
+import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 @Component({
   selector: 'app-shipping-method-detail',
@@ -13,10 +14,14 @@ export class ShippingMethodDetailComponent implements OnInit {
   methodId: string | null = null;
   method: any = null;
 
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Phương thức vận chuyển', url: '/admin/shipping-methods' },
+    { label: 'Chi tiết phương thức' }
+  ];
+
   isLoading = true;
   isNotFound = false;
   errorMessage = '';
-  successMessage = '';
 
   // Confirm dialog for status toggle or delete
   confirmOpen = false;
@@ -56,6 +61,10 @@ export class ShippingMethodDetailComponent implements OnInit {
         this.isLoading = false;
         if (res.success && res.data) {
           this.method = res.data;
+          this.breadcrumbItems = [
+            { label: 'Phương thức vận chuyển', url: '/admin/shipping-methods' },
+            { label: this.method?.name || 'Chi tiết phương thức' }
+          ];
         } else {
           this.isNotFound = true;
         }
@@ -130,12 +139,7 @@ export class ShippingMethodDetailComponent implements OnInit {
           if (res.success && res.data) {
             this.method = res.data;
             const msg = res.message || `Đã ${targetActive ? 'bật' : 'tắt'} phương thức vận chuyển thành công`;
-            this.successMessage = msg;
             this.notificationService.success(msg);
-            setTimeout(() => {
-              this.successMessage = '';
-              this.cdr.markForCheck();
-            }, 4000);
           } else {
             const msg = res.message || 'Không thể cập nhật trạng thái';
             this.errorMessage = msg;

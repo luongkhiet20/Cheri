@@ -1,6 +1,7 @@
 <div class="page-content">
   <div class="page-top">
     <div>
+      <app-admin-breadcrumb [items]="breadcrumbItems"></app-admin-breadcrumb>
       <h1 class="page-title">{{ isEditMode ? 'Chỉnh sửa đơn hàng' : 'Thêm đơn hàng' }}</h1>
       <p class="page-subtitle">
         {{ isEditMode ? 'Chỉ cập nhật các trường an toàn theo trạng thái hiện tại.' : 'Tạo đơn khách vãng lai từ dữ liệu sản phẩm hiện có.' }}

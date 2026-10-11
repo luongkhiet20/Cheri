@@ -15,10 +15,33 @@ export class AdminService {
   constructor(private http: HttpClient) {}
 
   // ── Dashboard ──────────────────────────────
-  getDashboardStats(timeRange?: string): Observable<any> {
+  getDashboardStats(timeRange?: string, startDate?: string, endDate?: string): Observable<any> {
     let params = new HttpParams();
-    if (timeRange) params = params.set('timeRange', timeRange);
+    if (startDate && endDate) {
+      params = params.set('startDate', startDate).set('endDate', endDate);
+    } else if (timeRange) {
+      params = params.set('timeRange', timeRange);
+    }
     return this.http.get(`${this.baseUrl}/dashboard/stats`, { params });
+  }
+
+  // ── Notifications ───────────────────────────
+  getNotifications(recipientId: string = 'admin'): Observable<any[]> {
+    const params = new HttpParams().set('recipientId', recipientId);
+    return this.http.get<any[]>(`${this.baseUrl}/orders/notifications`, { params });
+  }
+
+  getUnreadNotificationCount(recipientId: string = 'admin'): Observable<{ success: boolean; unreadCount: number }> {
+    const params = new HttpParams().set('recipientId', recipientId);
+    return this.http.get<{ success: boolean; unreadCount: number }>(`${this.baseUrl}/orders/notifications/unread-count`, { params });
+  }
+
+  markNotificationAsRead(id: string, recipientId: string = 'admin'): Observable<any> {
+    return this.http.patch(`${this.baseUrl}/orders/notifications/${id}/read`, { recipientId });
+  }
+
+  markAllNotificationsAsRead(recipientId: string = 'admin'): Observable<any> {
+    return this.http.post(`${this.baseUrl}/orders/notifications/read-all`, { recipientId });
   }
 
   // ── Products ───────────────────────────────
@@ -273,6 +296,53 @@ export class AdminService {
     return this.http.delete(`${this.baseUrl}/shipping-methods/${id}`);
   }
 
+  // ── Coupons ────────────────────────────────
+  getCoupons(params?: { page?: number; limit?: number; pageSize?: number; search?: string; discountType?: string; isActive?: boolean | string; status?: string }): Observable<any> {
+    let httpParams = new HttpParams();
+    if (params) {
+      if (params.page) httpParams = httpParams.set('page', params.page.toString());
+      if (params.limit) httpParams = httpParams.set('limit', params.limit.toString());
+      if (params.pageSize) httpParams = httpParams.set('limit', params.pageSize.toString());
+      if (params.search) httpParams = httpParams.set('search', params.search);
+      if (params.discountType && params.discountType !== 'all') httpParams = httpParams.set('discountType', params.discountType);
+      if (params.isActive !== undefined && params.isActive !== '' && params.isActive !== 'all') {
+        httpParams = httpParams.set('isActive', params.isActive.toString());
+      }
+      if (params.status !== undefined && params.status !== '' && params.status !== 'all') {
+        httpParams = httpParams.set('status', params.status.toString());
+      }
+    }
+    return this.http.get(`${this.baseUrl}/coupons`, { params: httpParams });
+  }
+
+  getCouponById(id: string): Observable<any> {
+    return this.http.get(`${this.baseUrl}/coupons/${id}`);
+  }
+
+  createCoupon(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}/coupons`, data);
+  }
+
+  updateCoupon(id: string, data: any): Observable<any> {
+    return this.http.put(`${this.baseUrl}/coupons/${id}`, data);
+  }
+
+  updateCouponStatus(id: string, isActive?: boolean): Observable<any> {
+    return this.http.patch(`${this.baseUrl}/coupons/${id}/status`, isActive !== undefined ? { isActive } : {});
+  }
+
+  toggleCoupon(id: string): Observable<any> {
+    return this.http.patch(`${this.baseUrl}/coupons/${id}/status`, {});
+  }
+
+  deleteCoupon(id: string): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/coupons/${id}`);
+  }
+
+  bulkDeleteCoupons(ids: string[]): Observable<any> {
+    return this.http.post(`${this.baseUrl}/coupons/bulk-delete`, { ids });
+  }
+
   // ── Inventory ──────────────────────────────
   getInventory(): Observable<any> {
     return this.http.get(`${this.baseUrl}/inventory`);
@@ -320,6 +390,31 @@ export class AdminService {
 
   deletePage(id: string): Observable<any> {
     return this.http.delete(`${this.baseUrl}/pages/${id}`);
+  }
+
+  // ── Policies (Aliases for Pages) ───────────
+  getPolicies(params?: { search?: string; status?: string }): Observable<any> {
+    return this.getPages(params);
+  }
+
+  getPolicyById(id: string): Observable<any> {
+    return this.getPageById(id);
+  }
+
+  createPolicy(data: any): Observable<any> {
+    return this.createPage(data);
+  }
+
+  updatePolicy(id: string, data: any): Observable<any> {
+    return this.updatePage(id, data);
+  }
+
+  patchPolicyStatus(id: string, status?: string): Observable<any> {
+    return this.patchPageStatus(id, status);
+  }
+
+  deletePolicy(id: string): Observable<any> {
+    return this.deletePage(id);
   }
 
   // ── Account (Admin Profile) ─────────────────

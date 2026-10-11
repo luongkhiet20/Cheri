@@ -1,6 +1,7 @@
 <div class="page-content">
   <div class="page-top">
     <div>
+      <app-admin-breadcrumb [items]="breadcrumbItems"></app-admin-breadcrumb>
       <h1 class="page-title">Quản lý đơn hàng</h1>
     </div>
     <div class="page-actions">
@@ -20,9 +21,7 @@
     </div>
   </div>
 
-  <div *ngIf="successMessage" class="alert-box alert-success mb-3" role="alert">
-    <div class="alert-content">{{ successMessage }}</div>
-  </div>
+
 
   <div *ngIf="errorMessage" class="alert-box alert-error mb-3" role="alert">
     <div class="alert-content">{{ errorMessage }}</div>

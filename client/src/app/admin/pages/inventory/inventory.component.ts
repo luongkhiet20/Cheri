@@ -1,8 +1,10 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Router, ActivatedRoute } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
 import { NotificationService } from '../../shared/notification/notification.service';
+import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 @Component({
   selector: 'app-inventory',
@@ -10,7 +12,13 @@ import { NotificationService } from '../../shared/notification/notification.serv
   templateUrl: './inventory.component.html',
   styleUrls: ['./inventory.component.css']
 })
-export class InventoryComponent implements OnInit {
+export class InventoryComponent implements OnInit, OnDestroy {
+  private querySub?: Subscription;
+
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Quản lý tồn kho' }
+  ];
+
   columns: TableColumn[] = [
     { key: 'image', label: '', type: 'image', width: '72px' },
     { key: 'name', label: 'Tên sản phẩm', type: 'text', sortable: true },
@@ -61,6 +69,7 @@ export class InventoryComponent implements OnInit {
   constructor(
     private apiService: AdminService,
     private router: Router,
+    private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
     private notificationService: NotificationService
   ) { }
@@ -70,7 +79,33 @@ export class InventoryComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.querySub = this.route.queryParams.subscribe(params => {
+      const statusParam = params['status'];
+      const statusField = this.filterFields.find(f => f.key === 'status');
+      if (statusParam) {
+        if (statusField) {
+          statusField.value = statusParam;
+          this.filterFields = [...this.filterFields];
+        }
+        if (this.allData.length > 0) {
+          this.applyStatusFilter(statusParam);
+        }
+      } else {
+        if (statusField && statusField.value !== undefined) {
+          delete statusField.value;
+          this.filterFields = [...this.filterFields];
+        }
+        if (this.allData.length > 0) {
+          this.applyStatusFilter('');
+        }
+      }
+    });
+
     this.loadInventory();
+  }
+
+  ngOnDestroy(): void {
+    this.querySub?.unsubscribe();
   }
 
   loadInventory(): void {
@@ -133,8 +168,13 @@ export class InventoryComponent implements OnInit {
               statusVariant
             };
           });
-          this.data = [...this.allData];
-          this.pagination = { ...this.pagination, total: this.data.length };
+          const currentStatus = this.filterFields.find(f => f.key === 'status')?.value;
+          if (currentStatus) {
+            this.applyStatusFilter(String(currentStatus));
+          } else {
+            this.data = [...this.allData];
+            this.pagination = { ...this.pagination, total: this.data.length };
+          }
         }
         this.cdr.markForCheck();
       },
@@ -233,33 +273,47 @@ export class InventoryComponent implements OnInit {
     return parts.length > 0 ? parts.join(' / ') : 'Mặc định';
   }
 
-  onSearch(v: string): void {
-    if (!v) {
+  private applyStatusFilter(status: string): void {
+    if (!status) {
       this.data = [...this.allData];
-      this.pagination = { ...this.pagination, total: this.data.length };
-      this.cdr.markForCheck();
+    } else {
+      this.data = this.allData.filter(d => d.status === status);
+    }
+    this.pagination = { ...this.pagination, total: this.data.length, page: 1 };
+    this.cdr.markForCheck();
+  }
+
+  onSearch(v: string): void {
+    const currentStatus = this.filterFields.find(f => f.key === 'status')?.value;
+    if (!v) {
+      this.applyStatusFilter(currentStatus ? String(currentStatus) : '');
       return;
     }
     const q = v.toLowerCase().trim();
-    this.data = this.allData.filter(d =>
+    let baseData = this.allData;
+    if (currentStatus) {
+      baseData = baseData.filter(d => d.status === currentStatus);
+    }
+    this.data = baseData.filter(d =>
       (d.name || '').toLowerCase().includes(q) ||
       (d.sku || '').toLowerCase().includes(q) ||
       (d.variants && d.variants.some((v: any) => (v.sku || '').toLowerCase().includes(q)))
     );
-    this.pagination = { ...this.pagination, total: this.data.length };
+    this.pagination = { ...this.pagination, total: this.data.length, page: 1 };
     this.cdr.markForCheck();
   }
 
   onFilter(v: Record<string, any>): void {
-    if (!v['status']) {
-      this.data = [...this.allData];
-      this.pagination = { ...this.pagination, total: this.data.length };
-      this.cdr.markForCheck();
-      return;
+    const statusVal = v['status'] || '';
+    const statusField = this.filterFields.find(f => f.key === 'status');
+    if (statusField) {
+      if (statusVal) {
+        statusField.value = statusVal;
+      } else {
+        delete statusField.value;
+      }
     }
-    this.data = this.allData.filter(d => d.status === v['status']);
-    this.pagination = { ...this.pagination, total: this.data.length };
-    this.cdr.markForCheck();
+    this.applyStatusFilter(statusVal);
   }
 
   onRefresh(): void { this.loadInventory(); }

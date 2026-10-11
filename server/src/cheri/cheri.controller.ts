@@ -4,6 +4,8 @@ import {
   Session,
   Post,
   Get,
+  Put,
+  Req,
   UseGuards,
   Param,
   Delete,
@@ -15,6 +17,8 @@ import { AuthGuard } from '@nestjs/passport';
 import { CheriService } from './cheri.service';
 import { ContactDto } from './dto/contact.dto';
 import { PageDto } from './dto/page.dto';
+import { PublishHomeDto } from './dto/home-page.dto';
+import { PublishAboutDto } from './dto/about-page.dto';
 import { RolesGuard, AdminJwtAuthGuard } from '../auth/roles.guard';
 import { Page } from './models/page.model';
 import { Theme } from './models/theme.model';
@@ -23,6 +27,42 @@ import { Config } from './models/config.model';
 @Controller('api/cheri')
 export class CheriController {
   constructor(private cheriService: CheriService) {}
+
+  @Get('/home')
+  getHomePublished() {
+    return this.cheriService.getHomePublished();
+  }
+
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @Get('/home/admin')
+  getHomeAdmin() {
+    return this.cheriService.getHomeAdmin();
+  }
+
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @Post('/home/publish')
+  publishHome(@Body() publishDto: PublishHomeDto, @Req() req: any) {
+    const userEmail = req?.user?.email;
+    return this.cheriService.publishHome(publishDto, userEmail);
+  }
+
+  @Get('/about')
+  getAboutPublished() {
+    return this.cheriService.getAboutPublished();
+  }
+
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @Get('/about/admin')
+  getAboutAdmin() {
+    return this.cheriService.getAboutAdmin();
+  }
+
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @Post('/about/publish')
+  publishAbout(@Body() publishDto: PublishAboutDto, @Req() req: any) {
+    const userEmail = req?.user?.email;
+    return this.cheriService.publishAbout(publishDto, userEmail);
+  }
 
   @Get('/config')
   getConfig(@Session() session): Promise<{ config: string }> {

@@ -26,3 +26,14 @@ Thêm một chat widget trực quan trong storefront, không xây backend hội 
 - UI thể hiện được cấu trúc hội thoại và ô nhập như prototype.
 - Không phát sinh request chat hoặc ghi dữ liệu.
 - Admin không render widget.
+
+## Ghi nhận triển khai — 2026-10-08
+
+- `ChatWidgetComponent` standalone gắn vào root shell bằng điều kiện `!isDashboard` hiện có; không thay đổi cách phân loại route admin.
+- Nút nổi và hộp chat dùng tông đỏ Chéri, có lời chào mẫu, textarea, nút gửi, vùng tin nhắn cuộn và thông báo rõ tin nhắn chưa gửi đến cửa hàng.
+- Tin nhắn chỉ nằm trong bộ nhớ của component. Đóng/mở giữ trạng thái local; reload hoặc hủy component xóa hội thoại. Không có trả lời tự động, service chat, request API/AI, storage hoặc thao tác database.
+- Enter gửi; Shift+Enter giữ xuống dòng; không gửi khi đang composition IME. Escape thu gọn, mở chat focus vào ô nhập và đóng chat trả focus về launcher.
+- Test tự động: 10 test chat (state, keyboard/focus/scroll, SSR render template shell storefront/admin và escape HTML); cùng 8 test seed/CSV hiện có đạt 18/18. Build frontend và lint TypeScript/template của widget đạt.
+- Preview cô lập của component thật được kiểm tra bằng Chrome headless tại desktop 1366×900, mobile 390×844 và màn hình thấp 640×360. Đã xác minh giới hạn viewport, focus, Escape, tin nhắn local, escape HTML, không request API/storage và reset khi reload.
+- Kiểm tra browser không khởi chạy backend hoặc kết nối MongoDB. Cấu hình MongoDB local của người dùng nằm ngoài nhánh này và không được commit.
+- Sau review: chat nằm dưới backdrop modal/cart, toàn bộ widget ẩn khi in và layout thấp được thu gọn để tin nhắn cuối vẫn đọc được. Các kiểm tra browser đã tái hiện lỗi trước khi sửa và đạt sau sửa; script regression được lưu cùng code.

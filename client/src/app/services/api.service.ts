@@ -196,6 +196,37 @@ export class ApiService {
     );
   }
 
+  requestPasswordReset(email: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(
+      `${this.apiUrl}/api/auth/forgot-password`,
+      { email },
+      this.getRequestOptions(),
+    );
+  }
+
+  verifyPasswordResetOtp(
+    email: string,
+    otp: string,
+  ): Observable<{ message: string; resetToken: string }> {
+    return this.http.post<{ message: string; resetToken: string }>(
+      `${this.apiUrl}/api/auth/verify-reset-otp`,
+      { email, otp },
+      this.getRequestOptions(),
+    );
+  }
+
+  resetPassword(
+    email: string,
+    resetToken: string,
+    newPassword: string,
+  ): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(
+      `${this.apiUrl}/api/auth/reset-password`,
+      { email, resetToken, newPassword },
+      this.getRequestOptions(),
+    );
+  }
+
   signUp(req) {
     const sendContact = this.apiUrl + '/api/auth/signup';
     return this.http.post(sendContact, req, this.getRequestOptions()).pipe(
@@ -932,4 +963,3 @@ export class ApiService {
     });
   }
 }
-

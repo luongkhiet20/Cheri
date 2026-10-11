@@ -2,6 +2,18 @@
   "version": 2,
   "rewrites": [
     {
+      "source": "/api/auth/forgot-password",
+      "destination": "/api/password-reset?endpoint=forgot-password"
+    },
+    {
+      "source": "/api/auth/verify-reset-otp",
+      "destination": "/api/password-reset?endpoint=verify-reset-otp"
+    },
+    {
+      "source": "/api/auth/reset-password",
+      "destination": "/api/password-reset?endpoint=reset-password"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/index.js"
     },

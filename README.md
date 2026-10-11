@@ -111,9 +111,34 @@ npm run serve:ssr
 npm start
 ```
 
+### 4. Triển khai chức năng quên mật khẩu trên Vercel
+
+Vercel phục vụ giao diện và API proxy; backend NestJS phải được chạy trên một
+dịch vụ Node.js riêng, có kết nối MongoDB và các biến môi trường backend. Trong
+cài đặt Vercel, thêm biến môi trường `NEST_API_URL` trỏ tới origin backend,
+không thêm `/api` ở cuối, ví dụ `https://cheri-api.example.com`. Ba endpoint
+đặt lại mật khẩu sẽ được proxy tới backend qua `/api/auth`.
+
+Trên dịch vụ backend, cấu hình `SENDGRID_KEY`, `EMAIL_FROM` (địa chỉ gửi đã xác
+minh trong SendGrid), `PASSWORD_RESET_SECRET` (ít nhất 32 ký tự ngẫu nhiên),
+`MONGO_URI`, cùng các biến môi trường backend cần thiết khác. Không đưa các giá
+trị này vào frontend hoặc commit chúng vào Git. `NEST_API_URL` thuộc cấu hình
+server-side của Vercel; khóa SendGrid chỉ được đặt ở backend.
+
+Sau khi triển khai, kiểm tra:
+
+1. Gọi `POST /api/auth/forgot-password` trên domain Vercel với email khách hàng
+   đã đăng ký; phản hồi thành công nghĩa là yêu cầu đã tới backend, còn lỗi 503
+   nghĩa là Vercel chưa được cấu hình `NEST_API_URL`.
+2. Xem log backend nếu phản hồi 500. Backend ghi trạng thái SendGrid và lý do
+   từ chối an toàn (không ghi API key); kiểm tra sender đã xác minh, quyền của
+   API key và hạn mức SendGrid.
+3. Nhập OTP trong giao diện, xác minh mã rồi đặt mật khẩu mới. OTP hết hạn sau
+   5 phút và giới hạn gửi lại là 60 giây cho mỗi email.
+
 ---
 
-### 4. Build Độc Lập
+### 5. Build Độc Lập
 
 ```bash
 # Build riêng Backend

@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  UnauthorizedException,
+  NotFoundException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, isValidObjectId, Types } from 'mongoose';
@@ -33,6 +38,8 @@ cloudinary.v2.config({
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
   @InjectModel('User') private userModel: Model<User>,
   @InjectModel('PasswordReset') private passwordResetModel: Model<any>,
@@ -513,6 +520,36 @@ async requestPasswordReset(email: string): Promise<{ message: string }> {
   try {
     await sendPasswordResetOtp(cleanEmail, otp);
   } catch (error) {
+    const sendGridError =
+      error && typeof error === 'object'
+        ? (error as {
+            response?: {
+              statusCode?: number;
+              body?: { errors?: Array<{ message?: string }> };
+            };
+          })
+        : undefined;
+    const statusCode = sendGridError?.response?.statusCode;
+    const providerMessages = sendGridError?.response?.body?.errors
+      ?.map(({ message }) => message)
+      .filter((message): message is string => Boolean(message));
+    const configurationMessage =
+      error instanceof Error &&
+      (error.message.startsWith('SendGrid is not configured:') ||
+        error.message.startsWith('SendGrid API key must start with'))
+        ? error.message
+        : undefined;
+    const diagnostic =
+      providerMessages?.join('; ') ||
+      configurationMessage ||
+      (error instanceof Error ? error.name : 'Unknown SendGrid error');
+
+    this.logger.error(
+      `Password reset email delivery failed${
+        statusCode ? ` (SendGrid HTTP ${statusCode})` : ''
+      }: ${diagnostic}`,
+    );
+
     // Không để OTP vừa tạo tiếp tục được sử dụng nếu email gửi thất bại.
     await this.passwordResetModel.deleteOne({ email: cleanEmail });
     throw new InternalServerErrorException(
@@ -678,5 +715,3 @@ async resetPassword(
   return { message: 'Đặt lại mật khẩu thành công' };
 }
 }
-
-

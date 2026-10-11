@@ -11,6 +11,7 @@ import { TranslatePipe } from '../../../../pipes/translate.pipe';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { HttpErrorResponse } from '@angular/common/http';
 import { SignalStore } from '../../../../store/signal.store';
 import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
 import { ApiService } from '../../../../services/api.service';
@@ -32,8 +33,14 @@ export class SignInComponent implements OnInit {
   user$: Signal<User>;
 
   isForgotPassword = false;
+  forgotStep: 'request' | 'verify' | 'reset' = 'request';
   showLoginPassword = false;
   forgotEmail = '';
+  forgotOtp = '';
+  newPassword = '';
+  confirmNewPassword = '';
+  resetToken = '';
+  isPasswordResetBusy = false;
 
   isRequestingAdmin = false;
   currentLoggedUser: any = null;
@@ -88,18 +95,122 @@ export class SignInComponent implements OnInit {
 
   setIsForgotPassword(val: boolean): void {
     this.isForgotPassword = val;
+    if (val) {
+      this.forgotStep = 'request';
+      this.forgotEmail = this.signInForm.get('email')?.value || '';
+      this.forgotOtp = '';
+      this.newPassword = '';
+      this.confirmNewPassword = '';
+      this.resetToken = '';
+    }
   }
 
   onForgotSubmit(): void {
-    if (this.forgotEmail) {
-      this.snackBar.open(`Đã gửi link đặt lại mật khẩu tới ${this.forgotEmail}`, 'Đóng', {
+    const email = this.forgotEmail.trim();
+    if (this.isPasswordResetBusy || !email) {
+      return;
+    }
+
+    this.isPasswordResetBusy = true;
+    this.apiService.requestPasswordReset(email).subscribe({
+      next: (response) => {
+        this.isPasswordResetBusy = false;
+        this.forgotEmail = email;
+        this.forgotStep = 'verify';
+        this.snackBar.open(response.message, 'Đóng', {
+          duration: 4000,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom',
+        });
+      },
+      error: (error: unknown) => {
+        this.isPasswordResetBusy = false;
+        this.showPasswordResetError(
+          error,
+          'Không thể gửi mã xác minh. Vui lòng thử lại sau.',
+        );
+      },
+    });
+  }
+
+  onVerifyResetOtp(): void {
+    if (this.isPasswordResetBusy || !/^\d{6}$/.test(this.forgotOtp)) {
+      return;
+    }
+
+    this.isPasswordResetBusy = true;
+    this.apiService
+      .verifyPasswordResetOtp(this.forgotEmail, this.forgotOtp)
+      .subscribe({
+        next: (response) => {
+          this.isPasswordResetBusy = false;
+          this.resetToken = response.resetToken;
+          this.forgotStep = 'reset';
+        },
+        error: (error: unknown) => {
+          this.isPasswordResetBusy = false;
+          this.showPasswordResetError(
+            error,
+            'Mã xác minh không hợp lệ hoặc đã hết hạn.',
+          );
+        },
+      });
+  }
+
+  onResetPassword(): void {
+    if (this.isPasswordResetBusy || this.newPassword.length < 8) {
+      return;
+    }
+
+    if (this.newPassword !== this.confirmNewPassword) {
+      this.snackBar.open('Mật khẩu xác nhận không khớp.', 'Đóng', {
         duration: 4000,
         horizontalPosition: 'center',
-        verticalPosition: 'bottom'
+        verticalPosition: 'bottom',
       });
-      this.isForgotPassword = false;
-      this.forgotEmail = '';
+      return;
     }
+
+    this.isPasswordResetBusy = true;
+    this.apiService
+      .resetPassword(this.forgotEmail, this.resetToken, this.newPassword)
+      .subscribe({
+        next: (response) => {
+          this.isPasswordResetBusy = false;
+          this.signInForm.patchValue({ email: this.forgotEmail });
+          this.isForgotPassword = false;
+          this.forgotStep = 'request';
+          this.forgotOtp = '';
+          this.newPassword = '';
+          this.confirmNewPassword = '';
+          this.resetToken = '';
+          this.snackBar.open(response.message, 'Đóng', {
+            duration: 4000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom',
+          });
+        },
+        error: (error: unknown) => {
+          this.isPasswordResetBusy = false;
+          this.showPasswordResetError(
+            error,
+            'Không thể đặt lại mật khẩu. Vui lòng thử lại.',
+          );
+        },
+      });
+  }
+
+  private showPasswordResetError(error: unknown, fallback: string): void {
+    const message =
+      error instanceof HttpErrorResponse &&
+      typeof error.error?.message === 'string'
+        ? error.error.message
+        : fallback;
+    this.snackBar.open(message, 'Đóng', {
+      duration: 5000,
+      horizontalPosition: 'center',
+      verticalPosition: 'bottom',
+    });
   }
 
   submit() {
@@ -202,4 +313,3 @@ export class SignInComponent implements OnInit {
     });
   }
 }
-

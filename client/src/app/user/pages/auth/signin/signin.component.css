@@ -208,6 +208,10 @@
   line-height: 1.4;
 }
 
+:host .reset-input {
+  padding-left: 14px !important;
+}
+
 :host .form-input::placeholder {
   color: #b8b3ac;
   font-weight: 300;

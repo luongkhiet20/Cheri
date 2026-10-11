@@ -2,7 +2,7 @@
 
 Ngày: 2026-10-11. Nhánh: `feature/product-reviews`.
 Baseline đã kiểm tra: `origin/main` tại `ed6ee42`.
-Trạng thái: thiết kế trong chat đã duyệt; tài liệu này chờ người dùng duyệt trước khi viết implementation plan.
+Trạng thái: người dùng đã duyệt spec ngày 2026-10-11; implementation plan chờ duyệt trước khi thực thi.
 
 ## 1. Mục tiêu và phạm vi đã duyệt
 

@@ -7,7 +7,7 @@
 .admin-shell .page-content {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xl);
+  gap: var(--space-md, 16px);
   max-width: 1400px;
 }
 
@@ -19,6 +19,7 @@
   justify-content: space-between;
   gap: var(--space-md);
   flex-wrap: wrap;
+  margin-bottom: 2px;
 }
 
 :host ::ng-deep .admin-shell .page-actions,

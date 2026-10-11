@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
 import { NotificationService } from '../../shared/notification/notification.service';
+import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 @Component({
   selector: 'app-shipping-methods',
@@ -11,6 +12,10 @@ import { NotificationService } from '../../shared/notification/notification.serv
   styleUrls: ['./shipping-methods.component.css']
 })
 export class ShippingMethodsComponent implements OnInit {
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Phương thức vận chuyển' }
+  ];
+
   columns: TableColumn[] = [
     { key: 'name', label: 'Tên phương thức', type: 'text', sortable: true },
     { key: 'code', label: 'Mã', type: 'text', sortable: true },
@@ -60,7 +65,6 @@ export class ShippingMethodsComponent implements OnInit {
   currentStatusFilter = '';
   isLoading = false;
   errorMessage = '';
-  successMessage = '';
 
   // Confirm dialog state
   confirmOpen = false;
@@ -319,7 +323,6 @@ export class ShippingMethodsComponent implements OnInit {
   }
 
   private showSuccess(msg: string): void {
-    this.successMessage = msg;
     this.notificationService.success(msg);
     this.cdr.markForCheck();
   }

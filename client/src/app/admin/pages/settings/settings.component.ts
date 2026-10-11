@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { SettingsService } from './settings.service';
 import { AppSettings } from './settings.model';
 import { NotificationService } from '../../shared/notification/notification.service';
+import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 @Component({
   selector: 'app-settings',
@@ -13,9 +14,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
   isLoading = true;
   isSaving = false;
 
-  breadcrumbs = [
-    { label: 'Quản trị', url: '/admin' },
-    { label: 'Cài đặt' }
+  breadcrumbs: BreadcrumbItem[] = [
+    { label: 'Cài đặt hệ thống' }
   ];
 
   settings: AppSettings = {
@@ -56,7 +56,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
   errors: { [key: string]: string } = {};
 
   // Alerts
-  successMessage = '';
   errorMessage = '';
   private timer: any = null;
 
@@ -335,20 +334,13 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   // ── ALERTS ──────────────────────────────────────────
   private showSuccess(msg: string): void {
-    this.successMessage = msg;
     this.errorMessage = '';
     this.notificationService.success(msg);
     this.cdr.markForCheck();
-    if (this.timer) clearTimeout(this.timer);
-    this.timer = setTimeout(() => {
-      this.successMessage = '';
-      this.cdr.markForCheck();
-    }, 6000);
   }
 
   private showError(msg: string): void {
     this.errorMessage = msg;
-    this.successMessage = '';
     this.notificationService.error(msg);
     this.cdr.markForCheck();
     if (this.timer) clearTimeout(this.timer);
@@ -359,7 +351,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   clearAlerts(): void {
-    this.successMessage = '';
     this.errorMessage = '';
     if (this.timer) clearTimeout(this.timer);
     this.cdr.markForCheck();

@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
+import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 interface ShippingMethodFormData {
   name: string;
@@ -39,7 +40,11 @@ export class ShippingMethodFormComponent implements OnInit {
 
   errors: Record<string, string> = {};
   errorMessage = '';
-  successMessage = '';
+
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Phương thức vận chuyển', url: '/admin/shipping-methods' },
+    { label: 'Thêm phương thức' }
+  ];
 
   constructor(
     private route: ActivatedRoute,
@@ -52,6 +57,11 @@ export class ShippingMethodFormComponent implements OnInit {
   ngOnInit(): void {
     this.methodId = this.route.snapshot.paramMap.get('id');
     this.isEditMode = !!this.methodId;
+
+    this.breadcrumbItems = [
+      { label: 'Phương thức vận chuyển', url: '/admin/shipping-methods' },
+      { label: this.isEditMode ? 'Chỉnh sửa phương thức' : 'Thêm phương thức' }
+    ];
 
     if (this.isEditMode) {
       if (!this.methodId || this.methodId.trim() === '') {
@@ -82,6 +92,10 @@ export class ShippingMethodFormComponent implements OnInit {
             isActive: m.isActive !== false,
             description: m.description || ''
           };
+          this.breadcrumbItems = [
+            { label: 'Phương thức vận chuyển', url: '/admin/shipping-methods' },
+            { label: this.formData.name ? ('Chỉnh sửa: ' + this.formData.name) : 'Chỉnh sửa phương thức' }
+          ];
         } else {
           this.errorMessage = res.message || 'Không tìm thấy phương thức vận chuyển';
         }
@@ -207,7 +221,6 @@ export class ShippingMethodFormComponent implements OnInit {
 
   onSubmit(): void {
     this.errorMessage = '';
-    this.successMessage = '';
 
     if (!this.validate()) {
       const orderedCandidates: string[] = ['name', 'code', 'baseCost', 'estimatedDays', 'freeShippingThreshold'];
@@ -238,7 +251,6 @@ export class ShippingMethodFormComponent implements OnInit {
         next: (res) => {
           this.isSubmitting = false;
           if (res.success) {
-            this.successMessage = 'Cập nhật phương thức vận chuyển thành công';
             this.notificationService.success('Cập nhật phương thức vận chuyển thành công');
             setTimeout(() => {
               this.router.navigate(['/admin/shipping-methods', this.methodId]);
@@ -263,7 +275,6 @@ export class ShippingMethodFormComponent implements OnInit {
         next: (res) => {
           this.isSubmitting = false;
           if (res.success) {
-            this.successMessage = 'Thêm phương thức vận chuyển thành công';
             this.notificationService.success('Thêm phương thức vận chuyển thành công');
             setTimeout(() => {
               this.router.navigate(['/admin/shipping-methods']);

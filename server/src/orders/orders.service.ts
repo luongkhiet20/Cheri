@@ -31,6 +31,7 @@ export class OrdersService {
     @InjectModel('PaymentMethod') private paymentMethodModel: Model<any>,
     @InjectModel('User') private userModel: Model<any>,
     @InjectModel('Coupon') private couponModel: Model<any>,
+    @InjectModel('Category') private categoryModel: Model<any>,
   ) {}
 
   async validateCoupon(code: string, subtotal: number): Promise<{
@@ -40,6 +41,12 @@ export class OrdersService {
     discountType?: string;
     discountValue?: number;
     discountAmount?: number;
+    maxDiscount?: number;
+    minOrderValue?: number;
+    startDate?: Date;
+    endDate?: Date;
+    usageLimit?: number;
+    usedCount?: number;
     message: string;
   }> {
     if (!code || !code.trim()) {
@@ -49,54 +56,83 @@ export class OrdersService {
     const cleanCode = code.trim().toUpperCase();
     await this.ensureDefaultCoupons();
 
-    const coupon = await this.couponModel.findOne({
-      code: cleanCode,
-      isActive: true,
-    });
+    // 1. Kiểm tra mã tồn tại trong CSDL
+    const coupon = await this.couponModel.findOne({ code: cleanCode });
 
     if (!coupon) {
-      return { valid: false, message: 'Mã giảm giá không hợp lệ hoặc đã hết hạn' };
+      return { valid: false, message: 'Mã giảm giá không tồn tại hoặc không hợp lệ' };
     }
 
+    // 2. Trạng thái hoạt động (isActive)
+    if (!coupon.isActive) {
+      return { valid: false, message: 'Mã giảm giá hiện đang tạm ngừng hoạt động' };
+    }
+
+    // 3. Ngày bắt đầu (startDate)
     const now = new Date();
     if (coupon.startDate && new Date(coupon.startDate) > now) {
-      return { valid: false, message: 'Chương trình ưu đãi chưa bắt đầu' };
+      const startFormatted = new Date(coupon.startDate).toLocaleDateString('vi-VN');
+      return { valid: false, message: `Chương trình ưu đãi chỉ bắt đầu từ ${startFormatted}` };
     }
+
+    // 4. Ngày kết thúc (endDate)
     if (coupon.endDate && new Date(coupon.endDate) < now) {
-      return { valid: false, message: 'Mã giảm giá đã hết hạn sử dụng' };
+      const endFormatted = new Date(coupon.endDate).toLocaleDateString('vi-VN');
+      return { valid: false, message: `Mã giảm giá đã hết hạn sử dụng (hết hạn ngày ${endFormatted})` };
     }
-    if (coupon.usageLimit > 0 && coupon.usedCount >= coupon.usageLimit) {
+
+    // 5. Giới hạn lượt sử dụng (usageLimit & usedCount)
+    if (coupon.usageLimit > 0 && (coupon.usedCount || 0) >= coupon.usageLimit) {
       return { valid: false, message: 'Mã giảm giá đã hết lượt sử dụng' };
     }
+
+    // 6. Giá trị đơn tối thiểu (minOrderValue)
     if (coupon.minOrderValue > 0 && subtotal < coupon.minOrderValue) {
       const minFormatted = coupon.minOrderValue.toLocaleString('vi-VN');
+      const diffFormatted = (coupon.minOrderValue - subtotal).toLocaleString('vi-VN');
       return {
         valid: false,
-        message: `Mã ${cleanCode} chỉ áp dụng cho đơn hàng từ ${minFormatted} ₫ trở lên`,
+        message: `Mã ${cleanCode} chỉ áp dụng cho đơn hàng từ ${minFormatted} ₫ trở lên (cần thêm ${diffFormatted} ₫)`,
       };
     }
 
+    // 7. Công thức tính tiền giảm:
     let discountAmount = 0;
+    const discountVal = Number(coupon.discountValue) || 0;
+
     if (coupon.discountType === 'PERCENTAGE') {
-      discountAmount = Math.round((subtotal * coupon.discountValue) / 100);
-      if (coupon.maxDiscount > 0 && discountAmount > coupon.maxDiscount) {
-        discountAmount = coupon.maxDiscount;
+      // Trường hợp 1: D = min(B * (r / 100), M)
+      discountAmount = Math.round((subtotal * discountVal) / 100);
+      const maxCap = Number(coupon.maxDiscount) || 0;
+      if (maxCap > 0 && discountAmount > maxCap) {
+        discountAmount = maxCap;
       }
     } else {
-      discountAmount = coupon.discountValue;
+      // Trường hợp 2: D = min(F, B)
+      discountAmount = discountVal;
     }
 
+    // Không vượt quá tổng tiền hàng đủ điều kiện B
     if (discountAmount > subtotal) {
       discountAmount = subtotal;
+    }
+    if (discountAmount < 0) {
+      discountAmount = 0;
     }
 
     return {
       valid: true,
       code: coupon.code,
-      description: coupon.description,
+      description: coupon.description || '',
       discountType: coupon.discountType,
       discountValue: coupon.discountValue,
       discountAmount,
+      maxDiscount: coupon.maxDiscount || 0,
+      minOrderValue: coupon.minOrderValue || 0,
+      startDate: coupon.startDate,
+      endDate: coupon.endDate,
+      usageLimit: coupon.usageLimit || 0,
+      usedCount: coupon.usedCount || 0,
       message: 'Áp dụng mã giảm giá thành công!',
     };
   }
@@ -238,7 +274,7 @@ export class OrdersService {
         mappedStatus = OrderStatus.CANCELLED;
       } else if (mappedStatus === 'PAID') {
         updateData.paymentStatus = PaymentStatus.PAID;
-        mappedStatus = OrderStatus.CONFIRMED;
+        mappedStatus = OrderStatus.PROCESSING;
       }
 
       const validStatuses = Object.values(OrderStatus) as string[];
@@ -517,6 +553,15 @@ export class OrdersService {
   }
 
 
+  private async isMaintenanceMode(): Promise<boolean> {
+    try {
+      const settings: any = await this.orderModel.db.collection('settings').findOne({});
+      return Boolean(settings?.maintenance?.enabled);
+    } catch {
+      return false;
+    }
+  }
+
   // ─── Thêm order COD ───────────────────────────────────────────────────────
   async addOrder(
     orderDto: OrderDto,
@@ -524,6 +569,9 @@ export class OrdersService {
     lang = 'vi',
   ): Promise<{ error: string; result: Order }> {
     try {
+      if (await this.isMaintenanceMode()) {
+        return { error: 'Hệ thống đang bảo trì. Quý khách vui lòng quay lại sau.', result: null };
+      }
       const orderData = await this.buildOrderData(orderDto, user, 'COD');
       const newOrder = new this.orderModel(orderData);
       await newOrder.save();
@@ -571,6 +619,9 @@ export class OrdersService {
     lang = 'vi',
   ): Promise<{ error: string; result: Order }> {
     try {
+      if (await this.isMaintenanceMode()) {
+        return { error: 'Hệ thống đang bảo trì. Quý khách vui lòng quay lại sau.', result: null };
+      }
       const orderData = await this.buildOrderData(body, user, 'STRIPE');
       const chargeCurrency = 'vnd';
       const charge = await stripe.charges.create({
@@ -846,7 +897,7 @@ export class OrdersService {
       paymentStatus: type === 'STRIPE' ? PaymentStatus.PENDING : PaymentStatus.PENDING,
       paymentFee,
       subtotal,
-      discountAmount: 0,
+      discountAmount: couponDiscount,
       taxAmount: 0,
       couponCode: appliedCouponCode,
       couponDiscount,
@@ -1024,5 +1075,928 @@ export class OrdersService {
     } catch (err) {
       this.logger.error(`Failed to send order email: ${err.stack || err.message}`);
     }
+  }
+
+  async getOrderStats(period: 'week' | 'month' = 'week'): Promise<any> {
+    const now = new Date();
+    const days = period === 'week' ? 7 : 30;
+
+    const currentStart = new Date(now);
+    currentStart.setDate(currentStart.getDate() - days);
+    currentStart.setHours(0, 0, 0, 0);
+
+    const prevStart = new Date(currentStart);
+    prevStart.setDate(prevStart.getDate() - days);
+
+    const [allOrders, allProducts] = await Promise.all([
+      this.orderModel.find({
+        $or: [
+          { createdAt: { $gte: prevStart } },
+          { dateAdded: { $gte: prevStart } },
+        ],
+      }).lean(),
+      this.productModel.find({}).lean(),
+    ]);
+
+    const getOrderTime = (o: any) => {
+      const d = o.createdAt || o.dateAdded;
+      return d ? new Date(d).getTime() : 0;
+    };
+
+    const currentOrders = allOrders.filter(o => getOrderTime(o) >= currentStart.getTime());
+    const prevOrders    = allOrders.filter(o => getOrderTime(o) < currentStart.getTime());
+
+    const isPaid = (o: any) => o.paymentStatus === PaymentStatus.PAID || o.status === OrderStatus.DELIVERED;
+    const currentRevenue = currentOrders
+      .filter(isPaid)
+      .reduce((sum, o) => sum + (o.totalAmount || (o as any).amount || 0), 0);
+    const prevRevenue = prevOrders
+      .filter(isPaid)
+      .reduce((sum, o) => sum + (o.totalAmount || (o as any).amount || 0), 0);
+
+    const calcGrowth = (curr: number, prev: number): number => {
+      if (prev === 0) return curr > 0 ? 100 : 0;
+      return Math.round(((curr - prev) / prev) * 100);
+    };
+
+    const chart: { label: string; value: number }[] = [];
+    const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0);
+      const dayEnd   = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+
+      const dayRevenue = currentOrders
+        .filter(o => {
+          const t = getOrderTime(o);
+          return t >= dayStart.getTime() && t <= dayEnd.getTime() && isPaid(o);
+        })
+        .reduce((sum, o) => sum + (o.totalAmount || (o as any).amount || 0), 0);
+
+      const label = period === 'week'
+        ? dayNames[d.getDay()]
+        : `${d.getDate()}/${d.getMonth() + 1}`;
+
+      chart.push({ label, value: dayRevenue });
+    }
+
+    const inStockCount = allProducts.filter(
+      p => p.stock !== 'outOfStock' && p.stock !== 'out',
+    ).length;
+
+    return {
+      success: true,
+      chart,
+      growth: {
+        products: calcGrowth(allProducts.length, allProducts.length),
+        orders:   calcGrowth(currentOrders.length, prevOrders.length),
+        revenue:  calcGrowth(currentRevenue, prevRevenue),
+        inStock:  calcGrowth(inStockCount, inStockCount),
+      },
+      stats: {
+        totalRevenue: currentRevenue,
+        totalOrders: currentOrders.length,
+        totalProducts: allProducts.length,
+        inStockCount,
+      },
+    };
+  }
+
+  async getNotifications(recipientId: string = 'admin'): Promise<any[]> {
+    const db = this.orderModel.db;
+    const notifCol = db.collection('notification-popup');
+    const since = new Date();
+    since.setDate(since.getDate() - 30);
+
+    const [orders, products, users] = await Promise.all([
+      this.orderModel.find({
+        $or: [
+          { createdAt: { $gte: since } },
+          { dateAdded: { $gte: since } },
+        ],
+      }).sort('-createdAt').lean(),
+      this.productModel.find({}).select('title titleUrl stock dateAdded quantity updatedAt').lean(),
+      this.userModel.find({
+        $or: [
+          { createdAt: { $gte: since } },
+          { dateAdded: { $gte: since } },
+        ],
+      }).select('email name fullName status createdAt dateAdded').sort('-createdAt').lean(),
+    ]);
+
+    const activeEvents: any[] = [];
+
+    // ── 🔔 ĐƠN HÀNG ──────────────────────────────────────────────────────────
+    const newOrders = orders.filter(o => o.status === OrderStatus.PENDING || (o as any).status === 'NEW' || (o as any).status === 'Pending');
+    if (newOrders.length) {
+      activeEvents.push({
+        id: 'orders-new',
+        type: 'order_new',
+        group: 'orders',
+        icon: 'new-order',
+        title: 'Có đơn hàng mới',
+        message: `${newOrders.length} đơn hàng mới chờ xử lý`,
+        count: newOrders.length,
+        level: 'info',
+        time: newOrders[0]?.createdAt || (newOrders[0] as any)?.dateAdded || new Date(),
+        targetUrl: '/admin/orders?status=PENDING',
+      });
+    }
+
+    const confirmedOrders = orders.filter(
+      o => o.status === OrderStatus.CONFIRMED || (o as any).status === 'CONFIRMED' ||
+           o.status === OrderStatus.PROCESSING || (o as any).status === 'PROCESSING' ||
+           (o as any).status === 'Confirmed' || (o as any).status === 'Processing'
+    );
+    if (confirmedOrders.length) {
+      activeEvents.push({
+        id: 'orders-confirmed',
+        type: 'order_confirmed',
+        group: 'orders',
+        icon: 'confirmed',
+        title: 'Đơn đã xác nhận cần xuất kho',
+        message: `${confirmedOrders.length} đơn đã xác nhận và cần xuất kho`,
+        count: confirmedOrders.length,
+        level: 'info',
+        time: confirmedOrders[0]?.createdAt || (confirmedOrders[0] as any)?.dateAdded || new Date(),
+        targetUrl: '/admin/orders?status=CONFIRMED',
+      });
+    }
+
+    const paidOrders = orders.filter(o => o.paymentStatus === PaymentStatus.PAID || (o as any).paymentStatus === 'Paid' || (o as any).status === 'PAID');
+    if (paidOrders.length) {
+      activeEvents.push({
+        id: 'orders-paid',
+        type: 'order_paid',
+        group: 'orders',
+        icon: 'paid',
+        title: 'Đơn hàng được thanh toán',
+        message: `${paidOrders.length} đơn đã thanh toán thành công`,
+        count: paidOrders.length,
+        level: 'success',
+        time: paidOrders[0]?.createdAt || (paidOrders[0] as any)?.dateAdded || new Date(),
+        targetUrl: '/admin/orders?status=CONFIRMED',
+      });
+    }
+
+    const canceledOrders = orders.filter(o => o.status === OrderStatus.CANCELLED || (o as any).status === 'CANCELLED' || (o as any).status === 'CANCELED' || (o as any).status === 'Cancelled');
+    if (canceledOrders.length) {
+      activeEvents.push({
+        id: 'orders-canceled',
+        type: 'order_canceled',
+        group: 'orders',
+        icon: 'cancel',
+        title: 'Đơn hàng bị hủy',
+        message: `${canceledOrders.length} đơn hàng đã bị hủy`,
+        count: canceledOrders.length,
+        level: 'error',
+        time: canceledOrders[0]?.createdAt || (canceledOrders[0] as any)?.dateAdded || new Date(),
+        targetUrl: '/admin/orders?status=CANCELLED',
+      });
+    }
+
+    const returnOrders = orders.filter(
+      o => o.status === OrderStatus.RETURNED ||
+           (o as any).type === 'RETURN' ||
+           (o.notes && /đổi|trả|refund|return/i.test(o.notes)),
+    );
+    if (returnOrders.length) {
+      activeEvents.push({
+        id: 'orders-return',
+        type: 'order_return',
+        group: 'orders',
+        icon: 'return',
+        title: 'Đơn hàng yêu cầu đổi/trả',
+        message: `${returnOrders.length} đơn yêu cầu đổi/trả`,
+        count: returnOrders.length,
+        level: 'warning',
+        time: returnOrders[0]?.createdAt || (returnOrders[0] as any)?.dateAdded || new Date(),
+        targetUrl: '/admin/orders?status=RETURNED',
+      });
+    }
+
+    // ── 🔔 SẢN PHẨM & KHO ────────────────────────────────────────────────────
+    const outOfStock = products.filter(p => p.stock === 'outOfStock' || p.stock === 'out' || p.quantity === 0);
+    if (outOfStock.length) {
+      activeEvents.push({
+        id: 'stock-out',
+        type: 'stock_out',
+        group: 'products',
+        icon: 'out-of-stock',
+        title: 'Sản phẩm hết hàng',
+        message: `${outOfStock.length} sản phẩm đã hết hàng`,
+        count: outOfStock.length,
+        level: 'error',
+        items: outOfStock.slice(0, 3).map((p: any) => p.title || p.titleUrl),
+        targetUrl: '/admin/products?status=out',
+        time: new Date(),
+      });
+    }
+
+    const lowStock = products.filter(
+      p => p.stock === 'lowStock' || p.stock === 'low' ||
+           (typeof p.quantity === 'number' && p.quantity > 0 && p.quantity <= 5),
+    );
+    if (lowStock.length) {
+      activeEvents.push({
+        id: 'stock-low',
+        type: 'stock_low',
+        group: 'products',
+        icon: 'low-stock',
+        title: 'Sản phẩm sắp hết hàng',
+        message: `${lowStock.length} sản phẩm sắp hết hàng`,
+        count: lowStock.length,
+        level: 'warning',
+        items: lowStock.slice(0, 3).map((p: any) => p.title || p.titleUrl),
+        targetUrl: '/admin/products?status=out',
+        time: new Date(),
+      });
+    }
+
+    const recentlyRestocked = products.filter(p => {
+      if (p.stock !== 'inStock' && p.stock !== 'in' && (!p.quantity || p.quantity <= 0)) return false;
+      const d = (p as any).dateAdded || (p as any).updatedAt;
+      return d && new Date(d) >= since;
+    });
+    if (recentlyRestocked.length) {
+      activeEvents.push({
+        id: 'stock-in',
+        type: 'stock_in',
+        group: 'products',
+        icon: 'restock',
+        title: 'Nhập kho thành công',
+        message: `${recentlyRestocked.length} sản phẩm được cập nhật vào kho`,
+        count: recentlyRestocked.length,
+        level: 'success',
+        targetUrl: '/admin/products',
+        time: new Date(),
+      });
+    }
+
+    const recentlyShipped = orders.filter(
+      o => o.status === OrderStatus.SHIPPING || o.status === OrderStatus.DELIVERED,
+    );
+    if (recentlyShipped.length) {
+      activeEvents.push({
+        id: 'stock-out-shipped',
+        type: 'stock_shipped',
+        group: 'products',
+        icon: 'shipped',
+        title: 'Xuất kho thành công',
+        message: `${recentlyShipped.length} đơn hàng đã xuất kho`,
+        count: recentlyShipped.length,
+        level: 'info',
+        targetUrl: '/admin/orders?status=SHIPPING',
+        time: recentlyShipped[0]?.createdAt || (recentlyShipped[0] as any)?.dateAdded || new Date(),
+      });
+    }
+
+    // ── 🔔 NGƯỜI DÙNG ─────────────────────────────────────────────────────────
+    const newUsers = users.filter(u => {
+      const d = (u as any).createdAt || (u as any).dateAdded;
+      return d && new Date(d) >= since;
+    });
+    if (newUsers.length) {
+      activeEvents.push({
+        id: 'users-new',
+        type: 'user_new',
+        group: 'users',
+        icon: 'new-user',
+        title: 'Người dùng mới đăng ký',
+        message: `${newUsers.length} tài khoản mới trong 30 ngày`,
+        count: newUsers.length,
+        level: 'info',
+        time: (newUsers[0] as any)?.createdAt || (newUsers[0] as any)?.dateAdded || new Date(),
+        targetUrl: '/admin/users',
+      });
+    }
+
+    const totalLockedCount = await this.userModel.countDocuments({ status: false });
+    if (totalLockedCount > 0) {
+      activeEvents.push({
+        id: 'users-locked',
+        type: 'user_locked',
+        group: 'users',
+        icon: 'locked-user',
+        title: 'Người dùng bị khóa/kích hoạt',
+        message: `${totalLockedCount} tài khoản đang bị khóa`,
+        count: totalLockedCount,
+        level: 'warning',
+        targetUrl: '/admin/users',
+        time: new Date(),
+      });
+    }
+
+    // Đồng bộ vào MongoDB collection 'notification-popup'
+    const existingDocs = await notifCol.find({ recipientId }).toArray();
+    const existingMap = new Map(existingDocs.map((d: any) => [d.id, d]));
+
+    for (const event of activeEvents) {
+      const existing = existingMap.get(event.id);
+      if (existing) {
+        const countIncreased = typeof event.count === 'number' && typeof existing.count === 'number'
+          ? event.count > existing.count
+          : (event.count !== existing.count && event.count > 0);
+
+        const updateDoc: any = {
+          title: event.title,
+          message: event.message,
+          count: event.count,
+          level: event.level,
+          icon: event.icon,
+          group: event.group,
+          type: event.type,
+          targetUrl: event.targetUrl,
+          items: event.items || [],
+          updatedAt: new Date(),
+        };
+
+        if (countIncreased) {
+          updateDoc.isRead = false;
+          updateDoc.readAt = null;
+          updateDoc.time = event.time || new Date();
+        } else {
+          updateDoc.time = existing.time || event.time || new Date();
+        }
+
+        await notifCol.updateOne({ _id: existing._id }, { $set: updateDoc });
+      } else {
+        await notifCol.insertOne({
+          ...event,
+          items: event.items || [],
+          isRead: false,
+          readAt: null,
+          recipientId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+    }
+
+    // Xóa những thông báo không còn sự kiện active
+    const activeIds = activeEvents.map(e => e.id);
+    if (activeIds.length > 0) {
+      await notifCol.deleteMany({ recipientId, id: { $nin: activeIds } });
+    } else {
+      await notifCol.deleteMany({ recipientId });
+    }
+
+    return await notifCol.find({ recipientId }).sort({ createdAt: -1 }).toArray();
+  }
+
+  async getUnreadNotificationCount(recipientId: string = 'admin'): Promise<{ success: boolean; unreadCount: number }> {
+    const unreadCount = await this.orderModel.db.collection('notification-popup').countDocuments({ recipientId, isRead: false });
+    return { success: true, unreadCount };
+  }
+
+  async markNotificationRead(id: string, recipientId: string = 'admin'): Promise<any> {
+    const notifCol = this.orderModel.db.collection('notification-popup');
+    const filter: any = { recipientId };
+    try {
+      const { ObjectId } = require('mongodb');
+      if (ObjectId.isValid(id) && String(new ObjectId(id)) === id) {
+        filter.$or = [{ _id: new ObjectId(id) }, { id: id }];
+      } else {
+        filter.id = id;
+      }
+    } catch {
+      filter.id = id;
+    }
+
+    await notifCol.updateOne(filter, { $set: { isRead: true, readAt: new Date(), updatedAt: new Date() } });
+    const notification = await notifCol.findOne(filter);
+    return { success: true, message: 'Đã đánh dấu thông báo là đã đọc', notification };
+  }
+
+  async markAllNotificationsRead(recipientId: string = 'admin'): Promise<any> {
+    const notifCol = this.orderModel.db.collection('notification-popup');
+    const result = await notifCol.updateMany(
+      { recipientId, isRead: false },
+      { $set: { isRead: true, readAt: new Date(), updatedAt: new Date() } },
+    );
+    return { success: true, message: 'Đã đánh dấu tất cả thông báo là đã đọc', modifiedCount: result.modifiedCount };
+  }
+
+  async getDashboardDetailedStats(
+    period: '7d' | '30d' | 'this_month' | 'last_month' | 'custom' = '7d',
+    customStart?: Date,
+    customEnd?: Date,
+  ): Promise<any> {
+    const now = new Date();
+
+    // Compute period boundaries
+    let periodStart: Date;
+    let periodEnd: Date;
+    let prevStart: Date;
+    let prevEnd: Date;
+    let days: number;
+
+    if (period === 'this_month') {
+      periodStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      periodEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      const elapsed = now.getDate();
+      prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+      prevEnd   = new Date(now.getFullYear(), now.getMonth() - 1, elapsed, 23, 59, 59, 999);
+      days = periodEnd.getDate();
+    } else if (period === 'last_month') {
+      const lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      periodStart = new Date(lm.getFullYear(), lm.getMonth(), 1, 0, 0, 0, 0);
+      periodEnd   = new Date(lm.getFullYear(), lm.getMonth() + 1, 0, 23, 59, 59, 999);
+      const pm = new Date(lm.getFullYear(), lm.getMonth() - 1, 1);
+      prevStart = new Date(pm.getFullYear(), pm.getMonth(), 1, 0, 0, 0, 0);
+      prevEnd   = new Date(pm.getFullYear(), pm.getMonth() + 1, 0, 23, 59, 59, 999);
+      days = periodEnd.getDate();
+    } else if (period === '30d') {
+      days = 30;
+      periodEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      periodStart = new Date(periodEnd.getTime() - (days - 1) * 86400000);
+      periodStart.setHours(0, 0, 0, 0);
+      prevEnd   = new Date(periodStart.getTime() - 1);
+      prevStart = new Date(prevEnd.getTime() - (days - 1) * 86400000);
+      prevStart.setHours(0, 0, 0, 0);
+    } else if (period === 'custom' && customStart && customEnd) {
+      periodStart = new Date(customStart);
+      periodStart.setHours(0, 0, 0, 0);
+      periodEnd = new Date(customEnd);
+      periodEnd.setHours(23, 59, 59, 999);
+      days = Math.max(1, Math.ceil((periodEnd.getTime() - periodStart.getTime()) / 86400000) + 1);
+      prevEnd   = new Date(periodStart.getTime() - 1);
+      prevStart = new Date(prevEnd.getTime() - (days - 1) * 86400000);
+      prevStart.setHours(0, 0, 0, 0);
+    } else {
+      days = 7;
+      periodEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      periodStart = new Date(periodEnd.getTime() - (days - 1) * 86400000);
+      periodStart.setHours(0, 0, 0, 0);
+      prevEnd   = new Date(periodStart.getTime() - 1);
+      prevStart = new Date(prevEnd.getTime() - (days - 1) * 86400000);
+      prevStart.setHours(0, 0, 0, 0);
+    }
+
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000);
+
+    const [allOrders, allProducts, allCategories, allUsers] = await Promise.all([
+      this.orderModel.find({}).sort('-createdAt').lean(),
+      this.productModel.find({}).lean(),
+      this.categoryModel.find({}).lean(),
+      this.userModel.find({}).lean(),
+    ]);
+
+    const getOrderTime = (o: any) => {
+      const d = o.createdAt || o.dateAdded;
+      if (d) {
+        const t = new Date(d).getTime();
+        if (!isNaN(t)) return t;
+      }
+      if (o._id && typeof o._id.getTimestamp === 'function') {
+        return o._id.getTimestamp().getTime();
+      }
+      return 0;
+    };
+
+    const getOrderAmount = (o: any) => {
+      const amt = Number(o.totalAmount !== undefined && o.totalAmount !== null ? o.totalAmount : (o.cart?.totalPrice !== undefined ? o.cart.totalPrice : (o.amount || 0)));
+      return isNaN(amt) ? 0 : amt;
+    };
+
+    const normalizeStatus = (st: any): string => {
+      if (!st) return 'PENDING';
+      const upper = String(st).trim().toUpperCase();
+      if (upper === 'NEW') return 'PENDING';
+      if (upper === 'COMPLETED') return 'DELIVERED';
+      if (upper === 'CANCELED') return 'CANCELLED';
+      if (upper === 'RETURN') return 'RETURNED';
+      return upper;
+    };
+
+    const isPaid = (o: any) => {
+      const st = normalizeStatus(o.status || o.statusHistory?.[0]?.status);
+      if (st === 'CANCELLED' || st === 'RETURNED' || st === 'DELIVERY_FAILED') return false;
+      const paySt = String(o.paymentStatus || o.payment?.status || '').toUpperCase();
+      return paySt === 'PAID' || st === 'DELIVERED' || paySt === 'COMPLETED';
+    };
+
+    // Category mapping
+    const categoryMap = new Map<string, string>();
+    for (const c of allCategories) {
+      const title = c.vi?.title || c.title || c.titleUrl || 'Danh mục';
+      categoryMap.set(String(c._id), title);
+      if (c.titleUrl) categoryMap.set(c.titleUrl, title);
+    }
+
+    // User mapping for customer name lookup
+    const userMap = new Map<string, string>();
+    for (const u of allUsers) {
+      userMap.set(String(u._id), u.fullName || u.name || u.email);
+    }
+
+    // Customer Users calculation (Exclude Admin & staff)
+    const isCustomer = (u: any) => {
+      if (u.isAdmin === true) return false;
+      const roles = Array.isArray(u.roles) ? u.roles : (u.roles ? [u.roles] : (Array.isArray(u.role) ? u.role : (u.role ? [u.role] : [])));
+      const hasAdmin = roles.some((r: any) => typeof r === 'string' && (r.toLowerCase() === 'admin' || r.toLowerCase() === 'super-admin'));
+      return !hasAdmin;
+    };
+
+    const customerUsers = allUsers.filter(isCustomer);
+    const usersCount = customerUsers.length;
+    let new7DaysUsers = 0;
+    let new30DaysUsers = 0;
+    for (const u of customerUsers) {
+      const d = (u as any).createdAt || (u as any).dateAdded;
+      if (d) {
+        const ud = new Date(d);
+        if (!isNaN(ud.getTime())) {
+          if (ud >= sevenDaysAgo) new7DaysUsers++;
+          if (ud >= thirtyDaysAgo) new30DaysUsers++;
+        }
+      }
+    }
+
+    // 4. Biểu đồ timeline
+    const revenueTimeline: { label: string; date: string; fullDate?: string; revenue: number; ordersCount: number }[] = [];
+    const curDay = new Date(periodStart);
+    while (curDay <= periodEnd) {
+      const dStart = new Date(curDay.getFullYear(), curDay.getMonth(), curDay.getDate(), 0, 0, 0, 0).getTime();
+      const dEnd   = new Date(curDay.getFullYear(), curDay.getMonth(), curDay.getDate(), 23, 59, 59, 999).getTime();
+
+      const dayOrders = allOrders.filter(o => {
+        const t = getOrderTime(o);
+        return t >= dStart && t <= dEnd;
+      });
+
+      const dayRevenue = dayOrders.filter(isPaid).reduce((sum, o) => sum + getOrderAmount(o), 0);
+      const label = `${String(curDay.getDate()).padStart(2, '0')}/${String(curDay.getMonth() + 1).padStart(2, '0')}`;
+      const fullDate = `${label}/${curDay.getFullYear()}`;
+      const dateStr = `${curDay.getFullYear()}-${String(curDay.getMonth() + 1).padStart(2, '0')}-${String(curDay.getDate()).padStart(2, '0')}`;
+
+      revenueTimeline.push({
+        label,
+        date: dateStr,
+        fullDate,
+        revenue: dayRevenue,
+        ordersCount: dayOrders.length,
+      });
+
+      curDay.setDate(curDay.getDate() + 1);
+    }
+
+    // 5. Đơn hàng trong kỳ (period) + theo trạng thái
+    const pStart = periodStart.getTime();
+    const pEnd   = periodEnd.getTime();
+    const periodOrders = allOrders.filter(o => { const t = getOrderTime(o); return t >= pStart && t <= pEnd; });
+    const prevOrders   = allOrders.filter(o => { const t = getOrderTime(o); return t >= prevStart.getTime() && t <= prevEnd.getTime(); });
+
+    const periodRevenue      = periodOrders.filter(isPaid).reduce((s, o) => s + getOrderAmount(o), 0);
+    const prevPeriodRevenue  = prevOrders.filter(isPaid).reduce((s, o) => s + getOrderAmount(o), 0);
+    const periodOrdersCount  = periodOrders.length;
+    const prevPeriodOrdersCount = prevOrders.length;
+
+    const fst = (orders: any[], ...st: string[]) => {
+      const upperSt = st.map(s => s.toUpperCase());
+      return orders.filter(o => {
+        const norm = normalizeStatus(o.status || o.statusHistory?.[0]?.status);
+        return upperSt.includes(norm);
+      }).length;
+    };
+
+    const ordersByStatus: Record<string, number> = {
+      delivered:       fst(periodOrders, OrderStatus.DELIVERED, 'COMPLETED'),
+      shipping:        fst(periodOrders, OrderStatus.SHIPPING),
+      processing:      fst(periodOrders, OrderStatus.PROCESSING, 'CONFIRMED'),
+      pending:         fst(periodOrders, OrderStatus.PENDING, 'NEW'),
+      cancelled:       fst(periodOrders, OrderStatus.CANCELLED, 'CANCELED'),
+      returned:        fst(periodOrders, OrderStatus.RETURNED, 'RETURN', 'DELIVERY_FAILED'),
+    };
+
+    // UPPERCASE aliases for compatibility
+    ordersByStatus['DELIVERED'] = ordersByStatus['delivered'];
+    ordersByStatus['SHIPPING'] = ordersByStatus['shipping'];
+    ordersByStatus['PROCESSING'] = ordersByStatus['processing'];
+    ordersByStatus['PENDING'] = ordersByStatus['pending'];
+    ordersByStatus['CANCELLED'] = ordersByStatus['cancelled'];
+    ordersByStatus['RETURNED'] = ordersByStatus['returned'];
+
+    // 6. Tồn kho & Sản phẩm sắp hết hàng (<= 5)
+    let outOfStockCount = 0;
+    let inStockCount = 0;
+    let totalStock = 0;
+    const lowStockProducts: any[] = [];
+
+    for (const p of allProducts) {
+      const vi = (p as any).vi || {};
+      let qty = 0;
+
+      if (Array.isArray((p as any).variants) && (p as any).variants.length > 0) {
+        qty = (p as any).variants.reduce((acc: number, v: any) => acc + (Number(v.stock) || 0), 0);
+      } else if (typeof p.quantity === 'number') {
+        qty = p.quantity;
+      } else if (typeof vi.quantity === 'number') {
+        qty = vi.quantity;
+      } else if (typeof (p as any).stock === 'number') {
+        qty = (p as any).stock;
+      } else if (typeof vi.stock === 'number') {
+        qty = vi.stock;
+      }
+
+      totalStock += qty;
+
+      if (qty === 0 || vi.stock === 'outOfStock' || (p as any).stock === 'outOfStock') {
+        outOfStockCount++;
+      } else {
+        inStockCount++;
+      }
+
+      if (qty <= 5) {
+        const rawCat = vi.categoryLevel1 || p.categoryLevel1;
+        const catKey = Array.isArray(rawCat) ? rawCat[0] : rawCat;
+        const catName = categoryMap.get(String(catKey)) || (typeof catKey === 'string' && catKey.trim() ? catKey.trim() : 'Thời trang nữ');
+
+        lowStockProducts.push({
+          id: String(p._id),
+          name: vi.title || p.title || (p as any).titleUrl || 'Sản phẩm',
+          sku: (p as any).variants?.[0]?.sku || vi.sku || p.sku || ('SP-' + String(p._id).slice(-6).toUpperCase()),
+          stock: qty,
+          price: vi.salePrice || vi.regularPrice || p.regularPrice || 0,
+          image: p.mainImage?.url || (Array.isArray(p.images) ? p.images[0] : ''),
+          category: catName,
+        });
+      }
+    }
+
+    lowStockProducts.sort((a, b) => a.stock - b.stock);
+    const topLowStock = lowStockProducts.slice(0, 5);
+
+    // 7. Top sản phẩm bán chạy (chỉ từ các đơn đủ điều kiện kinh doanh)
+    const productSalesMap = new Map<string, { id: string; title: string; name: string; sku: string; image: string; totalSold: number; revenue: number }>();
+    for (const order of allOrders) {
+      if (!isPaid(order)) continue;
+      const items = (Array.isArray(order.items) && order.items.length > 0)
+        ? order.items
+        : (Array.isArray((order as any).cart?.items) ? (order as any).cart.items : []);
+
+      for (const item of items) {
+        const key = String(item.productId || item.productSnapshot?.sku || item.id || (item as any).item?._id || 'item');
+        const name = item.name || item.productSnapshot?.name || item.productSnapshot?.title || (item as any).item?.vi?.title || (item as any).item?.title || 'Sản phẩm';
+        const image = item.image || item.productSnapshot?.image || (item as any).item?.mainImage?.url || (Array.isArray((item as any).item?.images) ? (item as any).item.images[0] : '');
+        const sku = item.sku || item.productSnapshot?.sku || (item as any).item?.vi?.sku || (item as any).item?.sku || '';
+        const qty = Number(item.quantity || (item as any).qty || 1);
+        const price = Number(item.unitPrice || item.price || (item as any).item?.salePrice || 0);
+
+        const existing = productSalesMap.get(key) || {
+          id: key,
+          title: name,
+          name,
+          sku,
+          image,
+          totalSold: 0,
+          revenue: 0,
+        };
+        existing.totalSold += qty;
+        existing.revenue += qty * price;
+        productSalesMap.set(key, existing);
+      }
+    }
+
+    const topSellingProducts = Array.from(productSalesMap.values())
+      .sort((a, b) => b.totalSold - a.totalSold)
+      .slice(0, 5);
+
+    // 8. Đơn hàng gần nhất (5 đơn)
+    const recentOrders = allOrders.slice(0, 5).map(o => {
+      let customerName = 'Khách hàng';
+      if (o.customer?.name && o.customer.name.trim()) {
+        customerName = o.customer.name.trim();
+      } else if (o.shippingAddress?.fullName && o.shippingAddress.fullName.trim()) {
+        customerName = o.shippingAddress.fullName.trim();
+      } else if (typeof o.shippingAddress?.address === 'string' && (o.shippingAddress as any).name) {
+        customerName = (o.shippingAddress as any).name.trim();
+      } else if (Array.isArray((o as any).addresses) && (o as any).addresses[0]?.name) {
+        customerName = (o as any).addresses[0].name.trim();
+      } else if (o.userId && userMap.has(String(o.userId))) {
+        customerName = userMap.get(String(o.userId)) || 'Khách hàng';
+      } else if ((o as any)._user && userMap.has(String((o as any)._user))) {
+        customerName = userMap.get(String((o as any)._user)) || 'Khách hàng';
+      } else if ((o as any).customerName && typeof (o as any).customerName === 'string') {
+        customerName = (o as any).customerName;
+      }
+
+      const customerEmail = o.customerEmail || o.customer?.email || (o.shippingAddress as any)?.email || (Array.isArray((o as any).addresses) ? (o as any).addresses[0]?.email : '') || '';
+      const rawStatus = normalizeStatus(o.status || (o as any).statusHistory?.[0]?.status);
+      const totalAmount = getOrderAmount(o);
+      const createdAt = new Date(getOrderTime(o)).toISOString();
+
+      const statusLabels: Record<string, string> = {
+        PENDING: 'Chờ xác nhận',
+        CONFIRMED: 'Đã xác nhận',
+        PROCESSING: 'Đang xử lý',
+        SHIPPING: 'Đang giao',
+        DELIVERED: 'Đã giao',
+        CANCELLED: 'Đã hủy',
+        RETURNED: 'Đã hoàn trả',
+        DELIVERY_FAILED: 'Giao thất bại',
+      };
+
+      const statusVariants: Record<string, string> = {
+        PENDING: 'neutral',
+        CONFIRMED: 'primary',
+        PROCESSING: 'warning',
+        SHIPPING: 'primary',
+        DELIVERED: 'success',
+        CANCELLED: 'danger',
+        RETURNED: 'neutral',
+        DELIVERY_FAILED: 'danger',
+      };
+
+      return {
+        _id: String(o._id),
+        id: String(o._id),
+        orderId: o.orderId || ('#DH' + String(o._id).slice(-6).toUpperCase()),
+        code: o.orderId || ('#DH' + String(o._id).slice(-6).toUpperCase()),
+        customerName,
+        customer: customerName,
+        customerEmail,
+        totalAmount,
+        total: totalAmount,
+        status: statusLabels[rawStatus] || rawStatus,
+        statusLabel: statusLabels[rawStatus] || rawStatus,
+        statusCode: rawStatus,
+        statusVariant: statusVariants[rawStatus] || 'neutral',
+        createdAt,
+        date: createdAt,
+      };
+    });
+
+    return {
+      totalRevenue: periodRevenue,
+      prevPeriodRevenue,
+      ordersCount: periodOrdersCount,
+      prevPeriodOrdersCount,
+      productsCount: allProducts.length,
+      categoriesCount: allCategories.length,
+      usersCount,
+      outOfStockCount,
+      lowStockCount: lowStockProducts.length,
+      lowStockThreshold: 5,
+      customers: {
+        total: usersCount,
+        new7Days: new7DaysUsers,
+        new30Days: new30DaysUsers,
+      },
+      revenueTimeline,
+      ordersByStatus,
+      inventory: {
+        totalStock,
+        outOfStockCount,
+        lowStockCount: lowStockProducts.length,
+        inStockCount,
+      },
+      topSellingProducts,
+      lowStockProducts: topLowStock,
+      recentOrders,
+    };
+  }
+
+  async getAdminOrders(query: any = {}): Promise<any> {
+    const page = Math.max(1, Number(query.page) || 1);
+    const limit = Math.max(1, Number(query.limit) || 20);
+    const skip = (page - 1) * limit;
+
+    const filter: any = {};
+
+    if (query.status) {
+      const statusUpper = String(query.status).trim().toUpperCase();
+      if (statusUpper === 'PENDING') {
+        filter.$or = [{ status: OrderStatus.PENDING }, { status: 'NEW' }];
+      } else if (statusUpper === 'CONFIRMED') {
+        filter.$or = [
+          { status: OrderStatus.CONFIRMED },
+          { status: OrderStatus.PROCESSING },
+          { status: 'CONFIRMED' },
+          { status: 'PROCESSING' },
+        ];
+      } else if (statusUpper === 'PROCESSING') {
+        filter.$or = [{ status: OrderStatus.PROCESSING }, { status: 'PROCESSING' }];
+      } else if (statusUpper === 'SHIPPING') {
+        filter.status = OrderStatus.SHIPPING;
+      } else if (statusUpper === 'DELIVERED') {
+        filter.$or = [{ status: OrderStatus.DELIVERED }, { status: 'COMPLETED' }];
+      } else if (statusUpper === 'CANCELLED') {
+        filter.$or = [
+          { status: OrderStatus.CANCELLED },
+          { status: 'CANCELLED' },
+          { status: 'CANCELED' },
+        ];
+      } else if (statusUpper === 'RETURNED') {
+        filter.$or = [{ status: OrderStatus.RETURNED }, { type: 'RETURN' }];
+      } else {
+        filter.status = statusUpper;
+      }
+    }
+
+    if (query.paymentMethod) {
+      const pm = String(query.paymentMethod).trim();
+      const pmOr = [
+        { 'payment.method': pm },
+        { 'paymentMethodSnapshot.code': pm },
+        { type: pm },
+      ];
+      if (filter.$or) {
+        filter.$and = [{ $or: filter.$or }, { $or: pmOr }];
+        delete filter.$or;
+      } else {
+        filter.$or = pmOr;
+      }
+    }
+
+    if (query.search) {
+      const s = String(query.search).trim();
+      const regex = new RegExp(s, 'i');
+      const searchOr = [
+        { orderId: regex },
+        { customerEmail: regex },
+        { customerPhone: regex },
+        { 'customer.name': regex },
+        { 'customer.email': regex },
+        { 'shippingAddress.fullName': regex },
+        { 'shippingAddress.phone': regex },
+      ];
+      if (filter.$and) {
+        filter.$and.push({ $or: searchOr });
+      } else if (filter.$or) {
+        filter.$and = [{ $or: filter.$or }, { $or: searchOr }];
+        delete filter.$or;
+      } else {
+        filter.$or = searchOr;
+      }
+    }
+
+    const total = await this.orderModel.countDocuments(filter);
+    const orders = await this.orderModel
+      .find(filter)
+      .sort({ createdAt: -1, dateAdded: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const statusMap: Record<string, { label: string; variant: string }> = {
+      PENDING: { label: 'Chờ xác nhận', variant: 'warning' },
+      CONFIRMED: { label: 'Đã xác nhận', variant: 'info' },
+      PROCESSING: { label: 'Đang xử lý', variant: 'info' },
+      SHIPPING: { label: 'Đang giao', variant: 'primary' },
+      DELIVERED: { label: 'Đã giao', variant: 'success' },
+      CANCELLED: { label: 'Đã hủy', variant: 'danger' },
+      RETURNED: { label: 'Đã hoàn trả', variant: 'neutral' },
+      DELIVERY_FAILED: { label: 'Giao thất bại', variant: 'danger' },
+    };
+
+    const formatted = orders.map((o: any) => {
+      const statusKey = String(o.status || 'PENDING').toUpperCase();
+      const statusMeta = statusMap[statusKey] || {
+        label: o.status || 'Không rõ',
+        variant: 'neutral',
+      };
+      const customerName =
+        o.customer?.name ||
+        o.shippingAddress?.fullName ||
+        (o.addresses && o.addresses[0]?.name) ||
+        o.customerEmail ||
+        'Khách vãng lai';
+
+      const totalVal = o.totalAmount ?? o.amount ?? o.subtotal ?? o.total ?? 0;
+      const paymentMethodName =
+        o.paymentMethodSnapshot?.name ||
+        o.payment?.provider ||
+        o.payment?.method ||
+        o.type ||
+        'COD';
+
+      return {
+        ...o,
+        id: o._id?.toString() || o.id,
+        code: o.orderId || ('#' + String(o._id).slice(-6).toUpperCase()),
+        customer: customerName,
+        total: totalVal,
+        payment: paymentMethodName,
+        status: o.status,
+        statusText: statusMeta.label,
+        statusVariant: statusMeta.variant,
+        createdAt: o.createdAt || o.dateAdded,
+      };
+    });
+
+    return {
+      success: true,
+      data: formatted,
+      pagination: {
+        page,
+        pageSize: limit,
+        total,
+        totalPages: Math.ceil(total / limit) || 1,
+      },
+    };
   }
 }

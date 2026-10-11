@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
+import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 interface UserFormData {
   email: string;
@@ -47,7 +48,11 @@ export class UsersFormComponent implements OnInit {
 
   errors: Record<string, string> = {};
   errorMessage = '';
-  successMessage = '';
+
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Quản lý tài khoản', url: '/admin/users' },
+    { label: 'Thêm tài khoản' }
+  ];
 
   constructor(
     private route: ActivatedRoute,
@@ -60,6 +65,11 @@ export class UsersFormComponent implements OnInit {
   ngOnInit(): void {
     this.userId = this.route.snapshot.paramMap.get('id');
     this.isEditMode = !!this.userId;
+
+    this.breadcrumbItems = [
+      { label: 'Quản lý tài khoản', url: '/admin/users' },
+      { label: this.isEditMode ? 'Chỉnh sửa tài khoản' : 'Thêm tài khoản' }
+    ];
 
     if (this.isEditMode) {
       if (!this.userId || this.userId.trim() === '') {
@@ -92,6 +102,11 @@ export class UsersFormComponent implements OnInit {
             avatar: u.avatar || '',
             description: u.description || ''
           };
+          const userName = this.formData.fullName || this.formData.name || this.formData.email || '';
+          this.breadcrumbItems = [
+            { label: 'Quản lý tài khoản', url: '/admin/users' },
+            { label: userName ? ('Chỉnh sửa: ' + userName) : 'Chỉnh sửa tài khoản' }
+          ];
         } else {
           this.errorMessage = res.message || 'Không tìm thấy thông tin tài khoản';
         }
@@ -239,7 +254,6 @@ export class UsersFormComponent implements OnInit {
 
     this.isSubmitting = true;
     this.errorMessage = '';
-    this.successMessage = '';
 
     if (this.isEditMode && this.userId) {
       // Edit User -> PUT /api/users/:id
@@ -261,7 +275,6 @@ export class UsersFormComponent implements OnInit {
         next: (res) => {
           this.isSubmitting = false;
           if (res.success) {
-            this.successMessage = 'Cập nhật tài khoản thành công';
             this.notificationService.success('Cập nhật tài khoản thành công');
             this.cdr.markForCheck();
             setTimeout(() => {
@@ -302,7 +315,6 @@ export class UsersFormComponent implements OnInit {
         next: (res) => {
           this.isSubmitting = false;
           if (res.success) {
-            this.successMessage = 'Thêm tài khoản thành công';
             this.notificationService.success('Thêm tài khoản thành công');
             this.cdr.markForCheck();
             setTimeout(() => {

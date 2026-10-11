@@ -1,11 +1,23 @@
-import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID, ChangeDetectorRef, Output, EventEmitter } from '@angular/core';
-import { CommonModule, isPlatformBrowser } from '@angular/common';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  Inject,
+  PLATFORM_ID,
+  ChangeDetectorRef,
+  Output,
+  EventEmitter,
+  HostListener,
+  ViewChild
+} from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AdminService } from '../../services/admin.service';
 import { SignalStore } from '../../../store/signal.store';
 import { accessTokenKey } from '../../../user/shared/constants';
 import { SettingsService } from '../../pages/settings/settings.service';
+import { NotificationPopupComponent } from '../../shared/notification-popup/notification-popup.component';
 
 @Component({
   selector: 'app-admin-header',
@@ -15,17 +27,29 @@ import { SettingsService } from '../../pages/settings/settings.service';
 })
 export class AdminHeaderComponent implements OnInit, OnDestroy {
   @Output() toggleMenu = new EventEmitter<void>();
+  @ViewChild('notifPopup') notifPopup!: NotificationPopupComponent;
 
   isUserMenuOpen = false;
   currentUser: any = null;
   logoUrl: string = '';
   hasLogoError = false;
+  unreadCount = 0;
 
   private userSub: Subscription | null = null;
   private settingsSub: Subscription | null = null;
 
   onToggleMenu(): void {
     this.toggleMenu.emit();
+  }
+
+  onToggleNotification(): void {
+    this.closeUserMenu();
+    this.notifPopup?.toggle();
+  }
+
+  onUnreadCountChange(count: number): void {
+    this.unreadCount = count;
+    this.cdr.markForCheck();
   }
 
   constructor(
@@ -96,12 +120,34 @@ export class AdminHeaderComponent implements OnInit, OnDestroy {
     return name.trim().charAt(0).toUpperCase();
   }
 
-  toggleUserMenu(): void {
+  toggleUserMenu(event?: MouseEvent): void {
+    if (event) {
+      event.stopPropagation();
+    }
     this.isUserMenuOpen = !this.isUserMenuOpen;
+    if (this.isUserMenuOpen) {
+      this.notifPopup?.close();
+    }
+    this.cdr.markForCheck();
   }
 
   closeUserMenu(): void {
-    this.isUserMenuOpen = false;
+    if (this.isUserMenuOpen) {
+      this.isUserMenuOpen = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (!this.isUserMenuOpen) {
+      return;
+    }
+    const target = event.target as HTMLElement | null;
+    if (target && (target.closest('.admin-header__user-menu') || target.closest('.admin-header__user-btn'))) {
+      return;
+    }
+    this.closeUserMenu();
   }
 
   navigateTo(path: string, event?: Event): void {
@@ -131,6 +177,3 @@ export class AdminHeaderComponent implements OnInit, OnDestroy {
     });
   }
 }
-
-
-

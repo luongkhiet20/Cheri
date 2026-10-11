@@ -143,7 +143,7 @@
             @if (!appliedCoupon) {
             <div class="coupon-form">
               <input type="text" class="coupon-input" placeholder="Nhập mã (VD: CHERI10, CHERI50K)"
-                [(ngModel)]="couponInput" (keyup.enter)="applyCoupon(cart)" autocomplete="off"
+                [(ngModel)]="couponInput" (input)="onCouponInputChange($event)" (keyup.enter)="applyCoupon(cart)" autocomplete="off"
                 (click)="$event.stopPropagation()" />
               <button type="button" class="coupon-btn" [disabled]="isApplyingCoupon"
                 (click)="applyCoupon(cart); $event.stopPropagation()">
@@ -151,16 +151,32 @@
               </button>
             </div>
             @if (couponError) {
-            <div class="coupon-msg coupon-msg--error">{{ couponError }}</div>
+            <div class="coupon-msg coupon-msg--error">
+              <i class="material-icons error-inline-icon">error_outline</i>
+              <span>{{ couponError }}</span>
+            </div>
             }
             } @else {
             <div class="applied-coupon-box">
               <div class="applied-coupon-info">
-                <div class="applied-coupon-badge">
-                  <i class="material-icons badge-icon">check_circle</i>
-                  <span class="applied-code">{{ appliedCoupon.code }}</span>
+                <div class="applied-coupon-top">
+                  <div class="applied-coupon-badge">
+                    <i class="material-icons badge-icon">check_circle</i>
+                    <span class="applied-code">{{ appliedCoupon.code }}</span>
+                  </div>
+                  <span class="applied-type-tag">
+                    {{ appliedCoupon.discountType === 'PERCENTAGE' ? ('Giảm ' + appliedCoupon.discountValue + '%') : 'Giảm trực tiếp' }}
+                  </span>
                 </div>
                 <div class="applied-desc">{{ appliedCoupon.description || 'Ưu đãi đã được áp dụng' }}</div>
+                <div class="applied-conditions" *ngIf="(appliedCoupon.discountType === 'PERCENTAGE' && appliedCoupon.maxDiscount && appliedCoupon.maxDiscount > 0) || (appliedCoupon.minOrderValue && appliedCoupon.minOrderValue > 0)">
+                  <span class="cond-pill" *ngIf="appliedCoupon.discountType === 'PERCENTAGE' && appliedCoupon.maxDiscount && appliedCoupon.maxDiscount > 0">
+                    Tối đa: {{ appliedCoupon.maxDiscount | priceFormat }} {{ currency$ | async }}
+                  </span>
+                  <span class="cond-pill" *ngIf="appliedCoupon.minOrderValue && appliedCoupon.minOrderValue > 0">
+                    Đơn tối thiểu: {{ appliedCoupon.minOrderValue | priceFormat }} {{ currency$ | async }}
+                  </span>
+                </div>
                 <div class="applied-val">-{{ getDiscountAmount(cart) | priceFormat }} {{ currency$ | async }}</div>
               </div>
               <button type="button" class="btn-remove-coupon" (click)="removeCoupon()" title="Gỡ mã giảm giá">
@@ -168,6 +184,13 @@
               </button>
             </div>
             }
+
+            <div class="coupon-rules-hint">
+              <i class="material-icons hint-icon">info_outline</i>
+              <span class="hint-text">
+                Mức giảm áp dụng cho các sản phẩm được tích chọn và tự động cập nhật theo giá trị đơn hàng.
+              </span>
+            </div>
           </div>
 
           <!-- Khu vực Phương thức vận chuyển (Sau Mã giảm giá, trước Tạm tính) -->

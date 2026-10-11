@@ -175,7 +175,6 @@
   border-radius: 50%;
 }
 
-
 .admin-header__user-info {
   display: flex;
   flex-direction: column;
@@ -279,4 +278,29 @@
   .admin-header__chevron {
     display: none;
   }
+}
+
+/* =============================================
+   NOTIFICATION BADGE
+   ============================================= */
+.admin-header__notif-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.admin-header__notif-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background-color: #74070e;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 9999px;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
 }

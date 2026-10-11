@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { AdminService } from '../../../services/admin.service';
+import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 @Component({
   selector: 'app-inventory-detail',
@@ -10,6 +11,11 @@ import { AdminService } from '../../../services/admin.service';
   styleUrls: ['./inventory-detail.component.css']
 })
 export class InventoryDetailComponent implements OnInit {
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Quản lý tồn kho', url: '/admin/inventory' },
+    { label: 'Chi tiết tồn kho' }
+  ];
+
   productId: string | null = null;
   isLoading = false;
   errorMessage = '';
@@ -47,6 +53,12 @@ export class InventoryDetailComponent implements OnInit {
         this.isLoading = false;
         if (res.success && res.data) {
           this.inventoryData = res.data;
+          if (this.inventoryData.name) {
+            this.breadcrumbItems = [
+              { label: 'Quản lý tồn kho', url: '/admin/inventory' },
+              { label: this.inventoryData.name }
+            ];
+          }
         } else {
           this.errorMessage = res.message || 'Không tìm thấy dữ liệu tồn kho cho sản phẩm này.';
         }

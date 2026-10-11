@@ -15,6 +15,7 @@ import { TranslateService } from '../../../../services/translate.service';
 import { CartToastService } from '../../../../services/cart-toast.service';
 import { SignalStore } from '../../../../store/signal.store';
 import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
+import { filterProductDescriptionBullets } from './product-description';
 
 @Component({
   selector: 'app-product',
@@ -51,7 +52,6 @@ export class ProductComponent implements OnDestroy {
   displaySku: string = '';
 
   productTitle: string = '';
-  productDescription: string = '';
   productDescriptionFull: string[] = [];
   categoryBreadcrumb: string | null = null;
 
@@ -135,11 +135,10 @@ export class ProductComponent implements OnDestroy {
     this.productTitle = viData.title || product.title || '';
 
     // 4.3 Mô tả
-    this.productDescription = viData.description || product.description || '';
     if (Array.isArray(viData.descriptionFull) && viData.descriptionFull.length > 0) {
-      this.productDescriptionFull = viData.descriptionFull;
+      this.productDescriptionFull = filterProductDescriptionBullets(viData.descriptionFull);
     } else if (Array.isArray(product.descriptionFull) && product.descriptionFull.length > 0) {
-      this.productDescriptionFull = product.descriptionFull;
+      this.productDescriptionFull = filterProductDescriptionBullets(product.descriptionFull);
     } else {
       this.productDescriptionFull = [];
     }

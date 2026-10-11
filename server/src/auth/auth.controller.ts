@@ -199,4 +199,36 @@ export class AuthController {
   signOutGet(@Req() req, @Res() res) {
     return this.signOut(req, res);
   }
+
+@Post('/forgot-password')
+async forgotPassword(
+  @Body() body: { email?: string },
+): Promise<{ message: string }> {
+  return this.authService.requestPasswordReset(body?.email || '');
+}
+@Post('/verify-reset-otp')
+async verifyResetOtp(
+  @Body() body: { email?: string; otp?: string },
+): Promise<{ message: string; resetToken: string }> {
+  return this.authService.verifyPasswordResetOtp(
+    body?.email || '',
+    body?.otp || '',
+  );
+}
+
+@Post('/reset-password')
+async resetPassword(
+  @Body()
+  body: {
+    email?: string;
+    resetToken?: string;
+    newPassword?: string;
+  },
+): Promise<{ message: string }> {
+  return this.authService.resetPassword(
+    body?.email || '',
+    body?.resetToken || '',
+    body?.newPassword || '',
+  );
+}
 }

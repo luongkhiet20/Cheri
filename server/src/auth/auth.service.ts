@@ -17,6 +17,13 @@ import * as cloudinary from 'cloudinary';
 import * as streamifier from 'streamifier';
 import * as fs from 'fs';
 import * as path from 'path';
+import {
+  randomInt,
+  randomBytes,
+  createHmac,
+  timingSafeEqual,
+} from 'crypto';
+import { sendPasswordResetOtp } from '../shared/utils/email/mailer';
 
 cloudinary.v2.config({
   cloud_name: process.env.CLOUDINARY_NAME,
@@ -27,9 +34,10 @@ cloudinary.v2.config({
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectModel('User') private userModel: Model<User>,
-    private jwtService: JwtService,
-  ) {}
+  @InjectModel('User') private userModel: Model<User>,
+  @InjectModel('PasswordReset') private passwordResetModel: Model<any>,
+  private jwtService: JwtService,
+) {}
 
   async signUp(authCredentialsDto: AuthCredentialDto): Promise<{
     accessToken: string;
@@ -443,6 +451,232 @@ export class AuthService {
       avatarUrl: updated.avatar || avatarUrl,
     };
   }
+
+async requestPasswordReset(email: string): Promise<{ message: string }> {
+  const cleanEmail = (email || '').trim().toLowerCase();
+  const message =
+    'Nếu email này đã đăng ký, hướng dẫn đặt lại mật khẩu sẽ được gửi nếu đủ điều kiện.';
+
+  if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+    throw new BadRequestException('Email không hợp lệ');
+  }
+
+  const user = await this.userModel.findOne({ email: cleanEmail });
+
+  // Trả thông báo giống nhau để hạn chế dò tìm email có tài khoản.
+  if (!user) {
+    return { message };
+  }
+
+  const existing = await this.passwordResetModel.findOne({
+    email: cleanEmail,
+  });
+
+  // Giới hạn gửi lại: mỗi email chỉ được yêu cầu OTP mới sau 60 giây.
+  if (
+    existing &&
+    existing.createdAt &&
+    Date.now() - new Date(existing.createdAt).getTime() < 60_000
+  ) {
+    return { message };
+  }
+
+  const secret = process.env.PASSWORD_RESET_SECRET;
+  if (!secret || secret.length < 32) {
+    throw new InternalServerErrorException(
+      'Password reset is not configured',
+    );
+  }
+
+  const otp = randomInt(0, 1_000_000).toString().padStart(6, '0');
+  const otpHash = createHmac('sha256', secret)
+    .update(`${cleanEmail}:${otp}`)
+    .digest('hex');
+
+  // Lưu OTP trước khi gửi; OTP hết hạn sau 5 phút.
+  await this.passwordResetModel.findOneAndUpdate(
+    { email: cleanEmail },
+    {
+      $set: {
+        otpHash,
+        expiresAt: new Date(Date.now() + 5 * 60_000),
+        attempts: 0,
+        verified: false,
+        resetTokenHash: null,
+        resetTokenExpiresAt: null,
+      },
+      $setOnInsert: { email: cleanEmail },
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  );
+
+  try {
+    await sendPasswordResetOtp(cleanEmail, otp);
+  } catch (error) {
+    // Không để OTP vừa tạo tiếp tục được sử dụng nếu email gửi thất bại.
+    await this.passwordResetModel.deleteOne({ email: cleanEmail });
+    throw new InternalServerErrorException(
+      'Không thể gửi email xác minh lúc này',
+    );
+  }
+
+  return { message };
+}
+async verifyPasswordResetOtp(
+  email: string,
+  otp: string,
+): Promise<{ message: string; resetToken: string }> {
+  const cleanEmail = (email || '').trim().toLowerCase();
+
+  if (!/^\d{6}$/.test(otp || '')) {
+    throw new BadRequestException('Mã OTP không hợp lệ');
+  }
+
+  const record = await this.passwordResetModel.findOne({
+    email: cleanEmail,
+  });
+
+  if (!record || record.verified) {
+    throw new BadRequestException(
+      'OTP không hợp lệ hoặc đã hết hạn',
+    );
+  }
+
+  if (new Date(record.expiresAt).getTime() <= Date.now()) {
+    await this.passwordResetModel.deleteOne({ email: cleanEmail });
+    throw new BadRequestException('Mã OTP đã hết hạn');
+  }
+
+  if (record.attempts >= 5) {
+    await this.passwordResetModel.deleteOne({ email: cleanEmail });
+    throw new BadRequestException(
+      'Bạn đã nhập sai OTP quá số lần cho phép. Vui lòng yêu cầu mã mới.',
+    );
+  }
+
+  const secret = process.env.PASSWORD_RESET_SECRET;
+
+  if (!secret || secret.length < 32) {
+    throw new InternalServerErrorException(
+      'Password reset is not configured',
+    );
+  }
+
+  const submittedHash = createHmac('sha256', secret)
+    .update(`${cleanEmail}:${otp}`)
+    .digest('hex');
+
+  const expected = Buffer.from(record.otpHash, 'hex');
+  const submitted = Buffer.from(submittedHash, 'hex');
+
+  const isValid =
+    expected.length === submitted.length &&
+    timingSafeEqual(expected, submitted);
+
+  if (!isValid) {
+    await this.passwordResetModel.updateOne(
+      { _id: record._id },
+      { $inc: { attempts: 1 } },
+    );
+
+    throw new BadRequestException('Mã OTP không chính xác');
+  }
+
+  const resetToken = randomBytes(32).toString('hex');
+
+  const resetTokenHash = createHmac('sha256', secret)
+    .update(`${cleanEmail}:${resetToken}`)
+    .digest('hex');
+
+  await this.passwordResetModel.updateOne(
+    { _id: record._id },
+    {
+      $set: {
+        verified: true,
+        resetTokenHash,
+        resetTokenExpiresAt: new Date(Date.now() + 10 * 60_000),
+      },
+    },
+  );
+
+  return {
+    message: 'Xác minh OTP thành công',
+    resetToken,
+  };
+}
+async resetPassword(
+  email: string,
+  resetToken: string,
+  newPassword: string,
+): Promise<{ message: string }> {
+  const cleanEmail = (email || '').trim().toLowerCase();
+
+  if (!cleanEmail || !resetToken || !newPassword) {
+    throw new BadRequestException('Vui lòng nhập đầy đủ thông tin');
+  }
+
+  if (newPassword.length < 8) {
+    throw new BadRequestException(
+      'Mật khẩu mới phải có ít nhất 8 ký tự',
+    );
+  }
+
+  const secret = process.env.PASSWORD_RESET_SECRET;
+
+  if (!secret || secret.length < 32) {
+    throw new InternalServerErrorException(
+      'Password reset is not configured',
+    );
+  }
+
+  const record = await this.passwordResetModel.findOne({
+    email: cleanEmail,
+    verified: true,
+  });
+
+  if (
+    !record ||
+    !record.resetTokenHash ||
+    !record.resetTokenExpiresAt ||
+    new Date(record.resetTokenExpiresAt).getTime() <= Date.now()
+  ) {
+    throw new BadRequestException(
+      'Phiên đặt lại mật khẩu không hợp lệ hoặc đã hết hạn',
+    );
+  }
+
+  const submittedHash = createHmac('sha256', secret)
+    .update(`${cleanEmail}:${resetToken}`)
+    .digest('hex');
+
+  const expected = Buffer.from(record.resetTokenHash, 'hex');
+  const submitted = Buffer.from(submittedHash, 'hex');
+
+  const isValid =
+    expected.length === submitted.length &&
+    timingSafeEqual(expected, submitted);
+
+  if (!isValid) {
+    throw new BadRequestException('Phiên đặt lại mật khẩu không hợp lệ');
+  }
+
+  const user = await this.userModel.findOne({ email: cleanEmail });
+
+  if (!user) {
+    throw new BadRequestException('Không tìm thấy tài khoản');
+  }
+
+  const salt = await bcrypt.genSalt();
+  const hashedPassword = await this.hashPassword(newPassword, salt);
+
+  user.salt = salt;
+  user.password = hashedPassword;
+  await user.save();
+
+  await this.passwordResetModel.deleteOne({ _id: record._id });
+
+  return { message: 'Đặt lại mật khẩu thành công' };
+}
 }
 
 

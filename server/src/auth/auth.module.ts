@@ -11,12 +11,19 @@ import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategy/jwt.strategy';
 import { GoogleStrategy } from './strategy/google.strategy';
 import UserSchema from './schemas/user.schema';
+import PasswordResetSchema from './schemas/password-reset.schema';
 import { SessionSerializer } from './utils/session.serializer';
 
 @Module({
   imports: [
-    ConfigModule.forRoot(),
-    MongooseModule.forFeature([{ name: 'User', schema: UserSchema }]),
+    ConfigModule.forRoot({
+  isGlobal: true,
+  envFilePath: '.env',
+}),
+    MongooseModule.forFeature([
+  { name: 'User', schema: UserSchema },
+  { name: 'PasswordReset', schema: PasswordResetSchema },
+]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({
       secret: process.env.JWT_SECRET,

@@ -1,0 +1,168 @@
+<div class="page-content">
+
+  <!-- Breadcrumbs & Header -->
+  <div class="page-top">
+    <div>
+      <app-admin-breadcrumb [items]="breadcrumbItems"></app-admin-breadcrumb>
+      <div class="title-with-badge">
+        <h1 class="page-title mb-0">{{ page?.title || 'Chi tiết chính sách' }}</h1>
+        <span *ngIf="page" class="status-badge" [class.badge-published]="page.isPublished"
+          [class.badge-draft]="!page.isPublished">
+          {{ page.status }}
+        </span>
+      </div>
+    </div>
+
+    <div class="page-actions" *ngIf="page">
+      <button type="button" class="btn btn-outline" [routerLink]="adminPagesUrls.POLICIES" id="btn-back">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        Danh sách
+      </button>
+      <button type="button" class="btn btn-outline" (click)="onToggleStatus()" [disabled]="isToggling"
+        id="btn-toggle-status">
+        <span *ngIf="isToggling" class="spinner-inline"></span>
+        {{ page.isPublished ? 'Chuyển sang Bản nháp' : 'Xuất bản công khai' }}
+      </button>
+      <button type="button" class="btn btn-primary" (click)="onEdit()" id="btn-edit">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+        </svg>
+        Chỉnh sửa
+      </button>
+    </div>
+  </div>
+
+  <!-- Alert Messages -->
+  <div *ngIf="errorMessage" class="alert-box alert-error">
+    <div class="alert-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+    </div>
+    <div class="alert-content">
+      <strong>Lỗi:</strong> {{ errorMessage }}
+    </div>
+  </div>
+
+
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="form-loading-card">
+    <div class="spinner"></div>
+    <p class="loading-title">Đang tải dữ liệu chính sách từ MongoDB...</p>
+  </div>
+
+  <!-- Detail Content Layout -->
+  <div *ngIf="!isLoading && page" class="page-detail-layout">
+
+    <!-- LEFT COLUMN: Content Preview -->
+    <div class="detail-main-col">
+
+      <div class="form-card">
+        <div class="card-header-flex">
+          <h2 class="card-section-title mb-0">Nội dung chính sách</h2>
+          <div style="display: flex; gap: 8px; align-items: center;">
+
+            <!-- Mode switcher -->
+            <div class="tab-toggle-group">
+              <button type="button" class="btn-tab" [class.active]="activeTab === 'preview'"
+                (click)="activeTab = 'preview'">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                Xem trước
+              </button>
+              <button type="button" class="btn-tab" [class.active]="activeTab === 'html'" (click)="activeTab = 'html'">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="16 18 22 12 16 6"></polyline>
+                  <polyline points="8 6 2 12 8 18"></polyline>
+                </svg>
+                Mã nguồn HTML
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rendered Preview -->
+        <div *ngIf="activeTab === 'preview'" class="html-preview-body">
+          <h3 class="preview-heading"
+            style="margin-top: 0; margin-bottom: 16px; font-size: 1.25rem; font-weight: 600; color: #0f172a;">
+            {{ displayTitle }}
+          </h3>
+          <div *ngIf="displayContentHTML" [innerHTML]="displayContentHTML"></div>
+          <div *ngIf="!displayContentHTML" class="no-content-notice">
+            Chính sách này chưa có nội dung bài viết.
+          </div>
+        </div>
+
+        <!-- Raw HTML Source -->
+        <div *ngIf="activeTab === 'html'" class="html-raw-code">
+          <pre><code>{{ displayContentHTML || 'Chưa có nội dung HTML' }}</code></pre>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN: Metadata & Sidebar -->
+    <div class="detail-sidebar-col">
+
+      <!-- Metadata Card -->
+      <div class="form-card">
+        <h2 class="card-section-title">Thông tin hệ thống</h2>
+
+        <div class="meta-item">
+          <span class="meta-label">Đường dẫn truy cập (Slug):</span>
+          <span class="meta-value font-mono text-primary">{{ page.slug }}</span>
+        </div>
+
+        <div class="meta-item">
+          <span class="meta-label">Trạng thái:</span>
+          <span class="meta-value">
+            <span class="status-badge" [class.badge-published]="page.isPublished"
+              [class.badge-draft]="!page.isPublished">
+              {{ page.status }}
+            </span>
+          </span>
+        </div>
+
+        <div class="meta-item">
+          <span class="meta-label">Ngày tạo:</span>
+          <span class="meta-value">{{ page.dateAdded ? (page.dateAdded | date:'dd/MM/yyyy HH:mm') : '—' }}</span>
+        </div>
+
+        <div class="meta-item">
+          <span class="meta-label">Cập nhật lần cuối:</span>
+          <span class="meta-value">{{ page.updatedAt ? (page.updatedAt | date:'dd/MM/yyyy HH:mm') : '—' }}</span>
+        </div>
+
+        <div class="meta-item">
+          <span class="meta-label">Mã MongoDB (_id):</span>
+          <span class="meta-value font-mono text-muted">{{ page.id }}</span>
+        </div>
+      </div>
+
+      <!-- SEO Meta Card -->
+      <div class="form-card">
+        <h2 class="card-section-title">Mô tả SEO (Meta Description)</h2>
+        <p class="meta-desc-text">
+          {{ displayMetaDescription || 'Chưa thiết lập mô tả tóm tắt cho chính sách này.' }}
+        </p>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

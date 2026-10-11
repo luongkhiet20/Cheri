@@ -1,7 +1,7 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, isValidObjectId, Types } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
 import {
   BadRequestException,
@@ -207,6 +207,15 @@ export class AuthService {
 
     const resolvedName = (fullName || name || cleanEmail.split('@')[0] || 'User').trim();
     const cleanDateOfBirth = dateOfBirth ? String(dateOfBirth).trim() : '';
+    if (cleanDateOfBirth) {
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (cleanDateOfBirth > todayStr) {
+        throw new BadRequestException('Ngày sinh không hợp lệ: Không được chọn ngày trong tương lai');
+      }
+      if (cleanDateOfBirth < '1900-01-01') {
+        throw new BadRequestException('Ngày sinh không hợp lệ: Ngày sinh không được nhỏ hơn 01/01/1900');
+      }
+    }
 
     const resolvedRoles = Array.isArray(roles) && roles.length
       ? roles
@@ -263,7 +272,17 @@ export class AuthService {
       dataToUpdate.fullName = dataToUpdate.name;
     }
     if (dataToUpdate.dateOfBirth !== undefined) {
-      dataToUpdate.dateOfBirth = dataToUpdate.dateOfBirth ? String(dataToUpdate.dateOfBirth).trim() : '';
+      const cleanDob = dataToUpdate.dateOfBirth ? String(dataToUpdate.dateOfBirth).trim() : '';
+      if (cleanDob) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (cleanDob > todayStr) {
+          throw new BadRequestException('Ngày sinh không hợp lệ: Không được chọn ngày trong tương lai');
+        }
+        if (cleanDob < '1900-01-01') {
+          throw new BadRequestException('Ngày sinh không hợp lệ: Ngày sinh không được nhỏ hơn 01/01/1900');
+        }
+      }
+      dataToUpdate.dateOfBirth = cleanDob;
     }
     if (dataToUpdate.password && dataToUpdate.password.trim()) {
       const salt = await bcrypt.genSalt();
@@ -287,6 +306,48 @@ export class AuthService {
 
   async deleteUser(id: string): Promise<any> {
     return this.userModel.findByIdAndDelete(id).exec();
+  }
+
+  async getUserById(id: string): Promise<any> {
+    return this.userModel.findById(id).exec();
+  }
+
+  async bulkDeleteUsers(ids: string[]): Promise<any> {
+    return this.userModel.deleteMany({ _id: { $in: ids } }).exec();
+  }
+
+  async getUserOrders(userId: string): Promise<any[]> {
+    const user = await this.userModel.findById(userId).lean();
+    if (!user) {
+      throw new NotFoundException('Không tìm thấy người dùng');
+    }
+
+    const conditions: any[] = [];
+    if (isValidObjectId(userId)) {
+      const objId = new Types.ObjectId(userId);
+      conditions.push({ _user: objId }, { userId: objId });
+    }
+    conditions.push({ _user: userId }, { userId });
+
+    if (user.email) {
+      conditions.push({ customerEmail: user.email }, { 'customer.email': user.email });
+    }
+
+    const orders = await this.userModel.db
+      .collection('orders')
+      .find({ $or: conditions })
+      .sort({ createdAt: -1, dateAdded: -1 })
+      .toArray();
+
+    return orders.map((o: any) => ({
+      ...o,
+      id: o._id?.toString() || o.id,
+      code: o.orderId || ('#' + String(o._id).slice(-6).toUpperCase()),
+      totalAmount: o.totalAmount ?? o.amount ?? o.subtotal ?? o.total ?? 0,
+      payment: o.paymentMethodSnapshot?.name || o.payment?.provider || o.payment?.method || o.type || 'COD',
+      status: o.status,
+      createdAt: o.createdAt || o.dateAdded,
+    }));
   }
 
   async uploadAvatar(user: User, file: any): Promise<any> {

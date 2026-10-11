@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
+import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 interface PaymentMethodFormData {
   name: string;
@@ -42,9 +43,13 @@ export class PaymentMethodFormComponent implements OnInit {
   imageError = '';
   selectedFileName = '';
 
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Phương thức thanh toán', url: '/admin/payment-methods' },
+    { label: 'Thêm phương thức' }
+  ];
+
   errors: Record<string, string> = {};
   errorMessage = '';
-  successMessage = '';
 
   readonly PAYMENT_TYPES: string[] = [
     'Online',
@@ -65,6 +70,11 @@ export class PaymentMethodFormComponent implements OnInit {
   ngOnInit(): void {
     this.methodId = this.route.snapshot.paramMap.get('id');
     this.isEditMode = !!this.methodId;
+
+    this.breadcrumbItems = [
+      { label: 'Phương thức thanh toán', url: '/admin/payment-methods' },
+      { label: this.isEditMode ? 'Chỉnh sửa phương thức' : 'Thêm phương thức' }
+    ];
 
     if (this.isEditMode) {
       if (!this.methodId || this.methodId.trim() === '') {
@@ -96,6 +106,10 @@ export class PaymentMethodFormComponent implements OnInit {
           };
           this.imagePreviewUrl = proofImg || null;
           this.imageUrlInput = proofImg || '';
+          this.breadcrumbItems = [
+            { label: 'Phương thức thanh toán', url: '/admin/payment-methods' },
+            { label: this.formData.name ? ('Chỉnh sửa: ' + this.formData.name) : 'Chỉnh sửa phương thức' }
+          ];
         } else {
           this.errorMessage = res.message || 'Không tìm thấy phương thức thanh toán';
         }
@@ -306,7 +320,6 @@ export class PaymentMethodFormComponent implements OnInit {
 
     this.isSubmitting = true;
     this.errorMessage = '';
-    this.successMessage = '';
 
     const payload = {
       name: this.formData.name.trim(),
@@ -324,7 +337,6 @@ export class PaymentMethodFormComponent implements OnInit {
         next: (res) => {
           this.isSubmitting = false;
           if (res.success) {
-            this.successMessage = 'Cập nhật phương thức thanh toán thành công';
             this.notificationService.success('Cập nhật phương thức thanh toán thành công');
             this.cdr.markForCheck();
             setTimeout(() => {
@@ -350,7 +362,6 @@ export class PaymentMethodFormComponent implements OnInit {
         next: (res) => {
           this.isSubmitting = false;
           if (res.success) {
-            this.successMessage = 'Thêm phương thức thanh toán thành công';
             this.notificationService.success('Thêm phương thức thanh toán thành công');
             this.cdr.markForCheck();
             setTimeout(() => {

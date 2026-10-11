@@ -9,6 +9,7 @@ import { SignalStore } from '../../../store/signal.store';
 import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
 import { Product } from '../../shared/models';
 import { WishlistService } from '../../../services/wishlist.service';
+import { CartToastService } from '../../../services/cart-toast.service';
 import { WishlistButtonComponent } from '../../shared/wishlist-button/wishlist-button.component';
 
 @Component({
@@ -36,6 +37,7 @@ export class Wishlist implements OnInit, OnDestroy {
     private selectors: SignalStoreSelectors,
     private router: Router,
     private snackBar: MatSnackBar,
+    private cartToast: CartToastService,
     private cdr: ChangeDetectorRef,
     private wishlistService: WishlistService
   ) {
@@ -189,14 +191,7 @@ export class Wishlist implements OnInit, OnDestroy {
       return;
     }
     this.store.addToCart('?id=' + id);
-    const snackBarRef = this.snackBar.open('Đã thêm vào giỏ hàng', 'Xem giỏ hàng', {
-      duration: 3000,
-      horizontalPosition: 'center',
-      verticalPosition: 'bottom'
-    });
-    snackBarRef.onAction().pipe(take(1)).subscribe(() => {
-      this.router.navigate(['/' + this.currentLang + '/cart']);
-    });
+    this.cartToast.show();
   }
 
   showToast(message: string, type: 'info' | 'success' | 'error' = 'info'): void {

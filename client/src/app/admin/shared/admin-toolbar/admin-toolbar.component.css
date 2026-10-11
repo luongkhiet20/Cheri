@@ -3,7 +3,7 @@
   align-items: center;
   gap: var(--space-sm);
   flex-wrap: wrap;
-  padding: var(--space-md) var(--space-lg);
+  padding: 12px var(--space-lg, 24px);
   background: var(--cheri-white);
   border: 1px solid var(--cheri-border);
   border-radius: var(--radius-xl);

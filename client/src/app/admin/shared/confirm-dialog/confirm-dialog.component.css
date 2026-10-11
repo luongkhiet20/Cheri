@@ -1,7 +1,7 @@
 .dialog-overlay {
   position: fixed; inset: 0;
   background: rgba(0,0,0,0.45);
-  z-index: 500;
+  z-index: 1050;
   display: flex; align-items: center; justify-content: center;
   padding: var(--space-md);
   animation: overlayFadeIn 0.15s ease;
@@ -55,3 +55,15 @@
   background-color: #8B1A14 !important;
   border-color: #8B1A14 !important;
 }
+
+/* Warning variant override */
+.btn-warning-solid {
+  background-color: #D97706 !important;
+  border-color: #D97706 !important;
+  color: white !important;
+}
+.btn-warning-solid:hover {
+  background-color: #B45309 !important;
+  border-color: #B45309 !important;
+}
+

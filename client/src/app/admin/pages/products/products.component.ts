@@ -3,6 +3,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent, BadgeVariant } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
 import { NotificationService } from '../../shared/notification/notification.service';
+import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 @Component({
   selector: 'app-products',
@@ -11,6 +12,9 @@ import { NotificationService } from '../../shared/notification/notification.serv
   styleUrls: ['./products.component.css']
 })
 export class ProductsComponent implements OnInit {
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Quản lý sản phẩm' }
+  ];
 
   // ── Table Configuration ──────────────────────────────────────
   columns: TableColumn[] = [
@@ -60,7 +64,6 @@ export class ProductsComponent implements OnInit {
   pagination: PaginationConfig = { page: 1, pageSize: 20, total: 0 };
   isLoading = false;
   errorMessage = '';
-  successMessage = '';
 
   // Search & Filter state
   searchQuery = '';
@@ -95,10 +98,16 @@ export class ProductsComponent implements OnInit {
 
   // ── Confirm Dialog State ─────────────────────────────────────
   confirmOpen = false;
+  confirmTitle = 'Xác nhận';
   confirmMessage = '';
+  confirmLabel = 'Xác nhận';
+  confirmVariant: 'danger' | 'warning' | 'default' = 'danger';
+  confirmActionType: 'delete' | 'toggle_on' | null = null;
+  pendingRow: any = null;
   pendingDeleteId: string | null = null;
   pendingDeleteName: string = '';
   isBulkDelete = false;
+  isProcessing = false;
 
   constructor(
     private apiService: AdminService,
@@ -117,9 +126,30 @@ export class ProductsComponent implements OnInit {
         this.filteredCategoryId = newCatId;
         this.pagination.page = 1;
       }
+      if (params['status']) {
+        const s = String(params['status']).trim();
+        this.selectedStatus = s;
+        const statusField = this.filterFields.find(f => f.key === 'status');
+        if (statusField) statusField.value = s;
+      }
+      this.updateBreadcrumbs();
       this.loadProducts();
     });
     this.loadCategoriesForFilter();
+  }
+
+  updateBreadcrumbs(): void {
+    if (this.filteredCategoryId && this.filteredCategoryName) {
+      this.breadcrumbItems = [
+        { label: 'Quản lý danh mục', url: '/admin/categories' },
+        { label: this.filteredCategoryName },
+        { label: 'Sản phẩm' }
+      ];
+    } else {
+      this.breadcrumbItems = [
+        { label: 'Quản lý sản phẩm' }
+      ];
+    }
   }
 
   clearCategoryFilter(): void {
@@ -127,6 +157,7 @@ export class ProductsComponent implements OnInit {
     this.filteredCategoryName = '';
     this.filteredCategorySlug = '';
     this.categoryNotFound = false;
+    this.updateBreadcrumbs();
     this.router.navigate(['/admin/products'], {
       queryParams: { categoryId: null, category: null },
       queryParamsHandling: 'merge'
@@ -258,7 +289,12 @@ export class ProductsComponent implements OnInit {
     if (count === 0) return;
     this.isBulkDelete = true;
     this.pendingDeleteId = null;
+    this.pendingRow = null;
+    this.confirmActionType = 'delete';
+    this.confirmTitle = 'Xác nhận xóa sản phẩm';
     this.confirmMessage = `Bạn có chắc chắn muốn xóa ${count} sản phẩm đã chọn khỏi không? Hành động này không thể hoàn tác.`;
+    this.confirmLabel = 'Xóa';
+    this.confirmVariant = 'danger';
     this.confirmOpen = true;
     this.cdr.markForCheck();
   }
@@ -277,27 +313,50 @@ export class ProductsComponent implements OnInit {
         break;
 
       case 'toggle':
-        this.onToggleStatus(event.row);
+      case 'toggle_on':
+      case 'toggle_off':
+        const targetActive = event.action === 'toggle_on' ? true : (event.action === 'toggle_off' ? false : !this.isProductActive(event.row));
+        if (targetActive) {
+          // BẬT SẢN PHẨM: Mở popup modal xác nhận giữa màn hình
+          this.pendingRow = event.row;
+          this.confirmActionType = 'toggle_on';
+          this.confirmTitle = 'Bật sản phẩm';
+          const productName = event.row.name || event.row.title || 'này';
+          this.confirmMessage = `Bạn có muốn bật sản phẩm "${productName}" để sản phẩm có thể hiển thị trên cửa hàng không?`;
+          this.confirmLabel = 'Bật sản phẩm';
+          this.confirmVariant = 'default';
+          this.confirmOpen = true;
+          this.cdr.markForCheck();
+        } else {
+          // TẮT SẢN PHẨM: Giữ nguyên logic tắt sản phẩm hiện tại
+          this.onToggleStatus(event.row, false);
+        }
         break;
 
       case 'delete':
         this.isBulkDelete = false;
+        this.pendingRow = null;
         this.pendingDeleteId = event.row.id;
         this.pendingDeleteName = event.row.name || '';
+        this.confirmActionType = 'delete';
+        this.confirmTitle = 'Xác nhận xóa sản phẩm';
         this.confirmMessage = `Bạn có chắc chắn muốn xóa sản phẩm "${this.pendingDeleteName}" không?`;
+        this.confirmLabel = 'Xóa';
+        this.confirmVariant = 'danger';
         this.confirmOpen = true;
         this.cdr.markForCheck();
         break;
     }
   }
 
-  onToggleStatus(row: any): void {
-    if (!row) return;
+  onToggleStatus(row: any, forceActive?: boolean): void {
+    if (!row || this.isProcessing) return;
 
     const productId = row.id || row._id;
     if (!productId) return;
 
-    const targetActive = !this.isProductActive(row);
+    const targetActive = forceActive !== undefined ? forceActive : !this.isProductActive(row);
+    this.isProcessing = true;
     const raw = row.raw || {};
     const rawVi = raw.vi || {};
 
@@ -315,6 +374,7 @@ export class ProductsComponent implements OnInit {
 
     this.apiService.updateProduct(productId, payload).subscribe({
       next: (res) => {
+        this.isProcessing = false;
         if (res && res.success) {
           const newStatus = targetActive ? 'Hiện' : 'Ẩn';
           const newStatusVariant: BadgeVariant = targetActive ? 'success' : 'neutral';
@@ -352,6 +412,7 @@ export class ProductsComponent implements OnInit {
         }
       },
       error: (err) => {
+        this.isProcessing = false;
         console.error('Lỗi khi cập nhật trạng thái sản phẩm:', err);
         const errMsg = err?.error?.message || err?.message || 'Lỗi khi cập nhật trạng thái sản phẩm.';
         this.showError(errMsg);
@@ -359,49 +420,98 @@ export class ProductsComponent implements OnInit {
     });
   }
 
+  onConfirmDialog(): void {
+    if (this.isProcessing) return;
+
+    if (this.confirmActionType === 'toggle_on' && this.pendingRow) {
+      const row = this.pendingRow;
+      this.confirmOpen = false;
+      this.pendingRow = null;
+      this.confirmActionType = null;
+      this.onToggleStatus(row, true);
+      return;
+    }
+
+    if (this.confirmActionType === 'delete' || this.isBulkDelete || this.pendingDeleteId) {
+      this.onConfirmDelete();
+      return;
+    }
+
+    this.confirmOpen = false;
+    this.cdr.markForCheck();
+  }
+
+  onCancelDialog(): void {
+    this.confirmOpen = false;
+    this.pendingRow = null;
+    this.confirmActionType = null;
+    this.pendingDeleteId = null;
+    this.pendingDeleteName = '';
+    this.isBulkDelete = false;
+    this.isProcessing = false;
+    this.cdr.markForCheck();
+  }
+
   onConfirmDelete(): void {
+    if (this.isProcessing) return;
+    this.isProcessing = true;
+
     if (this.isBulkDelete) {
       const idsToDelete = Array.from(this.selectedIds);
       this.apiService.bulkDeleteProducts(idsToDelete).subscribe({
         next: (res) => {
+          this.isProcessing = false;
           this.confirmOpen = false;
+          this.confirmActionType = null;
           this.pendingDeleteId = null;
+          this.isBulkDelete = false;
           this.showSuccess(res.message || `Đã xóa ${idsToDelete.length} sản phẩm thành công`);
           this.loadProducts();
         },
         error: (err) => {
+          this.isProcessing = false;
           this.confirmOpen = false;
+          this.confirmActionType = null;
+          this.isBulkDelete = false;
           this.showError('Lỗi xóa sản phẩm: ' + (err.error?.message || err.message));
           this.cdr.markForCheck();
         }
       });
     } else if (this.pendingDeleteId) {
-      this.apiService.deleteProduct(this.pendingDeleteId).subscribe({
+      const id = this.pendingDeleteId;
+      const name = this.pendingDeleteName;
+      this.apiService.deleteProduct(id).subscribe({
         next: (res) => {
+          this.isProcessing = false;
           this.confirmOpen = false;
-          const deletedId = this.pendingDeleteId;
+          this.confirmActionType = null;
           this.pendingDeleteId = null;
-          this.showSuccess(`Đã xóa sản phẩm "${this.pendingDeleteName}" thành công khỏi MongoDB!`);
+          this.pendingDeleteName = '';
+          this.showSuccess(`Đã xóa sản phẩm "${name}" thành công khỏi MongoDB!`);
           this.loadProducts();
         },
         error: (err) => {
+          this.isProcessing = false;
           this.confirmOpen = false;
+          this.confirmActionType = null;
+          this.pendingDeleteId = null;
+          this.pendingDeleteName = '';
           this.showError('Lỗi xóa sản phẩm: ' + (err.error?.message || err.message));
           this.cdr.markForCheck();
         }
       });
+    } else {
+      this.isProcessing = false;
+      this.confirmOpen = false;
+      this.confirmActionType = null;
     }
   }
 
   onCancelDelete(): void {
-    this.confirmOpen = false;
-    this.pendingDeleteId = null;
-    this.pendingDeleteName = '';
-    this.cdr.markForCheck();
+    this.onCancelDialog();
   }
 
   showSuccess(msg: string): void {
-    this.successMessage = msg;
     this.notificationService.success(msg);
     this.cdr.markForCheck();
   }

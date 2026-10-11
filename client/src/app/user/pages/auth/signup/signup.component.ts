@@ -1,13 +1,12 @@
 import { take, switchMap, map } from 'rxjs/operators';
-import { ChangeDetectionStrategy, Component, Inject, PLATFORM_ID } from '@angular/core';
-import { Router } from '@angular/router';
-import { Observable, of } from 'rxjs';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Inject, OnDestroy, PLATFORM_ID } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
+import { Observable, of, Subscription } from 'rxjs';
 import { AbstractControl, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 
 import { TranslateService } from '../../../../services/translate.service';
 import { TranslatePipe } from '../../../../pipes/translate.pipe';
-import { RouterLink } from '@angular/router';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { SignalStore } from '../../../../store/signal.store';
@@ -22,10 +21,12 @@ import { accessTokenKey } from '../../../shared/constants';
   imports: [CommonModule, TranslatePipe, RouterLink, MatInputModule, FormsModule, ReactiveFormsModule, MatSnackBarModule],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class SignUpComponent {
+export class SignUpComponent implements OnDestroy {
 
   signUpForm: FormGroup;
   lang$: Observable<string>;
+  lang = 'vi';
+  private langSub?: Subscription;
 
   showRegPassword = false;
 
@@ -37,9 +38,15 @@ export class SignUpComponent {
     private apiService: ApiService,
     private snackBar: MatSnackBar,
     private router: Router,
+    private cdr: ChangeDetectorRef,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
     this.lang$ = this.translate.getLang$();
+    this.lang = this.translate.lang || 'vi';
+    this.langSub = this.translate.getLang$().subscribe(lang => {
+      this.lang = lang || 'vi';
+      this.cdr.markForCheck();
+    });
 
     this.signUpForm = this._fb.group({
       email: ['', [Validators.required, Validators.email, this.gmailValidator]],
@@ -48,6 +55,10 @@ export class SignUpComponent {
       confirmPassword: [''],
       agreeTerms: [false, Validators.requiredTrue]
     }, { validators: this.passwordsMatchValidator });
+  }
+
+  ngOnDestroy(): void {
+    this.langSub?.unsubscribe();
   }
 
   gmailValidator(control: AbstractControl): ValidationErrors | null {

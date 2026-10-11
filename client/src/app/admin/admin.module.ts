@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Routes } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { DragDropModule } from '@angular/cdk/drag-drop';
 
 // Layout
 import { AdminLayout } from './layout/admin-layout/admin-layout';
@@ -21,6 +22,7 @@ import { ConfirmDialogComponent } from './shared/confirm-dialog/confirm-dialog.c
 import { LoadingStateComponent } from './shared/loading-state/loading-state.component';
 import { EmptyStateComponent } from './shared/empty-state/empty-state.component';
 import { NotificationComponent } from './shared/notification/notification.component';
+import { NotificationPopupComponent } from './shared/notification-popup/notification-popup.component';
 import { AdminBreadcrumbComponent } from './shared/admin-breadcrumb/admin-breadcrumb.component';
 
 // Pages
@@ -46,11 +48,17 @@ import { UsersDetailComponent } from './pages/users/users-detail/users-detail.co
 import { InventoryComponent } from './pages/inventory/inventory.component';
 import { InventoryDetailComponent } from './pages/inventory/inventory-detail/inventory-detail.component';
 import { InventoryImportComponent } from './pages/inventory/inventory-import/inventory-import.component';
-import { PagesComponent } from './pages/pages/pages.component';
-import { PageFormComponent } from './pages/pages/page-form/page-form.component';
-import { PageDetailComponent } from './pages/pages/page-detail/page-detail.component';
+import { PoliciesComponent } from './pages/pages/policies/policies.component';
+import { PolicyFormComponent } from './pages/pages/policies/policy-form/policy-form.component';
+import { PolicyEditComponent } from './pages/pages/policies/policy-edit/policy-edit.component';
+import { HomeComponent } from './pages/pages/home-about/home/home.component';
+import { AboutComponent } from './pages/pages/home-about/about/about.component';
+import { createAdminPagesRoutes } from './pages/pages/pages.routes';
 import { AccountComponent } from './pages/account/account.component';
 import { SettingsComponent } from './pages/settings/settings.component';
+import { CouponsComponent } from './pages/coupons/coupons.component';
+import { CouponFormComponent } from './pages/coupons/coupon-form/coupon-form.component';
+import { CouponDetailComponent } from './pages/coupons/coupon-detail/coupon-detail.component';
 
 const routes: Routes = [
   {
@@ -70,6 +78,14 @@ const routes: Routes = [
       { path: 'orders/add', component: OrderFormComponent },
       { path: 'orders/:id/edit', component: OrderFormComponent },
       { path: 'orders/:id', component: OrderDetailComponent },
+      { path: 'pages/coupons', component: CouponsComponent },
+      { path: 'pages/coupons/new', component: CouponFormComponent },
+      { path: 'pages/coupons/:id', component: CouponDetailComponent },
+      { path: 'pages/coupons/:id/edit', component: CouponFormComponent },
+      { path: 'coupons', redirectTo: 'pages/coupons', pathMatch: 'full' },
+      { path: 'coupons/new', redirectTo: 'pages/coupons/new', pathMatch: 'full' },
+      { path: 'coupons/:id', redirectTo: 'pages/coupons/:id', pathMatch: 'full' },
+      { path: 'coupons/:id/edit', redirectTo: 'pages/coupons/:id/edit', pathMatch: 'full' },
       { path: 'payment-methods', component: PaymentMethodsComponent },
       { path: 'payment-methods/add', component: PaymentMethodFormComponent },
       { path: 'payment-methods/:id', component: PaymentMethodDetailComponent },
@@ -86,10 +102,13 @@ const routes: Routes = [
       { path: 'inventory/import', component: InventoryImportComponent },
       { path: 'inventory/:id', component: InventoryDetailComponent },
       { path: 'inventory/:id/edit', component: InventoryImportComponent },
-      { path: 'pages', component: PagesComponent },
-      { path: 'pages/add', component: PageFormComponent },
-      { path: 'pages/:id', component: PageDetailComponent },
-      { path: 'pages/:id/edit', component: PageFormComponent },
+      ...createAdminPagesRoutes({
+        home: HomeComponent,
+        about: AboutComponent,
+        policies: PoliciesComponent,
+        policyForm: PolicyFormComponent,
+        policyEdit: PolicyEditComponent
+      }),
       { path: 'account', component: AccountComponent },
       { path: 'settings', component: SettingsComponent },
     ]
@@ -115,6 +134,7 @@ const routes: Routes = [
     LoadingStateComponent,
     EmptyStateComponent,
     NotificationComponent,
+    NotificationPopupComponent,
     AdminBreadcrumbComponent,
     // Pages
     DashboardComponent,
@@ -127,6 +147,9 @@ const routes: Routes = [
     OrdersComponent,
     OrderFormComponent,
     OrderDetailComponent,
+    CouponsComponent,
+    CouponFormComponent,
+    CouponDetailComponent,
     PaymentMethodsComponent,
     PaymentMethodFormComponent,
     PaymentMethodDetailComponent,
@@ -139,9 +162,11 @@ const routes: Routes = [
     InventoryComponent,
     InventoryDetailComponent,
     InventoryImportComponent,
-    PagesComponent,
-    PageFormComponent,
-    PageDetailComponent,
+    PoliciesComponent,
+    PolicyFormComponent,
+    PolicyEditComponent,
+    HomeComponent,
+    AboutComponent,
     AccountComponent,
     SettingsComponent,
   ],
@@ -149,10 +174,12 @@ const routes: Routes = [
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
+    DragDropModule,
     RouterModule.forChild(routes),
   ],
   exports: [
     AdminBreadcrumbComponent,
+    NotificationPopupComponent,
   ]
 })
 export class AdminModule { }

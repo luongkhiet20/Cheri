@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
+import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 export interface ProductVariantItem {
   id: string;
@@ -30,6 +31,10 @@ export interface ProductOption {
   styleUrls: ['./inventory-import.component.css']
 })
 export class InventoryImportComponent implements OnInit {
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Quản lý tồn kho', url: '/admin/inventory' },
+    { label: 'Nhập kho' }
+  ];
   isEditMode: boolean = false;
 
   products: ProductOption[] = [];
@@ -55,7 +60,6 @@ export class InventoryImportComponent implements OnInit {
 
   errors: Record<string, string> = {};
   errorMessage = '';
-  successMessage = '';
 
   get previewStock(): number | null {
     if (this.importQuantity === null || isNaN(this.importQuantity) || !Number.isInteger(Number(this.importQuantity))) {
@@ -87,6 +91,10 @@ export class InventoryImportComponent implements OnInit {
       const id = params.get('id');
       if (id) {
         this.isEditMode = true;
+        this.breadcrumbItems = [
+          { label: 'Quản lý tồn kho', url: '/admin/inventory' },
+          { label: 'Chỉnh sửa tồn kho' }
+        ];
         this.selectedProductId = id;
         this.fetchAndSelectProduct(id);
       }
@@ -182,6 +190,12 @@ export class InventoryImportComponent implements OnInit {
         };
 
         this.productSearchQuery = this.selectedProduct.name;
+        if (this.selectedProduct.name) {
+          this.breadcrumbItems = [
+            { label: 'Quản lý tồn kho', url: '/admin/inventory' },
+            { label: this.isEditMode ? `Chỉnh sửa: ${this.selectedProduct.name}` : `Nhập kho: ${this.selectedProduct.name}` }
+          ];
+        }
 
         if (!hasVariants) {
           this.sku = this.selectedProduct.sku;
@@ -428,7 +442,6 @@ export class InventoryImportComponent implements OnInit {
 
   onSubmit(): void {
     this.errorMessage = '';
-    this.successMessage = '';
 
     if (!this.validate()) {
       const orderedCandidates: string[] = ['product', 'variant', 'quantity'];
@@ -462,12 +475,12 @@ export class InventoryImportComponent implements OnInit {
             ? `biến thể SKU ${this.selectedVariant?.sku || ''}`
             : `sản phẩm ${this.selectedProduct?.name}`;
 
-          this.successMessage = res.message || (
+          const msg = res.message || (
             this.isEditMode
               ? `Đã cập nhật tồn kho ${targetName} thành công. Tồn kho mới: ${finalStock}.`
               : `Đã nhập thêm ${qty} vào ${targetName}. Tồn kho hiện tại: ${finalStock}.`
           );
-          this.notificationService.success(this.successMessage);
+          this.notificationService.success(msg);
           this.cdr.markForCheck();
           setTimeout(() => {
             this.router.navigate(['/admin/inventory']);

@@ -3,13 +3,7 @@
   <!-- Page Header -->
   <div class="page-top">
     <div>
-      <div *ngIf="filteredCategoryId && filteredCategoryName" class="category-breadcrumb">
-        <a routerLink="/admin/categories" class="category-breadcrumb-link">Quản lý danh mục</a>
-        <span class="category-breadcrumb-sep">/</span>
-        <span class="category-breadcrumb-current">{{ filteredCategoryName }}</span>
-        <span class="category-breadcrumb-sep">/</span>
-        <span class="category-breadcrumb-current">Sản phẩm</span>
-      </div>
+      <app-admin-breadcrumb [items]="breadcrumbItems"></app-admin-breadcrumb>
       <h1 class="page-title">
         {{ filteredCategoryId && filteredCategoryName ? ('Sản phẩm thuộc danh mục: ' + filteredCategoryName) : 'Quản lý sản phẩm' }}
       </h1>
@@ -87,16 +81,7 @@
     </div>
   </div>
 
-  <!-- Success & Error Alert Messages -->
-  <div *ngIf="successMessage" class="alert-box alert-success">
-    <div class="alert-icon">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <polyline points="20 6 9 17 4 12"></polyline>
-      </svg>
-    </div>
-    <div class="alert-content">{{ successMessage }}</div>
-  </div>
+  <!-- Error Alert Message -->
 
   <div *ngIf="errorMessage" class="alert-box alert-error">
     <div class="alert-icon">
@@ -124,7 +109,7 @@
   <app-empty-state *ngIf="!isLoading && (!data || data.length === 0)"
     [title]="filteredCategoryId ? ('Chưa có sản phẩm thuộc danh mục ' + (filteredCategoryName || 'này')) : 'Không tìm thấy sản phẩm nào'"
     [description]="filteredCategoryId ? 'Danh mục này hiện chưa có sản phẩm nào. Bạn có thể thêm sản phẩm mới hoặc xóa bộ lọc để xem tất cả sản phẩm.' : 'Không có sản phẩm nào khớp với điều kiện tìm kiếm hoặc cơ sở dữ liệu chưa có sản phẩm.'"
-    actionLabel="+ Thêm sản phẩm mới" (action)="onAddProduct()"></app-empty-state>
+    (action)="onAddProduct()"></app-empty-state>
 
   <!-- Data Table with row checkboxes -->
   <app-admin-table *ngIf="!isLoading && data && data.length > 0" [columns]="columns" [data]="data" [actions]="actions"
@@ -135,8 +120,15 @@
 </div>
 
 <!-- Confirm Dialog -->
-<app-confirm-dialog [isOpen]="confirmOpen" title="Xác nhận xóa sản phẩm" [message]="confirmMessage" confirmLabel="Xóa"
-  variant="danger" (confirmed)="onConfirmDelete()" (cancelled)="onCancelDelete()"></app-confirm-dialog>
+<app-confirm-dialog
+  [isOpen]="confirmOpen"
+  [title]="confirmTitle"
+  [message]="confirmMessage"
+  [confirmLabel]="confirmLabel"
+  [variant]="confirmVariant"
+  (confirmed)="onConfirmDialog()"
+  (cancelled)="onCancelDialog()">
+</app-confirm-dialog>
 
 <!-- Product CSV Import Modal -->
 <app-product-csv-modal [isOpen]="isCsvModalOpen" (closed)="isCsvModalOpen = false"

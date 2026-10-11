@@ -112,225 +112,384 @@ async function connectToMongo() {
 const LOW_STOCK_THRESHOLD = 5;
 
 const ORDER_STATUS_CONFIG = [
-  { code: 'PENDING', label: 'Chờ xác nhận', queryParam: 'Chờ xác nhận', variant: 'neutral' },
-  { code: 'CONFIRMED', label: 'Đã xác nhận', queryParam: 'Đã xác nhận', variant: 'primary' },
-  { code: 'PROCESSING', label: 'Đang xử lý', queryParam: 'Đang xử lý', variant: 'warning' },
-  { code: 'SHIPPING', label: 'Đang giao', queryParam: 'Đang giao', variant: 'primary' },
-  { code: 'DELIVERED', label: 'Đã giao', queryParam: 'Đã giao', variant: 'success' },
-  { code: 'CANCELLED', label: 'Đã hủy', queryParam: 'Đã hủy', variant: 'danger' },
-  { code: 'RETURNED', label: 'Đã hoàn trả', queryParam: 'Đã hoàn trả', variant: 'warning' }
+  { code: 'DELIVERED', label: 'Đã giao', key: 'delivered', queryParam: 'Đã giao', variant: 'success' },
+  { code: 'SHIPPING', label: 'Đang giao', key: 'shipping', queryParam: 'Đang giao', variant: 'primary' },
+  { code: 'PROCESSING', label: 'Đang xử lý', key: 'processing', queryParam: 'Đang xử lý', variant: 'warning' },
+  { code: 'PENDING', label: 'Chờ xác nhận', key: 'pending', queryParam: 'Chờ xác nhận', variant: 'neutral' },
+  { code: 'CANCELLED', label: 'Đã hủy', key: 'cancelled', queryParam: 'Đã hủy', variant: 'danger' },
+  { code: 'RETURNED', label: 'Đã hoàn trả', key: 'returned', queryParam: 'Đã hoàn trả', variant: 'neutral' },
 ];
 
-function getRevenueTimeline(orders, timeRange) {
-  const now = new Date();
-  let startDate = new Date(now);
-  let endDate = new Date(now);
+function normalizeOrderStatus(st) {
+  if (!st) return 'PENDING';
+  const upper = String(st).trim().toUpperCase();
+  if (upper === 'NEW') return 'PENDING';
+  if (upper === 'CONFIRMED') return 'PROCESSING';
+  if (upper === 'DELIVERY_FAILED') return 'RETURNED';
+  if (upper === 'COMPLETED') return 'DELIVERED';
+  if (upper === 'CANCELED') return 'CANCELLED';
+  if (upper === 'RETURN') return 'RETURNED';
+  return upper;
+}
+const normalizeStatus = normalizeOrderStatus;
 
-  if (timeRange === '30d') {
-    startDate.setDate(now.getDate() - 29);
-  } else if (timeRange === 'this_month') {
-    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-  } else if (timeRange === 'last_month') {
-    startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
-  } else {
-    // default: 7d
-    startDate.setDate(now.getDate() - 6);
+function getOrderTime(o) {
+  const d = o.createdAt || o.dateAdded;
+  if (d) {
+    const t = new Date(d).getTime();
+    if (!isNaN(t)) return t;
   }
-  startDate.setHours(0, 0, 0, 0);
-
-  const dailyMap = new Map();
-  const cur = new Date(startDate);
-  while (cur <= endDate) {
-    const key = `${String(cur.getDate()).padStart(2, '0')}/${String(cur.getMonth() + 1).padStart(2, '0')}`;
-    const keyFull = `${String(cur.getDate()).padStart(2, '0')}/${String(cur.getMonth() + 1).padStart(2, '0')}/${cur.getFullYear()}`;
-    dailyMap.set(key, { label: key, fullDate: keyFull, revenue: 0, ordersCount: 0 });
-    cur.setDate(cur.getDate() + 1);
+  if (o._id && typeof o._id.getTimestamp === 'function') {
+    return o._id.getTimestamp().getTime();
   }
+  return 0;
+}
 
-  for (const o of orders) {
-    const rawSt = (o.status || o.statusHistory?.[0]?.status || '').toUpperCase();
-    if (rawSt === 'DELIVERED') {
-      const oDate = new Date(o.dateAdded || o.createdAt || (o._id ? o._id.getTimestamp() : null));
-      if (!isNaN(oDate.getTime()) && oDate >= startDate && oDate <= endDate) {
-        const key = `${String(oDate.getDate()).padStart(2, '0')}/${String(oDate.getMonth() + 1).padStart(2, '0')}`;
-        const entry = dailyMap.get(key);
-        if (entry) {
-          const rev = Number(o.cart?.totalPrice !== undefined ? o.cart.totalPrice : (o.amount || 0));
-          entry.revenue += isNaN(rev) ? 0 : rev;
-          entry.ordersCount += 1;
-        }
-      }
-    }
-  }
+function getOrderAmount(o) {
+  const amt = Number(o.totalAmount !== undefined && o.totalAmount !== null ? o.totalAmount : (o.cart?.totalPrice !== undefined ? o.cart.totalPrice : (o.amount || 0)));
+  return isNaN(amt) ? 0 : amt;
+}
 
-  return Array.from(dailyMap.values());
+function isOrderRevenueEligible(o) {
+  const st = normalizeOrderStatus(o.status || o.statusHistory?.[0]?.status);
+  if (st === 'CANCELLED' || st === 'RETURNED' || st === 'DELIVERY_FAILED') return false;
+  const paySt = String(o.paymentStatus || o.payment?.status || '').toUpperCase();
+  return paySt === 'PAID' || st === 'DELIVERED' || paySt === 'COMPLETED';
 }
 
 const dashboardHandler = async (req, res) => {
   try {
+    const now = new Date();
     const timeRange = req.query.timeRange || '7d';
+    const startDateParam = req.query.startDate;
+    const endDateParam = req.query.endDate;
 
-    // 1. Concurrent queries to MongoDB Atlas for high performance & low latency
-    const [pingRes, orders, products, categoriesCount, users] = await Promise.all([
+    let periodStart;
+    let periodEnd;
+    let prevStart;
+    let prevEnd;
+    let days;
+
+    if (startDateParam && endDateParam) {
+      const s = new Date(startDateParam);
+      const e = new Date(endDateParam);
+      if (!isNaN(s.getTime()) && !isNaN(e.getTime()) && s <= e) {
+        periodStart = new Date(s);
+        periodStart.setHours(0, 0, 0, 0);
+        periodEnd = new Date(e);
+        periodEnd.setHours(23, 59, 59, 999);
+        days = Math.max(1, Math.ceil((periodEnd.getTime() - periodStart.getTime()) / 86400000) + 1);
+        prevEnd = new Date(periodStart.getTime() - 1);
+        prevStart = new Date(prevEnd.getTime() - (days - 1) * 86400000);
+        prevStart.setHours(0, 0, 0, 0);
+      }
+    }
+
+    if (!periodStart) {
+      if (timeRange === 'this_month') {
+        periodStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+        periodEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        const elapsed = now.getDate();
+        prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+        prevEnd = new Date(now.getFullYear(), now.getMonth() - 1, elapsed, 23, 59, 59, 999);
+        days = periodEnd.getDate();
+      } else if (timeRange === 'last_month') {
+        const lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        periodStart = new Date(lm.getFullYear(), lm.getMonth(), 1, 0, 0, 0, 0);
+        periodEnd = new Date(lm.getFullYear(), lm.getMonth() + 1, 0, 23, 59, 59, 999);
+        const pm = new Date(lm.getFullYear(), lm.getMonth() - 1, 1);
+        prevStart = new Date(pm.getFullYear(), pm.getMonth(), 1, 0, 0, 0, 0);
+        prevEnd = new Date(pm.getFullYear(), pm.getMonth() + 1, 0, 23, 59, 59, 999);
+        days = periodEnd.getDate();
+      } else if (timeRange === '30d') {
+        days = 30;
+        periodEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        periodStart = new Date(periodEnd.getTime() - (days - 1) * 86400000);
+        periodStart.setHours(0, 0, 0, 0);
+        prevEnd = new Date(periodStart.getTime() - 1);
+        prevStart = new Date(prevEnd.getTime() - (days - 1) * 86400000);
+        prevStart.setHours(0, 0, 0, 0);
+      } else if (timeRange === '15d') {
+        days = 15;
+        periodEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        periodStart = new Date(periodEnd.getTime() - (days - 1) * 86400000);
+        periodStart.setHours(0, 0, 0, 0);
+        prevEnd = new Date(periodStart.getTime() - 1);
+        prevStart = new Date(prevEnd.getTime() - (days - 1) * 86400000);
+        prevStart.setHours(0, 0, 0, 0);
+      } else {
+        // default 7d
+        days = 7;
+        periodEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        periodStart = new Date(periodEnd.getTime() - (days - 1) * 86400000);
+        periodStart.setHours(0, 0, 0, 0);
+        prevEnd = new Date(periodStart.getTime() - 1);
+        prevStart = new Date(prevEnd.getTime() - (days - 1) * 86400000);
+        prevStart.setHours(0, 0, 0, 0);
+      }
+    }
+
+    // Concurrent queries to MongoDB Atlas
+    const [pingRes, orders, products, categories, users] = await Promise.all([
       db.command({ ping: 1 }).then(() => 'Connected').catch((err) => {
         console.error('db.command ping failed:', err);
         return 'Disconnected';
       }),
-      db.collection('orders').find({}).sort({ dateAdded: -1, _id: -1 }).toArray(),
-      db.collection('products').find({}, {
-        projection: {
-          'vi.title': 1, 'vi.sku': 1, 'vi.quantity': 1, 'vi.stock': 1, 'vi.salePrice': 1, 'vi.regularPrice': 1, 'vi.categoryLevel1': 1,
-          title: 1, sku: 1, quantity: 1, variants: 1, mainImage: 1, images: 1, categoryLevel1: 1
-        }
-      }).toArray(),
-      db.collection('categories').countDocuments(),
-      db.collection('users').find({}, { projection: { createdAt: 1, dateAdded: 1 } }).toArray()
+      db.collection('orders').find({}).sort({ createdAt: -1, dateAdded: -1, _id: -1 }).toArray(),
+      db.collection('products').find({}).toArray(),
+      db.collection('categories').find({}).toArray(),
+      db.collection('users').find({}).toArray()
     ]);
 
     const mongoStatus = pingRes === 'Connected' ? 'Connected' : 'Disconnected';
     const mongoStatusText = pingRes === 'Connected' ? 'Đã kết nối thành công' : 'Mất kết nối MongoDB';
 
-    // Calculate Total Revenue (orders with status DELIVERED)
-    let totalRevenue = 0;
-    orders.forEach(o => {
-      const rawSt = (o.status || o.statusHistory?.[0]?.status || '').toUpperCase();
-      if (rawSt === 'DELIVERED') {
-        const p = Number(o.cart?.totalPrice !== undefined ? o.cart.totalPrice : (o.amount || 0));
-        if (!isNaN(p)) totalRevenue += p;
-      }
+    // Build category map (id/titleUrl -> title)
+    const categoryMap = new Map();
+    for (const c of categories) {
+      const title = c.vi?.title || c.title || c.titleUrl || 'Danh mục';
+      categoryMap.set(String(c._id), title);
+      if (c.titleUrl) categoryMap.set(c.titleUrl, title);
+    }
+
+    // Build user map for customer name lookup
+    const userMap = new Map();
+    for (const u of users) {
+      userMap.set(String(u._id), u.fullName || u.name || u.email);
+    }
+
+    // Filter period orders and previous period orders
+    const pStart = periodStart.getTime();
+    const pEnd = periodEnd.getTime();
+    const prevStartMs = prevStart.getTime();
+    const prevEndMs = prevEnd.getTime();
+
+    const periodOrders = orders.filter(o => {
+      const t = getOrderTime(o);
+      return t >= pStart && t <= pEnd;
     });
 
-    // 3. Orders by Status
+    const prevPeriodOrders = orders.filter(o => {
+      const t = getOrderTime(o);
+      return t >= prevStartMs && t <= prevEndMs;
+    });
+
+    const periodRevenue = periodOrders.filter(isOrderRevenueEligible).reduce((sum, o) => sum + getOrderAmount(o), 0);
+    const prevPeriodRevenue = prevPeriodOrders.filter(isOrderRevenueEligible).reduce((sum, o) => sum + getOrderAmount(o), 0);
+    const periodOrdersCount = periodOrders.length;
+    const prevPeriodOrdersCount = prevPeriodOrders.length;
+
+    // Timeline breakdown
+    const revenueTimeline = [];
+    const curDay = new Date(periodStart);
+    while (curDay <= periodEnd) {
+      const dStart = new Date(curDay.getFullYear(), curDay.getMonth(), curDay.getDate(), 0, 0, 0, 0).getTime();
+      const dEnd = new Date(curDay.getFullYear(), curDay.getMonth(), curDay.getDate(), 23, 59, 59, 999).getTime();
+
+      const dayOrders = orders.filter(o => {
+        const t = getOrderTime(o);
+        return t >= dStart && t <= dEnd;
+      });
+
+      const dayRevenue = dayOrders.filter(isOrderRevenueEligible).reduce((sum, o) => sum + getOrderAmount(o), 0);
+      const label = `${String(curDay.getDate()).padStart(2, '0')}/${String(curDay.getMonth() + 1).padStart(2, '0')}`;
+      const fullDate = `${label}/${curDay.getFullYear()}`;
+      const dateStr = `${curDay.getFullYear()}-${String(curDay.getMonth() + 1).padStart(2, '0')}-${String(curDay.getDate()).padStart(2, '0')}`;
+
+      revenueTimeline.push({
+        label,
+        date: dateStr,
+        fullDate,
+        revenue: dayRevenue,
+        ordersCount: dayOrders.length
+      });
+
+      curDay.setDate(curDay.getDate() + 1);
+    }
+
+    // Orders By Status (for periodOrders, and also overall counts)
     const statusCounts = {};
-    ORDER_STATUS_CONFIG.forEach(c => statusCounts[c.code] = 0);
-    orders.forEach(o => {
-      const rawSt = (o.status || o.statusHistory?.[0]?.status || '').toUpperCase();
-      if (statusCounts[rawSt] !== undefined) {
-        statusCounts[rawSt]++;
+    ORDER_STATUS_CONFIG.forEach(c => {
+      statusCounts[c.key] = 0;
+      statusCounts[c.code] = 0;
+    });
+
+    periodOrders.forEach(o => {
+      const norm = normalizeOrderStatus(o.status || o.statusHistory?.[0]?.status);
+      const cfg = ORDER_STATUS_CONFIG.find(c => c.code === norm);
+      if (cfg) {
+        statusCounts[cfg.key] = (statusCounts[cfg.key] || 0) + 1;
+        statusCounts[cfg.code] = (statusCounts[cfg.code] || 0) + 1;
       }
     });
 
-    const ordersByStatus = ORDER_STATUS_CONFIG.map(c => ({
+    const ordersByStatusList = ORDER_STATUS_CONFIG.map(c => ({
       code: c.code,
+      key: c.key,
       label: c.label,
       queryParam: c.queryParam,
-      count: statusCounts[c.code] || 0,
+      count: statusCounts[c.key] || 0,
       variant: c.variant
     }));
 
-    // 4. Revenue Timeline
-    const revenueTimeline = getRevenueTimeline(orders, timeRange);
+    // Customer Users calculation (Exclude Admin & staff)
+    const isCustomer = (u) => {
+      if (u.isAdmin === true) return false;
+      const roles = Array.isArray(u.roles) ? u.roles : (u.roles ? [u.roles] : (Array.isArray(u.role) ? u.role : (u.role ? [u.role] : [])));
+      const hasAdmin = roles.some(r => typeof r === 'string' && (r.toLowerCase() === 'admin' || r.toLowerCase() === 'super-admin'));
+      return !hasAdmin;
+    };
 
-    // 5. Top Selling Products (From orders.cart.items)
-    const topProductsMap = new Map();
-    orders.forEach(o => {
-      const items = o.cart?.items;
-      if (Array.isArray(items)) {
-        items.forEach(it => {
-          const pId = (it.id || it.item?._id || it.item?.id || '').toString();
-          const pName = it.item?.vi?.title || it.item?.title || it.name || 'Sản phẩm';
-          const pImg = it.item?.mainImage?.url || it.item?.image || (Array.isArray(it.item?.images) ? it.item.images[0] : '');
-          const pPrice = Number(it.price || it.item?.salePrice || it.item?.regularPrice || 0);
-          const qty = Number(it.qty || it.quantity || 1);
+    const customerUsers = users.filter(isCustomer);
+    const usersCount = customerUsers.length;
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000);
 
-          if (!topProductsMap.has(pId)) {
-            topProductsMap.set(pId, {
-              id: pId,
-              name: pName,
-              image: pImg,
-              price: pPrice,
-              totalSold: 0,
-              revenue: 0
-            });
-          }
-          const prod = topProductsMap.get(pId);
-          prod.totalSold += qty;
-          prod.revenue += qty * pPrice;
-        });
+    let new7Days = 0;
+    let new30Days = 0;
+    customerUsers.forEach(u => {
+      const d = u.createdAt || u.dateAdded;
+      if (d) {
+        const ud = new Date(d);
+        if (!isNaN(ud.getTime())) {
+          if (ud >= sevenDaysAgo) new7Days++;
+          if (ud >= thirtyDaysAgo) new30Days++;
+        }
       }
     });
 
-    const topSellingProducts = Array.from(topProductsMap.values())
-      .sort((a, b) => b.totalSold - a.totalSold)
-      .slice(0, 5);
-
-    // 6. Products, Low Stock and Out of Stock
-    const lowStockProducts = [];
+    // Inventory & Low Stock products
     let outOfStockCount = 0;
     let inStockCount = 0;
+    let totalStock = 0;
+    const lowStockProducts = [];
 
     products.forEach(p => {
       const vi = p.vi || {};
       let qty = 0;
       if (Array.isArray(p.variants) && p.variants.length > 0) {
-        qty = p.variants.reduce((acc, v) => acc + Number(v.stock || 0), 0);
-      } else if (vi.quantity !== undefined && !isNaN(Number(vi.quantity))) {
-        qty = Number(vi.quantity);
-      } else if (p.quantity !== undefined && !isNaN(Number(p.quantity))) {
-        qty = Number(p.quantity);
+        qty = p.variants.reduce((acc, v) => acc + (Number(v.stock) || 0), 0);
+      } else if (typeof p.quantity === 'number') {
+        qty = p.quantity;
+      } else if (typeof vi.quantity === 'number') {
+        qty = vi.quantity;
+      } else if (typeof p.stock === 'number') {
+        qty = p.stock;
+      } else if (typeof vi.stock === 'number') {
+        qty = vi.stock;
       }
 
-      if (qty === 0 || vi.stock === 'outOfStock') {
+      totalStock += qty;
+
+      if (qty === 0 || vi.stock === 'outOfStock' || p.stock === 'outOfStock') {
         outOfStockCount++;
       } else {
         inStockCount++;
-        if (qty <= LOW_STOCK_THRESHOLD) {
-          lowStockProducts.push({
-            id: p._id.toString(),
-            name: vi.title || p.title || p.titleUrl || 'Sản phẩm',
-            sku: p.variants?.[0]?.sku || vi.sku || ('SP-' + p._id.toString().slice(-6).toUpperCase()),
-            stock: qty,
-            price: vi.salePrice || vi.regularPrice || p.regularPrice || 0,
-            image: p.mainImage?.url || (Array.isArray(p.images) ? p.images[0] : ''),
-            category: vi.categoryLevel1 || p.categoryLevel1 || 'Thời trang'
-          });
-        }
+      }
+
+      if (qty <= LOW_STOCK_THRESHOLD) {
+        const rawCat = vi.categoryLevel1 || p.categoryLevel1;
+        const catKey = Array.isArray(rawCat) ? rawCat[0] : rawCat;
+        const catName = categoryMap.get(String(catKey)) || (typeof catKey === 'string' && catKey.trim() ? catKey.trim() : 'Thời trang nữ');
+
+        lowStockProducts.push({
+          id: String(p._id),
+          name: vi.title || p.title || p.titleUrl || 'Sản phẩm',
+          sku: p.variants?.[0]?.sku || vi.sku || p.sku || ('SP-' + String(p._id).slice(-6).toUpperCase()),
+          stock: qty,
+          price: vi.salePrice || vi.regularPrice || p.regularPrice || 0,
+          image: p.mainImage?.url || (Array.isArray(p.images) ? p.images[0] : ''),
+          category: catName
+        });
       }
     });
 
     lowStockProducts.sort((a, b) => a.stock - b.stock);
     const topLowStock = lowStockProducts.slice(0, 5);
 
-    // 7. Users & New Customers
-    const now = new Date();
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    // Top Selling Products (calculated from eligible orders)
+    const productSalesMap = new Map();
+    for (const o of orders) {
+      if (!isOrderRevenueEligible(o)) continue;
+      const items = (Array.isArray(o.items) && o.items.length > 0) ? o.items : (Array.isArray(o.cart?.items) ? o.cart.items : []);
+      for (const it of items) {
+        const pId = String(it.productId || it.productSnapshot?.sku || it.id || it.item?._id || it.item?.id || 'item');
+        const name = it.name || it.productSnapshot?.name || it.productSnapshot?.title || it.item?.vi?.title || it.item?.title || 'Sản phẩm';
+        const image = it.image || it.productSnapshot?.image || it.item?.mainImage?.url || (Array.isArray(it.item?.images) ? it.item.images[0] : '');
+        const sku = it.sku || it.productSnapshot?.sku || it.item?.vi?.sku || it.item?.sku || '';
+        const qty = Number(it.quantity || it.qty || 1);
+        const price = Number(it.unitPrice || it.price || it.item?.salePrice || 0);
 
-    let new7Days = 0;
-    let new30Days = 0;
-    users.forEach(u => {
-      const uDate = u.createdAt ? new Date(u.createdAt) : (u.dateAdded ? new Date(u.dateAdded) : (u._id ? u._id.getTimestamp() : null));
-      if (uDate && !isNaN(uDate.getTime())) {
-        if (uDate >= sevenDaysAgo) new7Days++;
-        if (uDate >= thirtyDaysAgo) new30Days++;
+        const existing = productSalesMap.get(pId) || {
+          id: pId,
+          name,
+          title: name,
+          sku,
+          image,
+          totalSold: 0,
+          revenue: 0
+        };
+        existing.totalSold += qty;
+        existing.revenue += qty * price;
+        productSalesMap.set(pId, existing);
       }
-    });
+    }
 
-    // 8. Recent Orders
-    const recentOrders = orders.slice(0, 6).map(o => {
-      const address = o.addresses?.[0] || {};
-      const statusHistory = o.statusHistory || [];
-      const rawStatus = (o.status || statusHistory[0]?.status || '').toUpperCase();
-      const statusCfg = ORDER_STATUS_CONFIG.find(c => c.code === rawStatus)
-        || { label: rawStatus || '—', variant: 'neutral' };
-      const totalPrice = o.cart?.totalPrice !== undefined ? o.cart.totalPrice : (o.amount || 0);
+    const topSellingProducts = Array.from(productSalesMap.values())
+      .sort((a, b) => b.totalSold - a.totalSold)
+      .slice(0, 5);
+
+    // Recent Orders (5 latest orders)
+    const recentOrders = orders.slice(0, 5).map(o => {
+      let customerName = 'Khách hàng';
+      if (o.customer?.name && o.customer.name.trim()) {
+        customerName = o.customer.name.trim();
+      } else if (o.shippingAddress?.fullName && o.shippingAddress.fullName.trim()) {
+        customerName = o.shippingAddress.fullName.trim();
+      } else if (typeof o.shippingAddress?.address === 'string' && o.shippingAddress.name) {
+        customerName = o.shippingAddress.name.trim();
+      } else if (Array.isArray(o.addresses) && o.addresses[0]?.name) {
+        customerName = o.addresses[0].name.trim();
+      } else if (o.userId && userMap.has(String(o.userId))) {
+        customerName = userMap.get(String(o.userId));
+      } else if (o._user && userMap.has(String(o._user))) {
+        customerName = userMap.get(String(o._user));
+      } else if (o.customerName && typeof o.customerName === 'string') {
+        customerName = o.customerName;
+      }
+
+      const customerEmail = o.customerEmail || o.customer?.email || o.shippingAddress?.email || (Array.isArray(o.addresses) ? o.addresses[0]?.email : '') || '';
+      const rawStatus = normalizeStatus(o.status || o.statusHistory?.[0]?.status);
+      const statusCfg = ORDER_STATUS_CONFIG.find(c => c.code === rawStatus) || { label: rawStatus, variant: 'neutral' };
+      const totalAmount = getOrderAmount(o);
+      const createdAt = new Date(getOrderTime(o)).toISOString();
 
       return {
-        id: o._id.toString(),
-        _id: o._id.toString(),
-        code: o.orderId || ('#DH' + o._id.toString().slice(-6).toUpperCase()),
-        customer: address.name || o.customerEmail || 'Khách mua hàng',
-        customerEmail: o.customerEmail || address.email || '',
-        total: totalPrice,
+        _id: String(o._id),
+        id: String(o._id),
+        orderId: o.orderId || ('#DH' + String(o._id).slice(-6).toUpperCase()),
+        code: o.orderId || ('#DH' + String(o._id).slice(-6).toUpperCase()),
+        customerName,
+        customer: customerName,
+        customerEmail,
+        totalAmount,
+        total: totalAmount,
         status: statusCfg.label,
-        statusVariant: statusCfg.variant,
+        statusLabel: statusCfg.label,
         statusCode: rawStatus,
-        date: o.dateAdded || o.createdAt || new Date().toISOString()
+        statusVariant: statusCfg.variant,
+        createdAt,
+        date: createdAt
       };
     });
 
-    // 9. System Info
+    const inventory = {
+      totalStock,
+      inStockCount,
+      outOfStockCount,
+      lowStockCount: lowStockProducts.length
+    };
+
     const system = {
       database: 'cheri',
       cluster: 'cluster0.cbvni8r.mongodb.net',
@@ -339,7 +498,7 @@ const dashboardHandler = async (req, res) => {
       backend: 'Online',
       serverUrl: 'http://localhost:5000',
       productsInStock: inStockCount,
-      activeCategories: categoriesCount,
+      activeCategories: categories.length,
       totalOrders: orders.length,
       totalUsers: users.length,
       lastUpdated: new Date().toISOString()
@@ -348,22 +507,26 @@ const dashboardHandler = async (req, res) => {
     res.json({
       success: true,
       stats: {
-        totalRevenue,
-        ordersCount: orders.length,
+        totalRevenue: periodRevenue,
+        prevPeriodRevenue,
+        ordersCount: periodOrdersCount,
+        prevPeriodOrdersCount,
         productsCount: products.length,
-        usersCount: users.length,
-        categoriesCount,
+        categoriesCount: categories.length,
+        usersCount,
         outOfStockCount,
         lowStockCount: lowStockProducts.length,
         lowStockThreshold: LOW_STOCK_THRESHOLD,
         revenueTimeline,
         timeRange,
-        ordersByStatus,
+        ordersByStatus: statusCounts,
+        ordersByStatusList,
         topSellingProducts,
         lowStockProducts: topLowStock,
         recentOrders,
+        inventory,
         customers: {
-          total: users.length,
+          total: usersCount,
           new7Days,
           new30Days
         },
@@ -2371,7 +2534,6 @@ app.post('/api/categories/bulk-delete', async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 const VALID_ORDER_TRANSITIONS = {
   PENDING: ['PROCESSING', 'CANCELLED'],
-  CONFIRMED: [],
   PROCESSING: ['SHIPPING', 'CANCELLED'],
   SHIPPING: ['DELIVERED', 'CANCELLED'],
   DELIVERED: [], // final state
@@ -3189,6 +3351,386 @@ app.get('/api/orders', async (req, res) => {
   }
 });
 
+// 4.1b Helper: Đồng bộ thông báo hệ thống vào collection 'notification-popup' trong MongoDB
+async function syncAndFetchNotifications(database, recipientId = 'admin') {
+  const notifCol = database.collection('notification-popup');
+  const since = new Date();
+  since.setDate(since.getDate() - 30);
+
+  const [orders, products, users] = await Promise.all([
+    database.collection('orders').find({
+      $or: [
+        { createdAt: { $gte: since } },
+        { dateAdded: { $gte: since } }
+      ]
+    }).sort({ createdAt: -1 }).toArray(),
+    database.collection('products').find({}, {
+      projection: { title: 1, titleUrl: 1, stock: 1, dateAdded: 1, quantity: 1, updatedAt: 1 }
+    }).toArray(),
+    database.collection('users').find({
+      $or: [
+        { createdAt: { $gte: since } },
+        { dateAdded: { $gte: since } }
+      ]
+    }, {
+      projection: { email: 1, name: 1, fullName: 1, status: 1, createdAt: 1, dateAdded: 1 }
+    }).sort({ createdAt: -1 }).toArray()
+  ]);
+
+  const activeEvents = [];
+
+  // 1. Đơn hàng mới
+  const newOrders = orders.filter(o => o.status === 'PENDING' || o.status === 'NEW' || o.status === 'Pending');
+  if (newOrders.length) {
+    activeEvents.push({
+      id: 'orders-new',
+      type: 'order_new',
+      group: 'orders',
+      icon: 'new-order',
+      title: 'Có đơn hàng mới',
+      message: `${newOrders.length} đơn hàng mới chờ xử lý`,
+      count: newOrders.length,
+      level: 'info',
+      time: newOrders[0]?.createdAt || newOrders[0]?.dateAdded || new Date(),
+      targetUrl: '/admin/orders?status=PENDING',
+    });
+  }
+
+  // 2. Đơn đã xác nhận cần xuất kho
+  const confirmedOrders = orders.filter(o => o.status === 'CONFIRMED' || o.status === 'PROCESSING' || o.status === 'Confirmed' || o.status === 'Processing');
+  if (confirmedOrders.length) {
+    activeEvents.push({
+      id: 'orders-confirmed',
+      type: 'order_confirmed',
+      group: 'orders',
+      icon: 'confirmed',
+      title: 'Đơn đã xác nhận cần xuất kho',
+      message: `${confirmedOrders.length} đơn đã xác nhận và cần xuất kho`,
+      count: confirmedOrders.length,
+      level: 'info',
+      time: confirmedOrders[0]?.createdAt || confirmedOrders[0]?.dateAdded || new Date(),
+      targetUrl: '/admin/orders?status=CONFIRMED',
+    });
+  }
+
+  // 3. Đơn hàng đã thanh toán
+  const paidOrders = orders.filter(o => o.paymentStatus === 'PAID' || o.paymentStatus === 'Paid' || o.status === 'PAID');
+  if (paidOrders.length) {
+    activeEvents.push({
+      id: 'orders-paid',
+      type: 'order_paid',
+      group: 'orders',
+      icon: 'paid',
+      title: 'Đơn hàng được thanh toán',
+      message: `${paidOrders.length} đơn đã thanh toán thành công`,
+      count: paidOrders.length,
+      level: 'success',
+      time: paidOrders[0]?.createdAt || paidOrders[0]?.dateAdded || new Date(),
+      targetUrl: '/admin/orders?status=CONFIRMED',
+    });
+  }
+
+  // 4. Đơn hàng bị hủy
+  const canceledOrders = orders.filter(o => o.status === 'CANCELLED' || o.status === 'CANCELED' || o.status === 'Cancelled');
+  if (canceledOrders.length) {
+    activeEvents.push({
+      id: 'orders-canceled',
+      type: 'order_canceled',
+      group: 'orders',
+      icon: 'cancel',
+      title: 'Đơn hàng bị hủy',
+      message: `${canceledOrders.length} đơn hàng đã bị hủy`,
+      count: canceledOrders.length,
+      level: 'error',
+      time: canceledOrders[0]?.createdAt || canceledOrders[0]?.dateAdded || new Date(),
+      targetUrl: '/admin/orders?status=CANCELLED',
+    });
+  }
+
+  // 5. Đơn hàng yêu cầu đổi trả
+  const returnOrders = orders.filter(o => o.status === 'RETURNED' || o.type === 'RETURN' || (o.notes && /đổi|trả|refund|return/i.test(o.notes)));
+  if (returnOrders.length) {
+    activeEvents.push({
+      id: 'orders-return',
+      type: 'order_return',
+      group: 'orders',
+      icon: 'return',
+      title: 'Đơn hàng yêu cầu đổi/trả',
+      message: `${returnOrders.length} đơn yêu cầu đổi/trả`,
+      count: returnOrders.length,
+      level: 'warning',
+      time: returnOrders[0]?.createdAt || returnOrders[0]?.dateAdded || new Date(),
+      targetUrl: '/admin/orders?status=RETURNED',
+    });
+  }
+
+  // 6. Sản phẩm hết hàng
+  const outOfStock = products.filter(p => p.stock === 'outOfStock' || p.stock === 'out' || p.quantity === 0);
+  if (outOfStock.length) {
+    activeEvents.push({
+      id: 'stock-out',
+      type: 'stock_out',
+      group: 'products',
+      icon: 'out-of-stock',
+      title: 'Sản phẩm hết hàng',
+      message: `${outOfStock.length} sản phẩm đã hết hàng`,
+      count: outOfStock.length,
+      level: 'error',
+      items: outOfStock.slice(0, 3).map(p => p.title || p.titleUrl),
+      targetUrl: '/admin/products?status=out',
+      time: new Date(),
+    });
+  }
+
+  // 7. Sản phẩm sắp hết hàng
+  const lowStock = products.filter(p => p.stock === 'lowStock' || p.stock === 'low' || (typeof p.quantity === 'number' && p.quantity > 0 && p.quantity <= 5));
+  if (lowStock.length) {
+    activeEvents.push({
+      id: 'stock-low',
+      type: 'stock_low',
+      group: 'products',
+      icon: 'low-stock',
+      title: 'Sản phẩm sắp hết hàng',
+      message: `${lowStock.length} sản phẩm sắp hết hàng`,
+      count: lowStock.length,
+      level: 'warning',
+      items: lowStock.slice(0, 3).map(p => p.title || p.titleUrl),
+      targetUrl: '/admin/products?status=out',
+      time: new Date(),
+    });
+  }
+
+  // 8. Nhập kho thành công
+  const recentlyRestocked = products.filter(p => {
+    if (p.stock !== 'inStock' && p.stock !== 'in' && (!p.quantity || p.quantity <= 0)) return false;
+    const d = p.dateAdded || p.updatedAt;
+    return d && new Date(d) >= since;
+  });
+  if (recentlyRestocked.length) {
+    activeEvents.push({
+      id: 'stock-in',
+      type: 'stock_in',
+      group: 'products',
+      icon: 'restock',
+      title: 'Nhập kho thành công',
+      message: `${recentlyRestocked.length} sản phẩm được cập nhật vào kho`,
+      count: recentlyRestocked.length,
+      level: 'success',
+      targetUrl: '/admin/products',
+      time: new Date(),
+    });
+  }
+
+  // 9. Xuất kho thành công
+  const recentlyShipped = orders.filter(o => o.status === 'SHIPPING' || o.status === 'DELIVERED');
+  if (recentlyShipped.length) {
+    activeEvents.push({
+      id: 'stock-out-shipped',
+      type: 'stock_shipped',
+      group: 'products',
+      icon: 'shipped',
+      title: 'Xuất kho thành công',
+      message: `${recentlyShipped.length} đơn hàng đã xuất kho`,
+      count: recentlyShipped.length,
+      level: 'info',
+      targetUrl: '/admin/orders?status=SHIPPING',
+      time: recentlyShipped[0]?.createdAt || recentlyShipped[0]?.dateAdded || new Date(),
+    });
+  }
+
+  // 10. Người dùng mới đăng ký
+  const newUsers = users.filter(u => {
+    const d = u.createdAt || u.dateAdded;
+    return d && new Date(d) >= since;
+  });
+  if (newUsers.length) {
+    activeEvents.push({
+      id: 'users-new',
+      type: 'user_new',
+      group: 'users',
+      icon: 'new-user',
+      title: 'Người dùng mới đăng ký',
+      message: `${newUsers.length} tài khoản mới trong 30 ngày`,
+      count: newUsers.length,
+      level: 'info',
+      time: newUsers[0]?.createdAt || newUsers[0]?.dateAdded || new Date(),
+      targetUrl: '/admin/users',
+    });
+  }
+
+  // 11. Người dùng bị khóa
+  const lockedUsersCount = await database.collection('users').countDocuments({ status: false });
+  if (lockedUsersCount > 0) {
+    activeEvents.push({
+      id: 'users-locked',
+      type: 'user_locked',
+      group: 'users',
+      icon: 'locked-user',
+      title: 'Người dùng bị khóa/kích hoạt',
+      message: `${lockedUsersCount} tài khoản đang bị khóa`,
+      count: lockedUsersCount,
+      level: 'warning',
+      targetUrl: '/admin/users',
+      time: new Date(),
+    });
+  }
+
+  // Đồng bộ vào collection 'notification-popup' trong MongoDB
+  const existingDocs = await notifCol.find({ recipientId }).toArray();
+  const existingMap = new Map(existingDocs.map(d => [d.id, d]));
+
+  for (const event of activeEvents) {
+    const existing = existingMap.get(event.id);
+    if (existing) {
+      // Chỉ reset về chưa đọc khi số lượng sự kiện thực sự tăng lên (có sự kiện mới phát sinh)
+      const countIncreased = typeof event.count === 'number' && typeof existing.count === 'number'
+        ? event.count > existing.count
+        : (event.count !== existing.count && event.count > 0);
+
+      const updateDoc = {
+        title: event.title,
+        message: event.message,
+        count: event.count,
+        level: event.level,
+        icon: event.icon,
+        group: event.group,
+        type: event.type,
+        targetUrl: event.targetUrl,
+        items: event.items || [],
+        updatedAt: new Date(),
+      };
+
+      if (countIncreased) {
+        updateDoc.isRead = false;
+        updateDoc.readAt = null;
+        updateDoc.time = event.time || new Date();
+      } else {
+        updateDoc.time = existing.time || event.time || new Date();
+      }
+
+      await notifCol.updateOne({ _id: existing._id }, { $set: updateDoc });
+    } else {
+      // Tạo document mới
+      await notifCol.insertOne({
+        ...event,
+        items: event.items || [],
+        isRead: false,
+        readAt: null,
+        recipientId,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+    }
+  }
+
+  // Xóa các thông báo không còn tồn tại sự kiện
+  const activeIds = activeEvents.map(e => e.id);
+  if (activeIds.length > 0) {
+    await notifCol.deleteMany({ recipientId, id: { $nin: activeIds } });
+  } else {
+    await notifCol.deleteMany({ recipientId });
+  }
+
+  // Lấy danh sách thông báo từ MongoDB
+  return await notifCol.find({ recipientId }).sort({ createdAt: -1 }).toArray();
+}
+
+// 4.1b GET /api/orders/notifications (Lấy danh sách thông báo admin từ MongoDB notification-popup)
+app.get('/api/orders/notifications', async (req, res) => {
+  try {
+    const recipientId = req.query.recipientId || 'admin';
+    const notifications = await syncAndFetchNotifications(db, recipientId);
+    res.json(notifications);
+  } catch (error) {
+    console.error('Error in GET /api/orders/notifications:', error);
+    res.status(500).json({ success: false, message: 'Lỗi tải thông báo' });
+  }
+});
+
+// Alias GET /api/notifications
+app.get('/api/notifications', async (req, res) => {
+  try {
+    const recipientId = req.query.recipientId || 'admin';
+    const notifications = await syncAndFetchNotifications(db, recipientId);
+    res.json(notifications);
+  } catch (error) {
+    console.error('Error in GET /api/notifications:', error);
+    res.status(500).json({ success: false, message: 'Lỗi tải thông báo' });
+  }
+});
+
+// 4.1c GET /api/orders/notifications/unread-count (Đếm số thông báo chưa đọc từ MongoDB)
+app.get('/api/orders/notifications/unread-count', async (req, res) => {
+  try {
+    const recipientId = req.query.recipientId || 'admin';
+    const unreadCount = await db.collection('notification-popup').countDocuments({ recipientId, isRead: false });
+    res.json({ success: true, unreadCount });
+  } catch (error) {
+    console.error('Error in GET /api/orders/notifications/unread-count:', error);
+    res.status(500).json({ success: false, message: 'Lỗi đếm thông báo chưa đọc' });
+  }
+});
+
+// 4.1d POST & PATCH /api/orders/notifications/read-all (Đánh dấu tất cả thông báo đã đọc trong MongoDB)
+const handleReadAllNotifications = async (req, res) => {
+  try {
+    const recipientId = req.body?.recipientId || req.query?.recipientId || 'admin';
+    const result = await db.collection('notification-popup').updateMany(
+      { recipientId, isRead: false },
+      { $set: { isRead: true, readAt: new Date(), updatedAt: new Date() } }
+    );
+    res.json({
+      success: true,
+      message: 'Đã đánh dấu tất cả thông báo là đã đọc',
+      modifiedCount: result.modifiedCount
+    });
+  } catch (error) {
+    console.error('Error in read-all notifications:', error);
+    res.status(500).json({ success: false, message: 'Lỗi cập nhật tất cả thông báo' });
+  }
+};
+app.post('/api/orders/notifications/read-all', handleReadAllNotifications);
+app.patch('/api/orders/notifications/read-all', handleReadAllNotifications);
+
+// 4.1e POST & PATCH /api/orders/notifications/:id/read (Đánh dấu 1 thông báo đã đọc trong MongoDB)
+const handleMarkNotificationRead = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const recipientId = req.body?.recipientId || req.query?.recipientId || 'admin';
+
+    if (!id) {
+      return res.status(400).json({ success: false, message: 'Thiếu ID thông báo' });
+    }
+
+    const filter = { recipientId };
+    if (ObjectId.isValid(id) && String(new ObjectId(id)) === id) {
+      filter.$or = [{ _id: new ObjectId(id) }, { id: id }];
+    } else {
+      filter.id = id;
+    }
+
+    const updateResult = await db.collection('notification-popup').updateOne(
+      filter,
+      { $set: { isRead: true, readAt: new Date(), updatedAt: new Date() } }
+    );
+
+    const updatedDoc = await db.collection('notification-popup').findOne(filter);
+
+    res.json({
+      success: true,
+      message: 'Đã đánh dấu thông báo là đã đọc',
+      matchedCount: updateResult.matchedCount,
+      modifiedCount: updateResult.modifiedCount,
+      notification: updatedDoc
+    });
+  } catch (error) {
+    console.error('Error in mark notification read:', error);
+    res.status(500).json({ success: false, message: 'Lỗi cập nhật trạng thái thông báo' });
+  }
+};
+app.patch('/api/orders/notifications/:id/read', handleMarkNotificationRead);
+app.post('/api/orders/notifications/:id/read', handleMarkNotificationRead);
+
 // 4.2 GET /api/orders/:id (Get single order by MongoDB _id)
 app.get('/api/orders/:id', async (req, res) => {
   try {
@@ -3235,7 +3777,7 @@ const ADMIN_ORDER_FULFILLMENT_EDIT_KEYS = new Set([
   'shippingProvider', 'trackingNumber', 'estimatedDeliveryDate'
 ]);
 const ADMIN_ORDER_FULFILLMENT_EDIT_STATUSES = new Set([
-  'PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPING'
+  'PENDING', 'PROCESSING', 'SHIPPING'
 ]);
 
 function getAdminOrderEditStatus(order) {
@@ -4778,6 +5320,443 @@ app.delete('/api/shipping-methods/:id', async (req, res) => {
 
 
 // ─────────────────────────────────────────────────────────────
+// 7.7 COUPONS API (Admin coupon management & checkout validation)
+// ─────────────────────────────────────────────────────────────
+
+function formatCoupon(c) {
+  if (!c) return null;
+  const id = c._id ? c._id.toString() : c.id;
+  const usageLimit = Number(c.usageLimit) || 0;
+  const usedCount = Number(c.usedCount) || 0;
+  const remainingUsage = Math.max(0, usageLimit - usedCount);
+
+  return {
+    id,
+    _id: id,
+    code: c.code ? String(c.code).trim().toUpperCase() : '',
+    description: c.description || '',
+    discountType: c.discountType === 'FIXED' ? 'FIXED' : 'PERCENTAGE',
+    discountValue: Number(c.discountValue) || 0,
+    maxDiscount: Number(c.maxDiscount) || 0,
+    minOrderValue: Number(c.minOrderValue) || 0,
+    startDate: c.startDate ? new Date(c.startDate).toISOString() : null,
+    endDate: c.endDate ? new Date(c.endDate).toISOString() : null,
+    usageLimit,
+    usedCount,
+    remainingUsage,
+    isActive: c.isActive !== false,
+    createdAt: c.createdAt,
+    updatedAt: c.updatedAt
+  };
+}
+
+// 7.7.1 GET /api/coupons (List with search, filter, pagination)
+app.get('/api/coupons', async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.max(1, Math.min(100, parseInt(req.query.limit || req.query.pageSize) || 20));
+    const skip = (page - 1) * limit;
+
+    const query = {};
+
+    if (req.query.search && String(req.query.search).trim()) {
+      const q = String(req.query.search).trim();
+      const sRegex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      query.$or = [
+        { code: sRegex },
+        { description: sRegex }
+      ];
+    }
+
+    if (req.query.discountType && req.query.discountType !== 'all') {
+      query.discountType = req.query.discountType;
+    }
+
+    if (req.query.isActive !== undefined && req.query.isActive !== '' && req.query.isActive !== 'all') {
+      query.isActive = req.query.isActive === 'true' || req.query.isActive === true;
+    } else if (req.query.status !== undefined && req.query.status !== '' && req.query.status !== 'all') {
+      query.isActive = req.query.status === 'true' || req.query.status === 'active' || req.query.status === true;
+    }
+
+    const [total, coupons] = await Promise.all([
+      db.collection('coupons').countDocuments(query),
+      db.collection('coupons').find(query).sort({ _id: -1 }).skip(skip).limit(limit).toArray()
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    res.json({
+      success: true,
+      data: coupons.map(formatCoupon),
+      pagination: {
+        page,
+        limit,
+        pageSize: limit,
+        total,
+        totalPages
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching coupons:', error);
+    res.status(500).json({ success: false, message: 'Lỗi tải danh sách mã giảm giá' });
+  }
+});
+
+// 7.7.2 GET /api/coupons/:id (Get single coupon)
+app.get('/api/coupons/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    let query;
+    if (ObjectId.isValid(id)) {
+      query = { $or: [{ _id: new ObjectId(id) }, { _id: id }] };
+    } else {
+      query = { _id: id };
+    }
+
+    const coupon = await db.collection('coupons').findOne(query);
+    if (!coupon) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy mã giảm giá' });
+    }
+
+    res.json({
+      success: true,
+      data: formatCoupon(coupon)
+    });
+  } catch (error) {
+    console.error('Error fetching coupon:', error);
+    res.status(500).json({ success: false, message: 'Lỗi tải thông tin mã giảm giá' });
+  }
+});
+
+// 7.7.3 POST /api/coupons (Create coupon)
+app.post('/api/coupons', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const code = String(body.code || '').trim().toUpperCase();
+    if (!code) {
+      return res.status(400).json({ success: false, message: 'Mã giảm giá là bắt buộc' });
+    }
+
+    // Uniqueness check
+    const existing = await db.collection('coupons').findOne({ code });
+    if (existing) {
+      return res.status(400).json({ success: false, message: 'Mã giảm giá đã tồn tại trong hệ thống' });
+    }
+
+    const discountType = body.discountType === 'FIXED' ? 'FIXED' : 'PERCENTAGE';
+    const discountValue = Number(body.discountValue);
+    if (!discountValue || discountValue <= 0) {
+      return res.status(400).json({ success: false, message: 'Giá trị giảm phải lớn hơn 0' });
+    }
+    if (discountType === 'PERCENTAGE' && discountValue > 100) {
+      return res.status(400).json({ success: false, message: 'Phần trăm giảm giá không được vượt quá 100%' });
+    }
+
+    const maxDiscount = discountType === 'PERCENTAGE' ? (Number(body.maxDiscount) || 0) : 0;
+    const minOrderValue = Number(body.minOrderValue) >= 0 ? Number(body.minOrderValue) : 0;
+
+    const startDate = body.startDate ? new Date(body.startDate) : new Date();
+    const endDate = body.endDate ? new Date(body.endDate) : null;
+    if (!endDate || isNaN(endDate.getTime())) {
+      return res.status(400).json({ success: false, message: 'Ngày hết hạn là bắt buộc và phải hợp lệ' });
+    }
+    if (startDate >= endDate) {
+      return res.status(400).json({ success: false, message: 'Ngày bắt đầu phải trước ngày hết hạn' });
+    }
+
+    const usageLimit = Number(body.usageLimit);
+    if (!usageLimit || usageLimit <= 0) {
+      return res.status(400).json({ success: false, message: 'Số lượt sử dụng tối đa phải lớn hơn 0' });
+    }
+
+    const now = new Date();
+    const newDoc = {
+      code,
+      description: String(body.description || '').trim(),
+      discountType,
+      discountValue,
+      maxDiscount,
+      minOrderValue,
+      startDate,
+      endDate,
+      usageLimit,
+      usedCount: 0, // Backend guarantees 0 on creation
+      isActive: body.isActive !== false,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    const insertResult = await db.collection('coupons').insertOne(newDoc);
+    const created = await db.collection('coupons').findOne({ _id: insertResult.insertedId });
+
+    res.status(201).json({
+      success: true,
+      message: 'Tạo mã giảm giá thành công',
+      data: formatCoupon(created)
+    });
+  } catch (error) {
+    console.error('Error creating coupon:', error);
+    res.status(500).json({ success: false, message: error.message || 'Lỗi khi tạo mã giảm giá' });
+  }
+});
+
+// 7.7.4 PUT /api/coupons/:id (Update coupon)
+app.put('/api/coupons/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    let query;
+    if (ObjectId.isValid(id)) {
+      query = { $or: [{ _id: new ObjectId(id) }, { _id: id }] };
+    } else {
+      query = { _id: id };
+    }
+
+    const existing = await db.collection('coupons').findOne(query);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy mã giảm giá cần cập nhật' });
+    }
+
+    const body = req.body || {};
+    const code = String(body.code || existing.code).trim().toUpperCase();
+    if (!code) {
+      return res.status(400).json({ success: false, message: 'Mã giảm giá không được để trống' });
+    }
+
+    if (code !== existing.code) {
+      const codeTaken = await db.collection('coupons').findOne({
+        code,
+        _id: { $ne: existing._id }
+      });
+      if (codeTaken) {
+        return res.status(400).json({ success: false, message: 'Mã giảm giá đã được sử dụng bởi mã khác' });
+      }
+    }
+
+    const discountType = body.discountType === 'FIXED' ? 'FIXED' : 'PERCENTAGE';
+    const discountValue = Number(body.discountValue !== undefined ? body.discountValue : existing.discountValue);
+    if (!discountValue || discountValue <= 0) {
+      return res.status(400).json({ success: false, message: 'Giá trị giảm phải lớn hơn 0' });
+    }
+    if (discountType === 'PERCENTAGE' && discountValue > 100) {
+      return res.status(400).json({ success: false, message: 'Phần trăm giảm giá không được vượt quá 100%' });
+    }
+
+    const maxDiscount = discountType === 'PERCENTAGE' ? (Number(body.maxDiscount !== undefined ? body.maxDiscount : existing.maxDiscount) || 0) : 0;
+    const minOrderValue = Number(body.minOrderValue !== undefined ? body.minOrderValue : existing.minOrderValue) >= 0
+      ? Number(body.minOrderValue !== undefined ? body.minOrderValue : existing.minOrderValue)
+      : 0;
+
+    const startDate = body.startDate ? new Date(body.startDate) : new Date(existing.startDate);
+    const endDate = body.endDate ? new Date(body.endDate) : new Date(existing.endDate);
+    if (!endDate || isNaN(endDate.getTime())) {
+      return res.status(400).json({ success: false, message: 'Ngày hết hạn không hợp lệ' });
+    }
+    if (startDate >= endDate) {
+      return res.status(400).json({ success: false, message: 'Ngày bắt đầu phải trước ngày hết hạn' });
+    }
+
+    const usageLimit = Number(body.usageLimit !== undefined ? body.usageLimit : existing.usageLimit);
+    if (!usageLimit || usageLimit <= 0) {
+      return res.status(400).json({ success: false, message: 'Số lượt sử dụng tối đa phải lớn hơn 0' });
+    }
+
+    const updateDoc = {
+      $set: {
+        code,
+        description: body.description !== undefined ? String(body.description).trim() : existing.description,
+        discountType,
+        discountValue,
+        maxDiscount,
+        minOrderValue,
+        startDate,
+        endDate,
+        usageLimit,
+        isActive: body.isActive !== undefined ? (body.isActive === true || body.isActive === 'true') : existing.isActive,
+        updatedAt: new Date()
+      }
+      // usedCount is NOT touched by Admin edit
+    };
+
+    await db.collection('coupons').updateOne({ _id: existing._id }, updateDoc);
+    const updated = await db.collection('coupons').findOne({ _id: existing._id });
+
+    res.json({
+      success: true,
+      message: 'Cập nhật mã giảm giá thành công',
+      data: formatCoupon(updated)
+    });
+  } catch (error) {
+    console.error('Error updating coupon:', error);
+    res.status(500).json({ success: false, message: error.message || 'Lỗi khi cập nhật mã giảm giá' });
+  }
+});
+
+// 7.7.5 PATCH /api/coupons/:id/status (Toggle isActive status)
+const handleToggleCouponStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    let query;
+    if (ObjectId.isValid(id)) {
+      query = { $or: [{ _id: new ObjectId(id) }, { _id: id }] };
+    } else {
+      query = { _id: id };
+    }
+
+    const existing = await db.collection('coupons').findOne(query);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy mã giảm giá' });
+    }
+
+    let nextActive;
+    if (req.body && req.body.isActive !== undefined) {
+      nextActive = req.body.isActive === true || req.body.isActive === 'true';
+    } else {
+      nextActive = existing.isActive === false;
+    }
+
+    await db.collection('coupons').updateOne(
+      { _id: existing._id },
+      { $set: { isActive: nextActive, updatedAt: new Date() } }
+    );
+
+    const updated = await db.collection('coupons').findOne({ _id: existing._id });
+    res.json({
+      success: true,
+      message: `Đã ${nextActive ? 'bật' : 'tắt'} mã giảm giá ${existing.code}`,
+      data: formatCoupon(updated)
+    });
+  } catch (error) {
+    console.error('Error toggling coupon status:', error);
+    res.status(500).json({ success: false, message: error.message || 'Lỗi cập nhật trạng thái mã giảm giá' });
+  }
+};
+
+app.patch('/api/coupons/:id/status', handleToggleCouponStatus);
+app.put('/api/coupons/:id/toggle', handleToggleCouponStatus);
+
+// 7.7.6 DELETE /api/coupons/:id (Delete single coupon)
+app.delete('/api/coupons/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    let query;
+    if (ObjectId.isValid(id)) {
+      query = { $or: [{ _id: new ObjectId(id) }, { _id: id }] };
+    } else {
+      query = { _id: id };
+    }
+
+    const result = await db.collection('coupons').deleteOne(query);
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: 'Mã giảm giá không tồn tại hoặc đã bị xóa' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Xóa mã giảm giá thành công'
+    });
+  } catch (error) {
+    console.error('Error deleting coupon:', error);
+    res.status(500).json({ success: false, message: error.message || 'Lỗi khi xóa mã giảm giá' });
+  }
+});
+
+// 7.7.7 POST /api/coupons/bulk-delete (Bulk delete coupons)
+app.post('/api/coupons/bulk-delete', async (req, res) => {
+  try {
+    const ids = req.body?.ids || [];
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'Danh sách ID không hợp lệ' });
+    }
+
+    const objectIds = ids.filter(ObjectId.isValid).map(id => new ObjectId(id));
+    const stringIds = ids.filter(id => !ObjectId.isValid(id));
+
+    const result = await db.collection('coupons').deleteMany({
+      $or: [
+        { _id: { $in: objectIds } },
+        { _id: { $in: stringIds } }
+      ]
+    });
+
+    res.json({
+      success: true,
+      message: `Đã xóa thành công ${result.deletedCount} mã giảm giá`,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.error('Error bulk deleting coupons:', error);
+    res.status(500).json({ success: false, message: error.message || 'Lỗi xóa nhiều mã giảm giá' });
+  }
+});
+
+// 7.7.8 POST /api/orders/coupon/validate (Checkout coupon validation endpoint on Admin Server)
+app.post(['/api/orders/coupon/validate', '/api/coupons/validate'], async (req, res) => {
+  try {
+    const { code, subtotal } = req.body || {};
+    if (!code || !String(code).trim()) {
+      return res.json({ valid: false, message: 'Vui lòng nhập mã giảm giá' });
+    }
+    const cleanCode = String(code).trim().toUpperCase();
+    const orderSubtotal = Number(subtotal) || 0;
+
+    const coupon = await db.collection('coupons').findOne({
+      code: cleanCode,
+      isActive: true
+    });
+
+    if (!coupon) {
+      return res.json({ valid: false, message: 'Mã giảm giá không hợp lệ hoặc đã hết hạn' });
+    }
+
+    const now = new Date();
+    if (coupon.startDate && new Date(coupon.startDate) > now) {
+      return res.json({ valid: false, message: 'Chương trình ưu đãi chưa bắt đầu' });
+    }
+    if (coupon.endDate && new Date(coupon.endDate) < now) {
+      return res.json({ valid: false, message: 'Mã giảm giá đã hết hạn sử dụng' });
+    }
+    if (coupon.usageLimit > 0 && coupon.usedCount >= coupon.usageLimit) {
+      return res.json({ valid: false, message: 'Mã giảm giá đã hết lượt sử dụng' });
+    }
+    if (coupon.minOrderValue > 0 && orderSubtotal < coupon.minOrderValue) {
+      const minFormatted = Number(coupon.minOrderValue).toLocaleString('vi-VN');
+      return res.json({
+        valid: false,
+        message: `Mã ${cleanCode} chỉ áp dụng cho đơn hàng từ ${minFormatted} ₫ trở lên`
+      });
+    }
+
+    let discountAmount = 0;
+    if (coupon.discountType === 'PERCENTAGE') {
+      discountAmount = Math.round((orderSubtotal * Number(coupon.discountValue)) / 100);
+      if (coupon.maxDiscount > 0 && discountAmount > coupon.maxDiscount) {
+        discountAmount = coupon.maxDiscount;
+      }
+    } else {
+      discountAmount = Number(coupon.discountValue);
+    }
+
+    if (discountAmount > orderSubtotal) {
+      discountAmount = orderSubtotal;
+    }
+
+    return res.json({
+      valid: true,
+      code: coupon.code,
+      description: coupon.description,
+      discountType: coupon.discountType,
+      discountValue: coupon.discountValue,
+      discountAmount,
+      message: 'Áp dụng mã giảm giá thành công!'
+    });
+  } catch (error) {
+    console.error('Error validating coupon:', error);
+    res.status(500).json({ valid: false, message: 'Lỗi kiểm tra mã giảm giá' });
+  }
+});
+
+
+// ─────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────
 // 8. INVENTORY API (Calculated from products and active orders)
 // ─────────────────────────────────────────────────────────────
@@ -5260,32 +6239,74 @@ app.post('/api/products/:id/inventory', handleInventoryImport);
 
 
 // ─────────────────────────────────────────────────────────────
-// 9. PAGES API (QUẢN LÝ TRANG TĨNH)
+// 9. POLICIES / PAGES API (QUẢN LÝ CHÍNH SÁCH - COLLECTION: pages_policies)
+// Đồng bộ 100% với MongoDB collection 'pages_policies' & mirror 'pages'
 // ─────────────────────────────────────────────────────────────
 function formatPage(p) {
-  const title = p.vi?.title || p.en?.title || p.title || p.titleUrl || 'Trang tĩnh';
-  const rawSlug = (p.titleUrl || p.slug || '').replace(/^\/+/, '');
+  if (!p) return null;
+  const vi = p.vi || {};
+  const en = p.en || {};
+  const viTitle = (vi.title || p.title || '').trim();
+  const enTitle = (en.title || '').trim();
+  const title = viTitle || enTitle || p.titleUrl || 'Chính sách';
+
+  const rawSlug = (p.titleUrl || p.slug || '').toString().trim().replace(/^\/+/, '');
   const slug = '/' + rawSlug;
-  const isPublished = p.status === 'published' || p.status === 'active' || (p.vi?.visibility !== false && p.visibility !== false && p.status !== 'draft');
+
+  const isPublished = p.status === 'published' || p.status === 'active' || p.status === 'Đã xuất bản'
+    || (p.status !== 'draft' && p.status !== 'inactive' && p.status !== 'Bản nháp' && vi.visibility !== false && p.isPublished !== false);
+
+  const viContent = vi.contentHTML !== undefined ? vi.contentHTML : (p.contentHTML || '');
+  const enContent = en.contentHTML !== undefined ? en.contentHTML : '';
+  const contentHTML = viContent || enContent;
+
+  const viMeta = vi.metaDescription !== undefined ? vi.metaDescription : (p.metaDescription || '');
+  const enMeta = en.metaDescription !== undefined ? en.metaDescription : '';
+  const metaDescription = viMeta || enMeta;
+
+  const docId = p._id ? p._id.toString() : (p.id ? p.id.toString() : '');
+
   return {
-    id: p._id.toString(),
-    _id: p._id.toString(),
-    title,
+    id: docId,
+    _id: docId,
+    titleUrl: rawSlug,
     slug,
     rawSlug,
-    contentHTML: p.vi?.contentHTML || p.en?.contentHTML || p.contentHTML || '',
+    title,
+    contentHTML,
+    metaDescription,
     status: isPublished ? 'Đã xuất bản' : 'Bản nháp',
     statusVariant: isPublished ? 'success' : 'neutral',
     isPublished: isPublished,
     statusCode: isPublished ? 'published' : 'draft',
     dateAdded: p.dateAdded || p.createdAt || '',
-    updatedAt: (p.updatedAt || p.dateAdded || new Date().toISOString()).toString().slice(0, 10),
-    metaDescription: p.vi?.metaDescription || p.metaDescription || '',
+    updatedAt: p.updatedAt || p.dateAdded || '',
+    vi: {
+      title: viTitle || title,
+      contentHTML: viContent,
+      visibility: vi.visibility !== undefined ? !!vi.visibility : isPublished,
+      metaDescription: viMeta
+    },
+    en: {
+      title: enTitle || viTitle || title,
+      contentHTML: enContent || viContent,
+      visibility: en.visibility !== undefined ? !!en.visibility : isPublished,
+      metaDescription: enMeta || viMeta
+    },
+    __v: typeof p.__v === 'number' ? p.__v : 0,
     raw: p
   };
 }
 
-// 9.1 GET /api/pages - List all pages
+function buildPageIdQuery(id) {
+  if (!id) return { _id: null };
+  if (ObjectId.isValid(id)) {
+    return { $or: [{ _id: new ObjectId(id) }, { _id: id }] };
+  }
+  return { _id: id };
+}
+
+// 9.1 GET /api/pages - Danh sách tất cả chính sách
 app.get('/api/pages', async (req, res) => {
   try {
     const search = req.query.search ? req.query.search.trim() : '';
@@ -5308,7 +6329,8 @@ app.get('/api/pages', async (req, res) => {
           $or: [
             { status: 'published' },
             { status: 'active' },
-            { $and: [{ status: { $ne: 'draft' } }, { 'vi.visibility': { $ne: false } }] }
+            { status: 'Đã xuất bản' },
+            { $and: [{ status: { $ne: 'draft' } }, { status: { $ne: 'inactive' } }, { 'vi.visibility': { $ne: false } }] }
           ]
         });
       } else if (status === 'Bản nháp' || status === 'draft' || status === 'inactive') {
@@ -5316,6 +6338,7 @@ app.get('/api/pages', async (req, res) => {
           $or: [
             { status: 'draft' },
             { status: 'inactive' },
+            { status: 'Bản nháp' },
             { 'vi.visibility': false }
           ]
         });
@@ -5323,7 +6346,13 @@ app.get('/api/pages', async (req, res) => {
     }
 
     const query = queryConditions.length > 0 ? { $and: queryConditions } : {};
-    const pagesRaw = await db.collection('pages').find(query).sort({ _id: -1 }).toArray();
+    let pagesRaw = await db.collection('pages_policies').find(query).sort({ _id: -1 }).toArray();
+
+    // Fallback sang pages collection nếu pages_policies đang rỗng
+    if (!pagesRaw || pagesRaw.length === 0) {
+      pagesRaw = await db.collection('pages').find(query).sort({ _id: -1 }).toArray();
+    }
+
     const data = pagesRaw.map(formatPage);
 
     res.json({
@@ -5337,20 +6366,17 @@ app.get('/api/pages', async (req, res) => {
   }
 });
 
-// 9.2 GET /api/pages/:id - Get page detail
+// 9.2 GET /api/pages/:id - Chi tiết chính sách
 app.get('/api/pages/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    let query;
-    if (ObjectId.isValid(id)) {
-      query = { _id: new ObjectId(id) };
-    } else {
-      query = { _id: id };
-    }
+    const query = buildPageIdQuery(id);
 
-    const page = await db.collection('pages').findOne(query);
+    const page = await db.collection('pages_policies').findOne(query)
+      || await db.collection('pages').findOne(query);
+
     if (!page) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy trang' });
+      return res.status(404).json({ success: false, message: 'Không tìm thấy chính sách' });
     }
 
     res.json({
@@ -5362,111 +6388,144 @@ app.get('/api/pages/:id', async (req, res) => {
   }
 });
 
-// 9.3 POST /api/pages - Create new page
+// 9.3 POST /api/pages - Thêm chính sách mới vào MongoDB (pages_policies)
 app.post('/api/pages', async (req, res) => {
   try {
     const body = req.body || {};
     const vi = body.vi || {};
-    const title = (vi.title || body.title || '').trim();
+    const en = body.en || {};
+
+    const viTitle = (vi.title || body.title || '').trim();
+    const enTitle = (en.title || '').trim();
+    const title = viTitle || enTitle;
 
     if (!title) {
-      return res.status(400).json({ success: false, message: 'Tiêu đề trang không được để trống' });
+      return res.status(400).json({ success: false, message: 'Tiêu đề chính sách không được để trống' });
     }
 
     let slug = (body.titleUrl || body.slug || generateSlug(title)).trim().replace(/^\/+/, '');
     slug = generateSlug(slug);
 
-    // Unique slug & title check
-    const dup = await db.collection('pages').findOne({
+    if (!slug) {
+      slug = generateSlug(title);
+    }
+
+    // Kiểm tra trùng lặp titleUrl hoặc tiêu đề tiếng Việt trong pages_policies
+    const dup = await db.collection('pages_policies').findOne({
       $or: [
         { titleUrl: slug },
-        { 'vi.title': { $regex: `^${title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } }
+        { 'vi.title': { $regex: `^${viTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } }
       ]
     });
 
     if (dup) {
-      return res.status(400).json({ success: false, message: 'Tiêu đề trang hoặc đường dẫn (slug) đã tồn tại' });
+      return res.status(400).json({ success: false, message: 'Tiêu đề chính sách hoặc đường dẫn (slug) đã tồn tại' });
     }
 
     const isPublished = body.isPublished !== undefined
       ? !!body.isPublished
       : (body.status === 'published' || body.status === 'active' || body.status === 'Đã xuất bản' || vi.visibility !== false);
 
-    const contentHTML = vi.contentHTML !== undefined
+    const viVisibility = vi.visibility !== undefined ? !!vi.visibility : isPublished;
+    const enVisibility = en.visibility !== undefined ? !!en.visibility : isPublished;
+
+    const viContent = vi.contentHTML !== undefined
       ? vi.contentHTML
       : (body.contentHTML !== undefined ? body.contentHTML : (body.content || ''));
+    const enContent = en.contentHTML !== undefined
+      ? en.contentHTML
+      : (enTitle ? viContent : '');
+
+    const viMeta = (vi.metaDescription !== undefined ? vi.metaDescription : (body.metaDescription || '')).trim();
+    const enMeta = (en.metaDescription !== undefined ? en.metaDescription : '').trim();
+
+    const now = new Date();
 
     const newPage = {
       titleUrl: slug,
       status: isPublished ? 'published' : 'draft',
-      dateAdded: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      dateAdded: now,
+      updatedAt: now,
       vi: {
-        title: title,
-        contentHTML: contentHTML,
-        visibility: isPublished,
-        metaDescription: (body.metaDescription || vi.metaDescription || '').trim()
+        title: viTitle,
+        contentHTML: viContent,
+        visibility: viVisibility,
+        metaDescription: viMeta
       },
       en: {
-        title: title,
-        contentHTML: contentHTML
+        title: enTitle || viTitle,
+        contentHTML: enContent || viContent,
+        visibility: enVisibility,
+        metaDescription: enMeta || viMeta
       },
       __v: 0
     };
 
-    const result = await db.collection('pages').insertOne(newPage);
-    const created = await db.collection('pages').findOne({ _id: result.insertedId });
+    // 1. Lưu chính thức vào collection 'pages_policies'
+    const result = await db.collection('pages_policies').insertOne(newPage);
+    const newDocId = result.insertedId;
+
+    // 2. Đồng bộ song song sang collection 'pages' để đảm bảo toàn vẹn dữ liệu
+    try {
+      await db.collection('pages').updateOne(
+        { _id: newDocId },
+        { $set: newPage },
+        { upsert: true }
+      );
+    } catch (mirrorErr) {
+      console.warn('Warning mirroring to pages collection:', mirrorErr);
+    }
+
+    const created = await db.collection('pages_policies').findOne({ _id: newDocId });
 
     res.status(201).json({
       success: true,
-      message: 'Tạo trang mới thành công',
-      id: result.insertedId.toString(),
+      message: 'Tạo chính sách mới thành công',
+      id: newDocId.toString(),
       data: formatPage(created)
     });
   } catch (error) {
     console.error('Error creating page:', error);
-    res.status(500).json({ success: false, message: error.message || 'Lỗi hệ thống khi tạo trang' });
+    res.status(500).json({ success: false, message: error.message || 'Lỗi hệ thống khi tạo chính sách' });
   }
 });
 
-// 9.4 PUT / PATCH /api/pages/:id - Update page
+// 9.4 PUT / PATCH /api/pages/:id - Cập nhật chính sách trong MongoDB
 const updatePageHandler = async (req, res) => {
   try {
     const { id } = req.params;
-    let query;
-    if (ObjectId.isValid(id)) {
-      query = { _id: new ObjectId(id) };
-    } else {
-      query = { _id: id };
-    }
+    const query = buildPageIdQuery(id);
 
-    const existing = await db.collection('pages').findOne(query);
+    const existing = await db.collection('pages_policies').findOne(query)
+      || await db.collection('pages').findOne(query);
+
     if (!existing) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy trang để chỉnh sửa' });
+      return res.status(404).json({ success: false, message: 'Không tìm thấy chính sách để chỉnh sửa' });
     }
 
     const body = req.body || {};
     const vi = body.vi || {};
-    const title = (vi.title !== undefined ? vi.title : (body.title !== undefined ? body.title : existing.vi?.title || existing.en?.title || '')).trim();
+    const en = body.en || {};
+
+    const viTitle = (vi.title !== undefined ? vi.title : (body.title !== undefined ? body.title : existing.vi?.title || '')).trim();
+    const enTitle = (en.title !== undefined ? en.title : (existing.en?.title || '')).trim();
+    const title = viTitle || enTitle || existing.vi?.title || existing.en?.title || '';
 
     if (!title) {
-      return res.status(400).json({ success: false, message: 'Tiêu đề trang không được để trống' });
+      return res.status(400).json({ success: false, message: 'Tiêu đề chính sách không được để trống' });
     }
 
-    let slug = (body.titleUrl || body.slug || existing.titleUrl || generateSlug(title)).trim().replace(/^\/+/, '');
-    slug = generateSlug(slug);
+    // Luôn giữ nguyên titleUrl hiện có từ cơ sở dữ liệu MongoDB, bỏ qua mọi thay đổi slug từ client
+    const slug = existing.titleUrl || (existing.slug ? existing.slug.replace(/^\/+/, '') : '') || generateSlug(title);
 
-    // Unique check against other pages
-    const dup = await db.collection('pages').findOne({
+    // Kiểm tra trùng lặp tiêu đề với các chính sách khác
+    const dup = await db.collection('pages_policies').findOne({
       _id: { $ne: existing._id },
-      $or: [
-        { titleUrl: slug },
-        { 'vi.title': { $regex: `^${title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } }
-      ]
+      'vi.title': { $regex: `^${viTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' }
     });
 
     if (dup) {
-      return res.status(400).json({ success: false, message: 'Tiêu đề trang hoặc đường dẫn (slug) đã tồn tại' });
+      return res.status(400).json({ success: false, message: 'Tiêu đề chính sách đã tồn tại' });
     }
 
     const isPublished = body.isPublished !== undefined
@@ -5475,51 +6534,76 @@ const updatePageHandler = async (req, res) => {
           ? (body.status === 'published' || body.status === 'active' || body.status === 'Đã xuất bản')
           : (existing.status === 'published' || existing.vi?.visibility !== false));
 
-    const contentHTML = vi.contentHTML !== undefined
+    const viVisibility = vi.visibility !== undefined ? !!vi.visibility : isPublished;
+    const enVisibility = existing.en?.visibility !== undefined
+      ? existing.en.visibility
+      : (en.visibility !== undefined ? !!en.visibility : isPublished);
+
+    const viContent = vi.contentHTML !== undefined
       ? vi.contentHTML
-      : (body.contentHTML !== undefined ? body.contentHTML : (body.content !== undefined ? body.content : existing.vi?.contentHTML || existing.en?.contentHTML || ''));
+      : (body.contentHTML !== undefined ? body.contentHTML : (existing.vi?.contentHTML || ''));
+    const enContent = existing.en?.contentHTML !== undefined
+      ? existing.en.contentHTML
+      : (en.contentHTML !== undefined ? en.contentHTML : '');
+
+    const viMeta = (vi.metaDescription !== undefined ? vi.metaDescription : (body.metaDescription !== undefined ? body.metaDescription : (existing.vi?.metaDescription || ''))).trim();
+    const enMeta = existing.en?.metaDescription !== undefined
+      ? existing.en.metaDescription
+      : (en.metaDescription !== undefined ? en.metaDescription : '').trim();
+
+    const now = new Date();
 
     const updateFields = {
       titleUrl: slug,
       status: isPublished ? 'published' : 'draft',
-      updatedAt: new Date().toISOString(),
-      'vi.title': title,
-      'vi.contentHTML': contentHTML,
-      'vi.visibility': isPublished,
-      'vi.metaDescription': (body.metaDescription !== undefined ? body.metaDescription : (vi.metaDescription || existing.vi?.metaDescription || '')).trim()
+      updatedAt: now,
+      'vi.title': viTitle,
+      'vi.contentHTML': viContent,
+      'vi.visibility': viVisibility,
+      'vi.metaDescription': viMeta,
+      'en.title': existing.en?.title || enTitle || viTitle,
+      'en.contentHTML': enContent || viContent,
+      'en.visibility': enVisibility,
+      'en.metaDescription': enMeta || viMeta
     };
 
-    await db.collection('pages').updateOne(query, { $set: updateFields });
-    const updated = await db.collection('pages').findOne(query);
+    // 1. Cập nhật trong 'pages_policies'
+    await db.collection('pages_policies').updateOne({ _id: existing._id }, { $set: updateFields });
+
+    // 2. Đồng bộ sang 'pages'
+    try {
+      await db.collection('pages').updateOne({ _id: existing._id }, { $set: updateFields });
+    } catch (mirrorErr) {
+      console.warn('Warning mirroring update to pages collection:', mirrorErr);
+    }
+
+    const updated = await db.collection('pages_policies').findOne({ _id: existing._id });
 
     res.json({
       success: true,
-      message: 'Cập nhật trang thành công',
+      message: 'Cập nhật chính sách thành công',
       data: formatPage(updated)
     });
   } catch (error) {
     console.error('Error updating page:', error);
-    res.status(500).json({ success: false, message: error.message || 'Lỗi hệ thống khi cập nhật trang' });
+    res.status(500).json({ success: false, message: error.message || 'Lỗi hệ thống khi cập nhật chính sách' });
   }
 };
 
 app.put('/api/pages/:id', updatePageHandler);
 app.patch('/api/pages/:id', updatePageHandler);
 
-// 9.5 PATCH /api/pages/:id/status - Toggle / update status
+// 9.5 PATCH /api/pages/:id/status - Đổi trạng thái hiển thị
 const togglePageStatusHandler = async (req, res) => {
   try {
     const { id } = req.params;
-    let query;
-    if (ObjectId.isValid(id)) {
-      query = { _id: new ObjectId(id) };
-    } else {
-      query = { _id: id };
-    }
+    const query = buildPageIdQuery(id);
 
-    const existing = await db.collection('pages').findOne(query);
+    const existing = await db.collection('pages_policies').findOne(query)
+      || await db.collection('pages').findOne(query);
+
     if (!existing) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy trang' });
+      return res.status(404).json({ success: false, message: 'Không tìm thấy chính sách' });
     }
 
     const currentPublished = existing.status === 'published' || existing.status === 'active' || existing.vi?.visibility !== false;
@@ -5533,20 +6617,30 @@ const togglePageStatusHandler = async (req, res) => {
     }
 
     const newStatus = newPublished ? 'published' : 'draft';
+    const now = new Date();
 
-    await db.collection('pages').updateOne(query, {
-      $set: {
-        status: newStatus,
-        'vi.visibility': newPublished,
-        updatedAt: new Date().toISOString()
-      }
-    });
+    const updateFields = {
+      status: newStatus,
+      'vi.visibility': newPublished,
+      'en.visibility': newPublished,
+      updatedAt: now
+    };
 
-    const updated = await db.collection('pages').findOne(query);
+    // 1. Cập nhật trong 'pages_policies'
+    await db.collection('pages_policies').updateOne({ _id: existing._id }, { $set: updateFields });
+
+    // 2. Đồng bộ sang 'pages'
+    try {
+      await db.collection('pages').updateOne({ _id: existing._id }, { $set: updateFields });
+    } catch (mirrorErr) {
+      console.warn('Warning mirroring status toggle to pages:', mirrorErr);
+    }
+
+    const updated = await db.collection('pages_policies').findOne({ _id: existing._id });
 
     res.json({
       success: true,
-      message: `Trang đã được chuyển sang trạng thái "${newPublished ? 'Đã xuất bản' : 'Bản nháp'}"`,
+      message: `Chính sách đã chuyển sang trạng thái "${newPublished ? 'Đã xuất bản' : 'Bản nháp'}"`,
       data: formatPage(updated)
     });
   } catch (error) {
@@ -5558,28 +6652,119 @@ const togglePageStatusHandler = async (req, res) => {
 app.patch('/api/pages/:id/status', togglePageStatusHandler);
 app.put('/api/pages/:id/toggle', togglePageStatusHandler);
 
-// 9.6 DELETE /api/pages/:id - Delete page
+// 9.6 DELETE /api/pages/:id - Xóa chính sách khỏi MongoDB
 app.delete('/api/pages/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    let query;
-    if (ObjectId.isValid(id)) {
-      query = { _id: new ObjectId(id) };
-    } else {
-      query = { _id: id };
+    const query = buildPageIdQuery(id);
+
+    const existing = await db.collection('pages_policies').findOne(query)
+      || await db.collection('pages').findOne(query);
+
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy chính sách hoặc đã bị xóa' });
     }
 
-    const result = await db.collection('pages').deleteOne(query);
+    // 1. Xóa trong 'pages_policies'
+    const result = await db.collection('pages_policies').deleteOne({ _id: existing._id });
+
+    // 2. Xóa trong 'pages'
+    try {
+      await db.collection('pages').deleteOne({ _id: existing._id });
+    } catch (mirrorErr) {
+      console.warn('Warning mirroring delete to pages:', mirrorErr);
+    }
+
     if (result.deletedCount === 0) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy trang hoặc đã bị xóa' });
+      return res.status(404).json({ success: false, message: 'Không tìm thấy chính sách hoặc đã bị xóa' });
     }
 
     res.json({
       success: true,
-      message: 'Xóa trang thành công'
+      message: 'Xóa chính sách thành công'
     });
   } catch (error) {
+    console.error('Error deleting page:', error);
     res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// 9.7 STOREFRONT COMPATIBILITY ENDPOINTS (Dành cho trang người dùng Chéri trên Vercel / Express)
+app.get('/api/cheri/page/all', async (req, res) => {
+  try {
+    const lang = req.headers.lang || req.query.lang || 'vi';
+    const titles = req.query.titles === 'true' || req.query.titles === true;
+    const selectQuery = titles ? { titleUrl: 1, [`${lang}.title`]: 1, status: 1, isPublished: 1 } : {};
+    let pages = await db.collection('pages_policies').find({}, { projection: selectQuery }).toArray();
+    if (!pages || pages.length === 0) {
+      pages = await db.collection('pages').find({}, { projection: selectQuery }).toArray();
+    }
+    res.json(pages);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/cheri/page/:titleUrl', async (req, res) => {
+  try {
+    const { titleUrl } = req.params;
+    const lang = req.headers.lang || req.query.lang || 'vi';
+    let page = await db.collection('pages_policies').findOne(
+      { titleUrl },
+      { projection: { titleUrl: 1, [lang]: 1, status: 1, isPublished: 1 } }
+    );
+    if (!page) {
+      page = await db.collection('pages').findOne(
+        { titleUrl },
+        { projection: { titleUrl: 1, [lang]: 1, status: 1, isPublished: 1 } }
+      );
+    }
+    if (!page) {
+      return res.status(404).json({ statusCode: 404, message: `Page with title ${titleUrl} not found` });
+    }
+    res.json(page);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/cheri/page', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const { titleUrl } = body;
+    if (!titleUrl) {
+      return res.status(400).json({ statusCode: 400, message: 'titleUrl is required' });
+    }
+    const existing = await db.collection('pages_policies').findOne({ titleUrl });
+    const now = new Date();
+    if (!existing) {
+      const newDoc = { ...body, dateAdded: now, updatedAt: now };
+      const r = await db.collection('pages_policies').insertOne(newDoc);
+      await db.collection('pages').updateOne({ _id: r.insertedId }, { $set: newDoc }, { upsert: true });
+      return res.json(newDoc);
+    } else {
+      const updateDoc = { ...body, updatedAt: now };
+      await db.collection('pages_policies').updateOne({ _id: existing._id }, { $set: updateDoc });
+      await db.collection('pages').updateOne({ _id: existing._id }, { $set: updateDoc });
+      const updated = await db.collection('pages_policies').findOne({ _id: existing._id });
+      return res.json(updated);
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/cheri/page/:titleUrl', async (req, res) => {
+  try {
+    const { titleUrl } = req.params;
+    const result = await db.collection('pages_policies').deleteOne({ titleUrl });
+    await db.collection('pages').deleteOne({ titleUrl });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ statusCode: 404, message: `Page with title ${titleUrl} not found` });
+    }
+    res.json({ success: true, message: 'Deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -5893,6 +7078,25 @@ app.get('/api/settings', async (req, res) => {
   }
 });
 
+// 11.1b GET /api/settings/maintenance - Lấy riêng trạng thái bảo trì hệ thống (Public)
+app.get('/api/settings/maintenance', async (req, res) => {
+  try {
+    let settings = await db.collection('settings').findOne({});
+    if (!settings) {
+      const result = await db.collection('settings').insertOne({ ...DEFAULT_SETTINGS });
+      settings = await db.collection('settings').findOne({ _id: result.insertedId });
+    }
+    const maintenance = settings?.maintenance || { enabled: false, message: 'Hệ thống đang bảo trì' };
+    res.json({
+      success: true,
+      data: maintenance
+    });
+  } catch (error) {
+    console.error('Error fetching maintenance settings:', error);
+    res.status(500).json({ success: false, message: error.message || 'Lỗi hệ thống khi tải thông tin bảo trì' });
+  }
+});
+
 // 11.2 PATCH /api/settings - Cập nhật cấu hình hệ thống
 app.patch('/api/settings', async (req, res) => {
   try {
@@ -6130,6 +7334,118 @@ app.get('/api/auth', async (req, res) => {
     });
   } catch (err) {
     res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// CHÉRI CMS HOME PAGE CONFIGURATION (COLLECTION: pages_home)
+// Cấu hình duy nhất, không draft, không versioning
+// ─────────────────────────────────────────────────────────────
+
+// Middleware xác thực quyền Admin cho các endpoint CMS Home
+async function requireHomeAdminAuth(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization || '';
+    if (!authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Thiếu access token xác thực' });
+    }
+    const token = authHeader.slice(7).trim();
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789');
+    if (!decoded || !decoded.email) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Token không hợp lệ' });
+    }
+    const user = await db.collection('users').findOne({ email: decoded.email.toLowerCase() });
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Người dùng không tồn tại' });
+    }
+    const userRoles = Array.isArray(user.roles) ? user.roles : [user.role || 'user'];
+    const isAdmin = userRoles.some(r => typeof r === 'string' && ['admin', 'superadmin', 'super-admin'].includes(r.toLowerCase())) || user.isAdmin === true;
+    if (!isAdmin) {
+      return res.status(403).json({ success: false, error: 'Forbidden: Bạn không có quyền quản trị viên' });
+    }
+    req.adminUser = user;
+    next();
+  } catch (err) {
+    return res.status(401).json({ success: false, error: 'Unauthorized: Token không hợp lệ hoặc đã hết hạn: ' + (err.message || '') });
+  }
+}
+
+// 1. Public API: Lấy cấu hình trang chủ đã xuất bản duy nhất
+app.get('/api/cheri/home', async (req, res) => {
+  try {
+    const homeDoc = await db.collection('pages_home').findOne({ key: 'home_page', status: 'published' });
+    if (!homeDoc || !Array.isArray(homeDoc.sections)) {
+      return res.json({ success: true, data: null, sections: [] });
+    }
+    const activeSections = homeDoc.sections
+      .filter(sec => sec && sec.enabled !== false)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+    return res.json({
+      success: true,
+      data: { ...homeDoc, sections: activeSections },
+      sections: activeSections
+    });
+  } catch (err) {
+    console.error('Error fetching published home configuration:', err);
+    return res.json({ success: true, data: null, sections: [] });
+  }
+});
+
+// 2. Admin API: Lấy cấu hình xuất bản hiện hành cho Admin CMS (Yêu cầu quyền Admin)
+app.get('/api/cheri/home/admin', requireHomeAdminAuth, async (req, res) => {
+  try {
+    const homeDoc = await db.collection('pages_home').findOne({ key: 'home_page', status: 'published' });
+    if (!homeDoc || !Array.isArray(homeDoc.sections)) {
+      return res.json({ success: true, data: null, sections: [] });
+    }
+    const sortedSections = [...homeDoc.sections].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    return res.json({
+      success: true,
+      data: { ...homeDoc, sections: sortedSections },
+      sections: sortedSections
+    });
+  } catch (err) {
+    console.error('Error fetching admin home configuration:', err);
+    return res.status(500).json({ success: false, message: 'Lỗi server khi tải cấu hình Home' });
+  }
+});
+
+// 3. Admin API: Xuất bản cấu hình duy nhất lên database (Yêu cầu quyền Admin)
+app.post('/api/cheri/home/publish', requireHomeAdminAuth, async (req, res) => {
+  try {
+    const sectionsToPublish = req.body?.sections;
+    if (!sectionsToPublish || !Array.isArray(sectionsToPublish) || sectionsToPublish.length === 0) {
+      return res.status(400).json({ success: false, message: 'Dữ liệu phân đoạn (sections) không hợp lệ hoặc rỗng' });
+    }
+
+    const editorEmail = req.adminUser?.email || req.body?.updatedBy || 'admin';
+    const now = new Date();
+
+    const publishedResult = await db.collection('pages_home').findOneAndUpdate(
+      { key: 'home_page', status: 'published' },
+      {
+        $set: {
+          key: 'home_page',
+          status: 'published',
+          sections: sectionsToPublish,
+          publishedAt: now,
+          updatedBy: editorEmail,
+          updatedAt: now
+        },
+        $setOnInsert: { createdAt: now }
+      },
+      { upsert: true, returnDocument: 'after' }
+    );
+
+    return res.json({
+      success: true,
+      message: 'Xuất bản cấu hình trang chủ thành công',
+      data: publishedResult?.value || publishedResult
+    });
+  } catch (err) {
+    console.error('Error publishing home configuration:', err);
+    return res.status(500).json({ success: false, message: err.message || 'Lỗi server khi xuất bản' });
   }
 });
 

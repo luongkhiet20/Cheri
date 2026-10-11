@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnChanges, OnInit, SimpleChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, OnInit, SimpleChanges, HostListener } from '@angular/core';
 import { FilterField } from '../models/admin-table.models';
 
 export interface ActiveFilter {
@@ -33,8 +33,31 @@ export class AdminFilterComponent implements OnInit, OnChanges {
 
   get activeCount(): number { return this.activeFilters.length; }
 
-  togglePanel(): void { this.isPanelOpen = !this.isPanelOpen; }
-  closePanel(): void  { this.isPanelOpen = false; }
+  togglePanel(event?: MouseEvent): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.isPanelOpen = !this.isPanelOpen;
+  }
+
+  closePanel(event?: MouseEvent): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.isPanelOpen = false;
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (!this.isPanelOpen) {
+      return;
+    }
+    const target = event.target as HTMLElement | null;
+    if (target && (target.closest('.admin-filter__panel') || target.closest('.admin-filter__btn'))) {
+      return;
+    }
+    this.closePanel();
+  }
 
   onFieldChange(field: FilterField, event: Event): void {
     const val = (event.target as HTMLSelectElement | HTMLInputElement).value;

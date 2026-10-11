@@ -18,7 +18,7 @@ const PageSchema = new Schema(
     dateAdded: Date,
     ...getPageLangContent(),
   },
-  { strict: false },
+  { strict: false, collection: 'pages_policies' },
 );
 
 export default PageSchema;

@@ -140,7 +140,6 @@ export interface Address {
 
 export enum OrderStatus {
   PENDING = 'PENDING',
-  CONFIRMED = 'CONFIRMED',
   PROCESSING = 'PROCESSING',
   SHIPPING = 'SHIPPING',
   DELIVERY_FAILED = 'DELIVERY_FAILED',
@@ -312,7 +311,9 @@ export interface Page {
   _id?                : string;
   titleUrl            : string;
   dateAdded?          : Date;
-  [lang: string]      : any | { title?: string; contentHTML?: string };
+  status?             : string;
+  isPublished?        : boolean;
+  [lang: string]      : any | { title?: string; contentHTML?: string; visibility?: boolean };
 }
 
 export interface Theme {

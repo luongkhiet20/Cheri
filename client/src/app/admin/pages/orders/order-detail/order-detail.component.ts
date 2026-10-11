@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
 import { paymentStatusLabel } from '../orders-report-csv.cjs';
+import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 interface StatusOption {
   code: string;
@@ -20,10 +21,14 @@ export class OrderDetailComponent implements OnInit {
   orderId: string | null = null;
   order: any = null;
 
+  breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Quản lý đơn hàng', url: '/admin/orders' },
+    { label: 'Chi tiết đơn hàng' }
+  ];
+
   isLoading = true;
   isNotFound = false;
   errorMessage = '';
-  successMessage = '';
 
   // Status transition state
   selectedNextStatus = '';
@@ -37,7 +42,6 @@ export class OrderDetailComponent implements OnInit {
   // Business state transitions rule
   readonly VALID_TRANSITIONS: Record<string, string[]> = {
     PENDING: ['PROCESSING', 'CANCELLED'],
-    CONFIRMED: ['PROCESSING', 'CANCELLED'],
     PROCESSING: ['SHIPPING', 'CANCELLED'],
     SHIPPING: ['DELIVERY_FAILED', 'DELIVERED', 'CANCELLED'],
     DELIVERY_FAILED: ['SHIPPING', 'CANCELLED', 'RETURNED'],
@@ -48,10 +52,10 @@ export class OrderDetailComponent implements OnInit {
 
   readonly ALL_STATUSES: StatusOption[] = [
     { code: 'PENDING', label: 'Chờ xác nhận', variant: 'neutral' },
-    { code: 'CONFIRMED', label: 'Đã xác nhận', variant: 'primary' },
+
     { code: 'PROCESSING', label: 'Đang xử lý', variant: 'warning' },
     { code: 'SHIPPING', label: 'Đang giao', variant: 'primary' },
-    { code: 'DELIVERY_FAILED', label: 'Giao hàng không thành công', variant: 'danger' },
+
     { code: 'DELIVERED', label: 'Đã giao', variant: 'success' },
     { code: 'CANCELLED', label: 'Đã hủy', variant: 'danger' },
     { code: 'RETURNED', label: 'Đã hoàn trả', variant: 'warning' }
@@ -68,7 +72,6 @@ export class OrderDetailComponent implements OnInit {
   ngOnInit(): void {
     this.orderId = this.route.snapshot.paramMap.get('id');
     if (this.route.snapshot.queryParamMap.get('updated') === '1') {
-      this.successMessage = 'Cập nhật đơn hàng thành công.';
       this.notificationService.success('Cập nhật đơn hàng thành công.');
     }
     if (!this.orderId || this.orderId.trim() === '') {
@@ -92,6 +95,11 @@ export class OrderDetailComponent implements OnInit {
           this.selectedNextStatus = '';
           this.statusNote = '';
           this.statusValidationMessage = '';
+          const code = this.order?.orderId || this.order?.code || '';
+          this.breadcrumbItems = [
+            { label: 'Quản lý đơn hàng', url: '/admin/orders' },
+            { label: code ? ('Đơn hàng #' + code) : 'Chi tiết đơn hàng' }
+          ];
         } else {
           this.isNotFound = true;
         }
@@ -148,7 +156,6 @@ export class OrderDetailComponent implements OnInit {
   onSelectStatus(targetStatus: string): void {
     this.statusValidationMessage = '';
     this.errorMessage = '';
-    this.successMessage = '';
 
     if (!this.order || !this.order.statusCode) return;
     const current = this.order.statusCode.toUpperCase();
@@ -197,7 +204,6 @@ export class OrderDetailComponent implements OnInit {
 
     this.isUpdatingStatus = true;
     this.errorMessage = '';
-    this.successMessage = '';
     this.statusValidationMessage = '';
 
     const newStatus = this.selectedNextStatus;
@@ -211,8 +217,8 @@ export class OrderDetailComponent implements OnInit {
           this.order = res.data;
           this.selectedNextStatus = '';
           this.statusNote = '';
-          this.successMessage = res.message || 'Cập nhật trạng thái đơn hàng thành công';
-          this.notificationService.success(this.successMessage);
+          const msg = res.message || 'Cập nhật trạng thái đơn hàng thành công';
+          this.notificationService.success(msg);
         } else {
           this.errorMessage = res.message || 'Cập nhật trạng thái thất bại';
           this.notificationService.error(this.errorMessage);

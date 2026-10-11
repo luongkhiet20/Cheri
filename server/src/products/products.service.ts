@@ -215,14 +215,14 @@ export class ProductsService {
       visibilityQuery['vi.visibility'] = { $ne: false };
     }
 
+    const filterConditions = [categoryQuery, stockQuery, ratingQuery]
+      .filter((condition) => Object.keys(condition).length > 0);
     const query = {
       ...searchQuery,
       ...imageProductQuery,
-      ...categoryQuery,
       ...priceQuery,
-      ...stockQuery,
-      ...ratingQuery,
       ...visibilityQuery,
+      ...(filterConditions.length > 0 ? { $and: filterConditions } : {}),
     };
     const options = {
       page: parseFloat(page) || 1,

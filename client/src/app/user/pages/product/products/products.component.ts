@@ -348,8 +348,11 @@ export class ProductsComponent implements OnDestroy {
     const next = this.selectedCategories().filter(c => c !== catUrl);
     this.selectedCategories.set(next);
     if (this.category()) {
+      const queryParams = { ...this.route.snapshot.queryParams };
+      queryParams['sort'] = this.sortBy() || queryParams['sort'] || 'newest';
+      queryParams['page'] = 1;
       this.router.navigate(['/' + this.lang() + '/product/all'], {
-        queryParams: { sort: this.sortBy() || 'newest', page: 1 },
+        queryParams,
       });
     }
     this.store.updatePosition({ productsComponent: 0 });

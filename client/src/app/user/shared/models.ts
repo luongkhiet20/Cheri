@@ -275,7 +275,7 @@ export interface TrackingResult {
   shippedAt: Date | string | null;
   deliveredAt: Date | string | null;
   dateAdded?: Date | string | null;
-  shippingAddress: {
+  shippingAddress?: {
     fullName?: string;
     name?: string;
     phone?: string;
@@ -289,7 +289,7 @@ export interface TrackingResult {
     fullAddress?: string;
   } | null;
   shippingLogs: ShippingLog[];
-  statusHistory: { status: string; updatedAt: Date; note: string }[];
+  statusHistory: { status: string; updatedAt: Date; note?: string }[];
   items?: {
     title: string;
     sku?: string;
@@ -300,6 +300,9 @@ export interface TrackingResult {
     subtotal: number;
   }[];
   paymentMethod?: string;
+  paymentStatus?: string | null;
+  refundedAmount?: number;
+  refundedAt?: Date | string | null;
   subtotal?: number;
   shippingFee?: number;
   totalAmount?: number;

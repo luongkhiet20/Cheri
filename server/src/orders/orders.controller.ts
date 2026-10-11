@@ -90,10 +90,17 @@ export class OrdersController {
   }
 
   // ─── Public: Tra cứu vận đơn (khách vãng lai) ─────────────────────────────
-  // Yêu cầu: orderId hoặc trackingNumber + customerEmail hoặc số điện thoại người nhận
+  // Guest verification stays in the POST body; no contact details are accepted from the URL.
   // Không trả toàn bộ document — chỉ trả dữ liệu tracking cần thiết.
   @Post('/track')
-  trackOrder(@Body() body: { orderId?: string; trackingNumber?: string; email?: string; phone?: string }) {
+  trackOrder(@Body() body: {
+    trackingCode?: string;
+    authContact?: string;
+    orderId?: string;
+    trackingNumber?: string;
+    email?: string;
+    phone?: string;
+  }) {
     return this.ordersService.trackOrder(body);
   }
 

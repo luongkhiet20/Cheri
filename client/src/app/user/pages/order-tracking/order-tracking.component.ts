@@ -1,6 +1,6 @@
-import { Component, Signal, OnInit, effect, ChangeDetectorRef } from '@angular/core';
+import { Component, Signal, OnInit, effect, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, ActivatedRoute } from '@angular/router';
+import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Observable, of } from 'rxjs';
 import { finalize, timeout, catchError } from 'rxjs/operators';
@@ -10,6 +10,7 @@ import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
 import { SignalStore } from '../../../store/signal.store';
 import { Order, TrackingResult, ShippingLog } from '../../shared/models';
 import { PriceFormatPipe } from '../../../pipes/price.pipe';
+import { findOwnedTrackingOrder, getTrackingIdentifierFromQuery, hasSensitiveTrackingQueryParams } from './tracking-query.cjs';
 
 @Component({
   selector: 'app-order-tracking',
@@ -19,6 +20,7 @@ import { PriceFormatPipe } from '../../../pipes/price.pipe';
   imports: [CommonModule, RouterModule, FormsModule, PriceFormatPipe],
 })
 export class OrderTrackingComponent implements OnInit {
+  private router = inject(Router);
 
   // ─── Auth state ──────────────────────────────────────────────────────────
   user: Signal<any>;
@@ -68,9 +70,7 @@ export class OrderTrackingComponent implements OnInit {
         if (!orders || orders.length === 0) {
           this.store.getUserOrders();
         } else if (this.targetOrderIdFromQuery && !this.selectedOrder) {
-          const match = orders.find(
-            o => o.orderId === this.targetOrderIdFromQuery || (o as any)._id === this.targetOrderIdFromQuery
-          );
+          const match = findOwnedTrackingOrder(orders as any[], this.targetOrderIdFromQuery);
           if (match) {
             this.selectOrder(match);
           }
@@ -82,8 +82,7 @@ export class OrderTrackingComponent implements OnInit {
   ngOnInit(): void {
     // Đọc query parameters (hỗ trợ trigger từ link email / thông báo / redirect)
     this.route.queryParams.subscribe(params => {
-      const q = params['orderId'] || params['id'] || params['trackingNumber'];
-      const verify = params['email'] || params['phone'];
+      const q = getTrackingIdentifierFromQuery(params);
 
       if (q) {
         this.targetOrderIdFromQuery = q;
@@ -92,22 +91,21 @@ export class OrderTrackingComponent implements OnInit {
         // Nếu người dùng đã đăng nhập và đã có orders trong store
         const orders = this.userOrders();
         if (orders && orders.length > 0) {
-          const match = orders.find(
-            o => o.orderId === q || (o as any)._id === q || o.trackingNumber === q
-          );
+          const match = findOwnedTrackingOrder(orders as any[], q);
           if (match) {
             this.selectOrder(match);
           }
         }
       }
 
-      if (verify) {
-        this.guestVerify = verify;
-      }
-
       // Tự động gọi API tra cứu nếu có đầy đủ cả 2 trường
-      if (this.guestInput && this.guestVerify && !this.user()) {
-        this.trackGuest();
+      if (hasSensitiveTrackingQueryParams(params)) {
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { email: null, phone: null },
+          queryParamsHandling: 'merge',
+          replaceUrl: true,
+        });
       }
     });
 
@@ -132,7 +130,7 @@ export class OrderTrackingComponent implements OnInit {
       return;
     }
     const orders = this.userOrders();
-    const match = orders?.find(o => o.orderId === orderId || (o as any)._id === orderId);
+    const match = findOwnedTrackingOrder(orders as any[], orderId);
     if (match) {
       this.selectOrder(match);
     }
@@ -162,14 +160,7 @@ export class OrderTrackingComponent implements OnInit {
     this.trackingResult = null;
     this.cdr.detectChanges();
 
-    const payload: any = {
-      trackingCode: code,
-      orderId: code,
-      trackingNumber: code,
-      authContact: verify,
-      email: verify,
-      phone: verify,
-    };
+    const payload = { trackingCode: code, authContact: verify };
 
     this.apiService.trackOrder(payload).pipe(
       timeout(15000),
@@ -279,8 +270,8 @@ export class OrderTrackingComponent implements OnInit {
     return {
       orderId: rawOrder.orderId,
       status: rawOrder.status || rawOrder.shipping?.status,
-      trackingNumber: rawOrder.shipping?.trackingNumber || rawOrder.trackingNumber || null,
-      trackingUrl: rawOrder.shipping?.trackingUrl || rawOrder.trackingUrl || null,
+      trackingNumber: rawOrder.trackingNumber || rawOrder.shipping?.trackingNumber || null,
+      trackingUrl: rawOrder.trackingUrl || rawOrder.shipping?.trackingUrl || null,
       carrierName: rawOrder.shipping?.carrierName || rawOrder.shippingProvider || rawOrder.shippingMethodSnapshot?.name || null,
       estimatedDelivery: rawOrder.shipping?.estimatedDelivery || rawOrder.estimatedDeliveryDate || null,
       dateAdded: rawOrder.dateAdded || rawOrder.createdAt || null,
@@ -301,6 +292,9 @@ export class OrderTrackingComponent implements OnInit {
       statusHistory,
       items,
       paymentMethod: rawOrder.type || rawOrder.paymentMethod || rawOrder.paymentMethodSnapshot?.name || 'COD',
+      paymentStatus: rawOrder.paymentStatus || rawOrder.payment?.status || null,
+      refundedAmount: rawOrder.refundedAmount || rawOrder.payment?.refundedAmount || 0,
+      refundedAt: rawOrder.refundedAt || rawOrder.payment?.refundedAt || null,
       subtotal: rawOrder.cart?.totalPrice ?? rawOrder.subtotal ?? 0,
       shippingFee: rawOrder.cart?.shippingCost ?? rawOrder.shippingFee ?? 0,
       totalAmount: rawOrder.amount ?? rawOrder.totalAmount ?? 0,
@@ -639,7 +633,7 @@ export class OrderTrackingComponent implements OnInit {
    * Sắp xếp Lịch sử xử lý đơn hàng theo tiến trình tuần tự:
    * Chờ xác nhận (1) → Đã xác nhận (2) → Đang chuẩn bị (3) → Đang vận chuyển (4) → Đã giao hàng (5)
    */
-  sortedHistory(history: { status: string; updatedAt: Date; note: string }[]): any[] {
+  sortedHistory(history: { status: string; updatedAt: Date; note?: string }[]): any[] {
     if (!history || !history.length) return [];
     return [...history].sort((a, b) => {
       const orderA = this.orderStatusOrder[a.status] ?? 50;

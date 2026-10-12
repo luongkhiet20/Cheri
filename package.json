@@ -66,6 +66,7 @@
     "deepmerge": "4.3.1",
     "express": "^5.1.0",
     "express-session": "^1.18.1",
+    "mongodb": "^6.21.0",
     "mongoose": "8.4.1",
     "ngx-cookie-service": "^20.1.0",
     "passport": "^0.7.0",

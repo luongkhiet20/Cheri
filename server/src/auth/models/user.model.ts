@@ -28,6 +28,7 @@ export interface User extends Document {
   images?: string[];
   roles: string[];
   googleId?: string;
+  provider?: string;
   status: boolean;
   description?: string;
   dateAdded?: Date;

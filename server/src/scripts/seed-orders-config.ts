@@ -5,6 +5,10 @@
  * Chạy: npx ts-node -r tsconfig-paths/register server/src/scripts/seed-orders-config.ts
  */
 
+import * as dns from 'dns';
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1', '8.8.4.4']);
+} catch (e: any) {}
 import * as mongoose from 'mongoose';
 import * as dotenv from 'dotenv';
 

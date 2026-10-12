@@ -16,6 +16,7 @@ const CartItemSchema = new Schema(
 const UserSchema = new Schema(
   {
     googleId: { type: String },
+    provider: { type: String, default: 'local' },
     email: {
       type: String,
       required: true,

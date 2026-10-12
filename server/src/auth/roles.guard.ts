@@ -52,3 +52,49 @@ export class RolesGuard implements CanActivate {
   }
 }
 
+@Injectable()
+export class GoogleAuthGuard extends AuthGuard('google') {
+  getAuthenticateOptions(context: ExecutionContext) {
+    const req = context.switchToHttp().getRequest();
+    const queryOrigin = req.query?.origin;
+    let origin: string | undefined;
+
+    if (queryOrigin && typeof queryOrigin === 'string') {
+      origin = queryOrigin;
+    } else if (req.headers?.referer) {
+      try {
+        origin = new URL(req.headers.referer).origin;
+      } catch {}
+    }
+
+    if (!origin) {
+      origin = process.env.ORIGIN || 'http://localhost:3000';
+    }
+
+    if (req.session) {
+      req.session.returnOrigin = origin;
+    }
+
+    return {
+      state: origin,
+    };
+  }
+
+  handleRequest(err: any, user: any, info: any, context: ExecutionContext) {
+    if (err || !user) {
+      const res = context.switchToHttp().getResponse();
+      const req = context.switchToHttp().getRequest();
+      let feOrigin = process.env.ORIGIN || 'http://localhost:3000';
+      const state = req.query?.state as string;
+      if (state && (state.startsWith('http://') || state.startsWith('https://'))) {
+        feOrigin = state.replace(/\/+$/, '');
+      } else if (req.session?.returnOrigin) {
+        feOrigin = req.session.returnOrigin.replace(/\/+$/, '');
+      }
+      return res.redirect(`${feOrigin}/vi/authorize/signin?error=google_auth_failed`);
+    }
+    return user;
+  }
+}
+
+

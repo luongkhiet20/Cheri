@@ -8,7 +8,7 @@ import { TranslateService } from '../../../../services/translate.service';
 import { User } from '../../../shared/models';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../../../pipes/translate.pipe';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { SignalStore } from '../../../../store/signal.store';
@@ -42,7 +42,8 @@ export class SignInComponent implements OnInit {
     private apiService: ApiService,
     private fb: FormBuilder,
     private snackBar: MatSnackBar,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute
   ) {
     this.lang$ = this.translate.getLang$();
     this.loading$ = toObservable(this.selectors.authLoading);
@@ -60,6 +61,16 @@ export class SignInComponent implements OnInit {
     if (checkIsAdmin(currentUser)) {
       this.router.navigate(['/admin']);
     }
+
+    this.route.queryParams.pipe(take(1)).subscribe((params) => {
+      if (params['error']) {
+        this.snackBar.open('Đăng nhập bằng Google không thành công hoặc đã bị hủy. Vui lòng thử lại!', 'Đóng', {
+          duration: 4000,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom'
+        });
+      }
+    });
   }
 
   togglePasswordVisibility(): void {
@@ -136,7 +147,10 @@ export class SignInComponent implements OnInit {
       verticalPosition: 'bottom'
     });
     // Gọi endpoint Google OAuth của Backend
-    window.location.href = '/api/auth/google';
+    const apiUrl = this.apiService.apiUrl || '';
+    const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+    const originParam = currentOrigin ? `?origin=${encodeURIComponent(currentOrigin)}` : '';
+    window.location.href = `${apiUrl}/api/auth/google${originParam}`;
   }
 
   signInWithFacebook(): void {

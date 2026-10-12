@@ -17,7 +17,7 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
 
-import { RolesGuard, AdminJwtAuthGuard } from './roles.guard';
+import { RolesGuard, AdminJwtAuthGuard, GoogleAuthGuard } from './roles.guard';
 import { AuthCredentialDto } from './dto/auth-credential.dto';
 import { AuthService } from './auth.service';
 import { User } from './models/user.model';
@@ -158,16 +158,47 @@ export class AuthController {
   }
 
   @Get('/google')
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(GoogleAuthGuard)
   googleLogin() {}
 
   @Get('/google/callback')
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(GoogleAuthGuard)
   async googleLoginCallback(@Req() req, @Res() res) {
-    const googleUserDto: GoogleUserDto = req.user;
-    const accessToken = await this.authService.signInGoogle(googleUserDto);
-    const tokenUrl = process.env.ORIGIN + '/jwtToken/' + accessToken;
-    res.redirect(tokenUrl);
+    if (res.headersSent) {
+      return;
+    }
+    try {
+      const googleUserDto: GoogleUserDto = req.user;
+      let feOrigin = process.env.ORIGIN || 'http://localhost:3000';
+      const state = req.query?.state as string;
+      if (state && (state.startsWith('http://') || state.startsWith('https://'))) {
+        feOrigin = state.replace(/\/+$/, '');
+      } else if (req.session?.returnOrigin) {
+        feOrigin = req.session.returnOrigin.replace(/\/+$/, '');
+      }
+
+      if (!googleUserDto || !googleUserDto.email) {
+        return res.redirect(`${feOrigin}/vi/authorize/signin?error=google_auth_failed`);
+      }
+
+      const accessToken = await this.authService.signInGoogle(googleUserDto);
+
+      res.cookie('accessToken', accessToken, {
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+        httpOnly: false,
+        sameSite: 'lax',
+      });
+      if (req.session) {
+        req.session.accessToken = accessToken;
+        req.session.token = accessToken;
+      }
+
+      const tokenUrl = `${feOrigin}/jwtToken/${accessToken}`;
+      return res.redirect(tokenUrl);
+    } catch (err: any) {
+      let feOrigin = process.env.ORIGIN || 'http://localhost:3000';
+      return res.redirect(`${feOrigin}/vi/authorize/signin?error=google_login_error`);
+    }
   }
 
   @Post('/signout')

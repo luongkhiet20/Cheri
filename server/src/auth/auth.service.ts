@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 
 import { GoogleUserDto } from './dto/google-user.dto';
+import { GoogleRegisterDto } from './dto/google-register.dto';
 import { User } from './models/user.model';
 import { JwtPayload } from './models/jwt-payload.interface';
 import { AuthCredentialDto } from './dto/auth-credential.dto';
@@ -17,6 +18,7 @@ import * as cloudinary from 'cloudinary';
 import * as streamifier from 'streamifier';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as crypto from 'crypto';
 
 cloudinary.v2.config({
   cloud_name: process.env.CLOUDINARY_NAME,
@@ -135,30 +137,77 @@ export class AuthService {
     };
   }
 
-  async signInGoogle(googleUserDto: GoogleUserDto) {
+  async signInGoogle(googleUserDto: GoogleUserDto): Promise<string> {
     const { email, profile } = googleUserDto;
-    const user = await this.userModel.findOne({ email });
+    const cleanEmail = (email || '').trim().toLowerCase();
 
-    if (!user) {
-      const googleUser = await new this.userModel({
-        email,
-        googleId: profile.id,
-      });
-      googleUser.save();
+    if (!cleanEmail) {
+      throw new UnauthorizedException('Không tìm thấy thông tin email từ tài khoản Google');
     }
 
-    const payload: JwtPayload = { email };
+    let user = await this.userModel.findOne({ email: cleanEmail });
+
+    if (user) {
+      if (user.status === false) {
+        throw new UnauthorizedException('Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động');
+      }
+      let updated = false;
+      if (!user.googleId && profile?.id) {
+        user.googleId = profile.id;
+        updated = true;
+      }
+      const photo = profile?.photos?.[0]?.value;
+      if (!user.avatar && photo) {
+        user.avatar = photo;
+        updated = true;
+      }
+      if (updated) {
+        await user.save();
+      }
+    } else {
+      const displayName =
+        profile?.displayName ||
+        (profile?.name?.givenName
+          ? `${profile.name.givenName} ${profile.name?.familyName || ''}`.trim()
+          : '') ||
+        cleanEmail.split('@')[0];
+
+      const photo = profile?.photos?.[0]?.value || '';
+      const salt = await bcrypt.genSalt();
+      const randomPassword = crypto.randomBytes(16).toString('hex');
+      const hashedPassword = await this.hashPassword(randomPassword, salt);
+
+      user = new this.userModel({
+        email: cleanEmail,
+        googleId: profile?.id,
+        name: displayName,
+        fullName: displayName,
+        avatar: photo,
+        images: photo ? [photo] : [],
+        salt,
+        password: hashedPassword,
+        roles: ['user'],
+        status: true,
+        cart: { items: [] },
+      });
+
+      await user.save();
+    }
+
+    const payload: JwtPayload = {
+      email: user.email,
+      id: user._id.toString(),
+      roles: user.roles,
+    };
     const accessToken: string = await this.jwtService.sign(payload);
 
     return accessToken;
   }
 
   async getGoogleUser(email: string, profile: any) {
-    const user = this.userModel.findOne({ email });
-    const googleUser =
-      user || (await new this.userModel({ email, googleId: profile.id }));
-
-    return googleUser;
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const user = await this.userModel.findOne({ email: cleanEmail });
+    return user;
   }
 
   private async hashPassword(password: string, salt: string): Promise<string> {

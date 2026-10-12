@@ -1,4 +1,5 @@
 import { Document, Model, Types } from 'mongoose';
+import type { StoredReview } from '../reviews/review.types';
 
 export interface Product extends Document {
   _id: any;
@@ -26,6 +27,7 @@ export interface Product extends Document {
   sizes?: string[];
   hasClassification?: boolean;
   rating?: number;
+  reviews?: StoredReview[];
   _user?: Types.ObjectId | string;
   dateAdded?: Date;
   createdAt?: Date;

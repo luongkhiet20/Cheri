@@ -1,5 +1,5 @@
 import { toObservable } from '@angular/core/rxjs-interop';
-import { ChangeDetectionStrategy, Component, OnInit, Signal, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, Signal, signal } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable, of } from 'rxjs';
 import { filter, map, switchMap, take } from 'rxjs/operators';
@@ -22,8 +22,7 @@ import { checkIsAdmin } from '../../../../services/auth.guard';
   selector: 'app-signin',
   templateUrl: './signin.component.html',
   styleUrls: ['./signin.component.css'],
-  imports: [CommonModule, TranslatePipe, RouterLink, MatInputModule, FormsModule, ReactiveFormsModule, MatSnackBarModule],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  imports: [CommonModule, TranslatePipe, RouterLink, MatInputModule, FormsModule, ReactiveFormsModule, MatSnackBarModule]
 })
 export class SignInComponent implements OnInit {
   signInForm: FormGroup;
@@ -57,7 +56,8 @@ export class SignInComponent implements OnInit {
     private fb: FormBuilder,
     private snackBar: MatSnackBar,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private cdr: ChangeDetectorRef
   ) {
     this.lang$ = this.translate.getLang$();
     this.loading$ = toObservable(this.selectors.authLoading);
@@ -77,15 +77,11 @@ export class SignInComponent implements OnInit {
 
     if (this.currentLoggedUser && (this.currentLoggedUser.email || this.currentLoggedUser.accessToken)) {
       if (checkIsAdmin(this.currentLoggedUser)) {
-        // Đã là Admin hợp lệ -> chuyển thẳng vào trang quản trị
         const target = this.isRequestingAdmin ? returnUrl : '/admin';
         this.router.navigateByUrl(target);
       } else if (!this.isRequestingAdmin) {
-        // Là User thường và KHÔNG yêu cầu đăng nhập Admin -> chuyển về trang chủ /
         this.router.navigateByUrl(returnUrl || '/');
       }
-      // NẾU LÀ USER THƯỜNG NHƯNG ĐANG YÊU CẦU ĐĂNG NHẬP ADMIN (this.isRequestingAdmin === true):
-      // -> KHÔNG điều hướng đi đâu cả, giữ nguyên form đăng nhập để User nhập tài khoản Admin!
     }
   }
 
@@ -117,6 +113,7 @@ export class SignInComponent implements OnInit {
         this.isPasswordResetBusy = false;
         this.forgotEmail = email;
         this.forgotStep = 'verify';
+        this.cdr.detectChanges();
         this.snackBar.open(response.message, 'Đóng', {
           duration: 4000,
           horizontalPosition: 'center',
@@ -125,6 +122,7 @@ export class SignInComponent implements OnInit {
       },
       error: (error: unknown) => {
         this.isPasswordResetBusy = false;
+        this.cdr.detectChanges();
         this.showPasswordResetError(
           error,
           'Không thể gửi mã xác minh. Vui lòng thử lại sau.',
@@ -146,9 +144,11 @@ export class SignInComponent implements OnInit {
           this.isPasswordResetBusy = false;
           this.resetToken = response.resetToken;
           this.forgotStep = 'reset';
+          this.cdr.detectChanges();
         },
         error: (error: unknown) => {
           this.isPasswordResetBusy = false;
+          this.cdr.detectChanges();
           this.showPasswordResetError(
             error,
             'Mã xác minh không hợp lệ hoặc đã hết hạn.',
@@ -184,6 +184,7 @@ export class SignInComponent implements OnInit {
           this.newPassword = '';
           this.confirmNewPassword = '';
           this.resetToken = '';
+          this.cdr.detectChanges();
           this.snackBar.open(response.message, 'Đóng', {
             duration: 4000,
             horizontalPosition: 'center',
@@ -192,6 +193,7 @@ export class SignInComponent implements OnInit {
         },
         error: (error: unknown) => {
           this.isPasswordResetBusy = false;
+          this.cdr.detectChanges();
           this.showPasswordResetError(
             error,
             'Không thể đặt lại mật khẩu. Vui lòng thử lại.',
@@ -227,26 +229,21 @@ export class SignInComponent implements OnInit {
       switchMap((response: any) => {
         const isAdmin = checkIsAdmin(response);
 
-        // Nếu đang ở luồng đăng nhập Admin nhưng tài khoản nhập vào KHÔNG phải Admin:
-        // Không lưu token này đè vào phiên quản trị!
         if (isRequestingAdmin && !isAdmin) {
           this.selectors.userState.update((state) => ({ ...state, loading: false }));
           return of({ user: response, isDeniedAdmin: true });
         }
 
-        // Đăng nhập hợp lệ (Admin thành công hoặc đăng nhập User thông thường):
         if (response && response.accessToken) {
           localStorage.setItem(accessTokenKey, response.accessToken);
         }
         this.selectors.userState.update((state) => ({ ...state, user: response, loading: false }));
-        // Lập tức gọi getUser() để đồng bộ toàn bộ state người dùng
         this.store.getUser();
         return this.lang$.pipe(take(1), map(lang => ({ user: response, lang, isDeniedAdmin: false })));
       })
     ).subscribe({
       next: ({ user, lang, isDeniedAdmin }: any) => {
         if (isDeniedAdmin) {
-          // Từ chối quyền quản trị, giữ nguyên ở form đăng nhập để thử lại
           this.snackBar.open('Tài khoản này không có quyền Quản trị viên (Admin). Vui lòng đăng nhập bằng tài khoản Admin!', 'Đóng', {
             duration: 5000,
             horizontalPosition: 'center',
@@ -258,17 +255,14 @@ export class SignInComponent implements OnInit {
 
         if (user && !user.error && (user.accessToken || user.email)) {
           this.signInForm.reset();
-          // Hợp nhất giỏ hàng khách vãng lai (nếu có) vào tài khoản User và xóa guest cart
           this.store.mergeGuestCartIfAny(lang || 'vi');
 
           const isAdmin = checkIsAdmin(user);
 
           if (isRequestingAdmin) {
-            // Admin đăng nhập thành công: chuyển tới trang quản trị
             const target = returnUrl || '/admin';
             this.router.navigateByUrl(target);
           } else {
-            // Khách hàng thông thường: không chuyển đến /admin kể cả khi URL có query returnUrl quản trị
             if (isAdmin) {
               this.router.navigateByUrl('/admin');
             } else {
@@ -301,7 +295,6 @@ export class SignInComponent implements OnInit {
       horizontalPosition: 'center',
       verticalPosition: 'bottom'
     });
-    // Gọi endpoint Google OAuth của Backend
     window.location.href = '/api/auth/google';
   }
 

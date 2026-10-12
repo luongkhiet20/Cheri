@@ -1,6 +1,7 @@
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, ExtractJwt } from 'passport-jwt';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtPayload } from '../models/jwt-payload.interface';
 import { Model } from 'mongoose';
 import { User } from '../models/user.model';
@@ -8,7 +9,10 @@ import { InjectModel } from '@nestjs/mongoose';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(@InjectModel('User') private userModel: Model<User>) {
+  constructor(
+    @InjectModel('User') private userModel: Model<User>,
+    configService: ConfigService, // Inject ConfigService từ NestJS
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -24,7 +28,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
           return token;
         },
       ]),
-      secretOrKey: process.env.JWT_SECRET,
+      // Lấy qua configService trước, sau đó process.env, kèm fallback tránh crash
+      secretOrKey:
+        configService.get<string>('JWT_SECRET') ||
+        process.env.JWT_SECRET ||
+        'cheri_fallback_secret_key',
     });
   }
 

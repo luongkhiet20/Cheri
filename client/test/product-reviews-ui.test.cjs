@@ -384,7 +384,8 @@ async function authHarness(t) {
   selectors.productState.update(state => ({ ...state, cart: { items: [] }, userOrders: [{}], order: {} }));
   const storage = () => {
     const values = new Map([['accessToken', staleUser.accessToken]]);
-    return { getItem: key => values.get(key) || null, removeItem: key => values.delete(key) };
+    return { getItem: key => values.get(key) || null, setItem: (key, value) => values.set(key, value),
+      removeItem: key => values.delete(key) };
   };
   for (const [key, value] of Object.entries({ window: {}, localStorage: storage(), sessionStorage: storage() })) {
     const descriptor = Object.getOwnPropertyDescriptor(globalThis, key);
@@ -470,6 +471,8 @@ test('a late 401 action does not invalidate a newer authenticated session', asyn
   h.last('getMine').response.error({ status: 401 });
   const newerUser = { id: 'user-a', accessToken: require('node:crypto').randomBytes(16).toString('hex') };
   h.selectors.userState.update(state => ({ ...state, user: newerUser }));
+  globalThis.localStorage.setItem('accessToken', newerUser.accessToken);
+  globalThis.sessionStorage.setItem('accessToken', newerUser.accessToken);
   h.last('getPage').response.next(page());
   h.component.signIn();
   assert.equal(h.selectors.user() === newerUser, true);
@@ -485,6 +488,56 @@ test('signout completion after a newer login does not redirect that session', as
   h.signout.next({ success: true });
   assert.equal(h.selectors.user() === newerUser, true);
   assert.deepEqual(h.navigations, []);
+});
+
+for (const source of ['getMine', 'saveMine']) {
+  for (const replaceUser of [true, false]) {
+    test(`delayed ${source} 401 preserves a replacement same-user credential before delivery (replaceUser=${replaceUser})`, async t => {
+      const h = await authHarness(t);
+      if (source === 'saveMine') {
+        h.last('getMine').response.next(mine());
+        h.component.form.setValue({ rating: 4, comment: 'Bản nháp' });
+        h.component.submit();
+      }
+      const currentUser = replaceUser ? { id: 'user-a' } : h.staleUser;
+      const freshCredential = require('node:crypto').randomBytes(16).toString('hex');
+      h.selectors.userState.update(state => ({ ...state, user: currentUser }));
+      globalThis.localStorage.setItem('accessToken', freshCredential);
+      globalThis.sessionStorage.setItem('accessToken', freshCredential);
+      h.last(source).response.error({ status: 401 });
+      assert.equal(h.component.state.error.kind, 'auth');
+      h.component.signIn();
+      assert.equal(h.selectors.user() === currentUser, true);
+      assert.equal(globalThis.localStorage.getItem('accessToken') === freshCredential, true);
+      assert.equal(globalThis.sessionStorage.getItem('accessToken') === freshCredential, true);
+      assert.equal(h.signout.observed, false);
+    });
+  }
+}
+
+test('a profile refresh with the same rejected credential still allows 401 sign-in recovery', async t => {
+  const h = await authHarness(t);
+  h.selectors.userState.update(state => ({ ...state, user: { _id: 'user-a' } }));
+  h.last('getMine').response.error({ status: 401 });
+  h.component.signIn();
+  assert.equal(h.selectors.user() === null, true);
+  assert.equal(h.signout.observed, true);
+});
+
+test('PUT captures its own rejected credential after the initial eligibility request used another session', async t => {
+  const h = await authHarness(t);
+  h.last('getMine').response.next(mine());
+  const currentUser = { _id: 'user-a' };
+  const currentCredential = require('node:crypto').randomBytes(16).toString('hex');
+  h.selectors.userState.update(state => ({ ...state, user: currentUser }));
+  globalThis.localStorage.setItem('accessToken', currentCredential);
+  globalThis.sessionStorage.setItem('accessToken', currentCredential);
+  h.component.form.setValue({ rating: 4, comment: 'Bản nháp' });
+  h.component.submit();
+  h.last('saveMine').response.error({ status: 401 });
+  h.component.signIn();
+  assert.equal(h.selectors.user() === null, true);
+  assert.equal(h.signout.observed, true);
 });
 
 test('signout completion after reviews are destroyed does not navigate', async t => {

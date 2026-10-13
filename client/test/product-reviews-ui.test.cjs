@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { Subject, BehaviorSubject } = require('rxjs');
+const { Subject, BehaviorSubject, of } = require('rxjs');
 const { loadTypeScript } = require('./helpers/load-typescript.cjs');
 const controllerPath = 'client/src/app/user/shared/reviews/review-controller.ts';
 const review = { id: 'review-a', authorName: 'Khách hàng', rating: 4, comment: 'Tốt',
@@ -176,6 +176,58 @@ test('eligibility errors retry without replacing a preserved draft', t => {
   assert.equal(h.state.draft.comment, 'Bản nháp');
 });
 
+for (const failureOrder of [['getMine', 'getPage'], ['getPage', 'getMine']]) {
+  for (const recoveryOrder of [['getMine', 'getPage'], ['getPage', 'getMine']]) {
+    test(`independent read failures ${failureOrder.join('/')} recover ${recoveryOrder.join('/')} without losing retry`, t => {
+      const h = setup(t);
+      h.controller.setContext('product-a', 'user-a');
+      for (const method of failureOrder) h.last(method).response.error({ status: 500 });
+      assert.ok(h.state.error);
+      h.controller.retry();
+      assert.equal(h.calls.filter(call => call.method === 'getPage').length, 2);
+      assert.equal(h.calls.filter(call => call.method === 'getMine').length, 2);
+      for (const method of recoveryOrder) {
+        h.last(method).response.next(method === 'getPage' ? page() : mine());
+      }
+      assert.equal(h.state.error, null);
+      assert.equal(h.state.page.productId, 'product-a');
+      assert.equal(h.state.eligibility.eligible, true);
+      assert.equal(h.state.loadingPage, false);
+      assert.equal(h.state.loadingEligibility, false);
+      h.controller.setDraft({ rating: 4, comment: 'Tốt' });
+      h.controller.submit();
+      assert.equal(h.calls.filter(call => call.method === 'saveMine').length, 1);
+    });
+  }
+}
+
+test('successful retry of one read leaves the other failed read recoverable', t => {
+  const h = setup(t);
+  h.controller.setContext('product-a', 'user-a');
+  h.last('getMine').response.error({ status: 500 });
+  h.last('getPage').response.error({ status: 500 });
+  h.controller.loadPage(1);
+  h.last('getPage').response.next(page());
+  assert.equal(h.state.error?.kind, 'eligibility');
+  h.controller.retry();
+  assert.equal(h.calls.filter(call => call.method === 'getMine').length, 2);
+  h.last('getMine').response.next(mine());
+  assert.equal(h.state.error, null);
+  assert.equal(h.state.eligibility.eligible, true);
+});
+
+test('a concurrent public read failure cannot hide an expired-session sign-in action', t => {
+  const h = setup(t);
+  h.controller.setContext('product-a', 'user-a');
+  h.last('getMine').response.error({ status: 401 });
+  h.last('getPage').response.error({ status: 500 });
+  assert.equal(h.state.error.kind, 'auth');
+  h.controller.retry();
+  h.last('getPage').response.next(page());
+  assert.equal(h.state.error.kind, 'auth');
+  assert.equal(h.state.eligibility, null);
+});
+
 test('a successful save invalidates prior GETs and publishes the server summary once', t => {
   const h = setup(t);
   eligible(h);
@@ -286,6 +338,7 @@ test('component adapts signin id and profile _id, preserves returnUrl, and tears
     '@angular/router': { Router: class {} },
     '../../../services/product-reviews.service': { ProductReviewsApi: class {} },
     '../../../store/signal.store.selectors': { SignalStoreSelectors: class {} },
+    '../../../store/signal.store': { SignalStore: class {} },
   });
   const component = new ProductReviewsComponent(api, { user: () => user.value }, router, 'server');
   t.after(() => component.ngOnDestroy());
@@ -314,4 +367,131 @@ test('component adapts signin id and profile _id, preserves returnUrl, and tears
   component.ngOnDestroy();
   assert.equal(user.observed, false);
   for (const call of calls) assert.equal(call.response.observed, false);
+});
+
+async function authHarness(t) {
+  await import('@angular/compiler');
+  const [core, common, forms] = await Promise.all([import('@angular/core'), import('@angular/common'), import('@angular/forms')]);
+  const { SignalStoreSelectors } = loadTypeScript('client/src/app/store/signal.store.selectors.ts', { '@angular/core': core });
+  const { SignalStore } = loadTypeScript('client/src/app/store/signal.store.ts', {
+    '@angular/core': core,
+    './signal.store.selectors': { SignalStoreSelectors },
+    '../services/api.service': { ApiService: class {} },
+  });
+  const selectors = new SignalStoreSelectors();
+  const staleUser = { id: 'user-a', accessToken: require('node:crypto').randomBytes(16).toString('hex') };
+  selectors.userState.update(state => ({ ...state, user: staleUser }));
+  selectors.productState.update(state => ({ ...state, cart: { items: [] }, userOrders: [{}], order: {} }));
+  const storage = () => {
+    const values = new Map([['accessToken', staleUser.accessToken]]);
+    return { getItem: key => values.get(key) || null, removeItem: key => values.delete(key) };
+  };
+  for (const [key, value] of Object.entries({ window: {}, localStorage: storage(), sessionStorage: storage() })) {
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, key);
+    Object.defineProperty(globalThis, key, { configurable: true, writable: true, value });
+    t.after(() => descriptor ? Object.defineProperty(globalThis, key, descriptor) : delete globalThis[key]);
+  }
+  const signout = new Subject();
+  const store = new SignalStore({ signOut: () => signout.asObservable(), clearGuestCartLocal() {},
+    saveGuestCartLocal() {}, getCart: () => of({ items: [] }) }, selectors);
+  const calls = [];
+  const api = Object.fromEntries(['getPage', 'getMine', 'saveMine'].map(method => [method, (...args) => {
+    const response = new Subject(); calls.push({ method, args, response }); return response.asObservable();
+  }]));
+  const navigations = [];
+  const redirects = [];
+  const router = { url: '/vi/product/product-a#reviews', navigate: (...args) => navigations.push(args), navigateByUrl: url => redirects.push(url) };
+  const sharedMocks = {
+    '@angular/core': core, '@angular/common': common, '@angular/forms': forms,
+    '@angular/core/rxjs-interop': { toObservable: () => of(selectors.user()) },
+    '@angular/router': { Router: class {}, RouterLink: class {}, ActivatedRoute: class {} },
+  };
+  const { ProductReviewsComponent } = loadTypeScript('client/src/app/user/shared/reviews/product-reviews.component.ts', {
+    ...sharedMocks,
+    '../../../services/product-reviews.service': { ProductReviewsApi: class {} },
+    '../../../store/signal.store.selectors': { SignalStoreSelectors },
+    '../../../store/signal.store': { SignalStore },
+  });
+  const component = new ProductReviewsComponent(api, selectors, router, 'browser', store);
+  component.productId = 'product-a'; component.ngOnChanges();
+  t.after(() => component.ngOnDestroy());
+  const { SignInComponent } = loadTypeScript('client/src/app/user/pages/auth/signin/signin.component.ts', {
+    ...sharedMocks,
+    '../../../../store/signal.store': { SignalStore },
+    '../../../../store/signal.store.selectors': { SignalStoreSelectors },
+    '../../../../services/api.service': { ApiService: class {} },
+    '../../../../services/translate.service': { TranslateService: class {} },
+    '../../../../pipes/translate.pipe': { TranslatePipe: class {} },
+    '@angular/material/input': { MatInputModule: class {} },
+    '@angular/material/snack-bar': { MatSnackBar: class {}, MatSnackBarModule: class {} },
+  });
+  const signin = new SignInComponent({ getLang$: () => of('vi') }, store, selectors, {}, new forms.FormBuilder(), {}, router,
+    { snapshot: { queryParams: { returnUrl: router.url } } });
+  return { component, selectors, staleUser, signout, calls, navigations, redirects, signin,
+    last(method) { return calls.filter(call => call.method === method).at(-1); } };
+}
+
+for (const source of ['getMine', 'saveMine']) {
+  for (const signoutResult of ['success', 'error']) {
+    test(`${source} 401 sign-in invalidates stale auth and reaches the existing form after signout ${signoutResult}`, async t => {
+      const h = await authHarness(t);
+      h.signin.ngOnInit();
+      assert.deepEqual(h.redirects, ['/vi/product/product-a#reviews']);
+      h.redirects.length = 0;
+      if (source === 'saveMine') {
+        h.last('getMine').response.next(mine());
+        h.component.form.setValue({ rating: 4, comment: 'Bản nháp' });
+        h.component.submit();
+      }
+      h.last(source).response.error({ status: 401 });
+      assert.equal(h.component.state.error.kind, 'auth');
+      if (source === 'saveMine') assert.equal(h.component.state.draft.comment, 'Bản nháp');
+      h.component.signIn();
+      assert.equal(h.selectors.user() === null, true);
+      assert.equal(globalThis.localStorage.getItem('accessToken'), null);
+      assert.equal(globalThis.sessionStorage.getItem('accessToken'), null);
+      assert.equal(h.selectors.productState().userOrders, null);
+      assert.equal(h.navigations.length, 0);
+      h.component.signIn();
+      assert.equal(h.navigations.length, 0);
+      if (signoutResult === 'success') h.signout.next({ success: true });
+      else h.signout.error({ status: 500 });
+      assert.deepEqual(h.navigations, [[['/', 'vi', 'authorize', 'signin'],
+        { queryParams: { returnUrl: '/vi/product/product-a#reviews' } }]]);
+      h.signin.ngOnInit();
+      assert.deepEqual(h.redirects, []);
+      assert.equal(h.signin.signInForm.valid, false);
+    });
+  }
+}
+
+test('a late 401 action does not invalidate a newer authenticated session', async t => {
+  const h = await authHarness(t);
+  h.last('getMine').response.error({ status: 401 });
+  const newerUser = { id: 'user-a', accessToken: require('node:crypto').randomBytes(16).toString('hex') };
+  h.selectors.userState.update(state => ({ ...state, user: newerUser }));
+  h.last('getPage').response.next(page());
+  h.component.signIn();
+  assert.equal(h.selectors.user() === newerUser, true);
+  assert.equal(h.signout.observed, false);
+});
+
+test('signout completion after a newer login does not redirect that session', async t => {
+  const h = await authHarness(t);
+  h.last('getMine').response.error({ status: 401 });
+  h.component.signIn();
+  const newerUser = { id: 'user-b' };
+  h.selectors.userState.update(state => ({ ...state, user: newerUser }));
+  h.signout.next({ success: true });
+  assert.equal(h.selectors.user() === newerUser, true);
+  assert.deepEqual(h.navigations, []);
+});
+
+test('signout completion after reviews are destroyed does not navigate', async t => {
+  const h = await authHarness(t);
+  h.last('getMine').response.error({ status: 401 });
+  h.component.signIn();
+  h.component.ngOnDestroy();
+  h.signout.next({ success: true });
+  assert.deepEqual(h.navigations, []);
 });

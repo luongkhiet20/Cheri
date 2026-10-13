@@ -37,6 +37,9 @@ export class ReviewController {
   private requestedPage = 1;
   private draftChanged = false;
   private destroyed = false;
+  private pageError: ReviewUiState['error'] = null;
+  private eligibilityError: ReviewUiState['error'] = null;
+  private actionError: ReviewUiState['error'] = null;
   constructor(private readonly api: ReviewApiPort) {}
   setContext(productId: string | null, userId: string | null): void {
     if (this.destroyed) return;
@@ -45,6 +48,7 @@ export class ReviewController {
     this.cancelReads();
     this.saveRequest?.unsubscribe();
     this.draftChanged = false;
+    this.pageError = this.eligibilityError = this.actionError = null;
     this.requestedPage = 1;
     this.state.next({ ...initialState(previous.revision + 1), productId, userId });
     if (productId) this.loadPage(1);
@@ -55,15 +59,17 @@ export class ReviewController {
     if (this.destroyed || !productId || submitting || !Number.isInteger(page) || page < 1) return;
     this.pageRequest?.unsubscribe();
     this.requestedPage = page;
-    this.patch({ loadingPage: true, error: this.state.value.error?.kind === 'page' ? null : this.state.value.error });
+    this.pageError = null;
+    this.patch({ loadingPage: true });
     this.pageRequest = this.api.getPage(productId, page, 10).pipe(take(1)).subscribe({
       next: result => {
         if (!this.isCurrent(revision) || result.productId !== productId) return;
         this.patch({ page: result, loadingPage: false });
       },
       error: () => {
-        if (this.isCurrent(revision)) this.patch({ loadingPage: false,
-          error: { kind: 'page', message: 'Không tải được đánh giá. Vui lòng thử lại.' } });
+        if (!this.isCurrent(revision)) return;
+        this.pageError = { kind: 'page', message: 'Không tải được đánh giá. Vui lòng thử lại.' };
+        this.patch({ loadingPage: false });
       },
     });
   }
@@ -71,7 +77,7 @@ export class ReviewController {
     if (this.destroyed || this.state.value.submitting) return;
     this.draftChanged = true;
     this.patch({ draft: { ...draft }, success: null,
-      error: this.state.value.error?.kind === 'validation' ? null : this.state.value.error });
+      error: this.actionError?.kind === 'validation' ? null : this.actionError });
   }
   submit(): void {
     if (this.destroyed || this.state.value.submitting) return;
@@ -96,6 +102,7 @@ export class ReviewController {
         this.cancelReads();
         this.requestedPage = 1;
         this.draftChanged = false;
+        this.pageError = this.eligibilityError = null;
         const { myReview, ...page } = result;
         this.patch({ revision: revision + 1, page,
           eligibility: { productId, eligible: true, reason: 'ELIGIBLE', myReview },
@@ -122,11 +129,11 @@ export class ReviewController {
   }
   retry(): void {
     if (this.destroyed) return;
-    switch (this.state.value.error?.kind) {
-      case 'page': this.loadPage(this.requestedPage); break;
-      case 'eligibility': this.loadEligibility(); break;
-      case 'submit': this.submit(); break;
-    }
+    if (this.actionError?.kind === 'submit') { this.submit(); return; }
+    const retryPage = this.pageError?.kind === 'page';
+    const retryEligibility = this.eligibilityError?.kind === 'eligibility';
+    if (retryPage) this.loadPage(this.requestedPage);
+    if (retryEligibility) this.loadEligibility();
   }
   destroy(): void {
     if (this.destroyed) return;
@@ -137,7 +144,9 @@ export class ReviewController {
     this.summaries.complete();
   }
   private patch(update: Partial<ReviewUiState>): void {
-    this.state.next({ ...this.state.value, ...update });
+    if ('error' in update) this.actionError = update.error || null;
+    this.state.next({ ...this.state.value, ...update,
+      error: this.actionError || this.eligibilityError || this.pageError });
   }
   private isCurrent(revision: number): boolean {
     return !this.destroyed && this.state.value.revision === revision;
@@ -150,7 +159,8 @@ export class ReviewController {
     const { productId, userId, revision } = this.state.value;
     if (this.destroyed || !productId || !userId) return;
     this.eligibilityRequest?.unsubscribe();
-    this.patch({ loadingEligibility: true, error: this.state.value.error?.kind === 'eligibility' ? null : this.state.value.error });
+    this.eligibilityError = null;
+    this.patch({ loadingEligibility: true });
     this.eligibilityRequest = this.api.getMine(productId).pipe(take(1)).subscribe({
       next: result => {
         if (!this.isCurrent(revision) || result.productId !== productId) return;
@@ -161,10 +171,11 @@ export class ReviewController {
       },
       error: error => {
         if (!this.isCurrent(revision)) return;
-        this.patch({ loadingEligibility: false, error: {
+        this.eligibilityError = {
           kind: error?.status === 401 ? 'auth' : 'eligibility',
           message: error?.status === 401 ? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.' : 'Không kiểm tra được quyền đánh giá. Vui lòng thử lại.',
-        } });
+        };
+        this.patch({ loadingEligibility: false });
       },
     });
   }

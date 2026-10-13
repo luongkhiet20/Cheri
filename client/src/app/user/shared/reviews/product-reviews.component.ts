@@ -7,6 +7,7 @@ import { distinctUntilChanged, map } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
 import { ProductReviewsApi } from '../../../services/product-reviews.service';
 import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
+import { SignalStore } from '../../../store/signal.store';
 import { ReviewController, ReviewUiState } from './review-controller';
 import { ReviewSummary } from './review.models';
 
@@ -30,11 +31,21 @@ export class ProductReviewsComponent implements OnChanges, OnDestroy {
   readonly controller: ReviewController;
   state!: ReviewUiState;
   private readonly subscriptions = new Subscription();
+  private rejectedUser: object | null = null;
+  private signingOut = false;
+  private destroyed = false;
 
   constructor(api: ProductReviewsApi, private readonly selectors: SignalStoreSelectors,
-    private readonly router: Router, @Inject(PLATFORM_ID) private readonly platformId: Object) {
+    private readonly router: Router, @Inject(PLATFORM_ID) private readonly platformId: Object,
+    private readonly store: SignalStore) {
     this.controller = new ReviewController(api);
     this.subscriptions.add(this.controller.state$.subscribe(state => {
+      if (state.error?.kind === 'auth' && this.state?.error?.kind !== 'auth') {
+        const user = this.selectors.user();
+        this.rejectedUser = user && (user._id || user.id) === state.userId ? user : null;
+      } else if (state.error?.kind !== 'auth') {
+        this.rejectedUser = null;
+      }
       this.state = state;
       const value = this.form.getRawValue();
       if (value.rating !== state.draft.rating || value.comment !== state.draft.comment) {
@@ -61,13 +72,23 @@ export class ProductReviewsComponent implements OnChanges, OnDestroy {
   }
 
   signIn(): void {
+    if (this.signingOut || this.destroyed) return;
     const currentUrl = this.router.url;
     const language = /^[a-z]{2}(?:-[A-Za-z]{2})?$/.test(this.lang) ? this.lang : 'vi';
     const returnUrl = currentUrl.startsWith('/') && !currentUrl.startsWith('//')
       && !/^\/(?:admin|jwtToken)(?:\/|\?|#|$)/.test(currentUrl)
       ? currentUrl : `/${language}/product/${encodeURIComponent(this.productId)}`;
     // app.routes.ts owns /:lang/authorize; AUTH_ROUTER owns its signin child.
-    this.router.navigate(['/', language, 'authorize', 'signin'], { queryParams: { returnUrl } });
+    const navigate = () => this.router.navigate(['/', language, 'authorize', 'signin'], { queryParams: { returnUrl } });
+    if (this.state.error?.kind === 'auth' && this.rejectedUser && this.selectors.user() === this.rejectedUser) {
+      this.signingOut = true;
+      this.store.signOut(() => {
+        this.signingOut = false;
+        if (!this.destroyed && !this.selectors.user()) navigate();
+      });
+    } else {
+      navigate();
+    }
   }
 
   focusReviews(): void {
@@ -77,6 +98,7 @@ export class ProductReviewsComponent implements OnChanges, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
     this.subscriptions.unsubscribe();
     this.controller.destroy();
   }

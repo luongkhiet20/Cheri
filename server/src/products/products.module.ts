@@ -7,11 +7,14 @@ import CategorySchema from './schemas/category.schema';
 import ProductVariantSchema from './schemas/product-variant.schema';
 import OrderSchema from '../orders/schemas/order.schema';
 import { ProductReviewsService } from './reviews/product-reviews.service';
+import { ProductReviewsController } from './reviews/product-reviews.controller';
+import { AuthModule } from '../auth/auth.module';
 
 import { ImageSearchService } from './image-search.service';
 
 @Module({
   imports: [
+    AuthModule,
     MongooseModule.forFeature([
       { name: 'Product', schema: ProductSchema },
       { name: 'Category', schema: CategorySchema },
@@ -23,7 +26,7 @@ import { ImageSearchService } from './image-search.service';
       },
     ]),
   ],
-  controllers: [ProductsController],
+  controllers: [ProductsController, ProductReviewsController],
   providers: [ProductsService, ImageSearchService, ProductReviewsService],
   exports: [MongooseModule, ProductsService, ImageSearchService],
 })

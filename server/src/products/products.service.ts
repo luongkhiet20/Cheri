@@ -18,6 +18,7 @@ import { ProductVariantDocument } from './models/product-variant.model';
 import { User } from '../auth/models/user.model';
 import { prepareProduct, toSlug } from '../shared/utils/prepareUtils';
 import { languages, paginationLimit } from '../shared/constans';
+const { sanitizeProductWrite } = require('../../shared/product-write-fields.cjs');
 
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -294,7 +295,7 @@ export class ProductsService {
       .find({ productId: found._id })
       .lean();
     const attachedVariants = (variants && variants.length > 0) ? variants : (found.variants || []);
-    const prepared = lang ? prepareProduct(found, lang, false, attachedVariants) : found;
+    const prepared = prepareProduct(found, lang || 'vi', false, attachedVariants);
     const result =
       prepared && typeof (prepared as any).toObject === 'function'
         ? (prepared as any).toObject()
@@ -418,6 +419,7 @@ export class ProductsService {
   }
 
   async addProduct(productReq, user: User): Promise<void> {
+    productReq = sanitizeProductWrite(productReq);
     if (!productReq.titleUrl || !productReq.titleUrl.trim()) {
       const titleName =
         productReq.vi?.title ||
@@ -486,6 +488,7 @@ export class ProductsService {
   }
 
   async editProduct(productReq): Promise<void> {
+    productReq = sanitizeProductWrite(productReq);
     const { titleUrl, _id, id } = productReq;
     let query: any = {};
     if (_id && isValidObjectId(_id)) {
@@ -586,7 +589,8 @@ export class ProductsService {
   async importProducts(productsReq: any[], user: User): Promise<{ imported: number; errors: string[] }> {
     const results = { imported: 0, errors: [] };
 
-    for (const productReq of productsReq) {
+    for (const incomingProduct of productsReq) {
+      const productReq = sanitizeProductWrite(incomingProduct);
       try {
         if (!productReq.titleUrl || !productReq.titleUrl.trim()) {
           const titleName =

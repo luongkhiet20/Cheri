@@ -8,6 +8,7 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const { trackingNumberUpdateFields } = require('./src/orders/tracking-update.cjs');
+const { sanitizeProductWrite } = require('./shared/product-write-fields.cjs');
 
 const app = express();
 const PORT = process.env.ADMIN_PORT || process.env.PORT_ADMIN || 5000;
@@ -1573,7 +1574,8 @@ app.post('/api/products/import-csv', async (req, res) => {
     let failedCount = 0;
     const nowIso = new Date().toISOString();
 
-    for (const p of productsToImport) {
+    for (const incomingProduct of productsToImport) {
+      const p = sanitizeProductWrite(incomingProduct);
       try {
         const query = { titleUrl: p.titleUrl };
         const existing = await db.collection('products').findOne(query);
@@ -1750,7 +1752,7 @@ app.get('/api/products/:id', async (req, res) => {
 // Create product (POST /api/products)
 app.post('/api/products', async (req, res) => {
   try {
-    const body = req.body || {};
+    const body = sanitizeProductWrite(req.body);
     const vi = body.vi || {};
 
     // Backend validation
@@ -1907,7 +1909,7 @@ app.post('/api/products', async (req, res) => {
 app.put('/api/products/:id', async (req, res) => {
   try {
     const id = req.params.id;
-    const body = req.body || {};
+    const body = sanitizeProductWrite(req.body);
     const vi = body.vi || {};
 
     const existing = await db.collection('products').findOne({ _id: new ObjectId(id) });

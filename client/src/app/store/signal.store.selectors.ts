@@ -1,6 +1,7 @@
 import { User, Page, Theme, Config, Product, Cart, Category, Order, Pagination, Translations, ShippingMethod, PaymentMethod } from '../user/shared/models';
 import { languages, currencyLang } from '../user/shared/constants';
 import { signal, computed, Injectable } from '@angular/core';
+import { ReviewSummary } from '../user/shared/reviews/review.models';
 
 export interface UserState {
   loading: boolean;
@@ -58,6 +59,9 @@ export interface DashboardState {
   providedIn: 'root',
 })
 export class SignalStoreSelectors {
+  // Public aggregates only; independent of the product object used by variant selection.
+  public readonly reviewSummaries = signal<Record<string, ReviewSummary>>({});
+
   public userState = signal<UserState>({
     loading: false,
     user: null,

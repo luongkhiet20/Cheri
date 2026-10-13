@@ -23,6 +23,7 @@ import { PaginationComponent } from '../../shared/pagination/pagination.componen
 import { SidebarComponent } from '../../shared/sidebar/sidebar.component';
 import { WishlistButtonComponent } from '../../shared/wishlist-button/wishlist-button.component';
 import { ProductReviewsComponent } from '../../shared/reviews/product-reviews.component';
+import { RatingSummaryComponent } from '../../shared/reviews/rating-summary.component';
 
 @NgModule({
   declarations: [
@@ -51,6 +52,7 @@ import { ProductReviewsComponent } from '../../shared/reviews/product-reviews.co
     SidebarComponent,
     WishlistButtonComponent,
     ProductReviewsComponent,
+    RatingSummaryComponent,
 
     RouterModule.forChild([
       { path: '', redirectTo: 'all', pathMatch: 'full' },

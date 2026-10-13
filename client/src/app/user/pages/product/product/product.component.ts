@@ -16,6 +16,7 @@ import { CartToastService } from '../../../../services/cart-toast.service';
 import { SignalStore } from '../../../../store/signal.store';
 import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
 import { filterProductDescriptionBullets } from './product-description';
+import { ReviewSummary } from '../../../shared/reviews/review.models';
 
 @Component({
   selector: 'app-product',
@@ -248,6 +249,14 @@ export class ProductComponent implements OnDestroy {
 
     this.quantity = 1;
     this.updateSelectedVariant();
+  }
+
+  resolveProductReviewSummary(product: Product): ReviewSummary {
+    return this.store.resolveProductReviewSummary(product);
+  }
+
+  onReviewSummaryChanged(event: { productId: string; summary: ReviewSummary }): void {
+    this.store.updateProductReviewSummary(event.productId, event.summary);
   }
 
   updateSelectedVariant(): void {

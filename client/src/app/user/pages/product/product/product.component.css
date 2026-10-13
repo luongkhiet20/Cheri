@@ -13,6 +13,10 @@
   font-family: var(--font-sans);
 }
 
+.cheri-product-rating {
+  margin: 0 0 12px;
+}
+
 /* 1. Backdrop Overlay */
 .cheri-popup-backdrop {
   position: fixed;

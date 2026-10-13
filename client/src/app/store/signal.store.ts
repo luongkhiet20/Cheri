@@ -1,7 +1,8 @@
 import { SignalStoreSelectors } from './signal.store.selectors';
 import { Injectable } from '@angular/core';
 import { ApiService } from '../services/api.service';
-import { User } from '../user/shared/models';
+import { Product, User } from '../user/shared/models';
+import { ReviewSummary } from '../user/shared/reviews/review.models';
 import { catchError, map, of } from 'rxjs';
 
 
@@ -15,6 +16,18 @@ export class SignalStore {
   constructor(private apiService: ApiService,
     private selectors: SignalStoreSelectors
   ) { }
+
+  updateProductReviewSummary(productId: string, summary: ReviewSummary): void {
+    const publicSummary = { average: summary.average, count: summary.count };
+    this.selectors.reviewSummaries.update(summaries => ({ ...summaries, [productId]: publicSummary }));
+  }
+
+  resolveProductReviewSummary(product: Product): ReviewSummary {
+    // A persisted PUT must keep winning over an older in-flight product response.
+    return this.selectors.reviewSummaries()[product?._id]
+      ?? product?.reviewSummary
+      ?? { average: null, count: 0 };
+  }
 
   signIn = (payload) => {
     this.selectors.userState.update((state) => ({ ...state, loading: true }));

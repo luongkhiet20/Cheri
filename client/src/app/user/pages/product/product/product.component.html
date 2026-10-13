@@ -64,6 +64,8 @@
 
         <!-- 4.2 Tên sản phẩm -->
         <h1 class="cheri-product-heading">{{ productTitle }}</h1>
+        <app-rating-summary class="cheri-product-rating" [summary]="resolveProductReviewSummary(product$())"
+          [showStars]="true" [interactive]="true" (activate)="reviews.focusReviews()"></app-rating-summary>
 
         <!-- Mã sản phẩm SKU nếu có -->
         @if (displaySku) {
@@ -226,7 +228,8 @@
           }
         </div>
         }
-        <app-product-reviews [productId]="product$()._id" [lang]="currentLang"></app-product-reviews>
+        <app-product-reviews #reviews [productId]="product$()._id" [lang]="currentLang"
+          (summaryChanged)="onReviewSummaryChanged($event)"></app-product-reviews>
       </div>
     </div>
     }

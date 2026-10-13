@@ -1,0 +1,64 @@
+<section class="product-reviews" aria-labelledby="reviews-heading">
+  <h2 id="reviews-heading" #reviewsHeading tabindex="-1">Đánh giá sản phẩm</h2>
+  <div aria-live="polite" aria-atomic="true">
+    @if (state.loadingPage) { <p>Đang tải đánh giá...</p> }
+    @if (state.loadingEligibility) { <p>Đang kiểm tra quyền đánh giá...</p> }
+    @if (state.submitting) { <p>Đang gửi đánh giá...</p> }
+    @if (state.error) {
+      <p class="review-error" role="alert">{{ state.error.message }}</p>
+      @if (state.error.kind === 'page' || state.error.kind === 'eligibility' || state.error.kind === 'submit') {
+        <button type="button" (click)="controller.retry()" [disabled]="state.submitting || state.loadingPage || state.loadingEligibility">Thử lại</button>
+      }
+    }
+    @if (state.success) { <p class="review-success">{{ state.success }}</p> }
+  </div>
+
+  @if (!state.userId || state.error?.kind === 'auth') {
+    <p><button type="button" (click)="signIn()">Đăng nhập</button> để gửi đánh giá sản phẩm đã mua.</p>
+  } @else if (state.eligibility && !state.eligibility.eligible) {
+    <p>Bạn cần có đơn đã thanh toán hoặc đã giao thành công cho sản phẩm này để gửi đánh giá.</p>
+  } @else if (state.eligibility?.eligible) {
+    <form [formGroup]="form" (ngSubmit)="submit()" class="review-form">
+      <fieldset [disabled]="state.submitting" aria-describedby="review-rating-help">
+        <legend>Chọn số sao</legend>
+        <div class="review-rating-options">
+          @for (rating of ratings; track rating) {
+            <label><input type="radio" formControlName="rating" [value]="rating" /> {{ rating }} sao</label>
+          }
+        </div>
+        <small id="review-rating-help">Chọn từ 1 đến 5 sao.</small>
+      </fieldset>
+      <label for="review-comment">Nội dung đánh giá</label>
+      <textarea id="review-comment" formControlName="comment" maxlength="1000" rows="4"
+        aria-describedby="review-comment-help"></textarea>
+      <small id="review-comment-help">Từ 1 đến 1000 ký tự. {{ form.controls.comment.value.length }}/1000</small>
+      <button type="submit" [disabled]="state.submitting">
+        {{ state.eligibility?.myReview ? 'Cập nhật đánh giá' : 'Gửi đánh giá' }}
+      </button>
+    </form>
+  }
+
+  @if (state.page; as page) {
+    @if (page.reviews.length === 0 && !state.loadingPage && state.error?.kind !== 'page') {
+      <p>Chưa có đánh giá.</p>
+    }
+    <ul class="review-list" [attr.aria-busy]="state.loadingPage">
+      @for (review of page.reviews; track review.id) {
+        <li>
+          <div class="review-author"><strong>{{ review.authorName }}</strong><span>{{ review.rating }}/5 sao</span></div>
+          <time [attr.datetime]="review.updatedAt">{{ review.updatedAt | date:'dd/MM/yyyy' }}</time>
+          <p class="review-comment">{{ review.comment }}</p>
+        </li>
+      }
+    </ul>
+    @if (page.total > page.pageSize) {
+      <nav class="review-pagination" aria-label="Phân trang đánh giá">
+        <button type="button" [disabled]="page.page <= 1 || state.loadingPage || state.submitting"
+          (click)="controller.loadPage(page.page - 1)">Trước</button>
+        <span>Trang {{ page.page }}</span>
+        <button type="button" [disabled]="page.page * page.pageSize >= page.total || state.loadingPage || state.submitting"
+          (click)="controller.loadPage(page.page + 1)">Sau</button>
+      </nav>
+    }
+  }
+</section>

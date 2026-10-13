@@ -22,6 +22,7 @@ import { ProductsListComponent } from '../../shared/products-list/products-list.
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { SidebarComponent } from '../../shared/sidebar/sidebar.component';
 import { WishlistButtonComponent } from '../../shared/wishlist-button/wishlist-button.component';
+import { ProductReviewsComponent } from '../../shared/reviews/product-reviews.component';
 
 @NgModule({
   declarations: [
@@ -49,6 +50,7 @@ import { WishlistButtonComponent } from '../../shared/wishlist-button/wishlist-b
     PaginationComponent,
     SidebarComponent,
     WishlistButtonComponent,
+    ProductReviewsComponent,
 
     RouterModule.forChild([
       { path: '', redirectTo: 'all', pathMatch: 'full' },

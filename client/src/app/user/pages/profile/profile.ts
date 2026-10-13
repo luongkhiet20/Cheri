@@ -9,6 +9,7 @@ import { SignalStore } from '../../../store/signal.store';
 import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
 import { User, Order } from '../../shared/models';
 import { accessTokenKey } from '../../shared/constants';
+import { canShowOrderReviewAction, getOrderReviewProducts } from './order-review-links';
 
 @Component({
   selector: 'app-profile',
@@ -24,6 +25,10 @@ export class Profile implements OnInit {
 
   // Tab filter
   activeTab: string = 'all';
+  private reviewOrder: Order | null = null;
+
+  readonly canShowOrderReviewAction = canShowOrderReviewAction;
+  readonly getOrderReviewProducts = getOrderReviewProducts;
 
   readonly orderTabs = [
     { key: 'all', label: 'Tất cả' },
@@ -379,16 +384,22 @@ export class Profile implements OnInit {
     return 'assets/images/placeholder.jpg';
   }
 
-  getReviewDeadline(order: Order): string {
-    const d = order.deliveredAt || (order as any).shipping?.deliveredAt || order.createdAt || order.dateAdded;
-    if (!d) return '—';
-    const base = new Date(d);
-    if (isNaN(base.getTime())) return '—';
-    base.setDate(base.getDate() + 30);
-    const dd = String(base.getDate()).padStart(2, '0');
-    const mm = String(base.getMonth() + 1).padStart(2, '0');
-    const yyyy = base.getFullYear();
-    return `${dd}/${mm}/${yyyy}`;
+  onReviewOrder(order: Order): void {
+    if (!this.getRawOrders().includes(order) || !canShowOrderReviewAction(order)) return;
+    const products = getOrderReviewProducts(order);
+    if (products.length === 1) this.openProductReview(products[0].productId);
+    else if (products.length > 1) this.reviewOrder = this.reviewOrder === order ? null : order;
+  }
+
+  isReviewChooserOpen(order: Order): boolean {
+    return this.reviewOrder === order && this.getRawOrders().includes(order) && canShowOrderReviewAction(order);
+  }
+
+  openProductReview(productId: string): void {
+    if (typeof productId !== 'string' || !/^[a-f\d]{24}$/i.test(productId)) return;
+    this.reviewOrder = null;
+    const lang = (this.translate as any)?.lang || 'vi';
+    this.router.navigate(['/' + lang + '/product', productId.toLowerCase()], { queryParams: { review: 1 } });
   }
 
   getOrderPhone(order: Order): string {

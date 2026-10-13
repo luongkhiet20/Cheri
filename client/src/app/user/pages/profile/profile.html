@@ -150,12 +150,11 @@
                   <span class="vat-label">Thành tiền (đã gồm VAT):</span>
                   <span class="vat-amount">{{ formatAmount(order) }}</span>
                 </div>
-                <div class="review-deadline-text" *ngIf="normalizeStatus(order.status) === 'DELIVERED'">
-                  Nhận xét đơn hàng trước {{ getReviewDeadline(order) }}
-                </div>
               </div>
               <div class="action-buttons-group">
-                <button type="button" class="btn-action-primary" *ngIf="normalizeStatus(order.status) === 'DELIVERED'">
+                <button type="button" class="btn-action-primary"
+                  *ngIf="canShowOrderReviewAction(order) && getOrderReviewProducts(order).length > 0"
+                  (click)="onReviewOrder(order)" [attr.aria-expanded]="getOrderReviewProducts(order).length > 1 ? isReviewChooserOpen(order) : null">
                   Đánh giá
                 </button>
                 <button type="button" class="btn-action-outline" *ngIf="normalizeStatus(order.status) === 'DELIVERED'">
@@ -165,6 +164,20 @@
                   Chi tiết đơn hàng
                 </button>
               </div>
+            </div>
+
+            <p class="order-review-note" *ngIf="canShowOrderReviewAction(order) && getOrderReviewProducts(order).length === 0">
+              Không xác định được sản phẩm trong đơn hàng này để mở đánh giá.
+            </p>
+            <div class="order-review-chooser" *ngIf="isReviewChooserOpen(order)">
+              <p class="order-review-note">Chọn sản phẩm bạn muốn đánh giá:</p>
+              @for (product of getOrderReviewProducts(order); track product.productId) {
+              <div class="order-review-choice">
+                <span>{{ product.title }}</span>
+                <button type="button" class="btn-action-primary" (click)="openProductReview(product.productId)"
+                  [attr.aria-label]="'Đánh giá ' + product.title">Đánh giá</button>
+              </div>
+              }
             </div>
 
             <!-- 4. Shipping Address Strip (No icons) -->

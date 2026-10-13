@@ -213,6 +213,28 @@ test('public language whitelist retains legacy SKU, media and embedded variant o
   assert.deepEqual(result.tags, ['Thử']);
   assert.deepEqual(result.variants, variants);
 });
+
+test('profile deep link resolves a canonical product ID even without a slug', async () => {
+  reset();
+  delete state.product.titleUrl;
+  const result = await request(`/api/products/${productId}?lang=vi`);
+  assert.equal(result.status, 200);
+  assert.equal(result.body._id, productId);
+  assert.equal(result.body.title, 'Sản phẩm thử');
+  assert.deepEqual(result.body.reviewSummary, { average: 4, count: 1 });
+  assert.equal(result.body.variants[0]._id, variantId);
+});
+
+test('canonical detail links preserve hidden-product visibility and cannot open private review operations', async () => {
+  reset();
+  const detail = await request(`/api/products/${hiddenId}?lang=vi`);
+  assert.equal(detail.status, 200);
+  assert.equal(detail.body.visibility, false);
+  for (const options of [{}, { actor: 'buyer' }, { method: 'PUT', actor: 'buyer', body: { rating: 5, comment: 'Fixture' } }]) {
+    const route = `/api/products/${hiddenId}/reviews${options.actor ? '/me' : ''}`;
+    assert.equal((await request(route, options)).status, 404);
+  }
+});
 function writeBody() {
   return { titleUrl: 'new-product', title: 'Hợp lệ', mainImage: { url: 'fixture' }, tags: [], reviews: [stored(1)], rating: 1, reviewSummary: { average: 1, count: 1 }, reviewCount: 1,
     'reviews.0.rating': 1, 'vi.reviewSummary.count': 9, $set: { rating: 1 },

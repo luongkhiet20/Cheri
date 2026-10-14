@@ -267,21 +267,42 @@ test('Nest add/edit/import preserve product data while excluding protected/dotte
 function adminHandlers(collection) {
   const file = path.join(__dirname, '../admin-server.js');
   const source = ts.createSourceFile(file, fs.readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
-  const wanted = new Set(['post /api/products', 'put /api/products/:id', 'post /api/products/import-csv']);
+  const wanted = new Set(['post /api/products', 'put /api/products/:id', 'post /api/products/import-csv', 'get /api/products', 'get /api/products/:id']);
   const context = vm.createContext({ db: { collection: () => collection }, ObjectId: Types.ObjectId, console,
     sanitizeProductWrite: fs.existsSync(path.join(__dirname, '../shared/product-write-fields.cjs')) ? require('../shared/product-write-fields.cjs').sanitizeProductWrite : undefined });
   const routes = {};
   for (const node of source.statements) {
-    if (ts.isFunctionDeclaration(node) && ['generateSlug', 'formatProduct'].includes(node.name?.text)) vm.runInContext(node.getText(source), context);
+    if (ts.isFunctionDeclaration(node) && ['generateSlug', 'formatProduct', 'omitReviewArrays'].includes(node.name?.text)) vm.runInContext(node.getText(source), context);
     if (!ts.isExpressionStatement(node) || !ts.isCallExpression(node.expression)) continue;
     const call = node.expression;
     if (!ts.isPropertyAccessExpression(call.expression) || call.expression.expression.getText(source) !== 'app' || !ts.isStringLiteral(call.arguments[0])) continue;
     const key = `${call.expression.name.text} ${call.arguments[0].text}`;
     if (wanted.has(key)) routes[key] = vm.runInContext(`(${call.arguments[1].getText(source)})`, context);
   }
-  return routes;
+  return { ...routes, formatProduct: context.formatProduct };
 }
 function response() { return { statusCode: 200, body: null, status(value) { this.statusCode = value; return this; }, json(value) { this.body = value; return this; } }; }
+test('public fallback list and detail responses omit embedded reviewer identities and include canonical summary', async () => {
+  const sourceProduct = { _id: new Types.ObjectId(productId), titleUrl: 'sample', rating: 5,
+    reviews: [{ userId: 'private-user', rating: 4, comment: 'Great' }, { userId: 'another-private-user', rating: 2 }],
+    vi: { title: 'Sample', reviews: [{ userId: 'nested-private-user', rating: 1 }] } };
+  const collection = {
+    countDocuments: async () => 1,
+    find: () => ({ sort() { return this; }, skip() { return this; }, limit() { return this; }, toArray: async () => [sourceProduct] }),
+    findOne: async () => sourceProduct,
+  };
+  const handlers = adminHandlers(collection);
+  const list = response();
+  await handlers['get /api/products']({ query: {}, headers: {} }, list);
+  const detail = response();
+  await handlers['get /api/products/:id']({ params: { id: productId }, query: {}, headers: {} }, detail);
+  for (const product of [list.body.products[0], detail.body.data]) {
+    assert.equal(JSON.stringify(product.reviewSummary), JSON.stringify({ average: 3, count: 2 }));
+    assert.equal(Array.isArray(product.raw.reviews), false, JSON.stringify(product.raw));
+    assert.equal(JSON.stringify(product).includes('private-user'), false);
+  }
+  assert.equal(sourceProduct.reviews.length, 2);
+});
 test('admin add/edit/import execute real whitelist consumers without startup and preserve existing review state', async () => {
   let document = { _id: new Types.ObjectId(productId), titleUrl: 'existing', reviews: [stored(4)], rating: 4, reviewSummary: { average: 4, count: 1 }, reviewCount: 1, vi: { title: 'Cũ', regularPrice: 100, salePrice: 50 } };
   const saved = [];

@@ -33,7 +33,7 @@ async function storeHarness() {
   const original = productA();
   const other = { ...productA(), _id: 'product-b', titleUrl: 'product-b', reviewSummary: { average: 2, count: 4 } };
   selectors.productState.update(state => ({ ...state, product: original, products: [original, other], categories: [{}], cart: { items: [] } }));
-  return { core, store, selectors, original, other, calls };
+  return { core, store, selectors, original, other, calls, api };
 }
 
 // A test-only synchronous bridge for real Angular signals: it observes selector values
@@ -155,6 +155,23 @@ test('persisted PUT updates detail and card summaries without reinitializing a s
   // A late canonical detail response may contain an old summary; the session map wins.
   h.calls[0].response.next({ ...h.original, reviewSummary: { average: 1, count: 1 } });
   assert.deepEqual(component.resolveProductReviewSummary(h.selectors.product()), { average: 4.5, count: 2 });
+});
+
+test('a fresh product read refreshes saved summary overrides but an older in-flight read cannot', async () => {
+  const h = await storeHarness();
+  h.store.updateProductReviewSummary('product-a', { average: 4.5, count: 2 });
+  const olderRead = new Subject();
+  h.api.getProduct = () => olderRead.asObservable();
+  h.store.getProduct('product-a');
+  h.store.updateProductReviewSummary('product-a', { average: 3.5, count: 4 });
+  olderRead.next({ _id: 'product-a', reviewSummary: { average: 4.5, count: 2 } });
+  assert.deepEqual(h.store.resolveProductReviewSummary(h.selectors.product()), { average: 3.5, count: 4 });
+
+  const freshRead = new Subject();
+  h.api.getProduct = () => freshRead.asObservable();
+  h.store.getProduct('product-a');
+  freshRead.next({ _id: 'product-a', reviewSummary: { average: 4, count: 5 } });
+  assert.deepEqual(h.store.resolveProductReviewSummary(h.selectors.product()), { average: 4, count: 5 });
 });
 
 test('homepage section and fallback products retain overrides after an older list response', async () => {

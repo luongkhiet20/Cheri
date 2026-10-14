@@ -547,6 +547,17 @@ app.get('/api/admin/dashboard', dashboardHandler);
 // ─────────────────────────────────────────────────────────────
 // 2. PRODUCTS API
 // ─────────────────────────────────────────────────────────────
+function omitReviewArrays(value) {
+  if (Array.isArray(value)) return value.map(omitReviewArrays);
+  if (!value || typeof value !== 'object') return value;
+  if (value._bsontype || Object.prototype.toString.call(value) !== '[object Object]') return value;
+  const sanitized = {};
+  for (const [key, nested] of Object.entries(value)) {
+    if (key !== 'reviews') sanitized[key] = omitReviewArrays(nested);
+  }
+  return sanitized;
+}
+
 function formatProduct(p, lang = 'vi') {
   const langData = p[lang] || p.vi || p.en || {};
   const fallbackData = p.en || p.vi || {};
@@ -576,6 +587,17 @@ function formatProduct(p, lang = 'vi') {
   const isGloballyVisible = p.visibility !== false;
   const isLangVisible = langData.visibility !== false && p.vi?.visibility !== false;
   const visibility = isGloballyVisible && isLangVisible;
+
+  const validReviews = Array.isArray(p.reviews)
+    ? p.reviews.filter(review => Number.isFinite(Number(review?.rating)) && Number(review.rating) >= 1 && Number(review.rating) <= 5)
+    : [];
+  const reviewSummary = {
+    average: validReviews.length
+      ? Math.round(validReviews.reduce((sum, review) => sum + Number(review.rating), 0) / validReviews.length * 100) / 100
+      : null,
+    count: validReviews.length
+  };
+  const publicRaw = omitReviewArrays(p);
 
   let status = 'Đang bán';
   let statusVariant = 'success';
@@ -611,6 +633,7 @@ function formatProduct(p, lang = 'vi') {
     description: langData.description || fallbackData.description || p.description || '',
     descriptionFull: langData.descriptionFull || fallbackData.descriptionFull || p.descriptionFull || [],
     rating: p.rating !== undefined ? p.rating : 5,
+    reviewSummary,
     colors: langData.colors || p.colors || fallbackData.colors || [],
     sizes: langData.sizes || p.sizes || fallbackData.sizes || [],
     hasColors: Boolean(langData.hasColors !== undefined ? langData.hasColors : (p.hasColors || false)),
@@ -618,7 +641,7 @@ function formatProduct(p, lang = 'vi') {
     hasClassification: Boolean(langData.hasClassification !== undefined ? langData.hasClassification : (p.hasClassification || false)),
     classifications: langData.classifications || p.classifications || fallbackData.classifications || [],
     variants: Array.isArray(p.variants) ? p.variants : [],
-    raw: p
+    raw: publicRaw
   };
 }
 

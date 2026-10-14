@@ -11,6 +11,7 @@ import { catchError, map, of } from 'rxjs';
   providedIn: 'root',
 })
 export class SignalStore {
+  private reviewSummaryRevision = 0;
 
 
   constructor(private apiService: ApiService,
@@ -19,7 +20,25 @@ export class SignalStore {
 
   updateProductReviewSummary(productId: string, summary: ReviewSummary): void {
     const publicSummary = { average: summary.average, count: summary.count };
+    this.reviewSummaryRevision += 1;
     this.selectors.reviewSummaries.update(summaries => ({ ...summaries, [productId]: publicSummary }));
+  }
+
+  private acceptFreshProductSummaries(products: Product | Product[]): void {
+    const productList = Array.isArray(products) ? products : [products];
+    const ids = productList.map(product => product?._id).filter(Boolean);
+    if (!ids.length) return;
+    this.selectors.reviewSummaries.update(summaries => {
+      let changed = false;
+      const next = { ...summaries };
+      for (const id of ids) {
+        if (Object.hasOwn(next, id)) {
+          delete next[id];
+          changed = true;
+        }
+      }
+      return changed ? next : summaries;
+    });
   }
 
   resolveProductReviewSummary(product: Product): ReviewSummary {
@@ -199,11 +218,15 @@ export class SignalStore {
   };
 
   getProducts = (payload) => {
+    const reviewSummaryRevision = this.reviewSummaryRevision;
     this.selectors.productState.update((state) => ({ ...state, loadingProducts: true }));
     this.apiService.getProducts(payload).subscribe((response: any) => {
       if (response.error) {
         this.selectors.productState.update((state) => ({ ...state, loadingProducts: false }));
         return;
+      }
+      if (reviewSummaryRevision === this.reviewSummaryRevision) {
+        this.acceptFreshProductSummaries(response.products || []);
       }
       this.selectors.productState.update((state) => ({
         ...state,
@@ -223,8 +246,12 @@ export class SignalStore {
   };
 
   getProduct = (payload) => {
+    const reviewSummaryRevision = this.reviewSummaryRevision;
     this.selectors.productState.update((state) => ({ ...state, loadingProduct: true }));
     this.apiService.getProduct(payload).subscribe((response: any) => {
+      if (reviewSummaryRevision === this.reviewSummaryRevision) {
+        this.acceptFreshProductSummaries(response);
+      }
       this.selectors.productState.update((state) => ({ ...state, product: response, loadingProduct: false }));
     });
   };

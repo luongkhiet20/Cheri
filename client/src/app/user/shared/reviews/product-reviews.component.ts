@@ -1,5 +1,5 @@
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { Component, ElementRef, EventEmitter, Inject, Input, OnChanges, OnDestroy, Output, PLATFORM_ID, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, EventEmitter, Inject, Input, OnChanges, OnDestroy, Output, PLATFORM_ID, ViewChild } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -44,7 +44,7 @@ export class ProductReviewsComponent implements OnChanges, OnDestroy {
 
   constructor(api: ProductReviewsApi, private readonly selectors: SignalStoreSelectors,
     private readonly router: Router, @Inject(PLATFORM_ID) private readonly platformId: Object,
-    private readonly store: SignalStore) {
+    private readonly store: SignalStore, private readonly cdr: ChangeDetectorRef) {
     this.controller = new ReviewController({
       getPage: (productId, page, pageSize) => api.getPage(productId, page, pageSize),
       getMine: productId => this.withAuthSession(() => api.getMine(productId)),
@@ -59,6 +59,7 @@ export class ProductReviewsComponent implements OnChanges, OnDestroy {
       }
       if (state.submitting) this.form.disable({ emitEvent: false });
       else this.form.enable({ emitEvent: false });
+      this.cdr.markForCheck();
     }));
     this.subscriptions.add(this.form.valueChanges.subscribe(() => this.controller.setDraft(this.form.getRawValue())));
     this.subscriptions.add(this.controller.summaryChanged$.subscribe(event => this.summaryChanged.emit(event)));

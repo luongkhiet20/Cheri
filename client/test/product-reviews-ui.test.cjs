@@ -320,6 +320,57 @@ test('API uses storefront URLs and only review draft fields, preserving observab
   assert.equal(error, failure);
 });
 
+test('zoneless view reflects async eligibility, pending save and failed draft through render notifications', async t => {
+  await import('@angular/compiler');
+  const [core, common, forms] = await Promise.all([import('@angular/core'), import('@angular/common'), import('@angular/forms')]);
+  const user = new BehaviorSubject({ id: 'user-a' });
+  const calls = [];
+  const api = Object.fromEntries(['getPage', 'getMine', 'saveMine'].map(method => [method, (...args) => {
+    const response = new Subject(); calls.push({ method, args, response }); return response.asObservable();
+  }]));
+  const { ProductReviewsComponent } = loadTypeScript('client/src/app/user/shared/reviews/product-reviews.component.ts', {
+    '@angular/core': core, '@angular/common': common, '@angular/forms': forms,
+    '@angular/core/rxjs-interop': { toObservable: () => user.asObservable() },
+    '@angular/router': { Router: class {} },
+    '../../../services/product-reviews.service': { ProductReviewsApi: class {} },
+    '../../../store/signal.store.selectors': { SignalStoreSelectors: class {} },
+    '../../../store/signal.store': { SignalStore: class {} },
+  });
+  let component;
+  let rendered;
+  const render = () => {
+    if (component) rendered = {
+      eligible: component.state.eligibility?.eligible === true,
+      submitting: component.state.submitting,
+      comment: component.form.controls.comment.value,
+      disabled: component.form.disabled,
+      error: component.state.error?.kind ?? null,
+    };
+  };
+  // Model the renderer scheduling boundary, keeping the actual controller and
+  // Angular form real. No polling or incidental parent render can hide a lost
+  // notification. Actual DOM/zoneless scheduling is also checked in Chrome.
+  const changeDetector = { markForCheck() { queueMicrotask(render); } };
+  component = new ProductReviewsComponent(api, { user: () => user.value }, {}, 'server', {}, changeDetector);
+  t.after(() => component.ngOnDestroy());
+  component.productId = 'product-a'; component.ngOnChanges();
+  render();
+  assert.equal(rendered.eligible, false);
+  calls.find(call => call.method === 'getMine').response.next(mine());
+  await Promise.resolve();
+  assert.equal(rendered.eligible, true);
+  component.form.setValue({ rating: 4, comment: 'Synthetic retained draft' });
+  component.submit();
+  await Promise.resolve();
+  assert.equal(rendered.submitting, true);
+  assert.equal(rendered.disabled, true);
+  calls.find(call => call.method === 'saveMine').response.error({ status: 500 });
+  await Promise.resolve();
+  assert.deepEqual(rendered, {
+    eligible: true, submitting: false, comment: 'Synthetic retained draft', disabled: false, error: 'submit',
+  });
+});
+
 test('component adapts signin id and profile _id, preserves returnUrl, and tears down on logout/destroy', async t => {
   await import('@angular/compiler');
   const [core, common, forms] = await Promise.all([import('@angular/core'), import('@angular/common'), import('@angular/forms')]);
@@ -340,7 +391,7 @@ test('component adapts signin id and profile _id, preserves returnUrl, and tears
     '../../../store/signal.store.selectors': { SignalStoreSelectors: class {} },
     '../../../store/signal.store': { SignalStore: class {} },
   });
-  const component = new ProductReviewsComponent(api, { user: () => user.value }, router, 'server');
+  const component = new ProductReviewsComponent(api, { user: () => user.value }, router, 'server', undefined, { markForCheck() {} });
   t.after(() => component.ngOnDestroy());
   component.productId = 'product-a';
   component.ngOnChanges();
@@ -413,7 +464,7 @@ async function authHarness(t) {
     '../../../store/signal.store.selectors': { SignalStoreSelectors },
     '../../../store/signal.store': { SignalStore },
   });
-  const component = new ProductReviewsComponent(api, selectors, router, 'browser', store);
+  const component = new ProductReviewsComponent(api, selectors, router, 'browser', store, { markForCheck() {} });
   component.productId = 'product-a'; component.ngOnChanges();
   t.after(() => component.ngOnDestroy());
   const { SignInComponent } = loadTypeScript('client/src/app/user/pages/auth/signin/signin.component.ts', {

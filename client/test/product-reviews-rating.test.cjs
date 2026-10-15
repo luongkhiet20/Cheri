@@ -181,6 +181,20 @@ test('a fresh product read refreshes saved summary overrides but an older in-fli
   assert.deepEqual(h.store.resolveProductReviewSummary(h.selectors.products()[0]), { average: 4, count: 5 });
 });
 
+test('fresh reads for different products do not invalidate each other', async () => {
+  const h = await storeHarness();
+  h.store.updateProductReviewSummary('product-b', { average: 3, count: 1 });
+  const pendingA = new Subject();
+  const pendingB = new Subject();
+  h.api.getProduct = id => id === 'product-a' ? pendingA.asObservable() : pendingB.asObservable();
+  h.store.getProduct('product-a');
+  h.store.getProduct('product-b');
+  pendingA.next({ _id: 'product-a', reviewSummary: { average: 4.5, count: 3 } });
+  pendingB.next({ _id: 'product-b', reviewSummary: { average: 4, count: 2 } });
+  assert.deepEqual(h.store.resolveProductReviewSummary(h.original), { average: 4.5, count: 3 });
+  assert.deepEqual(h.store.resolveProductReviewSummary(h.other), { average: 4, count: 2 });
+});
+
 test('homepage section and fallback products retain overrides after an older list response', async () => {
   const h = await storeHarness();
   const { HomeComponent } = loadTypeScript('client/src/app/user/pages/cheri/home/home.component.ts', {

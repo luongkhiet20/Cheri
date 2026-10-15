@@ -11,7 +11,7 @@ import { catchError, map, of } from 'rxjs';
   providedIn: 'root',
 })
 export class SignalStore {
-  private reviewSummaryRevision = 0;
+  private readonly reviewSummaryRevisions: Record<string, number> = {};
 
 
   constructor(private apiService: ApiService,
@@ -20,23 +20,26 @@ export class SignalStore {
 
   updateProductReviewSummary(productId: string, summary: ReviewSummary): void {
     const publicSummary = { average: summary.average, count: summary.count };
-    this.reviewSummaryRevision += 1;
+    this.reviewSummaryRevisions[productId] = (this.reviewSummaryRevisions[productId] || 0) + 1;
     this.selectors.reviewSummaries.update(summaries => ({ ...summaries, [productId]: publicSummary }));
   }
 
-  private acceptFreshProductSummaries(products: Product | Product[]): void {
+  private acceptFreshProductSummaries(products: Product | Product[], revisionsAtStart: Record<string, number>): void {
     const productList = Array.isArray(products) ? products : [products];
     const freshSummaries: Record<string, ReviewSummary> = {};
     for (const product of productList) {
       const summary = product?.reviewSummary;
       if (!product?._id || !summary || !Number.isInteger(summary.count) || summary.count < 0
-        || (summary.average !== null && !Number.isFinite(summary.average))) continue;
+        || (summary.average !== null && !Number.isFinite(summary.average))
+        || (revisionsAtStart[product._id] || 0) !== (this.reviewSummaryRevisions[product._id] || 0)) continue;
       freshSummaries[product._id] = { average: summary.average, count: summary.count };
     }
     if (!Object.keys(freshSummaries).length) return;
     // Keep the canonical read in the shared map so every retained Product copy sees it,
     // and make responses that began earlier ineligible to supersede this read.
-    this.reviewSummaryRevision += 1;
+    for (const productId of Object.keys(freshSummaries)) {
+      this.reviewSummaryRevisions[productId] = (this.reviewSummaryRevisions[productId] || 0) + 1;
+    }
     this.selectors.reviewSummaries.update(summaries => ({ ...summaries, ...freshSummaries }));
   }
 
@@ -217,16 +220,14 @@ export class SignalStore {
   };
 
   getProducts = (payload) => {
-    const reviewSummaryRevision = this.reviewSummaryRevision;
+    const revisionsAtStart = { ...this.reviewSummaryRevisions };
     this.selectors.productState.update((state) => ({ ...state, loadingProducts: true }));
     this.apiService.getProducts(payload).subscribe((response: any) => {
       if (response.error) {
         this.selectors.productState.update((state) => ({ ...state, loadingProducts: false }));
         return;
       }
-      if (reviewSummaryRevision === this.reviewSummaryRevision) {
-        this.acceptFreshProductSummaries(response.products || []);
-      }
+      this.acceptFreshProductSummaries(response.products || [], revisionsAtStart);
       this.selectors.productState.update((state) => ({
         ...state,
         products: response.products,
@@ -245,12 +246,10 @@ export class SignalStore {
   };
 
   getProduct = (payload) => {
-    const reviewSummaryRevision = this.reviewSummaryRevision;
+    const revisionsAtStart = { ...this.reviewSummaryRevisions };
     this.selectors.productState.update((state) => ({ ...state, loadingProduct: true }));
     this.apiService.getProduct(payload).subscribe((response: any) => {
-      if (reviewSummaryRevision === this.reviewSummaryRevision) {
-        this.acceptFreshProductSummaries(response);
-      }
+      this.acceptFreshProductSummaries(response, revisionsAtStart);
       this.selectors.productState.update((state) => ({ ...state, product: response, loadingProduct: false }));
     });
   };

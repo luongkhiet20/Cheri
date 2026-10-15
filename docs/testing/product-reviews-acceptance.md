@@ -2,6 +2,12 @@
 
 Ngày chạy: 14-10-2026. Môi trường: development MongoDB `cheri`, local Angular/ Nest app, Chrome headless qua Chrome DevTools Protocol. Không dùng tài khoản thật; luồng đăng nhập UI dùng hai user tổng hợp với mật khẩu tạo trong bộ nhớ. Không lưu URI, token, mật khẩu, email người dùng hoặc PII trong tài liệu/log.
 
+## Bổ sung sau review toàn nhánh (15-10-2026)
+
+Review độc lập phát hiện hai lỗi quan trọng và đã được sửa trong `24b6cfd` và `51ca97f`: response fallback công khai phải loại mảng review khỏi mọi cấp của `raw` nhưng vẫn trả `reviewSummary`; summary đọc mới phải được lưu trong cache dùng chung để mọi bản sao Product đồng bộ, đồng thời revision ngăn GET cũ ghi đè. Regression kiểm tra cả list/detail fallback, dữ liệu nested, detail top-level `raw`, summary từ người mua khác và request cũ đến muộn.
+
+Sau các sửa đổi: toàn bộ `*.test.cjs` **145 pass, 1 integration skip mặc định, 0 fail**; build server/client và `git diff --check` đều exit 0. Client build vẫn có sáu cảnh báo NG8113 cũ ở các component ngoài task.
+
 ## MongoDB thật
 
 Integration opt-in chạy trên collection hiện hữu `users`, `products`, `orders`; `autoIndex` và `autoCreate` tắt. Trước khi insert, harness kiểm tra database/collection/index, ID, email, SKU, title URL và order ID. Harness tạo 5 document tổng hợp (2 user, 1 product, 2 order) có marker riêng của run; `finally` xóa từng document bằng `_id` chính xác kèm marker rồi xác nhận không còn document nào.

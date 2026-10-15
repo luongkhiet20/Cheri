@@ -9,6 +9,8 @@ import {
   Param,
   UseGuards,
   Query,
+  Session,
+  Headers,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard, AdminJwtAuthGuard, OptionalJwtAuthGuard } from '../auth/roles.guard';
@@ -132,8 +134,10 @@ export class OrdersController {
   async addOrder(
     @Body() orderDto: OrderDto,
     @GetUser() user: User,
+    @Session() session: any,
+    @Headers('x-guest-cart-id') guestCartId?: string,
   ): Promise<{ error: string; result: Order }> {
-    return this.ordersService.addOrder(orderDto, user);
+    return this.ordersService.addOrder(orderDto, user, 'vi', session, guestCartId);
   }
 
   // ─── Đặt hàng Stripe — hỗ trợ cả user đăng nhập và khách vãng lai ────────
@@ -142,8 +146,10 @@ export class OrdersController {
   async orderWithStripe(
     @Body() body,
     @GetUser() user: User,
+    @Session() session: any,
+    @Headers('x-guest-cart-id') guestCartId?: string,
   ): Promise<{ error: string; result: Order }> {
-    return this.ordersService.orderWithStripe(body, user);
+    return this.ordersService.orderWithStripe(body, user, 'vi', session, guestCartId);
   }
 
   // ─── Admin: thông báo ──────────────────────────────────────────────────

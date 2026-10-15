@@ -93,6 +93,10 @@ export class OrderDto {
   @IsString()
   userId?: string;
 
+  @IsOptional()
+  @IsArray()
+  items?: any[];
+
   // Stripe
   @IsOptional()
   @IsString()

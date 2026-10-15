@@ -25,6 +25,10 @@ export class OrderComponent implements OnInit, OnDestroy {
 
   readonly component = 'orderComponent';
 
+  get currentUser(): any {
+    return this.selectors.user();
+  }
+
   constructor(
     private router: Router,
     private route: ActivatedRoute,

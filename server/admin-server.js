@@ -2655,10 +2655,13 @@ function formatOrder(o) {
   const shippingAddress = o.shippingAddress && typeof o.shippingAddress === 'object'
     ? o.shippingAddress
     : null;
-  const legacyAddress = Array.isArray(o.addresses) ? (o.addresses[0] || {}) : {};
-  const customerName = getNonEmptyString(shippingAddress?.fullName)
+  const isGuest = !o.userId && !o._user;
+  const rawCustomerName = getNonEmptyString(shippingAddress?.fullName)
     || getNonEmptyString(legacyAddress.fullName)
     || getNonEmptyString(legacyAddress.name);
+  const customerName = rawCustomerName
+    ? (isGuest ? `${rawCustomerName} (Khách vãng lai)` : rawCustomerName)
+    : (isGuest ? 'Khách vãng lai' : '—');
   const customerEmail = getNonEmptyString(o.customerEmail)
     || getNonEmptyString(legacyAddress.email);
   const customerPhone = getNonEmptyString(o.customerPhone)
@@ -2699,6 +2702,8 @@ function formatOrder(o) {
     id: mongoId,
     _id: mongoId,
     userId: o.userId?.toString?.() || o._user?.toString?.() || null,
+    isGuest,
+    isGuestOrder: isGuest,
     orderId: orderCode,
     code: orderCode,
     customer: customerName,
@@ -7207,27 +7212,89 @@ app.get('/api/translations', async (req, res) => {
   }
 });
 
+function checkPasswordSecurity(password, email) {
+  if (!password || typeof password !== 'string') {
+    return { valid: false, message: 'Vui lòng nhập mật khẩu' };
+  }
+  if (password.length < 8) {
+    return { valid: false, message: 'Mật khẩu phải có tối thiểu 8 ký tự.' };
+  }
+  if (password.length > 100) {
+    return { valid: false, message: 'Mật khẩu không được vượt quá 100 ký tự.' };
+  }
+
+  const trimmed = password.trim();
+  const lower = trimmed.toLowerCase();
+
+  const commonPasswords = new Set([
+    '12345678', '123456789', '1234567890', '87654321', '01234567', '98765432',
+    'password', 'passwords', 'password1', 'password12', 'password123', 'p@ssword', 'p@ssw0rd',
+    'qwerty123', 'qwertyui', 'qwertyuiop', 'asdfghjk', 'zxcvbnm1',
+    '11111111', '00000000', '12341234', '11223344',
+    'admin123', 'administrator', 'iloveyou', 'iloveyou1', 'cheri123', 'cheri12345',
+    'welcome1', 'welcome123', 'monkey123', 'dragon123', 'master123',
+    'sunshine', 'princess', 'football', 'abcdefgh'
+  ]);
+
+  if (commonPasswords.has(lower)) {
+    return {
+      valid: false,
+      message: 'Mật khẩu này quá phổ biến hoặc dễ đoán (ví dụ: 12345678, password, qwerty123...). Vui lòng chọn mật khẩu khó đoán hơn để bảo vệ tài khoản.'
+    };
+  }
+
+  if (/^(.)\1+$/.test(trimmed)) {
+    return {
+      valid: false,
+      message: 'Mật khẩu không được chỉ gồm các ký tự lặp lại giống nhau. Vui lòng chọn mật khẩu đa dạng hơn.'
+    };
+  }
+
+  const seqNumbers = '01234567890123456789';
+  const revSeqNumbers = '98765432109876543210';
+  if (lower.length >= 8 && (seqNumbers.includes(lower) || revSeqNumbers.includes(lower))) {
+    return {
+      valid: false,
+      message: 'Mật khẩu là chuỗi số liên tiếp dễ đoán. Vui lòng chọn mật khẩu khó đoán hơn.'
+    };
+  }
+
+  if (email) {
+    const emailPrefix = email.split('@')[0].toLowerCase().trim();
+    if (emailPrefix.length >= 3 && (lower === emailPrefix || lower === `${emailPrefix}123`)) {
+      return {
+        valid: false,
+        message: 'Mật khẩu không nên trùng hoặc quá giống với tên tài khoản email của bạn.'
+      };
+    }
+  }
+
+  return { valid: true };
+}
+
 app.post('/api/auth/signup', async (req, res) => {
   try {
     const { email, password, name, fullName, phoneNumber, address } = req.body || {};
     const cleanEmail = (email || '').trim().toLowerCase();
 
-    if (!cleanEmail || !/^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(cleanEmail)) {
+    const emailRegex = /^[a-zA-Z0-9]+([._%+-][a-zA-Z0-9]+)*@[a-zA-Z0-9]+([.-][a-zA-Z0-9]+)*\.[a-zA-Z]{2,}$/;
+    if (!cleanEmail || !emailRegex.test(cleanEmail)) {
       return res.status(400).json({
-        error: { message: 'Email phải đúng định dạng @gmail.com mới được đăng ký' }
+        error: { message: 'Email không đúng định dạng. Vui lòng nhập địa chỉ email hợp lệ (ví dụ: example@gmail.com, student@university.edu.vn).' }
       });
     }
 
-    if (!password || password.length < 6) {
+    const passCheck = checkPasswordSecurity(password, cleanEmail);
+    if (!passCheck.valid) {
       return res.status(400).json({
-        error: { message: 'Mật khẩu phải tối thiểu 6 ký tự' }
+        error: { message: passCheck.message }
       });
     }
 
     const existingUser = await db.collection('users').findOne({ email: cleanEmail });
     if (existingUser) {
       return res.status(409).json({
-        error: { message: 'Email đã tồn tại trong hệ thống. Vui lòng đăng nhập hoặc sử dụng email khác!' }
+        error: { message: 'Email này đã được đăng ký. Vui lòng sử dụng email khác hoặc đăng nhập.' }
       });
     }
 
@@ -7270,6 +7337,11 @@ app.post('/api/auth/signup', async (req, res) => {
       name: resolvedName
     });
   } catch (error) {
+    if (error && (error.code === 11000 || error.code === '23505' || error.name === 'MongoServerError')) {
+      return res.status(409).json({
+        error: { message: 'Email này đã được đăng ký. Vui lòng sử dụng email khác hoặc đăng nhập.' }
+      });
+    }
     console.error('Error during signup:', error);
     return res.status(500).json({
       error: { message: error.message || 'Lỗi server khi đăng ký' }

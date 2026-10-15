@@ -285,6 +285,28 @@
           </section>
         }
 
+        <!-- GUEST ADVICE & VOLUNTARY ACCOUNT SIGNUP BANNER -->
+        @if (!currentUser) {
+          <section class="guest-order-prompt no-print">
+            <div class="guest-prompt-icon">
+              <mat-icon>card_giftcard</mat-icon>
+            </div>
+            <div class="guest-prompt-content">
+              <h3 class="guest-prompt-title">Lưu ý dành cho Khách vãng lai</h3>
+              <p class="guest-prompt-desc">
+                Quý khách vui lòng lưu lại <strong>Mã đơn hàng: {{ currentOrder.orderId }}</strong> để dễ dàng tra cứu hành trình kiện hàng bất cứ lúc nào qua mục Tra cứu đơn hàng.
+              </p>
+              <div class="guest-prompt-invite">
+                <span>Bạn muốn quản lý lịch sử đơn mua và nhận ưu đãi độc quyền?</span>
+                <a [routerLink]="['/' + (lang$ | async) + '/auth/signup']" class="btn-guest-signup">
+                  Đăng ký tài khoản ngay
+                </a>
+                <span class="guest-optional-hint">(Không bắt buộc)</span>
+              </div>
+            </div>
+          </section>
+        }
+
         <!-- 8. ACTION BUTTONS -->
         <footer class="bill-actions-footer no-print">
           <button type="button" class="btn-cheri-primary" [routerLink]="['/' + (lang$ | async) + '/product/all']">

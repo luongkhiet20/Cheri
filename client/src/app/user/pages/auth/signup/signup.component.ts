@@ -49,25 +49,100 @@ export class SignUpComponent implements OnDestroy {
     });
 
     this.signUpForm = this._fb.group({
-      email: ['', [Validators.required, Validators.email, this.gmailValidator]],
+      email: ['', [Validators.required, Validators.email, this.emailFormatValidator]],
       name: [''],
-      password: ['', [Validators.required, Validators.minLength(6)]],
+      password: ['', [Validators.required, Validators.minLength(8), this.passwordSecurityValidator.bind(this)]],
       confirmPassword: [''],
       agreeTerms: [false, Validators.requiredTrue]
     }, { validators: this.passwordsMatchValidator });
+
+    // Khi người dùng sửa ô email, xóa lỗi trùng email trước đó và kiểm tra lại mật khẩu (để tránh trùng username)
+    this.signUpForm.get('email')?.valueChanges.subscribe(() => {
+      const emailCtrl = this.signUpForm.get('email');
+      if (emailCtrl?.hasError('emailTaken')) {
+        const errors = { ...emailCtrl.errors };
+        delete errors['emailTaken'];
+        emailCtrl.setErrors(Object.keys(errors).length ? errors : null);
+      }
+      this.signUpForm.get('password')?.updateValueAndValidity({ emitEvent: false });
+    });
   }
 
   ngOnDestroy(): void {
     this.langSub?.unsubscribe();
   }
 
-  gmailValidator(control: AbstractControl): ValidationErrors | null {
+  emailFormatValidator(control: AbstractControl): ValidationErrors | null {
     if (!control.value) {
       return null;
     }
-    const val = String(control.value).trim().toLowerCase();
-    const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
-    return gmailRegex.test(val) ? null : { gmailInvalid: true };
+    const val = String(control.value).trim();
+    // Tiêu chuẩn RFC 5322 regex chấp nhận Gmail cá nhân (@gmail.com), Google Workspace trường học (.edu, .edu.vn), doanh nghiệp (.com, .vn, .org,...)
+    const emailRegex = /^[a-zA-Z0-9]+([._%+-][a-zA-Z0-9]+)*@[a-zA-Z0-9]+([.-][a-zA-Z0-9]+)*\.[a-zA-Z]{2,}$/;
+    return emailRegex.test(val) ? null : { emailFormatInvalid: true };
+  }
+
+  passwordSecurityValidator(control: AbstractControl): ValidationErrors | null {
+    if (!control.value) {
+      return null;
+    }
+    const password = String(control.value);
+    if (password.length < 8) {
+      return null; // Đã có Validators.minLength(8) xử lý
+    }
+
+    const trimmed = password.trim();
+    const lower = trimmed.toLowerCase();
+
+    // Danh sách mật khẩu phổ biến hoặc dễ đoán
+    const commonPasswords = new Set([
+      '12345678', '123456789', '1234567890', '87654321', '01234567', '98765432',
+      'password', 'passwords', 'password1', 'password12', 'password123', 'p@ssword', 'p@ssw0rd',
+      'qwerty123', 'qwertyui', 'qwertyuiop', 'asdfghjk', 'zxcvbnm1',
+      '11111111', '00000000', '12341234', '11223344',
+      'admin123', 'administrator', 'iloveyou', 'iloveyou1', 'cheri123', 'cheri12345',
+      'welcome1', 'welcome123', 'monkey123', 'dragon123', 'master123',
+      'sunshine', 'princess', 'football', 'abcdefgh'
+    ]);
+
+    if (commonPasswords.has(lower)) {
+      return {
+        weakPassword: true,
+        weakPasswordMsg: 'Mật khẩu quá đơn giản hoặc phổ biến (ví dụ: 12345678, password, qwerty123...). Vui lòng chọn mật khẩu khó đoán hơn.'
+      };
+    }
+
+    // Chuỗi ký tự lặp lại giống hệt nhau (ví dụ: 11111111, aaaaaaaa)
+    if (/^(.)\1+$/.test(trimmed)) {
+      return {
+        weakPassword: true,
+        weakPasswordMsg: 'Mật khẩu không được chỉ gồm các ký tự lặp lại giống nhau. Vui lòng chọn mật khẩu đa dạng hơn.'
+      };
+    }
+
+    // Dãy số liên tiếp tăng dần hoặc giảm dần
+    const seqNumbers = '01234567890123456789';
+    const revSeqNumbers = '98765432109876543210';
+    if (lower.length >= 8 && (seqNumbers.includes(lower) || revSeqNumbers.includes(lower))) {
+      return {
+        weakPassword: true,
+        weakPasswordMsg: 'Mật khẩu là chuỗi số liên tiếp dễ đoán. Vui lòng chọn mật khẩu khó đoán hơn.'
+      };
+    }
+
+    // Kiểm tra trùng với username của email
+    const emailVal = this.signUpForm?.get('email')?.value;
+    if (emailVal) {
+      const emailPrefix = String(emailVal).split('@')[0].toLowerCase().trim();
+      if (emailPrefix.length >= 3 && (lower === emailPrefix || lower === `${emailPrefix}123`)) {
+        return {
+          weakPassword: true,
+          weakPasswordMsg: 'Mật khẩu không nên trùng hoặc quá giống với tên tài khoản email của bạn.'
+        };
+      }
+    }
+
+    return null;
   }
 
   passwordsMatchValidator(form: FormGroup) {
@@ -87,12 +162,52 @@ export class SignUpComponent implements OnDestroy {
     const emailCtrl = this.signUpForm.get('email');
     const passCtrl = this.signUpForm.get('password');
 
-    if (!emailCtrl?.value) return 'Vui lòng nhập địa chỉ Gmail';
-    if (emailCtrl?.invalid) return 'Email phải đúng định dạng Gmail (@gmail.com)';
-    if (passCtrl?.invalid) return 'Mật khẩu phải tối thiểu 6 ký tự';
+    if (!emailCtrl?.value) return 'Vui lòng nhập địa chỉ email';
+    if (emailCtrl?.errors?.['emailTaken']) return 'Email này đã được đăng ký. Vui lòng sử dụng email khác hoặc đăng nhập.';
+    if (emailCtrl?.invalid) return 'Email không đúng định dạng. Vui lòng nhập địa chỉ email hợp lệ (ví dụ: example@gmail.com, student@university.edu.vn)';
+    if (passCtrl?.errors?.['required']) return 'Vui lòng nhập mật khẩu';
+    if (passCtrl?.errors?.['minlength']) return 'Mật khẩu phải tối thiểu 8 ký tự';
+    if (passCtrl?.errors?.['weakPassword']) {
+      return passCtrl.errors['weakPasswordMsg'] || 'Mật khẩu quá đơn giản hoặc phổ biến. Vui lòng chọn mật khẩu an toàn hơn.';
+    }
     if (this.signUpForm.errors?.['passwordMismatch']) return 'Mật khẩu nhập lại không khớp';
     if (!this.signUpForm.get('agreeTerms')?.value) return 'Vui lòng tích chọn Chấp nhận điều khoản sử dụng và Chính sách bảo mật';
     return '';
+  }
+
+  private handleRegistrationError(err: any): void {
+    this.selectors.userState.update((state) => ({ ...state, loading: false }));
+    const rawMsg = err?.error?.message || err?.message || '';
+    const status = err?.status || err?.error?.statusCode;
+
+    const isDuplicate =
+      status === 409 ||
+      (typeof rawMsg === 'string' &&
+        (rawMsg.includes('đã được đăng ký') ||
+          rawMsg.includes('đã tồn tại') ||
+          rawMsg.toLowerCase().includes('already exist')));
+
+    if (isDuplicate) {
+      this.signUpForm.get('email')?.setErrors({ emailTaken: true });
+      this.signUpForm.get('email')?.markAsTouched();
+      this.cdr.markForCheck();
+      this.snackBar.open('Email này đã được đăng ký. Vui lòng sử dụng email khác hoặc đăng nhập.', 'Đóng', {
+        duration: 5000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom'
+      });
+      return;
+    }
+
+    const errorMsg = Array.isArray(rawMsg)
+      ? rawMsg.join(', ')
+      : (rawMsg || 'Có lỗi xảy ra khi đăng ký. Vui lòng thử lại sau!');
+
+    this.snackBar.open(errorMsg, 'Đóng', {
+      duration: 4500,
+      horizontalPosition: 'center',
+      verticalPosition: 'bottom'
+    });
   }
 
   submit() {
@@ -101,23 +216,45 @@ export class SignUpComponent implements OnDestroy {
       const passCtrl = this.signUpForm.get('password');
 
       if (!emailCtrl?.value) {
-        this.snackBar.open('Vui lòng nhập địa chỉ Gmail để đăng ký!', 'Đóng', {
+        this.snackBar.open('Vui lòng nhập địa chỉ email để đăng ký!', 'Đóng', {
           duration: 4000,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom'
+        });
+      } else if (emailCtrl?.errors?.['emailTaken']) {
+        this.snackBar.open('Email này đã được đăng ký. Vui lòng sử dụng email khác hoặc đăng nhập.', 'Đóng', {
+          duration: 4500,
           horizontalPosition: 'center',
           verticalPosition: 'bottom'
         });
       } else if (emailCtrl?.invalid) {
-        this.snackBar.open('Email phải đúng định dạng Gmail (@gmail.com) mới được đăng ký!', 'Đóng', {
+        this.snackBar.open('Email không đúng định dạng. Vui lòng nhập địa chỉ email hợp lệ (ví dụ: example@gmail.com, student@university.edu.vn)!', 'Đóng', {
+          duration: 4500,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom'
+        });
+      } else if (passCtrl?.errors?.['required']) {
+        this.snackBar.open('Vui lòng nhập mật khẩu!', 'Đóng', {
           duration: 4000,
           horizontalPosition: 'center',
           verticalPosition: 'bottom'
         });
-      } else if (passCtrl?.invalid) {
-        this.snackBar.open('Mật khẩu phải tối thiểu 6 ký tự!', 'Đóng', {
+      } else if (passCtrl?.errors?.['minlength']) {
+        this.snackBar.open('Mật khẩu phải có tối thiểu 8 ký tự!', 'Đóng', {
           duration: 4000,
           horizontalPosition: 'center',
           verticalPosition: 'bottom'
         });
+      } else if (passCtrl?.errors?.['weakPassword']) {
+        this.snackBar.open(
+          passCtrl.errors['weakPasswordMsg'] || 'Mật khẩu quá đơn giản hoặc phổ biến. Vui lòng chọn mật khẩu an toàn hơn!',
+          'Đóng',
+          {
+            duration: 5000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom'
+          }
+        );
       } else if (this.signUpForm.errors?.['passwordMismatch']) {
         this.snackBar.open('Mật khẩu nhập lại không khớp. Vui lòng kiểm tra lại!', 'Đóng', {
           duration: 4000,
@@ -188,17 +325,7 @@ export class SignUpComponent implements OnDestroy {
     ).subscribe({
       next: ({ user, lang, error }: any) => {
         if (error) {
-          this.selectors.userState.update((state) => ({ ...state, loading: false }));
-          const errMsg = error?.error?.message || error?.message || 'Đăng ký thất bại. Email có thể đã tồn tại!';
-          this.snackBar.open(
-            Array.isArray(errMsg) ? errMsg.join(', ') : errMsg,
-            'Đóng',
-            {
-              duration: 4000,
-              horizontalPosition: 'center',
-              verticalPosition: 'bottom'
-            }
-          );
+          this.handleRegistrationError(error);
           return;
         }
 
@@ -217,17 +344,7 @@ export class SignUpComponent implements OnDestroy {
         this.router.navigate(['/' + targetLang]);
       },
       error: (err: any) => {
-        this.selectors.userState.update((state) => ({ ...state, loading: false }));
-        const errorMsg = err?.error?.message || err?.message || 'Có lỗi xảy ra khi đăng ký. Vui lòng thử lại!';
-        this.snackBar.open(
-          Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg,
-          'Đóng',
-          {
-            duration: 4000,
-            horizontalPosition: 'center',
-            verticalPosition: 'bottom'
-          }
-        );
+        this.handleRegistrationError(err);
       }
     });
   }

@@ -36,6 +36,134 @@ cloudinary.v2.config({
   api_secret: process.env.CLOUDINARY_SECRET,
 });
 
+export function validateEmailFormat(email: string): { valid: boolean; message?: string } {
+  if (!email || typeof email !== 'string') {
+    return { valid: false, message: 'Vui lòng nhập địa chỉ email' };
+  }
+  const clean = email.trim();
+  if (!clean) {
+    return { valid: false, message: 'Địa chỉ email không được để trống' };
+  }
+  // Tiêu chuẩn RFC 5322 regex chấp nhận Gmail cá nhân, Google Workspace trường học (.edu, .edu.vn), doanh nghiệp và các domain hợp lệ
+  const emailRegex = /^[a-zA-Z0-9]+([._%+-][a-zA-Z0-9]+)*@[a-zA-Z0-9]+([.-][a-zA-Z0-9]+)*\.[a-zA-Z]{2,}$/;
+  if (!emailRegex.test(clean)) {
+    return {
+      valid: false,
+      message:
+        'Email không đúng định dạng. Vui lòng nhập địa chỉ email hợp lệ (ví dụ: example@gmail.com, student@university.edu.vn).',
+    };
+  }
+  return { valid: true };
+}
+
+export function validatePasswordSecurity(
+  password: string,
+  email?: string,
+): { valid: boolean; message?: string } {
+  if (!password || typeof password !== 'string') {
+    return { valid: false, message: 'Vui lòng nhập mật khẩu' };
+  }
+
+  if (password.length < 8) {
+    return {
+      valid: false,
+      message: 'Mật khẩu phải có tối thiểu 8 ký tự.',
+    };
+  }
+
+  if (password.length > 100) {
+    return {
+      valid: false,
+      message: 'Mật khẩu không được vượt quá 100 ký tự.',
+    };
+  }
+
+  const trimmed = password.trim();
+  const lower = trimmed.toLowerCase();
+
+  const commonPasswords = new Set([
+    '12345678',
+    '123456789',
+    '1234567890',
+    '87654321',
+    '01234567',
+    '98765432',
+    'password',
+    'passwords',
+    'password1',
+    'password12',
+    'password123',
+    'p@ssword',
+    'p@ssw0rd',
+    'qwerty123',
+    'qwertyui',
+    'qwertyuiop',
+    'asdfghjk',
+    'zxcvbnm1',
+    '11111111',
+    '00000000',
+    '12341234',
+    '11223344',
+    'admin123',
+    'administrator',
+    'iloveyou',
+    'iloveyou1',
+    'cheri123',
+    'cheri12345',
+    'welcome1',
+    'welcome123',
+    'monkey123',
+    'dragon123',
+    'master123',
+    'sunshine',
+    'princess',
+    'football',
+    'abcdefgh',
+  ]);
+
+  if (commonPasswords.has(lower)) {
+    return {
+      valid: false,
+      message:
+        'Mật khẩu này quá phổ biến hoặc dễ đoán (ví dụ: 12345678, password, qwerty123...). Vui lòng chọn mật khẩu khó đoán hơn để bảo vệ tài khoản.',
+    };
+  }
+
+  // Toàn bộ ký tự giống nhau lặp lại (ví dụ: 11111111, aaaaaaaa)
+  if (/^(.)\1+$/.test(trimmed)) {
+    return {
+      valid: false,
+      message:
+        'Mật khẩu không được chỉ gồm các ký tự lặp lại giống nhau. Vui lòng chọn mật khẩu đa dạng hơn.',
+    };
+  }
+
+  // Dãy số liên tiếp đơn giản tăng dần hoặc giảm dần
+  const seqNumbers = '01234567890123456789';
+  const revSeqNumbers = '98765432109876543210';
+  if (lower.length >= 8 && (seqNumbers.includes(lower) || revSeqNumbers.includes(lower))) {
+    return {
+      valid: false,
+      message:
+        'Mật khẩu là chuỗi số liên tiếp dễ đoán. Vui lòng chọn mật khẩu khó đoán hơn.',
+    };
+  }
+
+  // Kiểm tra trùng với username của email
+  if (email) {
+    const emailPrefix = email.split('@')[0].toLowerCase().trim();
+    if (emailPrefix.length >= 3 && (lower === emailPrefix || lower === `${emailPrefix}123`)) {
+      return {
+        valid: false,
+        message:
+          'Mật khẩu không nên trùng hoặc quá giống với tên tài khoản email của bạn.',
+      };
+    }
+  }
+
+  return { valid: true };
+}
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -58,13 +186,24 @@ export class AuthService {
     const cleanEmail = (email || '').trim().toLowerCase();
     const cleanPhone = phoneNumber ? String(phoneNumber).replace(/\D/g, '') : '';
 
-    if (!cleanEmail || !/^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(cleanEmail)) {
-      throw new BadRequestException('Email phải đúng định dạng @gmail.com mới được đăng ký');
+    // 1. Kiểm tra định dạng email hợp lệ (Gmail, email trường học edu/edu.vn, doanh nghiệp, v.v.)
+    const emailCheck = validateEmailFormat(cleanEmail);
+    if (!emailCheck.valid) {
+      throw new BadRequestException(emailCheck.message);
     }
 
+    // 1. Kiểm tra độ an toàn của mật khẩu
+    const passwordCheck = validatePasswordSecurity(password, cleanEmail);
+    if (!passwordCheck.valid) {
+      throw new BadRequestException(passwordCheck.message);
+    }
+
+    // 2. Kiểm tra email đã tồn tại trước khi tạo tài khoản
     const userExist = await this.userModel.findOne({ email: cleanEmail });
     if (userExist) {
-      throw new ConflictException('Username already exist');
+      throw new ConflictException(
+        'Email này đã được đăng ký. Vui lòng sử dụng email khác hoặc đăng nhập.',
+      );
     }
     const resolvedName = fullName || name || cleanEmail.split('@')[0];
     const user = new this.userModel({
@@ -84,11 +223,19 @@ export class AuthService {
     user.password = await this.hashPassword(password, user.salt);
     try {
       await user.save();
-    } catch (error) {
-      if (error.code === '23505' || error.code === 11000) {
-        throw new ConflictException('Username already exist');
+    } catch (error: any) {
+      if (
+        error?.code === '23505' ||
+        error?.code === 11000 ||
+        error?.name === 'MongoServerError'
+      ) {
+        throw new ConflictException(
+          'Email này đã được đăng ký. Vui lòng sử dụng email khác hoặc đăng nhập.',
+        );
       } else {
-        throw new InternalServerErrorException();
+        throw new InternalServerErrorException(
+          'Có lỗi xảy ra trong quá trình đăng ký tài khoản. Vui lòng thử lại sau.',
+        );
       }
     }
 

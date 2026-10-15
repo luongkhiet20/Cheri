@@ -807,3 +807,82 @@ button {
     padding: 0 !important;
   }
 }
+
+/* ── Guest Order Prompt ─────────────────────────────────────────── */
+.guest-order-prompt {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: #FFFBF2;
+  border: 1px solid #F6E0B5;
+  border-radius: 8px;
+  padding: 18px 20px;
+  margin-top: 24px;
+}
+
+.guest-prompt-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #FDF0D5;
+  color: #B27300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.guest-prompt-icon mat-icon {
+  font-size: 22px;
+  width: 22px;
+  height: 22px;
+}
+
+.guest-prompt-content {
+  flex: 1;
+}
+
+.guest-prompt-title {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #4A3508;
+}
+
+.guest-prompt-desc {
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #6B5120;
+}
+
+.guest-prompt-invite {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: #6B5120;
+}
+
+.btn-guest-signup {
+  display: inline-block;
+  background-color: #9C5120;
+  color: #FFFFFF !important;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.btn-guest-signup:hover {
+  background-color: #7D4018;
+}
+
+.guest-optional-hint {
+  font-size: 11.5px;
+  color: #8C7355;
+  font-style: italic;
+}
+

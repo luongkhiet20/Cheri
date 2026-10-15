@@ -515,6 +515,14 @@
 
         <div class="info-list">
           <div class="info-row">
+            <span class="info-label">Loại tài khoản:</span>
+            <span class="info-value">
+              <span class="badge" [ngClass]="(order.userId && order.userId !== 'null') ? 'badge-primary' : 'badge-neutral'">
+                {{ (order.userId && order.userId !== 'null') ? 'Tài khoản thành viên' : 'Khách vãng lai' }}
+              </span>
+            </span>
+          </div>
+          <div class="info-row">
             <span class="info-label">Tên khách hàng:</span>
             <span class="info-value font-medium">{{ order.customer || '—' }}</span>
           </div>

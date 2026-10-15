@@ -489,6 +489,8 @@ export class OrdersService {
     orderDto: OrderDto,
     user: User | null,
     lang = 'vi',
+    session?: any,
+    guestCartId?: string,
   ): Promise<{ error: string; result: Order }> {
     try {
       if (await this.isMaintenanceMode()) {
@@ -497,6 +499,9 @@ export class OrdersService {
       const orderData = await this.buildOrderData(orderDto, user, 'COD');
       const newOrder = new this.orderModel(orderData);
       await newOrder.save();
+
+      // Giảm tồn kho sản phẩm/biến thể
+      await this.decreaseStock(newOrder.items);
 
       // Xóa các sản phẩm đã đặt khỏi giỏ hàng của user
       if (user) {
@@ -516,6 +521,24 @@ export class OrdersService {
           await this.userModel.findByIdAndUpdate(user._id, {
             'cart.items': [],
           });
+        }
+      } else if (session) {
+        // Dọn giỏ hàng session của khách vãng lai
+        const guestKey = guestCartId ? `cart_${guestCartId}` : 'cart';
+        if (session[guestKey]) {
+          if (orderDto.selectedItemIds && orderDto.selectedItemIds.length > 0) {
+            const selectedSet = new Set(orderDto.selectedItemIds.map(id => String(id)));
+            if (Array.isArray(session[guestKey].items)) {
+              session[guestKey].items = session[guestKey].items.filter((item: any) => {
+                const pId = String(item.productId || item.id || item.item?._id || item.item?.id || '');
+                const vId = item.variantId ? String(item.variantId) : null;
+                const compoundId = vId ? `${pId}_${vId}` : pId;
+                return !selectedSet.has(compoundId) && !selectedSet.has(pId) && (!item.id || !selectedSet.has(String(item.id)));
+              });
+            }
+          } else {
+            session[guestKey] = { items: [], totalQty: 0, totalPrice: 0 };
+          }
         }
       }
 
@@ -539,6 +562,8 @@ export class OrdersService {
     body,
     user: User | null,
     lang = 'vi',
+    session?: any,
+    guestCartId?: string,
   ): Promise<{ error: string; result: Order }> {
     try {
       if (await this.isMaintenanceMode()) {
@@ -585,6 +610,23 @@ export class OrdersService {
             await this.userModel.findByIdAndUpdate(user._id, {
               'cart.items': [],
             });
+          }
+        } else if (session) {
+          const guestKey = guestCartId ? `cart_${guestCartId}` : 'cart';
+          if (session[guestKey]) {
+            if (body.selectedItemIds && body.selectedItemIds.length > 0) {
+              const selectedSet = new Set(body.selectedItemIds.map((id: any) => String(id)));
+              if (Array.isArray(session[guestKey].items)) {
+                session[guestKey].items = session[guestKey].items.filter((item: any) => {
+                  const pId = String(item.productId || item.id || item.item?._id || item.item?.id || '');
+                  const vId = item.variantId ? String(item.variantId) : null;
+                  const compoundId = vId ? `${pId}_${vId}` : pId;
+                  return !selectedSet.has(compoundId) && !selectedSet.has(pId) && (!item.id || !selectedSet.has(String(item.id)));
+                });
+              }
+            } else {
+              session[guestKey] = { items: [], totalQty: 0, totalPrice: 0 };
+            }
           }
         }
 
@@ -792,6 +834,7 @@ export class OrdersService {
     return {
       orderId,
       _user: user ? new Types.ObjectId(user._id as string) : null,
+      userId: user ? new Types.ObjectId(user._id as string) : null,
       customerEmail: orderDto.email,
       customerPhone: orderDto.customerPhone || normalizedShippingAddress.phone || '',
       status: OrderStatus.PENDING,
@@ -1881,12 +1924,16 @@ export class OrdersService {
         label: o.status || 'Không rõ',
         variant: 'neutral',
       };
-      const customerName =
+      const isGuest = !o.userId && !o._user;
+      const rawCustomerName =
         o.customer?.name ||
         o.shippingAddress?.fullName ||
         (o.addresses && o.addresses[0]?.name) ||
         o.customerEmail ||
-        'Khách vãng lai';
+        '';
+      const customerName = rawCustomerName
+        ? (isGuest ? `${rawCustomerName} (Khách vãng lai)` : rawCustomerName)
+        : 'Khách vãng lai';
 
       const totalVal = o.totalAmount ?? o.amount ?? o.subtotal ?? o.total ?? 0;
       const paymentMethodName =
@@ -1901,6 +1948,8 @@ export class OrdersService {
         id: o._id?.toString() || o.id,
         code: o.orderId || ('#' + String(o._id).slice(-6).toUpperCase()),
         customer: customerName,
+        isGuest,
+        customerType: isGuest ? 'GUEST' : 'MEMBER',
         total: totalVal,
         payment: paymentMethodName,
         status: o.status,

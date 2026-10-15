@@ -120,6 +120,8 @@ export class CartComponent implements OnInit, OnDestroy {
 
   readonly component = 'cartComponent';
 
+  isSubmittingOrder = false;
+
   // Regex xác thực họ tên (chữ tiếng Việt và khoảng trắng, không số)
   private readonly namePattern = /^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềểỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ\s]+$/;
   // Regex xác thực số điện thoại Việt Nam (10 số, bắt đầu 03, 05, 07, 08, 09 hoặc +84)
@@ -1917,7 +1919,34 @@ export class CartComponent implements OnInit, OnDestroy {
     };
   }
 
+  private cleanUpGuestCartAfterOrder(): void {
+    try {
+      const guestLocal = this.apiService.getGuestCartLocal();
+      if (!guestLocal || guestLocal.length === 0) return;
+
+      const selectedIds = this.selectedItemIds;
+      const remaining = guestLocal.filter(item => {
+        const pId = String(item.productId || '');
+        const vId = item.variantId ? String(item.variantId) : null;
+        const compoundId = vId ? `${pId}_${vId}` : pId;
+        return !selectedIds.has(compoundId) && !selectedIds.has(pId);
+      });
+
+      if (remaining.length > 0) {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem('cheri_guest_cart', JSON.stringify(remaining));
+        }
+      } else {
+        this.apiService.clearGuestCartLocal();
+      }
+      const lang = this.translate?.lang || 'vi';
+      this.store.getCart(lang);
+    } catch (_) {}
+  }
+
   payWithCard(payment: any): void {
+    if (this.isSubmittingOrder) return;
+
     if (this.selectedItemIds.size === 0) {
       this.snackBar.open('Vui lòng chọn ít nhất 1 sản phẩm để thanh toán', 'Đóng', { duration: 3000 });
       return;
@@ -1934,6 +1963,7 @@ export class CartComponent implements OnInit, OnDestroy {
       return;
     }
 
+    this.isSubmittingOrder = true;
     const selectedMethod = this.getSelectedPaymentMethod();
     this.user$.pipe(take(1)).subscribe((user: User) => {
       const orderPayload = this.buildOrderPayload(user, undefined, this.latestCart || undefined);
@@ -1943,12 +1973,16 @@ export class CartComponent implements OnInit, OnDestroy {
         paymentMethodId: selectedMethod?._id || selectedMethod?.code || '',
       };
       this.store.makeOrderWithPayment(paymentRequest, (response: any) => {
+        this.isSubmittingOrder = false;
         if (response && response.result && !response.error) {
           const createdOrder = response.result;
           if (typeof window !== 'undefined' && window.sessionStorage) {
             try {
               window.sessionStorage.setItem('cheri_last_order', JSON.stringify(createdOrder));
             } catch (_) {}
+          }
+          if (!user) {
+            this.cleanUpGuestCartAfterOrder();
           }
           const lang = this.translate?.lang || 'vi';
           this.router.navigate(['/' + lang + '/order'], {
@@ -1965,6 +1999,8 @@ export class CartComponent implements OnInit, OnDestroy {
   }
 
   submit(currency?: string): void {
+    if (this.isSubmittingOrder) return;
+
     if (this.selectedItemIds.size === 0) {
       this.snackBar.open('Vui lòng chọn ít nhất 1 sản phẩm để thanh toán', 'Đóng', { duration: 3000 });
       return;
@@ -1981,6 +2017,7 @@ export class CartComponent implements OnInit, OnDestroy {
       return;
     }
 
+    this.isSubmittingOrder = true;
     const selectedCurrency = currency || this.selectors.currency() || 'VND';
     const selectedMethod = this.getSelectedPaymentMethod();
     this.user$.pipe(take(1)).subscribe((user: User) => {
@@ -1988,12 +2025,16 @@ export class CartComponent implements OnInit, OnDestroy {
       orderRequest.paymentMethodId = selectedMethod?._id || selectedMethod?.code || '';
       
       this.store.makeOrder(orderRequest, (response: any) => {
+        this.isSubmittingOrder = false;
         if (response && response.result && !response.error) {
           const createdOrder = response.result;
           if (typeof window !== 'undefined' && window.sessionStorage) {
             try {
               window.sessionStorage.setItem('cheri_last_order', JSON.stringify(createdOrder));
             } catch (_) {}
+          }
+          if (!user) {
+            this.cleanUpGuestCartAfterOrder();
           }
           const lang = this.translate?.lang || 'vi';
           this.router.navigate(['/' + lang + '/order'], {

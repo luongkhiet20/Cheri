@@ -1,0 +1,42 @@
+{
+  "generated_at": "2026-10-15T09:43:42.413796+00:00",
+  "readiness_summary": {
+    "has_interactions": true,
+    "has_products": true,
+    "has_orders": true,
+    "is_training_ready": false,
+    "recommended_strategy": "DATASET_INITIALIZING"
+  },
+  "interaction_metrics": {
+    "total_raw_records": 113,
+    "real_records_count": 4,
+    "synthetic_records_count": 109,
+    "included_synthetic_in_clean": false,
+    "total_views": 4,
+    "valid_clean_records": 3,
+    "null_timestamp_count": 0,
+    "invalid_identifier_count": 0,
+    "compound_id_count": 0,
+    "linked_product_count": 4,
+    "unlinked_product_count": 0,
+    "technical_duplicate_count": 1,
+    "distinct_registered_users": 0,
+    "distinct_guest_sessions": 1,
+    "time_range_start": "2026-10-15T09:42:12.914000+00:00",
+    "time_range_end": "2026-10-15T09:42:34.926000+00:00"
+  },
+  "product_metrics": {
+    "total_products": 99,
+    "products_with_valid_price": 99,
+    "products_with_category": 99,
+    "visible_products": 96,
+    "in_stock_products": 3
+  },
+  "order_metrics": {
+    "total_orders": 43,
+    "successful_conversion_orders": 21,
+    "total_order_lines": 80,
+    "linked_order_lines": 76,
+    "unlinked_order_lines": 4
+  }
+}

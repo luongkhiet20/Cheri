@@ -1850,7 +1850,7 @@ export class CartComponent implements OnInit, OnDestroy {
     const selectedCartItems = (cart?.items || [])
       .filter((it: any) => {
         const id = this.getCartItemId(it);
-        const pId = String(it.productId || it.item?._id || it.item?.id || (typeof it.id === 'string' ? it.id.split('_')[0] : ''));
+        const pId = String(it.item?._id || it.productId || it.item?.id || (typeof it.id === 'string' ? it.id.split('_')[0] : ''));
         const vId = it.variantId ? String(it.variantId) : null;
         const compoundId = vId ? `${pId}_${vId}` : pId;
         return (
@@ -1860,26 +1860,34 @@ export class CartComponent implements OnInit, OnDestroy {
           selectedIds.includes(pId)
         );
       })
-      .map((it: any) => ({
-        productId: it.productId || it.id || it.item?._id || it.item?.id,
-        variantId: it.variantId,
-        quantity: it.quantity || it.qty || 1,
-        qty: it.quantity || it.qty || 1,
-        unitPrice: it.unitPrice || it.price || 0,
-        price: it.unitPrice || it.price || 0,
-        subtotal: (it.unitPrice || it.price || 0) * (it.quantity || it.qty || 1),
-        item: it.item || it,
-        productSnapshot: {
-          title: it.item?.title || it.title || 'Sản phẩm',
-          sku: it.item?.sku || it.sku || '',
-          image: it.item?.mainImage?.url || it.item?.images?.[0] || it.mainImage?.url || '',
-          variant: it.variant || (it.item?.variants?.[0] ? {
-            color: it.item.variants[0].color,
-            size: it.item.variants[0].size,
-            classification: it.item.variants[0].classification
-          } : null)
-        }
-      }));
+      .map((it: any) => {
+        const rawProdId = it.item?._id || it.productId || it.item?.id || it.id;
+        const cleanProdId = (typeof rawProdId === 'string' && rawProdId.includes('_'))
+          ? rawProdId.split('_')[0]
+          : String(rawProdId || '');
+        const cleanVariantId = it.variantId || (typeof it.id === 'string' && it.id.includes('_') ? it.id.split('_').slice(1).join('_') : null);
+
+        return {
+          productId: cleanProdId,
+          variantId: cleanVariantId,
+          quantity: it.quantity || it.qty || 1,
+          qty: it.quantity || it.qty || 1,
+          unitPrice: it.unitPrice || it.price || 0,
+          price: it.unitPrice || it.price || 0,
+          subtotal: (it.unitPrice || it.price || 0) * (it.quantity || it.qty || 1),
+          item: it.item || it,
+          productSnapshot: {
+            title: it.item?.title || it.title || 'Sản phẩm',
+            sku: it.item?.sku || it.sku || '',
+            image: it.item?.mainImage?.url || it.item?.images?.[0] || it.mainImage?.url || '',
+            variant: it.variant || (it.item?.variants?.[0] ? {
+              color: it.item.variants[0].color,
+              size: it.item.variants[0].size,
+              classification: it.item.variants[0].classification
+            } : null)
+          }
+        };
+      });
 
     return {
       ...userToOrder,
@@ -1979,6 +1987,10 @@ export class CartComponent implements OnInit, OnDestroy {
           if (typeof window !== 'undefined' && window.sessionStorage) {
             try {
               window.sessionStorage.setItem('cheri_last_order', JSON.stringify(createdOrder));
+              const contact = (createdOrder.customerPhone || createdOrder.customerEmail || createdOrder.shippingAddress?.phone || createdOrder.shippingAddress?.email || '').trim();
+              if (contact) {
+                window.sessionStorage.setItem('cheri_last_order_contact', contact);
+              }
             } catch (_) {}
           }
           if (!user) {
@@ -2031,6 +2043,10 @@ export class CartComponent implements OnInit, OnDestroy {
           if (typeof window !== 'undefined' && window.sessionStorage) {
             try {
               window.sessionStorage.setItem('cheri_last_order', JSON.stringify(createdOrder));
+              const contact = (createdOrder.customerPhone || createdOrder.customerEmail || createdOrder.shippingAddress?.phone || createdOrder.shippingAddress?.email || '').trim();
+              if (contact) {
+                window.sessionStorage.setItem('cheri_last_order_contact', contact);
+              }
             } catch (_) {}
           }
           if (!user) {

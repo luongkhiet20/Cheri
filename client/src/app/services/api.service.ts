@@ -950,6 +950,45 @@ export class ApiService {
     );
   }
 
+  public recordInteraction(payload: {
+    productId: string;
+    variantId?: string | null;
+    eventType?: string;
+    sessionId?: string;
+  }): Observable<any> {
+    const url = `${this.apiUrl}/api/interactions`;
+    const guestCartId = this.getOrCreateGuestCartId();
+    let headers = new HttpHeaders({
+      'Content-Type': 'application/json',
+    });
+    if (guestCartId) {
+      headers = headers.set('x-guest-cart-id', guestCartId);
+    }
+    if (isPlatformBrowser(this.platformId)) {
+      try {
+        const token = localStorage.getItem(accessTokenKey);
+        if (token && token !== 'null' && token !== 'undefined' && token.trim() !== '') {
+          headers = headers.set('Authorization', `Bearer ${token}`);
+        }
+      } catch {}
+    }
+
+    const body = {
+      productId: payload.productId,
+      variantId: payload.variantId || null,
+      eventType: payload.eventType || 'VIEW',
+      sessionId: payload.sessionId || guestCartId || undefined,
+    };
+
+    return this.http.post(url, body, { headers }).pipe(
+      catchError((err) => {
+        // Ghi nhận lỗi ngầm, không làm gián đoạn trải nghiệm của người dùng
+        return of({ success: false, error: err?.message || 'Tracking error' });
+      }),
+    );
+  }
+
+
   private initAuthTracking() {
     const selectors = inject(SignalStoreSelectors);
     combineLatest([toObservable(selectors.appLang), toObservable(selectors.user)]).subscribe(([lang, user]) => {

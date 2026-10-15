@@ -69,6 +69,7 @@ export class OrderComponent implements OnInit, OnDestroy {
     // 1. Kiểm tra store
     if (storeOrder && (!queryOrderId || storeOrder.orderId === queryOrderId || (storeOrder as any)._id === queryOrderId)) {
       this.currentOrder = storeOrder;
+      this.errorMessage = '';
       this.saveOrderToSession(storeOrder);
       return;
     }
@@ -81,6 +82,7 @@ export class OrderComponent implements OnInit, OnDestroy {
           const cached = JSON.parse(cachedRaw);
           if (cached && (!queryOrderId || cached.orderId === queryOrderId || cached._id === queryOrderId)) {
             this.currentOrder = cached;
+            this.errorMessage = '';
             return;
           }
         }
@@ -101,6 +103,7 @@ export class OrderComponent implements OnInit, OnDestroy {
             );
             if (matched) {
               this.currentOrder = matched;
+              this.errorMessage = '';
               this.saveOrderToSession(matched);
               return;
             }
@@ -129,15 +132,34 @@ export class OrderComponent implements OnInit, OnDestroy {
   }
 
   private fetchViaTrackOrder(queryOrderId: string): void {
+    let authContact = '';
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      authContact = window.sessionStorage.getItem('cheri_last_order_contact') || '';
+    }
+    const queryContact = this.route.snapshot.queryParamMap.get('contact') ||
+      this.route.snapshot.queryParamMap.get('phone') ||
+      this.route.snapshot.queryParamMap.get('email');
+    if (queryContact) {
+      authContact = queryContact;
+    }
+
+    if (!authContact) {
+      if (!this.currentOrder) {
+        this.errorMessage = 'Không tìm thấy thông tin đơn hàng này.';
+      }
+      return;
+    }
+
     this.isLoading = true;
-    this.apiService.trackOrder({ orderId: queryOrderId }).subscribe({
+    this.apiService.trackOrder({ orderId: queryOrderId, authContact }).subscribe({
       next: (res: any) => {
         this.isLoading = false;
         if (res && !res.error && res.orderId) {
           this.currentOrder = res;
+          this.errorMessage = '';
           this.saveOrderToSession(res);
         } else if (!this.currentOrder) {
-          this.errorMessage = 'Không tìm thấy thông tin đơn hàng này.';
+          this.errorMessage = res?.error || 'Không tìm thấy thông tin đơn hàng này.';
         }
       },
       error: () => {
@@ -153,6 +175,18 @@ export class OrderComponent implements OnInit, OnDestroy {
     if (typeof window !== 'undefined' && window.sessionStorage && order) {
       try {
         window.sessionStorage.setItem('cheri_last_order', JSON.stringify(order));
+        const contact = (
+          order.customerPhone ||
+          order.customerEmail ||
+          order.shippingAddress?.phone ||
+          order.shippingAddress?.email ||
+          order.email ||
+          order.phone ||
+          ''
+        ).trim();
+        if (contact) {
+          window.sessionStorage.setItem('cheri_last_order_contact', contact);
+        }
       } catch (_) {}
     }
   }

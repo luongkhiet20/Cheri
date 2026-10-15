@@ -884,11 +884,68 @@ export class OrdersService {
     const orderItems = [];
 
     for (const cartItem of cartItems) {
-      const productId = cartItem.productId;
-      const variantId = cartItem.variantId;
-      const quantity = cartItem.quantity || 1;
+      // 1. Trích xuất productId an toàn: hỗ trợ ObjectId thuần, compound id (prodId_varId) hoặc snapshot item
+      let rawProdId = cartItem.productId || cartItem.item?._id || cartItem.item?.id || cartItem.id;
+      let cleanProdId = '';
+      if (rawProdId) {
+        cleanProdId = String(rawProdId).trim();
+        if (cleanProdId.includes('_')) {
+          cleanProdId = cleanProdId.split('_')[0];
+        }
+      }
 
-      const product = await this.productModel.findById(productId).lean() as any;
+      // 2. Trích xuất variantId an toàn
+      let variantId = cartItem.variantId;
+      if (!variantId && typeof cartItem.id === 'string' && cartItem.id.includes('_')) {
+        const parts = cartItem.id.split('_');
+        if (parts.length > 1) {
+          variantId = parts.slice(1).join('_');
+        }
+      }
+
+      const quantity = Math.max(1, Number(cartItem.quantity || cartItem.qty) || 1);
+
+      // 3. Tìm sản phẩm trong DB bằng findById (nếu ObjectId hợp lệ) hoặc findOne theo SKU/code
+      let product: any = null;
+      if (cleanProdId && isValidObjectId(cleanProdId)) {
+        product = await this.productModel.findById(cleanProdId).lean() as any;
+      }
+
+      if (!product && cleanProdId) {
+        product = await this.productModel.findOne({
+          $or: [
+            { sku: cleanProdId },
+            { code: cleanProdId },
+            { 'vi.sku': cleanProdId },
+          ]
+        }).lean() as any;
+      }
+
+      // 4. Nếu không tìm thấy product trong DB nhưng cartItem có snapshot/item sẵn (phòng vệ cao)
+      if (!product && (cartItem.productSnapshot || cartItem.item)) {
+        const fallbackItem = cartItem.item || {};
+        const fallbackSnapshot = cartItem.productSnapshot || {};
+        const title = fallbackSnapshot.title || fallbackItem.title || fallbackItem.vi?.title || 'Sản phẩm Chéri';
+        const sku = fallbackSnapshot.sku || fallbackItem.sku || fallbackItem.vi?.sku || (cleanProdId ? `SKU-${cleanProdId}` : 'SKU-CHERI');
+        const image = fallbackSnapshot.image || fallbackItem.mainImage?.url || fallbackItem.image || (Array.isArray(fallbackItem.images) && (fallbackItem.images[0]?.url || fallbackItem.images[0])) || '';
+        const unitPrice = Number(cartItem.unitPrice || cartItem.price || fallbackItem.salePrice || fallbackItem.price || 0);
+
+        orderItems.push({
+          productId: cleanProdId && isValidObjectId(cleanProdId) ? new Types.ObjectId(cleanProdId) : null,
+          variantId: variantId && isValidObjectId(String(variantId)) ? new Types.ObjectId(String(variantId)) : (variantId ? String(variantId) : null),
+          productSnapshot: {
+            title,
+            sku,
+            image,
+            variant: fallbackSnapshot.variant || null,
+          },
+          quantity,
+          unitPrice,
+          subtotal: unitPrice * quantity,
+        });
+        continue;
+      }
+
       if (!product) continue;
 
       // Chặn nếu sản phẩm bị Ẩn (Case 3 & 4)
@@ -951,6 +1008,8 @@ export class OrdersService {
             classification: variant.classification || '',
           };
           snapshot.sku = variant.sku || snapshot.sku;
+        } else if (cartItem.productSnapshot?.variant) {
+          snapshot.variant = cartItem.productSnapshot.variant;
         }
       }
 
@@ -965,8 +1024,12 @@ export class OrdersService {
       const finalVariantId = matchedVariantDocId
         || (variantId && isValidObjectId(String(variantId)) ? new Types.ObjectId(String(variantId)) : (variantId ? String(variantId) : null));
 
+      const finalProductId = product._id && isValidObjectId(String(product._id))
+        ? new Types.ObjectId(String(product._id))
+        : (cleanProdId && isValidObjectId(cleanProdId) ? new Types.ObjectId(cleanProdId) : null);
+
       orderItems.push({
-        productId: new Types.ObjectId(productId.toString()),
+        productId: finalProductId,
         variantId: finalVariantId,
         productSnapshot: snapshot,
         quantity,
@@ -1000,12 +1063,12 @@ export class OrdersService {
           if (res) updated = true;
         }
 
-        if (item.productId) {
+        if (item.productId && isValidObjectId(String(item.productId))) {
           await this.productModel.findByIdAndUpdate(item.productId, {
             $inc: { quantity: -item.quantity },
           });
         }
-      } else if (item.productId) {
+      } else if (item.productId && isValidObjectId(String(item.productId))) {
         await this.productModel.findByIdAndUpdate(item.productId, {
           $inc: { quantity: -item.quantity },
         });

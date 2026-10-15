@@ -14,7 +14,7 @@
     "esModuleInterop": true
   },
   "files": ["./src/main.ts"],
-  "exclude": ["node_modules", "dist", "types.d.ts"]
+  "exclude": ["node_modules", "dist", "types.d.ts", "ml"]
 }
 
 

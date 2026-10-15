@@ -13,6 +13,7 @@ import { Cart, Product, Category, ProductVariant } from '../../../shared/models'
 import { ImagesDialogComponent } from '../../../shared/images-dialog/images-dialog.component';
 import { TranslateService } from '../../../../services/translate.service';
 import { CartToastService } from '../../../../services/cart-toast.service';
+import { ApiService } from '../../../../services/api.service';
 import { SignalStore } from '../../../../store/signal.store';
 import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
 import { filterProductDescriptionBullets } from './product-description';
@@ -34,6 +35,7 @@ export class ProductComponent implements OnDestroy {
   productSub: Subscription;
   product$: Signal<Product>;
   cartIds$: Observable<{ [productId: string]: number }>;
+  private lastTrackedProductId: string | null = null;
 
   // State cho Popup/Modal
   selectedImage: string = '';
@@ -86,6 +88,7 @@ export class ProductComponent implements OnDestroy {
     private router: Router,
     private translate: TranslateService,
     private jsonLDService: JsonLDService,
+    private apiService: ApiService,
   ) {
     this.lang$ = this.translate.getLang$();
     this.categories$ = toObservable(this.selectors.categories);
@@ -127,6 +130,14 @@ export class ProductComponent implements OnDestroy {
       return;
     }
     this.isUnavailable = false;
+
+    // Ghi nhận lượt xem sản phẩm thật vào MongoDB (Chỉ gửi 1 lần khi tải sản phẩm thành công, tránh gửi lặp khi đổi màu/size/render)
+    const validPid = product._id ? String(product._id) : null;
+    if (validPid && this.lastTrackedProductId !== validPid) {
+      this.lastTrackedProductId = validPid;
+      this.apiService.recordInteraction({ productId: validPid }).subscribe();
+    }
+
 
     // Dữ liệu ưu tiên từ vi
     const viData = product.vi || product;
@@ -446,10 +457,12 @@ export class ProductComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.lastTrackedProductId = null;
     if (this.routeSub) this.routeSub.unsubscribe();
     if (this.categoriesSub) this.categoriesSub.unsubscribe();
     if (this.productSub) this.productSub.unsubscribe();
   }
+
 
   private callCategories(): void {
     combineLatest([this.categories$.pipe(take(1)), this.lang$.pipe(take(1))])

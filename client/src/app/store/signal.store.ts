@@ -26,19 +26,18 @@ export class SignalStore {
 
   private acceptFreshProductSummaries(products: Product | Product[]): void {
     const productList = Array.isArray(products) ? products : [products];
-    const ids = productList.map(product => product?._id).filter(Boolean);
-    if (!ids.length) return;
-    this.selectors.reviewSummaries.update(summaries => {
-      let changed = false;
-      const next = { ...summaries };
-      for (const id of ids) {
-        if (Object.hasOwn(next, id)) {
-          delete next[id];
-          changed = true;
-        }
-      }
-      return changed ? next : summaries;
-    });
+    const freshSummaries: Record<string, ReviewSummary> = {};
+    for (const product of productList) {
+      const summary = product?.reviewSummary;
+      if (!product?._id || !summary || !Number.isInteger(summary.count) || summary.count < 0
+        || (summary.average !== null && !Number.isFinite(summary.average))) continue;
+      freshSummaries[product._id] = { average: summary.average, count: summary.count };
+    }
+    if (!Object.keys(freshSummaries).length) return;
+    // Keep the canonical read in the shared map so every retained Product copy sees it,
+    // and make responses that began earlier ineligible to supersede this read.
+    this.reviewSummaryRevision += 1;
+    this.selectors.reviewSummaries.update(summaries => ({ ...summaries, ...freshSummaries }));
   }
 
   resolveProductReviewSummary(product: Product): ReviewSummary {

@@ -296,6 +296,7 @@ test('public fallback list and detail responses omit embedded reviewer identitie
   await handlers['get /api/products']({ query: {}, headers: {} }, list);
   const detail = response();
   await handlers['get /api/products/:id']({ params: { id: productId }, query: {}, headers: {} }, detail);
+  assert.equal(JSON.stringify(detail.body.raw).includes('private-user'), false);
   for (const product of [list.body.products[0], detail.body.data]) {
     assert.equal(JSON.stringify(product.reviewSummary), JSON.stringify({ average: 3, count: 2 }));
     assert.equal(Array.isArray(product.raw.reviews), false, JSON.stringify(product.raw));

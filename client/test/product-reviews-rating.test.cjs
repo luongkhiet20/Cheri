@@ -170,8 +170,15 @@ test('a fresh product read refreshes saved summary overrides but an older in-fli
   const freshRead = new Subject();
   h.api.getProduct = () => freshRead.asObservable();
   h.store.getProduct('product-a');
+  const staleAfterFreshRead = new Subject();
+  h.api.getProduct = () => staleAfterFreshRead.asObservable();
+  h.store.getProduct('product-a');
   freshRead.next({ _id: 'product-a', reviewSummary: { average: 4, count: 5 } });
   assert.deepEqual(h.store.resolveProductReviewSummary(h.selectors.product()), { average: 4, count: 5 });
+  assert.deepEqual(h.store.resolveProductReviewSummary(h.selectors.products()[0]), { average: 4, count: 5 });
+  staleAfterFreshRead.next({ _id: 'product-a', reviewSummary: { average: 3, count: 6 } });
+  assert.deepEqual(h.store.resolveProductReviewSummary(h.selectors.product()), { average: 4, count: 5 });
+  assert.deepEqual(h.store.resolveProductReviewSummary(h.selectors.products()[0]), { average: 4, count: 5 });
 });
 
 test('homepage section and fallback products retain overrides after an older list response', async () => {

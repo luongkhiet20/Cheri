@@ -2655,8 +2655,12 @@ function formatOrder(o) {
   const shippingAddress = o.shippingAddress && typeof o.shippingAddress === 'object'
     ? o.shippingAddress
     : null;
+  const legacyAddress = Array.isArray(o.addresses)
+    ? (o.addresses[0] || {})
+    : (o.address && typeof o.address === 'object' ? o.address : {});
   const isGuest = !o.userId && !o._user;
   const rawCustomerName = getNonEmptyString(shippingAddress?.fullName)
+    || getNonEmptyString(o.customer?.name)
     || getNonEmptyString(legacyAddress.fullName)
     || getNonEmptyString(legacyAddress.name);
   const customerName = rawCustomerName
@@ -2715,6 +2719,10 @@ function formatOrder(o) {
     currency: o.currency || null,
     type: o.type || null,
     notes: o.notes || '',
+    cancelReason: o.cancelReason || null,
+    cancelReasonDetail: o.cancelReasonDetail || null,
+    cancelledAt: o.cancelledAt || null,
+    cancelledBy: o.cancelledBy ? o.cancelledBy.toString() : null,
     items,
     itemsCount,
     payment,
@@ -2824,6 +2832,124 @@ function queryFormattedOrders(formattedOrders, query = {}, paymentMethodCodeById
     pagination: { page, pageSize, total, totalPages }
   };
 }
+
+// 4.x CANCEL ORDER API (Customer cancellation with ownership and PENDING validation)
+async function handleCancelOrder(req, res) {
+  try {
+    const db = await connectToMongo();
+    const id = req.params.id;
+    const rawReason = typeof req.body === 'string' ? req.body : (req.body?.reason || '');
+    const rawDetail = typeof req.body === 'object' ? (req.body?.reasonDetail || '') : '';
+
+    const parsedReason = rawReason.trim();
+    const parsedDetail = rawDetail.trim();
+
+    // 1. Kiểm tra lý do hủy
+    if (!parsedReason) {
+      return res.status(400).json({ success: false, message: 'Vui lòng chọn lý do hủy đơn hàng.' });
+    }
+
+    if (parsedReason.startsWith('Lý do khác')) {
+      if (!parsedDetail) {
+        return res.status(400).json({ success: false, message: 'Vui lòng nhập nội dung lý do hủy cụ thể.' });
+      }
+      if (parsedDetail.length < 3) {
+        return res.status(400).json({ success: false, message: 'Nội dung lý do hủy phải có ít nhất 3 ký tự.' });
+      }
+    }
+
+    let userFromToken = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.split(' ')[1];
+        userFromToken = jwt.decode(token);
+      } catch (_) {}
+    }
+
+    const query = ObjectId.isValid(id)
+      ? { $or: [{ orderId: id }, { _id: new ObjectId(id) }] }
+      : { orderId: id };
+
+    const order = await db.collection('orders').findOne(query);
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng cần hủy.' });
+    }
+
+    if (userFromToken) {
+      const orderUserId = (order.userId || order._user)?.toString();
+      const tokenUserId = (userFromToken.id || userFromToken._id || userFromToken.sub)?.toString();
+      const orderEmail = (order.customerEmail || order.customer?.email || '').toLowerCase().trim();
+      const tokenEmail = (userFromToken.email || '').toLowerCase().trim();
+      const roles = userFromToken.roles || userFromToken.role || [];
+      const isAdmin = (Array.isArray(roles) ? roles : [roles]).some(r => typeof r === 'string' && r.toLowerCase().includes('admin'));
+
+      const isOwner = (orderUserId && tokenUserId && orderUserId === tokenUserId) ||
+        (orderEmail && tokenEmail && orderEmail === tokenEmail);
+
+      if (!isAdmin && !isOwner) {
+        return res.status(403).json({ success: false, message: 'Bạn không có quyền thực hiện hủy đơn hàng này.' });
+      }
+    }
+
+    const currentStatus = (order.status || '').toUpperCase().trim();
+    if (currentStatus !== 'PENDING' && currentStatus !== 'NEW' && currentStatus !== 'CHỜ XÁC NHẬN') {
+      return res.status(400).json({ success: false, message: 'Đơn hàng không ở trạng thái Chờ xác nhận, không thể hủy.' });
+    }
+
+    const cancelledAt = new Date();
+    const tokenUserIdStr = userFromToken ? (userFromToken.id || userFromToken._id) : null;
+    const cancelledBy = tokenUserIdStr && ObjectId.isValid(tokenUserIdStr) ? new ObjectId(tokenUserIdStr) : null;
+    const fullCancelNote = parsedDetail
+      ? `${parsedReason} - Chi tiết: ${parsedDetail}`
+      : parsedReason;
+
+    const updatedStatusHistory = Array.isArray(order.statusHistory) ? [...order.statusHistory] : [];
+    updatedStatusHistory.push({
+      status: 'CANCELLED',
+      updatedAt: cancelledAt,
+      updatedBy: cancelledBy,
+      note: fullCancelNote
+    });
+
+    const existingNotes = order.notes ? `${order.notes}\n[Hủy đơn]: ${fullCancelNote}` : `[Hủy đơn]: ${fullCancelNote}`;
+
+    await db.collection('orders').updateOne(
+      { _id: order._id },
+      {
+        $set: {
+          status: 'CANCELLED',
+          cancelReason: parsedReason,
+          cancelReasonDetail: parsedDetail || null,
+          cancelledAt: cancelledAt,
+          cancelledBy: cancelledBy,
+          notes: existingNotes,
+          statusHistory: updatedStatusHistory,
+          updatedAt: new Date()
+        }
+      }
+    );
+
+    const updatedOrder = await db.collection('orders').findOne({ _id: order._id });
+    return res.json({
+      success: true,
+      message: 'Hủy đơn hàng thành công.',
+      orderId: order.orderId,
+      status: 'CANCELLED',
+      cancelReason: parsedReason,
+      cancelReasonDetail: parsedDetail || null,
+      cancelledAt: cancelledAt,
+      cancelledBy: cancelledBy,
+      order: updatedOrder
+    });
+  } catch (err) {
+    console.error('Cancel order error:', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+app.post('/api/orders/:id/cancel', handleCancelOrder);
+app.patch('/api/orders/:id/cancel', handleCancelOrder);
 
 // 4.0 POST /api/admin/orders (Create normalized guest order from Admin)
 const ADMIN_ORDER_ID_MAX_ATTEMPTS = 5;

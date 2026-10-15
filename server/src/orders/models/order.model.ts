@@ -105,6 +105,12 @@ export interface Order extends Document {
   status: string;
   notes?: string;
 
+  // Thông tin hủy đơn hàng
+  cancelReason?: string;
+  cancelReasonDetail?: string;
+  cancelledAt?: Date;
+  cancelledBy?: Types.ObjectId;
+
   // Sản phẩm
   items: OrderItem[];
 

@@ -161,6 +161,14 @@
                 <button type="button" class="btn-action-outline" *ngIf="normalizeStatus(order.status) === 'DELIVERED'">
                   Trả hàng / Hoàn tiền
                 </button>
+                <button
+                  type="button"
+                  class="btn-action-cancel"
+                  *ngIf="canCancelOrder(order)"
+                  (click)="openCancelDialog(order)"
+                  title="Hủy đặt hàng này">
+                  Hủy đặt hàng
+                </button>
                 <button type="button" class="btn-action-outline" (click)="onViewOrderDetail(order)">
                   Chi tiết đơn hàng
                 </button>
@@ -274,4 +282,12 @@
     </div><!-- /profile-main-grid -->
 
   </div>
+
+  <!-- ── ORDER CANCEL POPUP DIALOG ── -->
+  <app-order-cancel-dialog
+    *ngIf="isCancelDialogOpen"
+    [order]="selectedOrderToCancel"
+    (close)="closeCancelDialog()"
+    (cancelled)="onOrderCancelled($event)">
+  </app-order-cancel-dialog>
 </div>

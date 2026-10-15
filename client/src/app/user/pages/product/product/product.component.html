@@ -245,7 +245,9 @@
     <div class="cheri-reviews-card" id="cheri-product-reviews">
       <div class="cheri-reviews-header">
         <h2 class="cheri-reviews-title">
-          <i class="material-icons">rate_review</i>
+          <svg class="cheri-title-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#74070E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill="#74070E" fill-opacity="0.12" />
+          </svg>
           Đánh giá sản phẩm
         </h2>
         @if (reviewStats && reviewStats.reviewCount > 0) {
@@ -288,126 +290,6 @@
             <span class="dist-star-count">{{ reviewStats.distribution[star]?.count || 0 }}</span>
           </div>
           }
-        </div>
-        }
-      </div>
-
-      <!-- C. FORM GỬI ĐÁNH GIÁ (Theo phân quyền đăng nhập & nhận hàng) -->
-      <div class="cheri-write-review-section">
-        @if (!isLoggedIn) {
-        <!-- Trạng thái 1: Chưa đăng nhập -->
-        <div class="cheri-review-prompt-box">
-          <div class="prompt-icon-wrap">
-            <i class="material-icons">lock_outline</i>
-          </div>
-          <div class="prompt-content">
-            <div class="prompt-heading">Đăng nhập để đánh giá sản phẩm</div>
-            <p class="prompt-text">
-              Bạn cần có tài khoản Chéri và đã nhận hàng thành công để có thể viết nhận xét cho sản phẩm này.
-            </p>
-          </div>
-          <button type="button" class="cheri-action-btn primary-btn cheri-prompt-btn" (click)="navigateToLogin()">
-            Đăng nhập ngay
-          </button>
-        </div>
-        } @else if (hasReviewed) {
-        <!-- Trạng thái 2: Đã gửi đánh giá rồi -->
-        <div class="cheri-review-status-box is-reviewed">
-          <i class="material-icons status-icon">check_circle</i>
-          <div class="status-content">
-            <div class="status-heading">Bạn đã gửi đánh giá cho sản phẩm này</div>
-            <p class="status-text">
-              Cảm ơn bạn đã chia sẻ trải nghiệm mua sắm quý báu với cộng đồng Chéri!
-            </p>
-            @if (existingReview) {
-            <div class="user-existing-review">
-              <div class="existing-stars">
-                @for (s of [1, 2, 3, 4, 5]; track s) {
-                <i class="material-icons star-icon" [class.is-active]="s <= existingReview.rating">star</i>
-                }
-              </div>
-              <div class="existing-comment">"{{ existingReview.comment }}"</div>
-            </div>
-            }
-          </div>
-        </div>
-        } @else if (!canReview) {
-        <!-- Trạng thái 3: Đã đăng nhập nhưng chưa mua hoặc đơn hàng chưa giao -->
-        <div class="cheri-review-status-box is-not-eligible">
-          <i class="material-icons status-icon">verified_user</i>
-          <div class="status-content">
-            <div class="status-heading">Chưa đủ điều kiện đánh giá</div>
-            <p class="status-text">
-              {{ eligibilityReason || 'Bạn chỉ có thể đánh giá sản phẩm này sau khi đã đặt mua và nhận hàng thành công.' }}
-            </p>
-          </div>
-        </div>
-        } @else {
-        <!-- Trạng thái 4: Đủ điều kiện viết đánh giá (Verified Purchase) -->
-        <div class="cheri-review-form-card">
-          <h3 class="form-title">Viết đánh giá của bạn</h3>
-          <p class="form-subtitle">Chia sẻ cảm nhận chân thực để giúp Chéri hoàn thiện và hỗ trợ khách hàng khác lựa chọn tốt hơn.</p>
-
-          <!-- Chọn số sao -->
-          <div class="form-group star-picker-group">
-            <label class="form-label">Đánh giá chung: <span class="required-star">*</span></label>
-            <div class="star-rating-interactive">
-              @for (star of [1, 2, 3, 4, 5]; track star) {
-              <button type="button" class="star-btn"
-                (mouseenter)="setHoverRating(star)"
-                (mouseleave)="setHoverRating(0)"
-                (click)="setRating(star)"
-                [attr.aria-label]="star + ' sao'">
-                <i class="material-icons"
-                  [class.is-active]="star <= (hoveredRating || reviewRating)">star</i>
-              </button>
-              }
-              <span class="rating-descriptor">
-                @switch (hoveredRating || reviewRating) {
-                  @case (5) { Rất hài lòng }
-                  @case (4) { Hài lòng }
-                  @case (3) { Bình thường }
-                  @case (2) { Không hài lòng }
-                  @case (1) { Rất tệ }
-                }
-              </span>
-            </div>
-          </div>
-
-          <!-- Nhập nhận xét -->
-          <div class="form-group">
-            <label class="form-label" for="reviewCommentInput">
-              Nhận xét chi tiết: <span class="required-star">*</span>
-            </label>
-            <textarea id="reviewCommentInput" class="cheri-textarea" rows="4"
-              [(ngModel)]="reviewComment"
-              placeholder="Chất liệu vải thế nào? Form dáng và kích cỡ có vừa vặn với bạn không? Đóng gói giao hàng ra sao?..."
-              maxlength="2000"></textarea>
-            <div class="textarea-footer">
-              <span class="char-count">{{ (reviewComment || '').length }}/2000 ký tự</span>
-            </div>
-          </div>
-
-          <!-- Lỗi form nếu có -->
-          @if (reviewFormError) {
-          <div class="cheri-review-error-banner">
-            <i class="material-icons">error_outline</i>
-            <span>{{ reviewFormError }}</span>
-          </div>
-          }
-
-          <div class="form-actions">
-            <button type="button" class="cheri-action-btn primary-btn cheri-submit-review-btn"
-              [disabled]="isSubmittingReview || !reviewComment || reviewComment.trim().length < 3"
-              (click)="submitReview()">
-              @if (isSubmittingReview) {
-              <span class="btn-spinner"></span>
-              Đang gửi...
-              } @else {
-              Gửi đánh giá
-              }
-            </button>
-          </div>
         </div>
         }
       </div>

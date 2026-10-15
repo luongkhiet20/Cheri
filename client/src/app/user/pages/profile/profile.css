@@ -638,6 +638,25 @@
   border-color: #b5aba0;
 }
 
+.btn-action-cancel {
+  background: #ffffff;
+  color: var(--cheri-primary, #74070E);
+  border: 1px solid #74070E;
+  border-radius: 6px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.btn-action-cancel:hover {
+  background: var(--cheri-primary, #74070E);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(116, 7, 14, 0.22);
+}
+
 .btn-action-more {
   background: #ffffff;
   color: #332d27;

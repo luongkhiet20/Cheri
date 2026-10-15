@@ -1,0 +1,429 @@
+:host {
+  display: block;
+  position: relative;
+  z-index: 99999;
+}
+
+/* ── BACKDROP OVERLAY ── */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(18, 14, 12, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+  animation: backdropFadeIn 0.22s ease-out;
+  z-index: 99999;
+}
+
+@keyframes backdropFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ── MODAL CARD ── */
+.dialog-card {
+  width: 100%;
+  max-width: 480px;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 20px 48px -8px rgba(36, 12, 14, 0.22), 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: 1px solid #ebdcd5;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-height: calc(100vh - 40px);
+  animation: cardScaleIn 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+@keyframes cardScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ── CARD HEADER ── */
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  background: #faf7f5;
+  border-bottom: 1px solid #eee5e0;
+}
+
+.dialog-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.dialog-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #74070E;
+  letter-spacing: -0.2px;
+}
+
+.dialog-order-badge {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #635850;
+  background: #ede6e1;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.dialog-close-btn {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  line-height: 1;
+  color: #8c7e75;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.18s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dialog-close-btn:hover:not(:disabled) {
+  color: #74070E;
+  background: #f0e6e2;
+}
+
+.dialog-close-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── CARD BODY ── */
+.dialog-body {
+  padding: 20px 22px;
+  overflow-y: auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dialog-subtitle {
+  margin: 0 0 4px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #423832;
+  line-height: 1.45;
+}
+
+/* ── REASONS RADIO LIST ── */
+.reasons-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reason-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 9px;
+  border: 1px solid #e9dfd7;
+  background: #fcfbf9;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.reason-item:hover:not(.disabled) {
+  border-color: #d1b8b2;
+  background: #fdf8f7;
+}
+
+.reason-item.selected {
+  border-color: #74070E;
+  background: #fdf5f5;
+  box-shadow: 0 1px 4px rgba(116, 7, 14, 0.08);
+}
+
+.reason-item.disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.reason-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+
+.radio-indicator {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #bdafa6;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.18s ease;
+  box-sizing: border-box;
+}
+
+.reason-item.selected .radio-indicator {
+  border-color: #74070E;
+  background: #ffffff;
+}
+
+.reason-item.selected .radio-indicator::after {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #74070E;
+  display: block;
+}
+
+.reason-text {
+  font-size: 13px;
+  color: #2b2420;
+  line-height: 1.4;
+  font-weight: 450;
+  flex: 1;
+}
+
+.reason-item.selected .reason-text {
+  color: #74070E;
+  font-weight: 600;
+}
+
+/* ── OTHER REASON INPUT ── */
+.other-reason-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 12px;
+  background: #faf7f5;
+  border-radius: 8px;
+  border: 1px dashed #d9cac4;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.other-reason-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #423832;
+}
+
+.required-mark {
+  color: #74070E;
+  font-weight: 700;
+}
+
+.other-reason-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #d4c5bd;
+  border-radius: 6px;
+  padding: 9px 11px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #2b2420;
+  background: #ffffff;
+  resize: vertical;
+  min-height: 64px;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.other-reason-textarea:focus {
+  outline: none;
+  border-color: #74070E;
+  box-shadow: 0 0 0 3px rgba(116, 7, 14, 0.12);
+}
+
+.other-reason-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: #8c7e75;
+}
+
+.validation-hint {
+  color: #8c7e75;
+}
+
+.char-count {
+  margin-left: auto;
+}
+
+/* ── ALERT BOXES ── */
+.dialog-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.alert-validation {
+  background: #fff8eb;
+  border: 1px solid #fbd38d;
+  color: #975a16;
+}
+
+.alert-server {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+
+.alert-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: currentColor;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* ── CARD FOOTER ── */
+.dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 22px;
+  background: #faf7f5;
+  border-top: 1px solid #eee5e0;
+}
+
+.btn-dialog-back {
+  background: #ffffff;
+  color: #423832;
+  border: 1px solid #dcd5cb;
+  border-radius: 6px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-family: inherit;
+}
+
+.btn-dialog-back:hover:not(:disabled) {
+  background: #f7f3ef;
+  border-color: #baa79d;
+}
+
+.btn-dialog-back:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-dialog-confirm {
+  background: #74070E;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 9px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: inherit;
+  box-shadow: 0 2px 6px rgba(116, 7, 14, 0.22);
+}
+
+.btn-dialog-confirm:hover:not(:disabled) {
+  background: #56050a;
+  box-shadow: 0 3px 10px rgba(116, 7, 14, 0.32);
+}
+
+.btn-dialog-confirm:disabled {
+  background: #a35d62;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* ── SPINNER ── */
+.btn-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── RESPONSIVE MOBILE ── */
+@media (max-width: 480px) {
+  .dialog-card {
+    max-width: 100%;
+    border-radius: 12px;
+  }
+
+  .dialog-header {
+    padding: 14px 16px;
+  }
+
+  .dialog-body {
+    padding: 16px;
+  }
+
+  .dialog-footer {
+    padding: 12px 16px;
+  }
+
+  .btn-dialog-back,
+  .btn-dialog-confirm {
+    flex: 1;
+    justify-content: center;
+  }
+}

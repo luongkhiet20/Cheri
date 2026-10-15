@@ -214,6 +214,10 @@ export interface Order {
   status: string;
   paymentStatus?: string;
   notes?: string;
+  cancelReason?: string;
+  cancelReasonDetail?: string;
+  cancelledAt?: Date | string;
+  cancelledBy?: string;
   items?: {
     productId: string;
     variantId?: string;

@@ -477,6 +477,15 @@ export class ApiService {
     );
   }
 
+  cancelOrder(orderId: string, payload: { reason: string; reasonDetail?: string } | string) {
+    const cancelUrl = `${this.apiUrl}/api/orders/${orderId}/cancel`;
+    const body = typeof payload === 'string' ? { reason: payload } : payload;
+    return this.http.post(cancelUrl, body, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: any) => of({ error: error?.error?.message || error?.message || 'Có lỗi xảy ra khi hủy đơn hàng' })),
+    );
+  }
+
   deleteOrder(orderId: string) {
     const orderDeleteUrl = this.apiUrl + '/api/orders/' + orderId;
     return this.http.delete(orderDeleteUrl, this.getRequestOptions()).pipe(

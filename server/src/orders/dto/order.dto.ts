@@ -106,3 +106,13 @@ export class OrderDto {
   @IsString()
   currency?: string;
 }
+
+export class CancelOrderDto {
+  @IsString()
+  @IsNotEmpty()
+  reason: string;
+
+  @IsOptional()
+  @IsString()
+  reasonDetail?: string;
+}

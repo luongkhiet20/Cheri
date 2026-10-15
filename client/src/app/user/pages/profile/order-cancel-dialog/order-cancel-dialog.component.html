@@ -1,0 +1,115 @@
+<div
+  class="dialog-backdrop"
+  (click)="onBackdropClick($event)"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="cancel-dialog-title"
+>
+  <div class="dialog-card">
+
+    <!-- Card Header -->
+    <div class="dialog-header">
+      <div class="dialog-title-group">
+        <h3 class="dialog-title" id="cancel-dialog-title">Hủy đặt hàng</h3>
+        <span class="dialog-order-badge" *ngIf="order?.orderId">
+          Mã đơn: #{{ order.orderId }}
+        </span>
+      </div>
+      <button
+        type="button"
+        class="dialog-close-btn"
+        (click)="onClose()"
+        [disabled]="isSubmitting"
+        title="Đóng"
+        aria-label="Đóng popup"
+      >
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
+
+    <!-- Card Body -->
+    <div class="dialog-body">
+      <p class="dialog-subtitle">
+        Vui lòng chọn một lý do hủy đơn hàng:
+      </p>
+
+      <!-- Reason Radio Group -->
+      <div class="reasons-list" role="radiogroup" aria-label="Danh sách lý do hủy đơn">
+        <label
+          *ngFor="let reason of cancelReasons; let idx = index"
+          class="reason-item"
+          [class.selected]="selectedReason === reason"
+          [class.disabled]="isSubmitting"
+        >
+          <input
+            type="radio"
+            name="cancelReasonOption"
+            [value]="reason"
+            [checked]="selectedReason === reason"
+            (change)="onSelectReason(reason)"
+            [disabled]="isSubmitting"
+            class="reason-input"
+          />
+          <span class="radio-indicator"></span>
+          <span class="reason-text">{{ reason }}</span>
+        </label>
+      </div>
+
+      <!-- Other reason textarea -->
+      <div class="other-reason-section" *ngIf="isOtherSelected()">
+        <label for="other-reason-input" class="other-reason-label">
+          Chi tiết lý do khác <span class="required-mark">*</span>
+        </label>
+        <textarea
+          id="other-reason-input"
+          class="other-reason-textarea"
+          [(ngModel)]="otherReason"
+          (ngModelChange)="validationError = ''"
+          [disabled]="isSubmitting"
+          rows="3"
+          maxlength="300"
+          placeholder="Vui lòng nhập lý do cụ thể bạn muốn hủy đơn hàng..."
+        ></textarea>
+        <div class="other-reason-footer">
+          <span class="validation-hint" *ngIf="!validationError">Tối thiểu 3 ký tự</span>
+          <span class="char-count">{{ (otherReason || '').length }}/300</span>
+        </div>
+      </div>
+
+      <!-- Validation Error Notification -->
+      <div class="dialog-alert alert-validation" *ngIf="validationError">
+        <span class="alert-icon">!</span>
+        <span class="alert-text">{{ validationError }}</span>
+      </div>
+
+      <!-- Server API Error Notification (retains selection for retry) -->
+      <div class="dialog-alert alert-server" *ngIf="errorMessage">
+        <span class="alert-icon">!</span>
+        <span class="alert-text">{{ errorMessage }}</span>
+      </div>
+    </div>
+
+    <!-- Card Footer -->
+    <div class="dialog-footer">
+      <button
+        type="button"
+        class="btn-dialog-back"
+        (click)="onClose()"
+        [disabled]="isSubmitting"
+      >
+        Quay lại
+      </button>
+
+      <button
+        type="button"
+        class="btn-dialog-confirm"
+        (click)="onConfirmCancel()"
+        [disabled]="isSubmitting"
+      >
+        <span class="btn-spinner" *ngIf="isSubmitting"></span>
+        <span>{{ isSubmitting ? 'Đang gửi yêu cầu...' : 'Xác nhận hủy' }}</span>
+      </button>
+    </div>
+
+  </div>
+</div>

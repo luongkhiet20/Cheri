@@ -1,4 +1,4 @@
-import { Logger, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Logger, Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types, isValidObjectId } from 'mongoose';
 import Stripe from 'stripe';
@@ -240,6 +240,105 @@ export class OrdersService {
       .find({ $or: userConditions })
       .sort({ dateAdded: -1, createdAt: -1 });
     return orders;
+  }
+
+  // ─── Hủy đơn hàng (User / Khách hàng sở hữu đơn hàng) ──────────────────────
+  async cancelOrder(
+    id: string,
+    payload: { reason?: string; reasonDetail?: string } | string,
+    user: User,
+  ): Promise<any> {
+    const rawReason = typeof payload === 'string' ? payload : (payload?.reason || '');
+    const rawDetail = typeof payload === 'object' ? (payload?.reasonDetail || '') : '';
+
+    const parsedReason = rawReason.trim();
+    const parsedDetail = rawDetail.trim();
+
+    // 1. Kiểm tra lý do hủy
+    if (!parsedReason) {
+      throw new BadRequestException('Vui lòng chọn lý do hủy đơn hàng.');
+    }
+
+    if (parsedReason.startsWith('Lý do khác')) {
+      if (!parsedDetail) {
+        throw new BadRequestException('Vui lòng nhập nội dung lý do hủy cụ thể.');
+      }
+      if (parsedDetail.length < 3) {
+        throw new BadRequestException('Nội dung lý do hủy phải có ít nhất 3 ký tự.');
+      }
+    }
+
+    const idQuery = isValidObjectId(id)
+      ? { $or: [{ orderId: id }, { _id: new Types.ObjectId(id) }] }
+      : { orderId: id };
+
+    const order: any = await this.orderModel.findOne(idQuery);
+    if (!order) {
+      throw new NotFoundException('Không tìm thấy đơn hàng cần hủy.');
+    }
+
+    // 2. Backend xác minh quyền sở hữu đơn hàng (hoặc admin)
+    const orderUserId = (order.userId || order._user)?.toString();
+    const currentUserId = user?._id?.toString();
+    const orderEmail = (order.customerEmail || order.customer?.email || '').toLowerCase().trim();
+    const userEmail = (user?.email || '').toLowerCase().trim();
+
+    const userRoles = (user as any)?.roles || (user as any)?.role || [];
+    const roles = Array.isArray(userRoles) ? userRoles : [userRoles];
+    const isAdmin = roles.some((r: any) => typeof r === 'string' && r.toLowerCase().includes('admin'));
+
+    const isOwner = (orderUserId && currentUserId && orderUserId === currentUserId) ||
+      (orderEmail && userEmail && orderEmail === userEmail);
+
+    if (!isAdmin && !isOwner) {
+      throw new ForbiddenException('Bạn không có quyền hủy đơn hàng này.');
+    }
+
+    // 3. Backend xác minh trạng thái thực tế: chỉ cho phép hủy khi là PENDING / NEW / Chờ xác nhận
+    const rawStatus = (order.status || '').toUpperCase().trim();
+    if (rawStatus !== 'PENDING' && rawStatus !== 'NEW' && rawStatus !== 'CHỜ XÁC NHẬN') {
+      throw new BadRequestException('Đơn hàng hiện không ở trạng thái Chờ xác nhận, không thể hủy.');
+    }
+
+    // 4. Cập nhật các trường dữ liệu hủy đơn hàng
+    const cancelledAt = new Date();
+    const cancelledBy = user?._id && isValidObjectId(user._id) ? new Types.ObjectId(user._id) : null;
+    const fullCancelNote = parsedDetail
+      ? `${parsedReason} - Chi tiết: ${parsedDetail}`
+      : parsedReason;
+
+    order.status = OrderStatus.CANCELLED;
+    order.cancelReason = parsedReason;
+    order.cancelReasonDetail = parsedDetail || null;
+    order.cancelledAt = cancelledAt;
+    order.cancelledBy = cancelledBy;
+
+    // Ghi nhận vào notes (bảo toàn ghi chú cũ)
+    order.notes = order.notes ? `${order.notes}\n[Hủy đơn]: ${fullCancelNote}` : `[Hủy đơn]: ${fullCancelNote}`;
+
+    // Ghi nhận vào statusHistory
+    if (!Array.isArray(order.statusHistory)) {
+      order.statusHistory = [];
+    }
+    order.statusHistory.push({
+      status: OrderStatus.CANCELLED,
+      updatedAt: cancelledAt,
+      updatedBy: cancelledBy,
+      note: fullCancelNote,
+    });
+
+    await order.save();
+    return {
+      success: true,
+      message: 'Hủy đơn hàng thành công.',
+      orderId: order.orderId,
+      status: order.status,
+      cancelReason: order.cancelReason,
+      cancelReasonDetail: order.cancelReasonDetail,
+      cancelledAt: order.cancelledAt,
+      cancelledBy: order.cancelledBy,
+      order,
+    };
   }
 
   // ─── Lấy tất cả orders (admin) ────────────────────────────────────────────

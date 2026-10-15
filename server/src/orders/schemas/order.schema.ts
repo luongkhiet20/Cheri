@@ -137,6 +137,12 @@ const OrderSchema = new Schema(
     },
     notes: { type: String, default: '' },
 
+    // Thông tin hủy đơn hàng (Cancellation metadata)
+    cancelReason: { type: String, default: null },
+    cancelReasonDetail: { type: String, default: null },
+    cancelledAt: { type: Date, default: null },
+    cancelledBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+
     // Sản phẩm
     items: { type: [OrderItemSchema], required: true, default: [] },
 

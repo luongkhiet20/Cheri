@@ -91,6 +91,27 @@ export class OrdersController {
     return this.ordersService.getOrders(user);
   }
 
+  // ─── Khách hàng: Hủy đơn hàng (chỉ khi đơn ở trạng thái PENDING) ───────────
+  @UseGuards(AuthGuard('jwt'))
+  @Post('/:id/cancel')
+  cancelOrder(
+    @Param('id') id: string,
+    @Body() body: { reason?: string; reasonDetail?: string },
+    @GetUser() user: User,
+  ) {
+    return this.ordersService.cancelOrder(id, body, user);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Patch('/:id/cancel')
+  cancelOrderPatch(
+    @Param('id') id: string,
+    @Body() body: { reason?: string; reasonDetail?: string },
+    @GetUser() user: User,
+  ) {
+    return this.ordersService.cancelOrder(id, body, user);
+  }
+
   // ─── Public: Tra cứu vận đơn (khách vãng lai) ─────────────────────────────
   // Guest verification stays in the POST body; no contact details are accepted from the URL.
   // Không trả toàn bộ document — chỉ trả dữ liệu tracking cần thiết.

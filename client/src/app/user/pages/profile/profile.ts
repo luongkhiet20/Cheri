@@ -9,11 +9,12 @@ import { SignalStore } from '../../../store/signal.store';
 import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
 import { User, Order } from '../../shared/models';
 import { accessTokenKey } from '../../shared/constants';
+import { OrderCancelDialogComponent } from './order-cancel-dialog/order-cancel-dialog.component';
 
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule],
+  imports: [CommonModule, RouterLink, FormsModule, OrderCancelDialogComponent],
   templateUrl: './profile.html',
   styleUrl: './profile.css'
 })
@@ -36,6 +37,10 @@ export class Profile implements OnInit {
     { key: 'CANCELLED', label: 'Đã hủy' },
     { key: 'RETURNED', label: 'Đã hoàn trả' },
   ];
+
+  // Cancel order dialog state
+  isCancelDialogOpen: boolean = false;
+  selectedOrderToCancel: any = null;
 
   // Form fields
   formName: string = '';
@@ -452,6 +457,53 @@ export class Profile implements OnInit {
     this.router.navigate(['/' + currentLang + '/order', targetId], {
       queryParams: { orderId: order.orderId }
     });
+  }
+
+  // ── Xử lý Hủy đơn hàng (Chỉ khả dụng khi trạng thái thực tế là Chờ xác nhận) ──
+  canCancelOrder(order: Order | any): boolean {
+    if (!order) return false;
+    return this.normalizeStatus(order.status) === 'PENDING';
+  }
+
+  openCancelDialog(order: Order | any): void {
+    if (!this.canCancelOrder(order)) return;
+    this.selectedOrderToCancel = order;
+    this.isCancelDialogOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  closeCancelDialog(): void {
+    this.isCancelDialogOpen = false;
+    this.selectedOrderToCancel = null;
+    this.cdr.markForCheck();
+  }
+
+  onOrderCancelled(event: any): void {
+    const targetId = event?.orderId || this.selectedOrderToCancel?.orderId || this.selectedOrderToCancel?._id;
+    this.closeCancelDialog();
+
+    // 1. Cập nhật ngay trong local store để UI phản hồi tức thì
+    if (targetId) {
+      try {
+        this.selectors.productState.update((state: any) => {
+          if (!state?.userOrders) return state;
+          const updated = state.userOrders.map((o: any) => {
+            if (o._id === targetId || o.orderId === targetId) {
+              return { ...o, status: 'CANCELLED' };
+            }
+            return o;
+          });
+          return { ...state, userOrders: updated };
+        });
+      } catch (_) {}
+    }
+
+    // 2. Đồng bộ bộ đếm trạng thái và danh sách đơn hàng chính thức từ máy chủ
+    if (isPlatformBrowser(this.platformId)) {
+      this.store.getUserOrders();
+      this.updateSyncTime();
+    }
+    this.cdr.markForCheck();
   }
 
   // ── Save profile (Gửi API cập nhật MongoDB & đồng bộ state tức thì) ──

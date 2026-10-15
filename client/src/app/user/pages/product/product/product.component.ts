@@ -87,22 +87,7 @@ export class ProductComponent implements OnDestroy {
 
   isLoadingStats: boolean = false;
   isLoadingReviews: boolean = false;
-  isSubmittingReview: boolean = false;
-  isCheckingEligibility: boolean = false;
-
-  isLoggedIn: boolean = false;
-  canReview: boolean = false;
-  hasReviewed: boolean = false;
-  existingReview: any = null;
-  eligibilityReason: string = '';
-
-  reviewRating: number = 5;
-  hoveredRating: number = 0;
-  reviewComment: string = '';
-  reviewFormError: string = '';
-  reviewSubmitSuccess: boolean = false;
   currentProductId: string | null = null;
-  private userSub?: Subscription;
 
   constructor(
     private route: ActivatedRoute,
@@ -139,14 +124,6 @@ export class ProductComponent implements OnDestroy {
       map((cart: Cart) => cart.items.reduce((prev, curr) => ({ ...prev, [curr.id]: curr.qty }), {})),
     );
 
-    // Lắng nghe trạng thái đăng nhập của người dùng để kích hoạt quyền đánh giá
-    this.userSub = toObservable(this.selectors.user).subscribe((user: any) => {
-      this.isLoggedIn = !!(user && (user.accessToken || user._id || user.id));
-      if (this.currentProductId && this.isLoggedIn) {
-        this.checkReviewEligibility(this.currentProductId);
-      }
-    });
-
     // Đồng bộ state khi dữ liệu product thay đổi
     this.productSub = toObservable(this.selectors.product).subscribe((product) => {
       if (product) {
@@ -182,8 +159,6 @@ export class ProductComponent implements OnDestroy {
       this.reviewsPage = 1;
       this.selectedStarFilter = null;
       this.selectedSortBy = 'newest';
-      this.reviewSubmitSuccess = false;
-      this.reviewFormError = '';
       this.loadProductReviews(currentPid);
     }
 
@@ -518,16 +493,12 @@ export class ProductComponent implements OnDestroy {
     if (this.routeSub) this.routeSub.unsubscribe();
     if (this.categoriesSub) this.categoriesSub.unsubscribe();
     if (this.productSub) this.productSub.unsubscribe();
-    if (this.userSub) this.userSub.unsubscribe();
   }
 
-  // ─── Product Reviews Methods ────────────────────────────────────────────────
+  // ─── Product Reviews Methods (View-only: Xem, Lọc, Sắp xếp, Phân trang) ────
   loadProductReviews(productId: string): void {
     this.fetchReviewStats(productId);
     this.fetchReviewsOnly(productId);
-    if (this.isLoggedIn) {
-      this.checkReviewEligibility(productId);
-    }
   }
 
   fetchReviewStats(productId: string): void {
@@ -566,22 +537,6 @@ export class ProductComponent implements OnDestroy {
       });
   }
 
-  checkReviewEligibility(productId: string): void {
-    this.isCheckingEligibility = true;
-    this.apiService.checkReviewEligibility(productId).subscribe({
-      next: (res) => {
-        this.canReview = !!res.canReview;
-        this.hasReviewed = !!res.hasReviewed;
-        this.existingReview = res.existingReview || null;
-        this.eligibilityReason = res.reason || '';
-        this.isCheckingEligibility = false;
-      },
-      error: () => {
-        this.isCheckingEligibility = false;
-      },
-    });
-  }
-
   onFilterStar(star: number | null): void {
     if (this.selectedStarFilter === star) return;
     this.selectedStarFilter = star;
@@ -609,64 +564,6 @@ export class ProductComponent implements OnDestroy {
         this.fetchReviewsOnly(this.currentProductId);
       }
     }
-  }
-
-  setRating(star: number): void {
-    this.reviewRating = star;
-  }
-
-  setHoverRating(star: number): void {
-    this.hoveredRating = star;
-  }
-
-  submitReview(): void {
-    if (!this.reviewRating || this.reviewRating < 1 || this.reviewRating > 5) {
-      this.reviewFormError = 'Vui lòng chọn số sao từ 1 đến 5.';
-      return;
-    }
-    const trimmed = (this.reviewComment || '').trim();
-    if (!trimmed || trimmed.length < 3) {
-      this.reviewFormError = 'Nội dung nhận xét phải có ít nhất 3 ký tự.';
-      return;
-    }
-    if (trimmed.length > 2000) {
-      this.reviewFormError = 'Nội dung nhận xét không được vượt quá 2000 ký tự.';
-      return;
-    }
-
-    this.reviewFormError = '';
-    this.isSubmittingReview = true;
-
-    const payload = {
-      productId: this.currentProductId!,
-      rating: this.reviewRating,
-      comment: trimmed,
-    };
-
-    this.apiService.createProductReview(payload).subscribe({
-      next: () => {
-        this.isSubmittingReview = false;
-        this.reviewSubmitSuccess = true;
-        this.reviewComment = '';
-        this.reviewRating = 5;
-        this.snackBar.open('Cảm ơn bạn đã gửi đánh giá sản phẩm!', 'Đóng', { duration: 3500 });
-        if (this.currentProductId) {
-          this.loadProductReviews(this.currentProductId);
-        }
-      },
-      error: (err) => {
-        this.isSubmittingReview = false;
-        const msg = err?.error?.message || 'Không thể gửi đánh giá. Vui lòng thử lại sau.';
-        this.reviewFormError = msg;
-        this.snackBar.open(msg, 'Đóng', { duration: 4000 });
-      },
-    });
-  }
-
-  navigateToLogin(): void {
-    this.router.navigate(['/' + this.currentLang + '/signin'], {
-      queryParams: { returnUrl: this.router.url },
-    });
   }
 
   getStarArray(): number[] {

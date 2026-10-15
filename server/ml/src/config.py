@@ -57,12 +57,16 @@ MONGO_DB_NAME: str = os.getenv("MONGO_DB_NAME", "cheri")
 
 OUTPUT_DATA_DIR: Path = Path(os.getenv("OUTPUT_DATA_DIR", str(ML_ROOT_DIR / "data")))
 OUTPUT_REPORT_DIR: Path = Path(os.getenv("OUTPUT_REPORT_DIR", str(ML_ROOT_DIR / "reports")))
+OUTPUT_MODEL_DIR: Path = Path(os.getenv("OUTPUT_MODEL_DIR", str(ML_ROOT_DIR / "models")))
 
 FUTURE_WINDOW_DAYS: int = int(os.getenv("FUTURE_WINDOW_DAYS", "14"))
 MIN_INTERACTIONS: int = int(os.getenv("MIN_INTERACTIONS", "1"))
 
 # Ensure output directories exist
 OUTPUT_DATA_DIR.mkdir(parents=True, exist_ok=True)
+OUTPUT_REPORT_DIR.mkdir(parents=True, exist_ok=True)
+OUTPUT_MODEL_DIR.mkdir(parents=True, exist_ok=True)
+
 OUTPUT_REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
 # Business Logic Statuses

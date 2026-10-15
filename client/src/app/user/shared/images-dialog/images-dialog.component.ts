@@ -1,41 +1,89 @@
-﻿import { CommonModule } from '@angular/common';
-import { Component, Inject, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Component, HostListener, Inject, OnInit } from '@angular/core';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
-import { TranslatePipe } from '../../../pipes/translate.pipe';
 
 @Component({
   selector: 'app-images-dialog',
   templateUrl: './images-dialog.component.html',
   styleUrls: ['./images-dialog.component.css'],
-  imports: [CommonModule, TranslatePipe]
+  imports: [CommonModule],
+  standalone: true
 })
 export class ImagesDialogComponent implements OnInit {
-  openImages = {};
+  currentIndex: number = 0;
+  images: string[] = [];
+  isZoomed: boolean = false;
 
   constructor(
     public dialogRef: MatDialogRef<ImagesDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: { index: number; images: string[] }
-  ) { }
+  ) {}
 
   ngOnInit(): void {
-    this.openImages[this.data.index] = true;
+    this.images = Array.isArray(this.data?.images) ? this.data.images : [];
+    const initialIndex = Number(this.data?.index) || 0;
+    this.currentIndex = Math.max(0, Math.min(initialIndex, Math.max(0, this.images.length - 1)));
   }
 
-  prevImg(event: Event, i: number): void {
-    event.stopPropagation();
-    event.preventDefault();
-    this.openImages[i] = false;
-    this.openImages[i - 1] = true;
+  @HostListener('window:keydown', ['$event'])
+  handleKeyboardEvent(event: KeyboardEvent): void {
+    if (event.key === 'ArrowLeft') {
+      this.prevImg();
+    } else if (event.key === 'ArrowRight') {
+      this.nextImg();
+    } else if (event.key === 'Escape') {
+      this.onClose();
+    }
   }
 
-  nextImg(event: Event, i: number): void {
-    event.stopPropagation();
-    event.preventDefault();
-    this.openImages[i] = false;
-    this.openImages[i + 1] = true;
+  prevImg(event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+    if (this.currentIndex > 0) {
+      this.currentIndex--;
+      this.isZoomed = false;
+    }
   }
 
-  onCloseImage(): void {
-    this.dialogRef.close();
+  nextImg(event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+    if (this.currentIndex < this.images.length - 1) {
+      this.currentIndex++;
+      this.isZoomed = false;
+    }
+  }
+
+  goToImage(index: number, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    if (index >= 0 && index < this.images.length) {
+      this.currentIndex = index;
+      this.isZoomed = false;
+    }
+  }
+
+  toggleZoom(event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.isZoomed = !this.isZoomed;
+  }
+
+  onStageClick(event: MouseEvent): void {
+    // Nếu nhấp vào vùng ngoài ảnh thì đóng popup
+    const target = event.target as HTMLElement;
+    if (target.classList.contains('cheri-lightbox-stage') || target.classList.contains('cheri-lightbox-viewport')) {
+      this.onClose();
+    }
+  }
+
+  onClose(): void {
+    this.dialogRef.close(this.currentIndex);
   }
 }

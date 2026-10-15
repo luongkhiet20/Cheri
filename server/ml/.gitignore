@@ -24,6 +24,13 @@ data/*.parquet
 data/*.json
 !data/.gitkeep
 
+# ML Models and Weights (binary artifacts)
+models/*.joblib
+models/*.pkl
+models/*.json
+!models/.gitkeep
+
+
 # Testing and coverage
 .pytest_cache/
 .coverage

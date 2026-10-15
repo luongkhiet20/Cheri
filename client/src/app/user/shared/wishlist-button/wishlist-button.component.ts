@@ -13,6 +13,7 @@ import { WishlistService } from '../../../services/wishlist.service';
 export class WishlistButtonComponent {
   @Input({ required: true }) product: any;
   @Input() lang = 'vi';
+  @Input() variant: 'default' | 'detail' = 'default';
 
   readonly isActive = computed(() => {
     const id = this.product?._id || this.product?.id;

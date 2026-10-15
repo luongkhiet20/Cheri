@@ -8,6 +8,8 @@ import { TranslationsModule } from './translations/translations.module';
 import { AdminModule } from './admin/admin.module';
 import { CheriModule } from './cheri/cheri.module';
 import { InteractionsModule } from './interactions/interactions.module';
+import { RecommendationsModule } from './recommendations/recommendations.module';
+import { ReviewsModule } from './reviews/reviews.module';
 import { ConfigModule } from '@nestjs/config';
 // import { join } from 'path';
 // import { ServeStaticModule } from '@nestjs/serve-static';
@@ -32,6 +34,8 @@ const defaultMongoUri =
     AdminModule,
     CheriModule,
     InteractionsModule,
+    RecommendationsModule,
+    ReviewsModule,
 
     // ServeStaticModule.forRoot({
     //   rootPath: staticFile,

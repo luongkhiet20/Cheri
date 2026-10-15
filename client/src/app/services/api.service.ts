@@ -988,6 +988,40 @@ export class ApiService {
     );
   }
 
+  // ─── Product Reviews APIs ──────────────────────────────────────────────────
+  getProductReviewStats(productId: string): Observable<any> {
+    const url = `${this.apiUrl}/api/reviews/product/${encodeURIComponent(productId)}/stats`;
+    return this.http.get(url);
+  }
+
+  getProductReviews(
+    productId: string,
+    query?: { page?: number; limit?: number; rating?: number; sortBy?: string },
+  ): Observable<any> {
+    const url = `${this.apiUrl}/api/reviews/product/${encodeURIComponent(productId)}`;
+    let params = new HttpParams();
+    if (query?.page) params = params.set('page', query.page.toString());
+    if (query?.limit) params = params.set('limit', query.limit.toString());
+    if (query?.rating) params = params.set('rating', query.rating.toString());
+    if (query?.sortBy) params = params.set('sortBy', query.sortBy);
+    return this.http.get(url, { params });
+  }
+
+  checkReviewEligibility(productId: string): Observable<any> {
+    const url = `${this.apiUrl}/api/reviews/check-eligible/${encodeURIComponent(productId)}`;
+    return this.http.get(url);
+  }
+
+  createProductReview(payload: {
+    productId: string;
+    rating: number;
+    comment: string;
+    orderId?: string;
+  }): Observable<any> {
+    const url = `${this.apiUrl}/api/reviews`;
+    return this.http.post(url, payload);
+  }
+
 
   private initAuthTracking() {
     const selectors = inject(SignalStoreSelectors);

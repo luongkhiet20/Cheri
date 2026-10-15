@@ -128,6 +128,8 @@ export const prepareProduct = (
     rating: p.rating !== undefined ? p.rating : 5,
     _user: p._user,
     dateAdded: p.dateAdded,
+    categoryLevel1: langData.categoryLevel1 || p.categoryLevel1,
+    categoryLevel2: langData.categoryLevel2 || p.categoryLevel2,
     hasClassification: p.hasClassification ?? langData.hasClassification,
     hasColors: p.hasColors ?? langData.hasColors,
     hasSizes: p.hasSizes ?? langData.hasSizes,

@@ -2,6 +2,7 @@
 Online Inference and Recommendation Engine for Cheri Machine Learning System.
 Phase B2: Implements Top-N recommendations, model validation gates, post-ranking diversity,
 and robust 2-tier cold-start fallbacks (Category-based and Popularity-based).
+Supports server-authorized bootstrap model inference trained on synthetic bootstrap data.
 """
 
 import sys
@@ -52,6 +53,14 @@ def load_catalog(data_dir: Optional[Path] = None) -> pd.DataFrame:
     catalog_path = base_dir / "products_features.csv"
 
     if not catalog_path.exists():
+        # Attempt to dynamically extract from MongoDB if CSV not yet exported
+        try:
+            from src.extract_data import extract_products
+            df = extract_products()
+            if not df.empty:
+                return df
+        except Exception:
+            pass
         logger.warning(f"Catalog file not found at {catalog_path}.")
         return pd.DataFrame()
 
@@ -73,11 +82,11 @@ def load_catalog(data_dir: Optional[Path] = None) -> pd.DataFrame:
 def load_model_and_metadata(
     model_dir: Optional[Path] = None,
     allow_sandbox: bool = False,
+    allow_bootstrap: bool = False,
 ) -> Tuple[Optional[Any], Optional[Dict[str, Any]]]:
     """
-    Loads trained model and verifies production readiness.
-    If model was trained on synthetic data and allow_sandbox is False,
-    the model is strictly rejected for production inference.
+    Loads trained model and verifies production readiness or bootstrap authorization.
+    If model was trained on synthetic data, it is rejected unless allow_bootstrap or allow_sandbox is enabled.
     """
     import joblib
 
@@ -98,13 +107,24 @@ def load_model_and_metadata(
     # Check production readiness guard
     is_prod_ready = meta.get("is_production_ready", False)
     trained_on_synthetic = meta.get("trained_on_synthetic", False)
+    is_bootstrap = meta.get("is_bootstrap", False)
 
-    if not is_prod_ready and not allow_sandbox:
-        logger.info(
-            f"Model '{meta.get('model_name')}' is not flagged as production-ready "
-            f"(trained_on_synthetic={trained_on_synthetic}). Rejecting model for production inference."
-        )
-        return None, meta
+    if not is_prod_ready:
+        if is_bootstrap and allow_bootstrap:
+            logger.info(
+                f"Authorizing bootstrap model '{meta.get('model_name')}' "
+                f"(trained_on_synthetic={trained_on_synthetic}, source={meta.get('dataset_source')}) "
+                f"via server-side configuration."
+            )
+        elif allow_sandbox:
+            logger.info(f"Authorizing model '{meta.get('model_name')}' under sandbox mode.")
+        else:
+            logger.info(
+                f"Model '{meta.get('model_name')}' is not flagged as production-ready "
+                f"(trained_on_synthetic={trained_on_synthetic}, is_bootstrap={is_bootstrap}). "
+                f"Rejecting model for production inference without server authorization."
+            )
+            return None, meta
 
     # Check feature contract consistency
     model_features = meta.get("feature_columns", [])
@@ -186,7 +206,6 @@ def fallback_by_category(
 
     target_category = curr_match.iloc[0]["primary_category"]
 
-    # Filter by category and exclude current product
     candidates = catalog[
         (catalog["product_id"] != current_id_clean) &
         (catalog["primary_category"] == target_category) &
@@ -196,10 +215,8 @@ def fallback_by_category(
     if candidates.empty:
         return [], f"Không có sản phẩm nào khác cùng danh mục '{target_category}'."
 
-    # Sort: in-stock first, then by price descending
     candidates["sort_stock"] = candidates["is_in_stock"].astype(int)
     candidates = candidates.sort_values(by=["sort_stock", "regular_price"], ascending=[False, False])
-
     filtered = candidates.head(top_n)
 
     results = []
@@ -237,16 +254,13 @@ def fallback_by_popularity(
     if candidates.empty:
         candidates = catalog.copy()
 
-    # Prioritize in-stock items
     candidates["sort_stock"] = candidates["is_in_stock"].astype(int)
     candidates = candidates.sort_values(by=["sort_stock", "regular_price"], ascending=[False, False])
 
-    # Apply diversity
     diverse = apply_diversity_filter(candidates, top_n=top_n, max_per_category=max_per_category)
 
     results = []
     for idx, (_, row) in enumerate(diverse.iterrows()):
-        # Assigned score descending from 0.75
         pseudo_score = round(0.75 - (idx * 0.02), 4)
         results.append({
             "product_id": str(row["product_id"]),
@@ -265,14 +279,21 @@ def fallback_by_popularity(
 def build_candidate_features(
     candidates_df: pd.DataFrame,
     user_id: Optional[str] = None,
+    current_product_id: Optional[str] = None,
+    catalog: Optional[pd.DataFrame] = None,
     interactions_df: Optional[pd.DataFrame] = None,
 ) -> pd.DataFrame:
     """
     Builds the 12-feature matrix conforming identically to FEATURE_COLUMNS for candidate items.
+    Accounts for user interaction history and current product context.
     """
-    features_list = []
+    curr_cat = None
+    if current_product_id and catalog is not None and not catalog.empty:
+        curr_id_clean = normalize_id(current_product_id)
+        c_match = catalog[catalog["product_id"] == curr_id_clean]
+        if not c_match.empty:
+            curr_cat = str(c_match.iloc[0].get("primary_category", ""))
 
-    # Calculate user-level summary if user_id provided
     u_views = 0
     u_distinct = 0
     u_orders = 0
@@ -286,19 +307,27 @@ def build_candidate_features(
             u_distinct = u_records["product_id"].nunique()
             days_since = 1.0
 
+    features_list = []
     for _, row in candidates_df.iterrows():
+        p_cat = str(row.get("primary_category", ""))
         p_price = float(row.get("sale_price", 0.0) or row.get("regular_price", 0.0))
         p_variants = int(row.get("variant_count", 1))
         p_stock = 1.0 if row.get("is_in_stock", True) else 0.0
         p_visibility = 1.0 if row.get("visibility", True) else 0.0
-        p_views = 1.0  # neutral popularity default
+        p_views = float(row.get("popularity_views", 1.0) or 1.0)
+
+        # Contextual affinity: category overlap with current viewed product
+        is_same_cat = 1.0 if (curr_cat and p_cat == curr_cat) else 0.0
+        cat_views = float(max(u_views, 2.0 if is_same_cat else 0.0))
+        prod_views = 1.0 if is_same_cat else 0.0
+        recency = 1.0 if is_same_cat else days_since
 
         feat_row = {
-            "user_total_views": float(u_views),
-            "user_distinct_products_viewed": float(u_distinct),
-            "user_product_views": 0.0,
-            "user_category_views": float(u_views),
-            "days_since_last_view": float(days_since),
+            "user_total_views": float(max(u_views, 2.0 if curr_cat else 0.0)),
+            "user_distinct_products_viewed": float(max(u_distinct, 2.0 if curr_cat else 0.0)),
+            "user_product_views": float(prod_views),
+            "user_category_views": float(cat_views),
+            "days_since_last_view": float(recency),
             "user_total_orders_before": float(u_orders),
             "user_previously_purchased": 0.0,
             "product_price": p_price,
@@ -310,7 +339,6 @@ def build_candidate_features(
         features_list.append(feat_row)
 
     df_feats = pd.DataFrame(features_list)
-    # Ensure exact column ordering matching FEATURE_COLUMNS contract
     return df_feats[FEATURE_COLUMNS].fillna(0.0)
 
 
@@ -321,6 +349,7 @@ def recommend(
     model_dir: Optional[Path] = None,
     data_dir: Optional[Path] = None,
     allow_sandbox: bool = False,
+    allow_bootstrap: bool = False,
 ) -> Dict[str, Any]:
     """
     Main recommendation workflow:
@@ -341,7 +370,11 @@ def recommend(
         }
 
     # Attempt to load ML model
-    model, metadata = load_model_and_metadata(model_dir=model_dir, allow_sandbox=allow_sandbox)
+    model, metadata = load_model_and_metadata(
+        model_dir=model_dir,
+        allow_sandbox=allow_sandbox,
+        allow_bootstrap=allow_bootstrap,
+    )
 
     # -------------------------------------------------------------
     # PATH A: Machine Learning Model Inference
@@ -358,7 +391,12 @@ def recommend(
                 candidates = catalog.copy()
 
             # Build feature matrix
-            X_cand = build_candidate_features(candidates, user_id=user_id)
+            X_cand = build_candidate_features(
+                candidates,
+                user_id=user_id,
+                current_product_id=current_product_id,
+                catalog=catalog,
+            )
 
             # Predict probabilities
             if hasattr(model, "predict_proba"):
@@ -372,6 +410,10 @@ def recommend(
 
             diverse_cands = apply_diversity_filter(candidates, top_n=top_n, max_per_category=3)
 
+            is_bootstrap = metadata.get("is_bootstrap", False)
+            strategy = "ml_bootstrap_model" if is_bootstrap else "ml_model"
+            data_source = metadata.get("dataset_source", "synthetic_bootstrap" if is_bootstrap else "real_data")
+
             recs = []
             for _, row in diverse_cands.iterrows():
                 recs.append({
@@ -382,13 +424,19 @@ def recommend(
                     "sale_price": float(row.get("sale_price", 0.0)),
                     "is_in_stock": bool(row.get("is_in_stock", True)),
                     "score": round(float(row["ml_score"]), 4),
-                    "reason": "Mô hình ML dự đoán khách hàng có xác suất quan tâm cao dựa trên đặc trưng tương tác",
+                    "reason": (
+                        "Mô hình Random Forest bootstrap dự đoán mức độ quan tâm cao dựa trên đặc trưng tương tác và sản phẩm"
+                        if is_bootstrap
+                        else "Mô hình ML dự đoán khách hàng có xác suất quan tâm cao dựa trên đặc trưng tương tác"
+                    ),
                 })
 
             return {
                 "status": "success",
-                "strategy": "ml_model",
+                "strategy": strategy,
                 "model_used": metadata.get("model_name", "TrainedModel"),
+                "is_bootstrap": is_bootstrap,
+                "data_source": data_source,
                 "current_product_id": current_product_id,
                 "count": len(recs),
                 "recommendations": recs,
@@ -411,7 +459,6 @@ def recommend(
                 "recommendations": cat_recs,
             }
         elif cat_recs:
-            # Partially matched, pad with Popularity fallback
             needed = top_n - len(cat_recs)
             existing_ids = {r["product_id"] for r in cat_recs}
             pop_recs = fallback_by_popularity(catalog, current_product_id, top_n=top_n)
@@ -447,6 +494,7 @@ def main():
     parser.add_argument("--model-dir", type=str, default=None, help="Path to models directory")
     parser.add_argument("--data-dir", type=str, default=None, help="Path to data directory")
     parser.add_argument("--allow-sandbox", action="store_true", help="Allow inference with sandbox model for technical testing")
+    parser.add_argument("--allow-bootstrap", action="store_true", help="Allow inference with bootstrap model authorized server-side")
     args = parser.parse_args()
 
     result = recommend(
@@ -456,6 +504,7 @@ def main():
         model_dir=Path(args.model_dir) if args.model_dir else None,
         data_dir=Path(args.data_dir) if args.data_dir else None,
         allow_sandbox=args.allow_sandbox,
+        allow_bootstrap=args.allow_bootstrap,
     )
 
     # Print strict JSON to stdout so consumer (NestJS) can read safely

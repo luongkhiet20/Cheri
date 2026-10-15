@@ -14,6 +14,13 @@ export class CreateInteractionDto {
   sessionId?: string;
 
   @IsOptional()
-  @IsIn(['VIEW', 'view'], { message: 'eventType chỉ chấp nhận VIEW' })
+  @IsString()
+  orderId?: string;
+
+  @IsOptional()
+  @IsIn(
+    ['VIEW', 'view', 'CLICK', 'click', 'ADD_TO_CART', 'add_to_cart', 'PURCHASE', 'purchase'],
+    { message: 'eventType phải là một trong các giá trị: VIEW, CLICK, ADD_TO_CART, PURCHASE' },
+  )
   eventType?: string;
 }

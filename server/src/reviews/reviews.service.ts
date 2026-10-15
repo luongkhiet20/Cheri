@@ -56,15 +56,20 @@ export class ReviewsService {
     const productObjectId = new Types.ObjectId(product._id);
     const userObjectId = new Types.ObjectId(userId);
 
-    // 1. Chống gửi đánh giá trùng: 1 người dùng chỉ được đánh giá 1 lần cho mỗi sản phẩm
-    const existing = await this.reviewModel
-      .findOne({
-        productId: productObjectId,
-        userId: userObjectId,
-      })
-      .lean();
+    // 1. Chống gửi đánh giá trùng: không cho phép gửi nhiều đánh giá cho cùng một sản phẩm trong cùng một đơn hàng
+    const duplicateFilter: any = {
+      productId: productObjectId,
+      $or: [
+        { userId: userObjectId },
+        { userId: String(userObjectId) },
+      ],
+    };
+    if (dto.orderId) {
+      duplicateFilter.orderId = dto.orderId;
+    }
+    const existing = await this.reviewModel.findOne(duplicateFilter).lean();
     if (existing) {
-      throw new ConflictException('Bạn đã gửi đánh giá cho sản phẩm này rồi');
+      throw new ConflictException('Bạn đã gửi đánh giá cho sản phẩm này trong đơn hàng rồi');
     }
 
     // 2. Xác minh mua hàng: Kiểm tra đơn hàng thuộc về user có chứa sản phẩm và đã giao thành công (DELIVERED / COMPLETED)
@@ -72,15 +77,22 @@ export class ReviewsService {
     const orderFilter: any = {
       $or: [
         { userId: userObjectId },
+        { userId: String(userObjectId) },
         { _user: userObjectId },
         ...(userEmail ? [{ customerEmail: userEmail }] : []),
       ],
       status: { $in: [OrderStatus.DELIVERED, 'COMPLETED', 'delivered', 'completed'] },
-      'items.productId': productObjectId,
+      'items.productId': { $in: [productObjectId, String(productObjectId)] },
     };
 
     if (dto.orderId) {
-      orderFilter.orderId = dto.orderId;
+      if (isValidObjectId(dto.orderId)) {
+        orderFilter.$and = [
+          { $or: [{ orderId: dto.orderId }, { _id: new Types.ObjectId(dto.orderId) }] }
+        ];
+      } else {
+        orderFilter.orderId = dto.orderId;
+      }
     }
 
     const matchedOrder = await this.orderModel.findOne(orderFilter).lean();

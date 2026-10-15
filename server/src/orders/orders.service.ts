@@ -1,4 +1,4 @@
-import { Logger, Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Logger, Injectable, NotFoundException, BadRequestException, ForbiddenException, ConflictException, MethodNotAllowedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types, isValidObjectId } from 'mongoose';
 import Stripe from 'stripe';
@@ -33,7 +33,58 @@ export class OrdersService {
     @InjectModel('User') private userModel: Model<any>,
     @InjectModel('Coupon') private couponModel: Model<any>,
     @InjectModel('Category') private categoryModel: Model<any>,
+    @InjectModel('Interaction') private interactionModel?: Model<any>,
   ) {}
+
+  /**
+   * Tự động ghi nhận sự kiện PURCHASE vào user_interactions phục vụ huấn luyện Machine Learning.
+   * Sử dụng cơ chế idempotent upsert để tránh ghi trùng khi cập nhật đơn hàng.
+   */
+  private async recordPurchaseInteractions(order: any): Promise<void> {
+    if (!this.interactionModel || !order || !Array.isArray(order.items)) return;
+    try {
+      const orderCode = order.orderId || String(order._id);
+      const userId = order.userId
+        ? (isValidObjectId(order.userId) ? new Types.ObjectId(String(order.userId)) : null)
+        : null;
+
+      for (const it of order.items) {
+        const rawPid = it.productId || it.id || it.item?._id;
+        if (rawPid && isValidObjectId(rawPid)) {
+          const productObjectId = new Types.ObjectId(String(rawPid));
+          await this.interactionModel.updateOne(
+            {
+              orderId: orderCode,
+              productId: productObjectId,
+              eventType: 'PURCHASE',
+            },
+            {
+              $setOnInsert: {
+                userId,
+                sessionId: order.sessionId || null,
+                productId: productObjectId,
+                variantId: it.variantId || null,
+                orderId: orderCode,
+                eventType: 'PURCHASE',
+                timestamp: new Date(),
+                isSynthetic: false,
+                datasetType: 'real',
+                metadata: {
+                  isSynthetic: false,
+                  source: 'order_checkout',
+                  price: it.price || it.unitPrice || 0,
+                  quantity: it.quantity || 1,
+                },
+              },
+            },
+            { upsert: true },
+          );
+        }
+      }
+    } catch (err: any) {
+      this.logger.warn(`Failed to record purchase interaction for order ${order.orderId}: ${err.message}`);
+    }
+  }
 
   async validateCoupon(code: string, subtotal: number): Promise<{
     valid: boolean;
@@ -341,6 +392,123 @@ export class OrdersService {
     };
   }
 
+  // ─── Yêu cầu Trả hàng / Hoàn tiền (Khách hàng sở hữu đơn hàng đã giao) ────
+  async createReturnRequest(
+    id: string,
+    payload: any,
+    user: User,
+  ): Promise<any> {
+    const idQuery = isValidObjectId(id)
+      ? { $or: [{ orderId: id }, { _id: new Types.ObjectId(id) }] }
+      : { orderId: id };
+
+    const order: any = await this.orderModel.findOne(idQuery);
+    if (!order) {
+      throw new NotFoundException('Không tìm thấy đơn hàng cần yêu cầu đổi trả.');
+    }
+
+    // 1. Backend xác minh quyền sở hữu đơn hàng
+    const orderUserId = (order.userId || order._user)?.toString();
+    const currentUserId = user?._id?.toString();
+    const orderEmail = (order.customerEmail || order.customer?.email || '').toLowerCase().trim();
+    const userEmail = (user?.email || '').toLowerCase().trim();
+
+    const isOwner = (orderUserId && currentUserId && orderUserId === currentUserId) ||
+      (orderEmail && userEmail && orderEmail === userEmail);
+
+    if (!isOwner) {
+      throw new ForbiddenException('Bạn không có quyền gửi yêu cầu đổi trả cho đơn hàng này.');
+    }
+
+    // 2. Backend kiểm tra trạng thái thực tế: chỉ cho phép khi đã giao hàng (DELIVERED)
+    const rawStatus = (order.status || '').toUpperCase().trim();
+    if (rawStatus !== 'DELIVERED') {
+      throw new BadRequestException('Chỉ có thể gửi yêu cầu trả hàng / hoàn tiền cho đơn hàng đã giao thành công.');
+    }
+
+    // 3. Chống gửi yêu cầu trùng lặp
+    if (order.returnRequest && order.returnRequest.status === 'PENDING') {
+      throw new ConflictException('Đơn hàng này đã có yêu cầu trả hàng / hoàn tiền đang được xử lý.');
+    }
+
+    // 4. Kiểm tra lý do
+    const reason = (payload?.reason || '').trim();
+    if (!reason) {
+      throw new BadRequestException('Vui lòng chọn lý do yêu cầu trả hàng / hoàn tiền.');
+    }
+
+    // 5. Kiểm tra danh sách sản phẩm yêu cầu trả
+    const items = Array.isArray(payload?.items) ? payload.items : [];
+    if (items.length === 0) {
+      throw new BadRequestException('Vui lòng chọn ít nhất một sản phẩm cần trả hàng.');
+    }
+
+    // Xác minh từng sản phẩm và số lượng trả
+    const orderItems = Array.isArray(order.items) ? order.items : [];
+    const sanitizedItems: any[] = [];
+    for (const item of items) {
+      const pId = String(item.productId || item.id || '');
+      const matchedOrderItem = orderItems.find((oi: any) => {
+        const oiPid = String(oi.productId?._id || oi.productId || oi.id || '');
+        return oiPid === pId;
+      });
+
+      if (!matchedOrderItem) {
+        throw new BadRequestException(`Sản phẩm với mã ${pId} không tồn tại trong đơn hàng này.`);
+      }
+
+      const returnQty = Number(item.quantity) || 1;
+      const boughtQty = Number(matchedOrderItem.quantity) || 1;
+      if (returnQty <= 0 || returnQty > boughtQty) {
+        throw new BadRequestException(`Số lượng trả cho sản phẩm "${matchedOrderItem.productSnapshot?.title || pId}" không hợp lệ.`);
+      }
+
+      sanitizedItems.push({
+        productId: matchedOrderItem.productId,
+        productSnapshot: matchedOrderItem.productSnapshot,
+        quantity: returnQty,
+        boughtQuantity: boughtQty,
+        unitPrice: matchedOrderItem.unitPrice,
+        reason: item.reason || reason,
+      });
+    }
+
+    // 6. Lưu thông tin yêu cầu trả hàng
+    const requestedAt = new Date();
+    const returnRequest = {
+      requestedAt,
+      reason,
+      description: String(payload?.description || '').trim(),
+      items: sanitizedItems,
+      refundMethod: String(payload?.refundMethod || 'ORIGINAL_PAYMENT'),
+      status: 'PENDING',
+    };
+
+    order.returnRequest = returnRequest;
+
+    const noteEntry = `[Yêu cầu Trả hàng / Hoàn tiền - ${requestedAt.toISOString().slice(0, 10)}] Lý do: ${reason}. Chi tiết: ${returnRequest.description || 'Không có'}`;
+    order.notes = order.notes ? `${order.notes}\n${noteEntry}` : noteEntry;
+
+    if (Array.isArray(order.statusHistory)) {
+      order.statusHistory.push({
+        status: order.status,
+        updatedAt: requestedAt,
+        note: `Khách hàng gửi yêu cầu trả hàng / hoàn tiền: ${reason}`,
+        updatedBy: user?._id || null,
+      });
+    }
+
+    await order.save();
+
+    return {
+      success: true,
+      message: 'Yêu cầu trả hàng / hoàn tiền đã được tiếp nhận thành công. Chéri sẽ liên hệ với quý khách trong thời gian sớm nhất.',
+      data: returnRequest,
+      order,
+    };
+  }
+
+
   // ─── Lấy tất cả orders (admin) ────────────────────────────────────────────
   async getAllOrders(): Promise<Order[]> {
     return this.orderModel.find({}).sort('-createdAt');
@@ -403,11 +571,11 @@ export class OrdersService {
     return order;
   }
 
-  // ─── Xóa order ────────────────────────────────────────────────────────────
+  // ─── Xóa order (Vô hiệu hóa để bảo vệ dữ liệu nghiệp vụ) ──────────────────
   async removeOrder(id: string): Promise<any> {
-    return this.orderModel.findOneAndDelete({
-      $or: [{ orderId: id }, { _id: id }],
-    });
+    throw new MethodNotAllowedException(
+      'Không hỗ trợ thao tác xóa đơn hàng. Đơn hàng là dữ liệu nghiệp vụ cần được lưu trữ để tra cứu, đối soát và quản lý lịch sử giao dịch.',
+    );
   }
 
   // ─── Tra cứu vận đơn dành cho khách vãng lai ─────────────────────────────
@@ -583,6 +751,24 @@ export class OrdersService {
     }
   }
 
+  // ─── Lấy thông tin địa chỉ gửi cửa hàng từ settings (MongoDB) cho hóa đơn ─
+  async getStoreContact(): Promise<{ email: string; phone: string; address: string }> {
+    try {
+      const settings: any = await this.orderModel.db.collection('settings').findOne(
+        {},
+        { projection: { 'contact.email': 1, 'contact.phone': 1, 'contact.address': 1 } }
+      );
+      const contact = settings?.contact || {};
+      return {
+        email: contact.email ? String(contact.email).trim() : '',
+        phone: contact.phone ? String(contact.phone).trim() : '',
+        address: contact.address ? String(contact.address).trim() : '',
+      };
+    } catch {
+      return { email: '', phone: '', address: '' };
+    }
+  }
+
   // ─── Thêm order COD ───────────────────────────────────────────────────────
   async addOrder(
     orderDto: OrderDto,
@@ -598,6 +784,9 @@ export class OrdersService {
       const orderData = await this.buildOrderData(orderDto, user, 'COD');
       const newOrder = new this.orderModel(orderData);
       await newOrder.save();
+
+      // Ghi nhận tương tác mua hàng cho mô hình ML
+      await this.recordPurchaseInteractions(newOrder);
 
       // Giảm tồn kho sản phẩm/biến thể
       await this.decreaseStock(newOrder.items);
@@ -689,6 +878,9 @@ export class OrdersService {
         newOrder.paymentStatus = PaymentStatus.PAID;
         newOrder.paidAt = new Date();
         await newOrder.save();
+
+        // Ghi nhận tương tác mua hàng cho mô hình ML
+        await this.recordPurchaseInteractions(newOrder);
 
         await this.decreaseStock(newOrder.items);
 

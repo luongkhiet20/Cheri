@@ -91,6 +91,68 @@
   flex-wrap: wrap;
 }
 
+/* ── 0. Store Info / Sender Section (Chỉ hiển thị khi In hóa đơn) ───────── */
+.bill-store-info-section,
+.print-only {
+  display: none !important;
+}
+
+.bill-store-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed #E5E7EB;
+}
+
+.bill-store-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  color: #74070E;
+}
+
+.bill-store-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #74070E;
+}
+
+.bill-store-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px 20px;
+}
+
+.store-grid-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.store-grid-item.store-grid-address {
+  grid-column: 1 / -1;
+}
+
+.store-item-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.store-item-value {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #1F1F1F;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
 /* ── 1. Header / Success ────────────────────────────────────────────────── */
 .bill-header {
   text-align: center;
@@ -775,9 +837,61 @@ button {
   .bill-meta-grid,
   .order-notes-box,
   .bill-section,
+  .bill-store-info-section,
   .timeline-step {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
+  }
+
+  .bill-store-info-section,
+  .print-only {
+    display: block !important;
+    visibility: visible !important;
+    background-color: #FAFAFA !important;
+    border: 1px solid #D1D5DB !important;
+    border-left: 4px solid #74070E !important;
+    border-radius: 4px !important;
+    padding: 12px 14px !important;
+    margin-bottom: 16px !important;
+    box-sizing: border-box !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .bill-store-badge {
+    display: flex !important;
+    align-items: center !important;
+    border-bottom: 1px dashed #D1D5DB !important;
+    margin-bottom: 8px !important;
+    padding-bottom: 6px !important;
+  }
+
+  .bill-store-title {
+    color: #74070E !important;
+    font-size: 11pt !important;
+    font-weight: 700 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .bill-store-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px 14px !important;
+  }
+
+  .store-grid-item.store-grid-address {
+    grid-column: 1 / -1 !important;
+  }
+
+  .store-item-label {
+    font-size: 9pt !important;
+    color: #4B5563 !important;
+  }
+
+  .store-item-value {
+    font-size: 10pt !important;
+    color: #111827 !important;
   }
 
   .bill-items-list {

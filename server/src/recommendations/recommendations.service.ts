@@ -12,9 +12,10 @@ import { GetRecommendationsDto } from './dto/get-recommendations.dto';
 
 export interface RecommendationResponse {
   status: 'success' | 'fallback' | 'error';
-  strategy: 'ml_model' | 'fallback_category' | 'fallback_popularity';
+  strategy: 'ml_model' | 'ml_bootstrap_model' | 'fallback_category' | 'fallback_popularity';
   modelUsed: string;
   isMachineLearning: boolean;
+  dataSource?: string;
   currentProductId?: string;
   count: number;
   products: Product[];
@@ -22,8 +23,10 @@ export interface RecommendationResponse {
 
 interface PythonCLIResult {
   status: string;
-  strategy: 'ml_model' | 'fallback_category' | 'fallback_popularity';
+  strategy: 'ml_model' | 'ml_bootstrap_model' | 'fallback_category' | 'fallback_popularity';
   model_used: string;
+  is_bootstrap?: boolean;
+  data_source?: string;
   current_product_id?: string;
   count: number;
   recommendations: Array<{
@@ -84,12 +87,20 @@ export class RecommendationsService {
       const hydrated = await this.hydrateProducts(candidateIds, lang, rawProductId);
 
       if (hydrated.length >= Math.min(limit, 4)) {
-        const isML = cliResult.strategy === 'ml_model';
+        const isML =
+          cliResult.strategy === 'ml_model' ||
+          (cliResult.strategy as string) === 'ml_bootstrap_model';
+
+        this.logger.log(
+          `Recommendations served: strategy=${cliResult.strategy}, model=${cliResult.model_used}, count=${hydrated.length}`,
+        );
+
         return {
           status: 'success',
           strategy: cliResult.strategy,
           modelUsed: cliResult.model_used || 'None',
           isMachineLearning: isML,
+          dataSource: cliResult.data_source || (isML ? 'synthetic_bootstrap' : 'real_data'),
           currentProductId: rawProductId,
           count: hydrated.length,
           products: hydrated.slice(0, limit),
@@ -116,6 +127,7 @@ export class RecommendationsService {
         strategy: 'fallback_category',
         modelUsed: 'None',
         isMachineLearning: false,
+        dataSource: 'native_fallback',
         currentProductId: rawProductId,
         count: paddedProducts.length,
         products: paddedProducts,
@@ -157,7 +169,15 @@ export class RecommendationsService {
         args.push('--user-id', params.userKey);
       }
 
-      // STRICT PRODUCTION GUARD: Never pass --allow-sandbox in customer-facing API
+      // Server-side authorization for bootstrap model:
+      // Controlled strictly via server configuration, never client query parameter.
+      const allowBootstrap =
+        process.env.ENABLE_ML_BOOTSTRAP !== 'false';
+
+      if (allowBootstrap) {
+        args.push('--allow-bootstrap');
+      }
+
       let stdoutBuffer = '';
       let stderrBuffer = '';
       let isTimedOut = false;
@@ -296,6 +316,7 @@ export class RecommendationsService {
         strategy: 'fallback_category',
         modelUsed: 'None',
         isMachineLearning: false,
+        dataSource: 'native_fallback',
         currentProductId: currentProductId,
         count: Math.min(hydrated.length, limit),
         products: hydrated.slice(0, limit),
@@ -362,6 +383,7 @@ export class RecommendationsService {
         strategy: 'fallback_popularity',
         modelUsed: 'None',
         isMachineLearning: false,
+        dataSource: 'native_fallback',
         currentProductId: excludeProductId,
         count: Math.min(hydrated.length, limit),
         products: hydrated.slice(0, limit),
@@ -373,6 +395,7 @@ export class RecommendationsService {
         strategy: 'fallback_popularity',
         modelUsed: 'None',
         isMachineLearning: false,
+        dataSource: 'native_fallback',
         currentProductId: excludeProductId,
         count: 0,
         products: [],

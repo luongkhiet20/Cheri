@@ -3863,6 +3863,36 @@ const handleMarkNotificationRead = async (req, res) => {
 app.patch('/api/orders/notifications/:id/read', handleMarkNotificationRead);
 app.post('/api/orders/notifications/:id/read', handleMarkNotificationRead);
 
+// 4.1b GET /api/orders/store-contact (Public: store contact for invoice)
+app.get('/api/orders/store-contact', async (req, res) => {
+  try {
+    let settings = await db.collection('settings').findOne(
+      {},
+      { projection: { 'contact.email': 1, 'contact.phone': 1, 'contact.address': 1 } }
+    );
+    const contact = settings?.contact || {};
+    res.json({
+      success: true,
+      email: contact.email ? String(contact.email).trim() : '',
+      phone: contact.phone ? String(contact.phone).trim() : '',
+      address: contact.address ? String(contact.address).trim() : '',
+      data: {
+        email: contact.email ? String(contact.email).trim() : '',
+        phone: contact.phone ? String(contact.phone).trim() : '',
+        address: contact.address ? String(contact.address).trim() : '',
+      }
+    });
+  } catch (error) {
+    res.json({
+      success: false,
+      email: '',
+      phone: '',
+      address: '',
+      data: { email: '', phone: '', address: '' }
+    });
+  }
+});
+
 // 4.2 GET /api/orders/:id (Get single order by MongoDB _id)
 app.get('/api/orders/:id', async (req, res) => {
   try {

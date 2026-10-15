@@ -10,11 +10,20 @@ import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
 import { User, Order } from '../../shared/models';
 import { accessTokenKey } from '../../shared/constants';
 import { OrderCancelDialogComponent } from './order-cancel-dialog/order-cancel-dialog.component';
+import { ProductReviewDialogComponent } from './product-review-dialog.component/product-review-dialog.component';
+import { OrderReturnRefundDialogComponent } from './order-return-refund-dialog.component/order-return-refund-dialog.component';
 
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, OrderCancelDialogComponent],
+  imports: [
+    CommonModule,
+    RouterLink,
+    FormsModule,
+    OrderCancelDialogComponent,
+    ProductReviewDialogComponent,
+    OrderReturnRefundDialogComponent
+  ],
   templateUrl: './profile.html',
   styleUrl: './profile.css'
 })
@@ -41,6 +50,14 @@ export class Profile implements OnInit {
   // Cancel order dialog state
   isCancelDialogOpen: boolean = false;
   selectedOrderToCancel: any = null;
+
+  // Review dialog state
+  isReviewDialogOpen: boolean = false;
+  selectedOrderToReview: any = null;
+
+  // Return / refund dialog state
+  isReturnRefundDialogOpen: boolean = false;
+  selectedOrderToReturn: any = null;
 
   // Form fields
   formName: string = '';
@@ -499,6 +516,52 @@ export class Profile implements OnInit {
     }
 
     // 2. Đồng bộ bộ đếm trạng thái và danh sách đơn hàng chính thức từ máy chủ
+    if (isPlatformBrowser(this.platformId)) {
+      this.store.getUserOrders();
+      this.updateSyncTime();
+    }
+    this.cdr.markForCheck();
+  }
+
+  // ── Xử lý Đánh giá sản phẩm ──
+  openReviewDialog(order: Order | any): void {
+    if (!order) return;
+    this.selectedOrderToReview = order;
+    this.isReviewDialogOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  closeReviewDialog(): void {
+    this.isReviewDialogOpen = false;
+    this.selectedOrderToReview = null;
+    this.cdr.markForCheck();
+  }
+
+  onOrderReviewed(event: any): void {
+    this.closeReviewDialog();
+    if (isPlatformBrowser(this.platformId)) {
+      this.updateSyncTime();
+    }
+    this.cdr.markForCheck();
+  }
+
+  // ── Xử lý Trả hàng / Hoàn tiền ──
+  openReturnRefundDialog(order: Order | any): void {
+    if (!order) return;
+    this.selectedOrderToReturn = order;
+    this.isReturnRefundDialogOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  closeReturnRefundDialog(): void {
+    this.isReturnRefundDialogOpen = false;
+    this.selectedOrderToReturn = null;
+    this.cdr.markForCheck();
+  }
+
+  onReturnRefundSubmitted(event: any): void {
+    this.closeReturnRefundDialog();
+    // Đồng bộ lại danh sách đơn hàng để cập nhật trạng thái yêu cầu trả hàng
     if (isPlatformBrowser(this.platformId)) {
       this.store.getUserOrders();
       this.updateSyncTime();

@@ -320,3 +320,33 @@ test('10. Khi tiến trình Python ném lỗi hoặc timeout (trả null), Nativ
   assert.equal(res.isMachineLearning, false);
   assert.equal(res.products.length, 3);
 });
+
+test('11. Khi sử dụng mô hình bootstrap được kích hoạt server-side, trả về strategy=ml_bootstrap_model, isMachineLearning=true và modelUsed=RandomForestBootstrap', async () => {
+  const { mockProductModel, mockProductVariantModel } = createMockModels();
+  const service = new RecommendationsService(mockProductModel, mockProductVariantModel);
+
+  service.invokePythonCLI = async () => ({
+    status: 'success',
+    strategy: 'ml_bootstrap_model',
+    model_used: 'RandomForestBootstrap',
+    is_bootstrap: true,
+    data_source: 'ml_bootstrap_interactions',
+    count: 2,
+    recommendations: [
+      { product_id: '6ab8f745547709e9279f68fd', score: 0.95 },
+      { product_id: '6ab8f745547709e9279f68fe', score: 0.72 },
+    ],
+  });
+
+  const res = await service.getRecommendations({ limit: 2 });
+  assert.equal(res.status, 'success');
+  assert.equal(res.strategy, 'ml_bootstrap_model');
+  assert.equal(res.isMachineLearning, true);
+  assert.equal(res.modelUsed, 'RandomForestBootstrap');
+  assert.equal(res.dataSource, 'ml_bootstrap_interactions');
+  assert.equal(res.products.length, 2);
+  // Xác minh thứ tự sản phẩm phản ánh đúng ranking của mô hình ML
+  assert.equal(res.products[0]._id.toString(), '6ab8f745547709e9279f68fd');
+  assert.equal(res.products[1]._id.toString(), '6ab8f745547709e9279f68fe');
+});
+

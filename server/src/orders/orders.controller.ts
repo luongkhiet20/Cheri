@@ -11,6 +11,7 @@ import {
   Query,
   Session,
   Headers,
+  MethodNotAllowedException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard, AdminJwtAuthGuard, OptionalJwtAuthGuard } from '../auth/roles.guard';
@@ -34,6 +35,12 @@ export class OrdersController {
   @Get('/payment-methods')
   getPaymentMethods() {
     return this.ordersService.getActivePaymentMethods();
+  }
+
+  // ─── Public: lấy thông tin địa chỉ gửi của cửa hàng từ settings (hóa đơn) ──
+  @Get('/store-contact')
+  getStoreContact() {
+    return this.ordersService.getStoreContact();
   }
 
   // ─── Admin: lấy tất cả shipping methods ──────────────────────────────────
@@ -110,6 +117,17 @@ export class OrdersController {
     @GetUser() user: User,
   ) {
     return this.ordersService.cancelOrder(id, body, user);
+  }
+
+  // ─── Khách hàng: Yêu cầu Trả hàng / Hoàn tiền (đơn đã DELIVERED) ─────────
+  @UseGuards(AuthGuard('jwt'))
+  @Post('/:id/return-request')
+  createReturnRequest(
+    @Param('id') id: string,
+    @Body() body: any,
+    @GetUser() user: User,
+  ) {
+    return this.ordersService.createReturnRequest(id, body, user);
   }
 
   // ─── Public: Tra cứu vận đơn (khách vãng lai) ─────────────────────────────
@@ -244,10 +262,12 @@ export class OrdersController {
     return this.ordersService.updateOrder({ ...order, updatedBy: user?._id || null });
   }
 
-  // ─── Admin: xóa order ────────────────────────────────────────────────────
+  // ─── Admin: xóa order (Vô hiệu hóa để bảo vệ dữ liệu nghiệp vụ) ───────────
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
   @Delete('/:id')
   deleteOrder(@Param('id') id: string) {
-    return this.ordersService.removeOrder(id);
+    throw new MethodNotAllowedException(
+      'Không hỗ trợ thao tác xóa đơn hàng. Đơn hàng là dữ liệu nghiệp vụ cần được lưu trữ để tra cứu, đối soát và quản lý lịch sử giao dịch.',
+    );
   }
 }

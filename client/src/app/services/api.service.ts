@@ -9,7 +9,7 @@ import { environment } from '../../environments/environment';
 import { Translations } from '../user/shared/models';
 import { accessTokenKey } from '../user/shared/constants';
 import { SignalStoreSelectors } from '../store/signal.store.selectors';
-import { BehaviorSubject, combineLatest, Observable, of } from 'rxjs';
+import { BehaviorSubject, combineLatest, Observable, of, Subject } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -19,6 +19,7 @@ export class ApiService {
   ranNumber = 0;
   private currentLang = 'vi';
   currentUser$ = new BehaviorSubject<any>(null);
+  public readonly reviewCreated$ = new Subject<{ productId: string; review?: any }>();
 
   constructor(
     private readonly http: HttpClient,
@@ -365,6 +366,37 @@ export class ApiService {
     );
   }
 
+  getRecommendations(
+    paramsOrProductId?: string | { productId?: string; limit?: number; lang?: string },
+    limit?: number,
+    lang?: string
+  ): Observable<any> {
+    let pId: string | undefined;
+    let lim: number | undefined;
+    let l: string | undefined;
+
+    if (typeof paramsOrProductId === 'object' && paramsOrProductId !== null) {
+      pId = paramsOrProductId.productId;
+      lim = paramsOrProductId.limit;
+      l = paramsOrProductId.lang;
+    } else if (typeof paramsOrProductId === 'string') {
+      pId = paramsOrProductId;
+      lim = limit;
+      l = lang;
+    }
+
+    const queryParts: string[] = [];
+    if (pId) queryParts.push('productId=' + encodeURIComponent(pId));
+    if (lim) queryParts.push('limit=' + lim);
+    if (l) queryParts.push('lang=' + encodeURIComponent(l));
+    const qs = queryParts.length ? '?' + queryParts.join('&') : '';
+    const recUrl = `${this.apiUrl}/api/recommendations${qs}`;
+    return this.http.get(recUrl, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: any) => of({ status: 'error', error, products: [] })),
+    );
+  }
+
   addProduct(product) {
     const addProductUrl = this.apiUrl + '/api/products/add';
     return this.http.post(addProductUrl, product, this.getRequestOptions()).pipe(
@@ -486,13 +518,6 @@ export class ApiService {
     );
   }
 
-  deleteOrder(orderId: string) {
-    const orderDeleteUrl = this.apiUrl + '/api/orders/' + orderId;
-    return this.http.delete(orderDeleteUrl, this.getRequestOptions()).pipe(
-      map((response: any) => response),
-      catchError((error: Error) => of({ error })),
-    );
-  }
 
   trackOrder(payload: { trackingCode?: string; authContact?: string; orderId?: string; trackingNumber?: string; email?: string; phone?: string }) {
     const trackUrl = this.apiUrl + '/api/orders/track';
@@ -550,6 +575,35 @@ export class ApiService {
     return this.http.delete(this.apiUrl + '/api/orders/shipping-methods/' + id, this.getRequestOptions()).pipe(
       map((response: any) => response),
       catchError((error: Error) => of({ error })),
+    );
+  }
+
+  // ─── Store Contact / Sender Info (Hóa đơn) ────────────────────────────────
+  getStoreContact(): Observable<{ email?: string; phone?: string; address?: string }> {
+    const storeContactUrl = this.apiUrl + '/api/orders/store-contact';
+    return this.http.get<any>(storeContactUrl, this.getRequestOptions()).pipe(
+      map((res: any) => {
+        const contact = res?.data || res || {};
+        return {
+          email: contact.email ? String(contact.email).trim() : '',
+          phone: contact.phone ? String(contact.phone).trim() : '',
+          address: contact.address ? String(contact.address).trim() : '',
+        };
+      }),
+      catchError(() => {
+        const fallbackUrl = (environment.adminApiUrl || 'http://localhost:5000/api') + '/settings';
+        return this.http.get<any>(fallbackUrl).pipe(
+          map((res: any) => {
+            const contact = res?.data?.contact || res?.contact || {};
+            return {
+              email: contact.email ? String(contact.email).trim() : '',
+              phone: contact.phone ? String(contact.phone).trim() : '',
+              address: contact.address ? String(contact.address).trim() : '',
+            };
+          }),
+          catchError(() => of({ email: '', phone: '', address: '' }))
+        );
+      })
     );
   }
 
@@ -1028,7 +1082,24 @@ export class ApiService {
     orderId?: string;
   }): Observable<any> {
     const url = `${this.apiUrl}/api/reviews`;
-    return this.http.post(url, payload);
+    return this.http.post(url, payload).pipe(
+      tap((res: any) => {
+        if (res && !res.error) {
+          this.reviewCreated$.next({
+            productId: payload.productId,
+            review: res.data || res,
+          });
+        }
+      })
+    );
+  }
+
+  createReturnRequest(orderId: string, payload: any): Observable<any> {
+    const url = `${this.apiUrl}/api/orders/${encodeURIComponent(orderId)}/return-request`;
+    return this.http.post(url, payload).pipe(
+      map((res: any) => res),
+      catchError((err: any) => of({ error: err?.error || err })),
+    );
   }
 
 

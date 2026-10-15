@@ -1,5 +1,5 @@
 import { debounceTime, take, delay } from 'rxjs/operators';
-import { Component, OnInit, PLATFORM_ID, Inject, Signal, ChangeDetectorRef, effect } from '@angular/core';
+import { Component, OnInit, PLATFORM_ID, Inject, Signal, ChangeDetectorRef, effect, HostListener } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Observable, BehaviorSubject, of } from 'rxjs';
@@ -65,8 +65,39 @@ export class HeaderComponent implements OnInit {
   isSearchOpen = false;
 
   scrollToTop(): void {
+    if (!isPlatformBrowser(this._platformId)) return;
+    const scrollWrap = document.querySelector('.main-scroll-wrap') as HTMLElement | null;
+    if (scrollWrap) {
+      const prevBehavior = scrollWrap.style.scrollBehavior;
+      scrollWrap.style.scrollBehavior = 'auto';
+      scrollWrap.scrollTop = 0;
+      scrollWrap.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      requestAnimationFrame(() => {
+        if (scrollWrap) {
+          scrollWrap.scrollTop = 0;
+          scrollWrap.style.scrollBehavior = prevBehavior;
+        }
+      });
+    }
+    const adminMain = document.querySelector('.admin-main') as HTMLElement | null;
+    if (adminMain) {
+      adminMain.scrollTop = 0;
+    }
     if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }
+    if (typeof document !== 'undefined') {
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    }
+  }
+
+  @HostListener('click', ['$event'])
+  onHeaderClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement | null;
+    const navLink = target?.closest('a, button[routerLink], .cheri-logo, .nav-label, .nav-cart-label, .nav-avatar-btn, .nav-account-guest-btn');
+    if (navLink && !navLink.classList.contains('nav-search-trigger') && !navLink.classList.contains('mat-mdc-icon-button')) {
+      this.scrollToTop();
     }
   }
 

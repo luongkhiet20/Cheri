@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, Signal } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Location } from '@angular/common';
-import { Observable, Subscription } from 'rxjs';
+import { Observable, Subscription, combineLatest } from 'rxjs';
 import { TranslateService } from '../../../services/translate.service';
 import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
 import { ApiService } from '../../../services/api.service';
@@ -20,6 +20,7 @@ export class OrderComponent implements OnInit, OnDestroy {
   currentOrder: any = null;
   isLoading = false;
   errorMessage = '';
+  storeContact: { email?: string; phone?: string; address?: string } | null = null;
 
   private sub = new Subscription();
 
@@ -48,7 +49,23 @@ export class OrderComponent implements OnInit, OnDestroy {
       })
     );
 
-    this.resolveOrderData();
+    this.loadStoreContact();
+
+    let lastOrderId: string | null = null;
+    this.sub.add(
+      combineLatest([this.route.params, this.route.queryParams]).subscribe(([params, queryParams]) => {
+        const orderId = params['id'] || queryParams['orderId'] || '';
+        const orderIdStr = orderId ? String(orderId).trim() : '';
+
+        // Tự động cuộn lên đầu trang khi mã đơn hàng thay đổi (kể cả khi component được tái sử dụng)
+        if (orderIdStr !== lastOrderId) {
+          lastOrderId = orderIdStr;
+          this.resetScrollToTop();
+        }
+
+        this.resolveOrderData(orderIdStr || undefined);
+      })
+    );
   }
 
   ngOnDestroy(): void {
@@ -62,15 +79,18 @@ export class OrderComponent implements OnInit, OnDestroy {
    * 3. Đối chiếu queryParam orderId hoặc route param :id
    * 4. Nếu user đăng nhập: tìm trong danh sách đơn hàng của user qua getUserOrders()
    */
-  resolveOrderData(): void {
+  resolveOrderData(explicitOrderId?: string): void {
     const storeOrder = this.orderSignal();
-    const queryOrderId = this.route.snapshot.queryParamMap.get('orderId') || this.route.snapshot.paramMap.get('id');
+    const queryOrderId = explicitOrderId !== undefined
+      ? explicitOrderId
+      : (this.route.snapshot.queryParamMap.get('orderId') || this.route.snapshot.paramMap.get('id'));
 
     // 1. Kiểm tra store
     if (storeOrder && (!queryOrderId || storeOrder.orderId === queryOrderId || (storeOrder as any)._id === queryOrderId)) {
       this.currentOrder = storeOrder;
       this.errorMessage = '';
       this.saveOrderToSession(storeOrder);
+      this.resetScrollToTop();
       return;
     }
 
@@ -83,6 +103,7 @@ export class OrderComponent implements OnInit, OnDestroy {
           if (cached && (!queryOrderId || cached.orderId === queryOrderId || cached._id === queryOrderId)) {
             this.currentOrder = cached;
             this.errorMessage = '';
+            this.resetScrollToTop();
             return;
           }
         }
@@ -105,6 +126,7 @@ export class OrderComponent implements OnInit, OnDestroy {
               this.currentOrder = matched;
               this.errorMessage = '';
               this.saveOrderToSession(matched);
+              this.resetScrollToTop();
               return;
             }
           }
@@ -158,6 +180,7 @@ export class OrderComponent implements OnInit, OnDestroy {
           this.currentOrder = res;
           this.errorMessage = '';
           this.saveOrderToSession(res);
+          this.resetScrollToTop();
         } else if (!this.currentOrder) {
           this.errorMessage = res?.error || 'Không tìm thấy thông tin đơn hàng này.';
         }
@@ -323,13 +346,79 @@ export class OrderComponent implements OnInit, OnDestroy {
     }
   }
 
+  loadStoreContact(): void {
+    this.sub.add(
+      this.apiService.getStoreContact().subscribe({
+        next: (contact) => {
+          if (contact && (contact.email || contact.phone || contact.address)) {
+            this.storeContact = contact;
+          } else {
+            this.storeContact = null;
+          }
+        },
+        error: () => {
+          this.storeContact = null;
+        }
+      })
+    );
+  }
+
+  get hasStoreContact(): boolean {
+    return Boolean(
+      this.storeContact &&
+      (this.storeContact.email || this.storeContact.phone || this.storeContact.address)
+    );
+  }
+
   printBill(): void {
-    if (typeof window !== 'undefined') {
+    if (typeof window === 'undefined') return;
+    if (this.storeContact) {
       window.print();
+    } else {
+      this.apiService.getStoreContact().subscribe({
+        next: (contact) => {
+          if (contact && (contact.email || contact.phone || contact.address)) {
+            this.storeContact = contact;
+          }
+          window.print();
+        },
+        error: () => {
+          window.print();
+        }
+      });
     }
   }
 
   goBack(): void {
     this.location.back();
+  }
+
+  resetScrollToTop(): void {
+    if (typeof document !== 'undefined' && typeof document.querySelector === 'function') {
+      const scrollWrap = document.querySelector('.main-scroll-wrap') as HTMLElement | null;
+      if (scrollWrap) {
+        const prevBehavior = scrollWrap.style.scrollBehavior;
+        scrollWrap.style.scrollBehavior = 'auto';
+        scrollWrap.scrollTop = 0;
+        scrollWrap.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+        if (typeof requestAnimationFrame === 'function') {
+          requestAnimationFrame(() => {
+            if (scrollWrap) {
+              scrollWrap.scrollTop = 0;
+              scrollWrap.style.scrollBehavior = prevBehavior;
+            }
+          });
+        }
+      }
+      const adminMain = document.querySelector('.admin-main') as HTMLElement | null;
+      if (adminMain) {
+        adminMain.scrollTop = 0;
+      }
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    }
+    if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }
   }
 }

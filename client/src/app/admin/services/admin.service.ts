@@ -160,13 +160,6 @@ export class AdminService {
     return this.http.patch(`${this.baseUrl}/orders/${id}/status`, { status, note });
   }
 
-  deleteOrder(id: string): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/orders/${id}`);
-  }
-
-  bulkDeleteOrders(ids: string[]): Observable<any> {
-    return this.http.post(`${this.baseUrl}/orders/bulk-delete`, { ids });
-  }
 
   // ── Users (Accounts) ────────────────────────
   getUsers(params?: { page?: number; limit?: number; pageSize?: number; search?: string; role?: string; status?: string }): Observable<any> {

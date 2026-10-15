@@ -112,6 +112,7 @@ export class SearchModalComponent implements OnInit, OnDestroy {
     // CASE 1: Chỉ tìm bằng từ khóa
     if (trimmedKeyword && !this.selectedFile) {
       this.closeModal();
+      this.resetScrollToTop();
       this.router.navigate(['/' + this.currentLang + '/product/all'], {
         queryParams: { search: trimmedKeyword, page: 1 },
       });
@@ -131,6 +132,7 @@ export class SearchModalComponent implements OnInit, OnDestroy {
           }
 
           this.closeModal();
+          this.resetScrollToTop();
           const queryParams: any = {
             imageSearch: '1',
             page: 1,
@@ -150,6 +152,7 @@ export class SearchModalComponent implements OnInit, OnDestroy {
           this.isLoading = false;
           // Fallback grace: navigate to products page with keyword or error context
           this.closeModal();
+          this.resetScrollToTop();
           const queryParams: any = {
             imageSearch: '1',
             page: 1,
@@ -162,6 +165,18 @@ export class SearchModalComponent implements OnInit, OnDestroy {
           });
         },
       });
+    }
+  }
+
+  private resetScrollToTop(): void {
+    if (typeof document !== 'undefined') {
+      const scrollWrap = document.querySelector('.main-scroll-wrap') as HTMLElement | null;
+      if (scrollWrap) {
+        scrollWrap.scrollTop = 0;
+      }
+    }
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     }
   }
 }

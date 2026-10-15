@@ -26,6 +26,8 @@ class MockInteractionModel {
           if (query.productId && doc.productId.toString() !== query.productId.toString()) return false;
           if (query.userId && (!doc.userId || doc.userId.toString() !== query.userId.toString())) return false;
           if (query.sessionId && doc.sessionId !== query.sessionId) return false;
+          if (query.orderId && doc.orderId !== query.orderId) return false;
+          if (query.eventType && doc.eventType !== query.eventType) return false;
           if (query.timestamp && query.timestamp.$gte && doc.timestamp < query.timestamp.$gte) return false;
           return true;
         }) || null;
@@ -170,3 +172,54 @@ test('6. Deduplication kỹ thuật: Tránh spam khi nhấn liên tục trong v�
   assert.equal(mockInteractionModel.storage.length, 1, 'Chỉ được phép lưu 1 document duy nhất');
   assert.equal(res2.message.includes('deduplicated'), true);
 });
+
+test('7. Ghi nhận sự kiện ADD_TO_CART và CLICK thành công với nhãn real', async () => {
+  const { service, mockInteractionModel } = setupService();
+  const user = { _id: new ObjectId() };
+
+  const resCart = await service.recordInteraction(
+    { productId: validProdId1.toString(), eventType: 'ADD_TO_CART' },
+    user,
+    {}
+  );
+  assert.equal(resCart.success, true);
+  assert.equal(resCart.eventType, 'ADD_TO_CART');
+  assert.equal(resCart.isSynthetic, false);
+
+  const resClick = await service.recordInteraction(
+    { productId: validProdId2.toString(), eventType: 'CLICK' },
+    user,
+    {}
+  );
+  assert.equal(resClick.success, true);
+  assert.equal(resClick.eventType, 'CLICK');
+  assert.equal(resClick.isSynthetic, false);
+});
+
+test('8. Deduplication mua hàng: Không ghi trùng sự kiện PURCHASE cho cùng đơn hàng', async () => {
+  const { service, mockInteractionModel } = setupService();
+  const user = { _id: new ObjectId() };
+  const orderId = 'ORD_TEST_999';
+
+  // Lần ghi nhận 1
+  const res1 = await service.recordInteraction(
+    { productId: validProdId1.toString(), eventType: 'PURCHASE', orderId },
+    user,
+    {}
+  );
+  assert.equal(res1.success, true);
+  assert.equal(res1.eventType, 'PURCHASE');
+
+  // Lần ghi nhận 2 cho cùng orderId + productId
+  const res2 = await service.recordInteraction(
+    { productId: validProdId1.toString(), eventType: 'PURCHASE', orderId },
+    user,
+    {}
+  );
+  assert.equal(res2.success, true);
+  assert.equal(res2.message.includes('deduplicated'), true);
+
+  const purchaseEvents = mockInteractionModel.storage.filter(d => d.eventType === 'PURCHASE');
+  assert.equal(purchaseEvents.length, 1, 'Chỉ được phép tồn tại 1 bản ghi PURCHASE duy nhất cho cùng đơn hàng');
+});
+

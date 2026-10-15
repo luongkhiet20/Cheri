@@ -27,7 +27,7 @@ export class InteractionsController {
     @Headers('user-agent') userAgent?: string,
   ) {
     const user = req.user || null;
-    return this.interactionsService.recordView(
+    return this.interactionsService.recordInteraction(
       createDto,
       user,
       session,

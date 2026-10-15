@@ -34,6 +34,36 @@
     @if (!isLoading && currentOrder) {
     <div class="bill-card printable-bill bill-print-area">
 
+      <!-- 0. THÔNG TIN CỬA HÀNG / ĐỊA CHỈ GỬI (STORE SENDER INFO - CHỈ HIỂN THỊ KHI IN HÓA ĐƠN) -->
+      @if (hasStoreContact) {
+      <section class="bill-store-info-section print-only">
+        <div class="bill-store-badge">
+          <mat-icon class="bill-store-icon">storefront</mat-icon>
+          <span class="bill-store-title">CHÉRI — THÔNG TIN CỬA HÀNG</span>
+        </div>
+        <div class="bill-store-grid">
+          @if (storeContact?.address) {
+          <div class="store-grid-item store-grid-address">
+            <span class="store-item-label">Địa chỉ gửi:</span>
+            <span class="store-item-value">{{ storeContact?.address }}</span>
+          </div>
+          }
+          @if (storeContact?.phone) {
+          <div class="store-grid-item">
+            <span class="store-item-label">Điện thoại:</span>
+            <span class="store-item-value">{{ storeContact?.phone }}</span>
+          </div>
+          }
+          @if (storeContact?.email) {
+          <div class="store-grid-item">
+            <span class="store-item-label">Email:</span>
+            <span class="store-item-value">{{ storeContact?.email }}</span>
+          </div>
+          }
+        </div>
+      </section>
+      }
+
       <!-- 1. HEADER / SUCCESS BANNER -->
       <header class="bill-header">
         <div class="bill-success-badge">

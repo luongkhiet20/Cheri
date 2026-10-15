@@ -1,0 +1,219 @@
+<div
+  class="dialog-backdrop"
+  (click)="onBackdropClick($event)"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="review-dialog-title"
+>
+  <div class="dialog-card">
+
+    <!-- Card Header -->
+    <div class="dialog-header">
+      <div class="dialog-title-group">
+        <h3 class="dialog-title" id="review-dialog-title">ĐÁNH GIÁ SẢN PHẨM</h3>
+        <span class="dialog-order-badge" *ngIf="order?.orderId">
+          Mã đơn: #{{ order.orderId }}
+        </span>
+      </div>
+      <button
+        type="button"
+        class="dialog-close-btn"
+        (click)="onClose()"
+        [disabled]="isSubmitting"
+        title="Đóng"
+        aria-label="Đóng popup"
+      >
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
+
+    <!-- Card Body -->
+    <div class="dialog-body">
+      <p class="dialog-subtitle">
+        Chia sẻ trải nghiệm của bạn để giúp Chéri cải thiện chất lượng sản phẩm và hỗ trợ những khách hàng khác.
+      </p>
+
+      <!-- Multi-Product Tab Selector if Order has > 1 product -->
+      <div class="product-selector-bar" *ngIf="orderItems.length > 1">
+        <span class="selector-label">Chọn sản phẩm đánh giá:</span>
+        <div class="product-tabs-list">
+          <button
+            type="button"
+            *ngFor="let item of orderItems; let idx = index"
+            class="product-tab-btn"
+            [class.active]="selectedProductIndex === idx"
+            (click)="selectProduct(idx)"
+            [disabled]="isSubmitting"
+          >
+            <img [src]="getItemImage(item)" [alt]="item.productSnapshot?.title || 'Sản phẩm'" class="tab-thumb" />
+            <span class="tab-title">{{ item.productSnapshot?.title || ('Sản phẩm ' + (idx + 1)) }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Selected Product Info Card -->
+      <div class="reviewed-product-card" *ngIf="activeItem">
+        <div class="product-thumb-wrap">
+          <img
+            [src]="getItemImage(activeItem)"
+            [alt]="activeItem.productSnapshot?.title || 'Sản phẩm'"
+            class="product-thumb-img"
+          />
+        </div>
+        <div class="product-meta">
+          <h4 class="product-name">{{ activeItem.productSnapshot?.title || 'Sản phẩm Chéri' }}</h4>
+          <div class="product-variant" *ngIf="getVariantText(activeItem)">
+            {{ getVariantText(activeItem) }}
+          </div>
+          <div class="product-badges-row">
+            <span class="badge-verified" title="Đã xác thực đơn hàng thành công">
+              <svg viewBox="0 0 24 24" class="badge-icon" fill="currentColor">
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+              </svg>
+              Đã mua hàng tại Chéri
+            </span>
+            <span class="badge-order-ref" *ngIf="order?.orderId">
+              Đơn hàng: #{{ order.orderId }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Star Rating Section -->
+      <div class="rating-section">
+        <label class="rating-section-title">
+          Bạn đánh giá sản phẩm này như thế nào? <span class="required-mark">*</span>
+        </label>
+
+        <div class="stars-picker-row" role="radiogroup" aria-label="Đánh giá sao">
+          <button
+            type="button"
+            *ngFor="let star of stars"
+            class="star-btn"
+            [class.active]="(hoverRating || rating) >= star"
+            [class.selected]="rating >= star"
+            (click)="onRate(star)"
+            (mouseenter)="onStarHover(star)"
+            (mouseleave)="onStarLeave()"
+            [disabled]="isSubmitting"
+            [attr.aria-label]="star + ' sao'"
+          >
+            <svg viewBox="0 0 24 24" class="star-icon" fill="currentColor">
+              <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+            </svg>
+          </button>
+
+          <span class="rating-text-hint" *ngIf="getCurrentRatingLabel()">
+            {{ getCurrentRatingLabel() }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Review Content Section -->
+      <div class="comment-section">
+        <div class="comment-header-row">
+          <label for="review-comment-textarea" class="comment-label">
+            Chia sẻ cảm nhận của bạn <span class="required-mark">*</span>
+          </label>
+          <span class="char-counter" [class.near-limit]="comment.length > maxCommentLength * 0.9">
+            {{ comment.length }}/{{ maxCommentLength }}
+          </span>
+        </div>
+
+        <textarea
+          id="review-comment-textarea"
+          class="review-textarea"
+          [(ngModel)]="comment"
+          (ngModelChange)="validationError = ''"
+          [disabled]="isSubmitting"
+          rows="4"
+          [maxlength]="maxCommentLength"
+          placeholder="Chất liệu, kiểu dáng, màu sắc, chất lượng sản phẩm... Hãy chia sẻ trải nghiệm thực tế của bạn."
+        ></textarea>
+      </div>
+
+      <!-- Photo Attachment Section -->
+      <div class="photos-section">
+        <div class="photos-header">
+          <span class="photos-label">Hình ảnh thực tế (Tùy chọn)</span>
+          <span class="photos-limit-hint">{{ selectedImages.length }}/5 ảnh (tối đa 5MB/ảnh)</span>
+        </div>
+
+        <div class="photos-grid">
+          <!-- Thumbnail Previews -->
+          <div class="photo-preview-box" *ngFor="let img of selectedImages; let i = index">
+            <img [src]="img.preview" [alt]="img.name" class="photo-preview-img" />
+            <button
+              type="button"
+              class="photo-remove-btn"
+              (click)="removeImage(i)"
+              [disabled]="isSubmitting"
+              title="Xóa ảnh"
+              aria-label="Xóa ảnh"
+            >
+              &times;
+            </button>
+          </div>
+
+          <!-- Add Photo Button -->
+          <label class="photo-upload-btn" *ngIf="selectedImages.length < 5" [class.disabled]="isSubmitting">
+            <input
+              type="file"
+              accept="image/png, image/jpeg, image/jpg, image/webp"
+              multiple
+              (change)="onFilesSelected($event)"
+              [disabled]="isSubmitting"
+              class="photo-file-input"
+            />
+            <svg viewBox="0 0 24 24" class="upload-icon" fill="currentColor">
+              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+            </svg>
+            <span class="upload-text">Thêm hình ảnh</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Validation Error -->
+      <div class="dialog-alert alert-validation" *ngIf="validationError">
+        <span class="alert-icon">!</span>
+        <span class="alert-text">{{ validationError }}</span>
+      </div>
+
+      <!-- Server Error -->
+      <div class="dialog-alert alert-server" *ngIf="errorMessage">
+        <span class="alert-icon">!</span>
+        <span class="alert-text">{{ errorMessage }}</span>
+      </div>
+
+      <!-- Success Message -->
+      <div class="dialog-alert alert-success" *ngIf="successMessage">
+        <span class="alert-icon">&#10003;</span>
+        <span class="alert-text">{{ successMessage }}</span>
+      </div>
+
+    </div>
+
+    <!-- Card Footer -->
+    <div class="dialog-footer">
+      <button
+        type="button"
+        class="btn-dialog-back"
+        (click)="onClose()"
+        [disabled]="isSubmitting"
+      >
+        Hủy
+      </button>
+
+      <button
+        type="button"
+        class="btn-dialog-confirm"
+        (click)="onSubmit()"
+        [disabled]="isSubmitting"
+      >
+        <span class="btn-spinner" *ngIf="isSubmitting"></span>
+        <span>{{ isSubmitting ? 'Đang gửi đánh giá...' : 'Gửi đánh giá' }}</span>
+      </button>
+    </div>
+
+  </div>
+</div>

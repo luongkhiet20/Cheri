@@ -155,10 +155,18 @@
                 </div>
               </div>
               <div class="action-buttons-group">
-                <button type="button" class="btn-action-primary" *ngIf="normalizeStatus(order.status) === 'DELIVERED'">
+                <button
+                  type="button"
+                  class="btn-action-primary"
+                  *ngIf="normalizeStatus(order.status) === 'DELIVERED'"
+                  (click)="openReviewDialog(order)">
                   Đánh giá
                 </button>
-                <button type="button" class="btn-action-outline" *ngIf="normalizeStatus(order.status) === 'DELIVERED'">
+                <button
+                  type="button"
+                  class="btn-action-outline"
+                  *ngIf="normalizeStatus(order.status) === 'DELIVERED'"
+                  (click)="openReturnRefundDialog(order)">
                   Trả hàng / Hoàn tiền
                 </button>
                 <button
@@ -290,4 +298,20 @@
     (close)="closeCancelDialog()"
     (cancelled)="onOrderCancelled($event)">
   </app-order-cancel-dialog>
+
+  <!-- ── PRODUCT REVIEW POPUP DIALOG ── -->
+  <app-product-review-dialog
+    *ngIf="isReviewDialogOpen"
+    [order]="selectedOrderToReview"
+    (close)="closeReviewDialog()"
+    (reviewed)="onOrderReviewed($event)">
+  </app-product-review-dialog>
+
+  <!-- ── ORDER RETURN / REFUND POPUP DIALOG ── -->
+  <app-order-return-refund-dialog
+    *ngIf="isReturnRefundDialogOpen"
+    [order]="selectedOrderToReturn"
+    (close)="closeReturnRefundDialog()"
+    (submitted)="onReturnRefundSubmitted($event)">
+  </app-order-return-refund-dialog>
 </div>

@@ -12,7 +12,7 @@ export class InteractionsService {
     @InjectModel('Product') private productModel: Model<any>,
   ) {}
 
-  async recordView(
+  async recordInteraction(
     createDto: CreateInteractionDto,
     user: User | null,
     session: any,
@@ -51,34 +51,66 @@ export class InteractionsService {
       }
     }
 
-    // 3. Deduplication kỹ thuật: Bỏ qua nếu có lượt xem trùng trong vòng 2 giây
-    const twoSecondsAgo = new Date(Date.now() - 2000);
-    const recentDuplicate = await this.interactionModel.findOne({
-      ...(userId ? { userId } : { sessionId }),
-      productId: productObjectId,
-      eventType: 'VIEW',
-      timestamp: { $gte: twoSecondsAgo },
-    }).lean();
+    const eventType = (createDto.eventType || 'VIEW').trim().toUpperCase();
+    const orderId = createDto.orderId ? String(createDto.orderId).trim() : null;
 
-    if (recentDuplicate) {
-      return {
-        success: true,
-        message: 'Lượt xem vừa được ghi nhận (deduplicated)',
-        interactionId: recentDuplicate._id,
-        isSynthetic: false,
-      };
+    // 3. Deduplication kỹ thuật
+    // 3.1. Đối với VIEW / CLICK: bỏ qua nếu lặp lại trong vòng 2 giây
+    if (eventType === 'VIEW' || eventType === 'CLICK') {
+      const twoSecondsAgo = new Date(Date.now() - 2000);
+      const recentDuplicate = await this.interactionModel
+        .findOne({
+          ...(userId ? { userId } : { sessionId }),
+          productId: productObjectId,
+          eventType,
+          timestamp: { $gte: twoSecondsAgo },
+        })
+        .lean();
+
+      if (recentDuplicate) {
+        return {
+          success: true,
+          message: `Lượt ${eventType.toLowerCase()} vừa được ghi nhận (deduplicated)`,
+          interactionId: recentDuplicate._id,
+          eventType,
+          isSynthetic: false,
+        };
+      }
     }
 
-    // 4. Tạo document tương tác THẬT (isSynthetic luôn là false)
-    // Tuyệt đối không lưu email, SĐT, địa chỉ hay thông tin PII
+    // 3.2. Đối với PURCHASE: không ghi trùng đơn hàng cho cùng sản phẩm
+    if (eventType === 'PURCHASE' && orderId) {
+      const existingPurchase = await this.interactionModel
+        .findOne({
+          orderId,
+          productId: productObjectId,
+          eventType: 'PURCHASE',
+        })
+        .lean();
+
+      if (existingPurchase) {
+        return {
+          success: true,
+          message: 'Sự kiện mua hàng đã được ghi nhận trước đó (deduplicated)',
+          interactionId: existingPurchase._id,
+          eventType: 'PURCHASE',
+          isSynthetic: false,
+        };
+      }
+    }
+
+    // 4. Tạo document tương tác THẬT (isSynthetic luôn là false, datasetType là 'real')
+    // Không bao giờ cho phép client can thiệp hay lưu thông tin PII
     const cleanDoc = {
       userId,
       sessionId,
       productId: productObjectId,
       variantId: createDto.variantId ? String(createDto.variantId).trim() : null,
-      eventType: 'VIEW',
+      orderId,
+      eventType,
       timestamp: new Date(),
       isSynthetic: false,
+      datasetType: 'real',
       metadata: {
         isSynthetic: false,
         source: 'web_client',
@@ -90,13 +122,31 @@ export class InteractionsService {
 
     return {
       success: true,
-      message: 'Ghi nhận lượt xem thành công',
+      message: `Ghi nhận sự kiện ${eventType} thành công`,
       interactionId: created._id,
       userId: created.userId,
       isGuest: !created.userId,
       productId: created.productId,
+      eventType: created.eventType,
       isSynthetic: false,
       timestamp: created.timestamp,
     };
+  }
+
+  // Alias for backwards compatibility
+  async recordView(
+    createDto: CreateInteractionDto,
+    user: User | null,
+    session: any,
+    clientGuestId?: string,
+    userAgent?: string,
+  ): Promise<any> {
+    return this.recordInteraction(
+      { ...createDto, eventType: createDto.eventType || 'VIEW' },
+      user,
+      session,
+      clientGuestId,
+      userAgent,
+    );
   }
 }

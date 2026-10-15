@@ -75,18 +75,6 @@ export class ProductComponent implements OnDestroy {
   productTags: string[] = [];
   isUnavailable: boolean = false;
 
-  // ─── Product Reviews State ──────────────────────────────────────────────────
-  reviewStats: any = null;
-  reviewsList: any[] = [];
-  reviewsTotal: number = 0;
-  reviewsPage: number = 1;
-  reviewsLimit: number = 5;
-  reviewsTotalPages: number = 1;
-  selectedStarFilter: number | null = null;
-  selectedSortBy: 'newest' | 'highest' | 'lowest' | 'oldest' = 'newest';
-
-  isLoadingStats: boolean = false;
-  isLoadingReviews: boolean = false;
   currentProductId: string | null = null;
 
   constructor(
@@ -107,8 +95,14 @@ export class ProductComponent implements OnDestroy {
     this.lang$ = this.translate.getLang$();
     this.categories$ = toObservable(this.selectors.categories);
 
+    let lastLoadedRouteId: string | null = null;
     this.routeSub = combineLatest([this.lang$, this.route.params.pipe(map((params) => params['id']))]).subscribe(([lang, id]) => {
       this.currentLang = lang || 'vi';
+      const idStr = id ? String(id).trim() : '';
+      if (idStr && lastLoadedRouteId !== idStr) {
+        lastLoadedRouteId = idStr;
+        this.resetScrollToTop();
+      }
       this.store.getProduct(id + '?lang=' + lang);
     });
 
@@ -152,14 +146,10 @@ export class ProductComponent implements OnDestroy {
       this.apiService.recordInteraction({ productId: validPid }).subscribe();
     }
 
-    // Khởi tạo và nạp dữ liệu đánh giá sản phẩm (Chỉ nạp khi đổi sản phẩm)
     const currentPid = product._id ? String(product._id) : (product.id ? String(product.id) : product.titleUrl);
     if (currentPid && this.currentProductId !== currentPid) {
       this.currentProductId = currentPid;
-      this.reviewsPage = 1;
-      this.selectedStarFilter = null;
-      this.selectedSortBy = 'newest';
-      this.loadProductReviews(currentPid);
+      this.resetScrollToTop();
     }
 
 
@@ -495,96 +485,6 @@ export class ProductComponent implements OnDestroy {
     if (this.productSub) this.productSub.unsubscribe();
   }
 
-  // ─── Product Reviews Methods (View-only: Xem, Lọc, Sắp xếp, Phân trang) ────
-  loadProductReviews(productId: string): void {
-    this.fetchReviewStats(productId);
-    this.fetchReviewsOnly(productId);
-  }
-
-  fetchReviewStats(productId: string): void {
-    this.isLoadingStats = true;
-    this.apiService.getProductReviewStats(productId).subscribe({
-      next: (stats) => {
-        this.reviewStats = stats;
-        this.isLoadingStats = false;
-      },
-      error: () => {
-        this.isLoadingStats = false;
-      },
-    });
-  }
-
-  fetchReviewsOnly(productId: string): void {
-    this.isLoadingReviews = true;
-    this.apiService
-      .getProductReviews(productId, {
-        page: this.reviewsPage,
-        limit: this.reviewsLimit,
-        rating: this.selectedStarFilter ?? undefined,
-        sortBy: this.selectedSortBy,
-      })
-      .subscribe({
-        next: (res) => {
-          this.reviewsList = res.reviews || [];
-          this.reviewsTotal = res.pagination?.total || 0;
-          this.reviewsTotalPages = res.pagination?.totalPages || 1;
-          this.isLoadingReviews = false;
-        },
-        error: () => {
-          this.reviewsList = [];
-          this.isLoadingReviews = false;
-        },
-      });
-  }
-
-  onFilterStar(star: number | null): void {
-    if (this.selectedStarFilter === star) return;
-    this.selectedStarFilter = star;
-    this.reviewsPage = 1;
-    if (this.currentProductId) {
-      this.fetchReviewsOnly(this.currentProductId);
-    }
-  }
-
-  onSortChange(event: Event): void {
-    const target = event.target as HTMLSelectElement;
-    if (target) {
-      this.selectedSortBy = target.value as any;
-      this.reviewsPage = 1;
-      if (this.currentProductId) {
-        this.fetchReviewsOnly(this.currentProductId);
-      }
-    }
-  }
-
-  onPageChange(page: number): void {
-    if (page >= 1 && page <= this.reviewsTotalPages && page !== this.reviewsPage) {
-      this.reviewsPage = page;
-      if (this.currentProductId) {
-        this.fetchReviewsOnly(this.currentProductId);
-      }
-    }
-  }
-
-  getStarArray(): number[] {
-    return [1, 2, 3, 4, 5];
-  }
-
-  formatDate(dateStr: string): string {
-    if (!dateStr) return '';
-    try {
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return '';
-      const day = String(d.getDate()).padStart(2, '0');
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const year = d.getFullYear();
-      return `${day}/${month}/${year}`;
-    } catch {
-      return '';
-    }
-  }
-
-
   private callCategories(): void {
     combineLatest([this.categories$.pipe(take(1)), this.lang$.pipe(take(1))])
       .pipe(take(1))
@@ -624,6 +524,35 @@ export class ProductComponent implements OnDestroy {
         };
         this.jsonLDService.insertSchema(productSchema, 'structured-data-product');
       });
+  }
+
+  resetScrollToTop(): void {
+    if (typeof document !== 'undefined' && typeof document.querySelector === 'function') {
+      const scrollWrap = document.querySelector('.main-scroll-wrap') as HTMLElement | null;
+      if (scrollWrap) {
+        const prevBehavior = scrollWrap.style.scrollBehavior;
+        scrollWrap.style.scrollBehavior = 'auto';
+        scrollWrap.scrollTop = 0;
+        scrollWrap.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+        if (typeof requestAnimationFrame === 'function') {
+          requestAnimationFrame(() => {
+            if (scrollWrap) {
+              scrollWrap.scrollTop = 0;
+              scrollWrap.style.scrollBehavior = prevBehavior;
+            }
+          });
+        }
+      }
+      const adminMain = document.querySelector('.admin-main') as HTMLElement | null;
+      if (adminMain) {
+        adminMain.scrollTop = 0;
+      }
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    }
+    if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }
   }
 }
 

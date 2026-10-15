@@ -18,10 +18,11 @@ import { CategoriesListComponent } from '../../shared/categories-list/categories
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { PriceFormatPipe } from '../../../pipes/price.pipe';
 import { ProductContentComponent } from '../../shared/product-content/product-content.component';
-import { ProductsListComponent } from '../../shared/products-list/products-list.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { SidebarComponent } from '../../shared/sidebar/sidebar.component';
 import { WishlistButtonComponent } from '../../shared/wishlist-button/wishlist-button.component';
+import { ProductRecommendationsComponent } from './product/product-recommendations/product-recommendations';
+import { ProductReviewsComponent } from './product/product-reviews/product-reviews';
 
 @NgModule({
   declarations: [
@@ -46,10 +47,11 @@ import { WishlistButtonComponent } from '../../shared/wishlist-button/wishlist-b
 
     CategoriesListComponent,
     ProductContentComponent,
-    ProductsListComponent,
     PaginationComponent,
     SidebarComponent,
     WishlistButtonComponent,
+    ProductRecommendationsComponent,
+    ProductReviewsComponent,
 
     RouterModule.forChild([
       { path: '', redirectTo: 'all', pathMatch: 'full' },

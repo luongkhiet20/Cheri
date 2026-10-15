@@ -28,7 +28,6 @@ export class OrdersComponent implements OnInit {
   actions: RowAction[] = [
     { key: 'view', label: 'Xem' },
     { key: 'edit', label: 'Sửa' },
-    { key: 'delete', label: 'Xóa', variant: 'danger' },
   ];
   filterFields: FilterField[] = [
     {
@@ -54,7 +53,6 @@ export class OrdersComponent implements OnInit {
   isLoading = false;
   isExporting = false;
   isLoadingPaymentMethods = false;
-  isDeleting = false;
   errorMessage = '';
   searchTerm = '';
   selectedStatus = '';
@@ -73,19 +71,6 @@ export class OrdersComponent implements OnInit {
   }
   get isIndeterminate(): boolean { return this.selectedCount > 0 && !this.allSelected; }
   get displayTotal(): number { return this.pagination?.total ?? this.data.length; }
-
-  confirmOpen = false;
-  confirmMessage = '';
-  pendingDeleteId: any = null;
-  pendingBulkDeleteIds: any[] = [];
-  pendingBulkQueryState: {
-    searchTerm: string;
-    selectedStatus: string;
-    selectedPaymentMethod: string;
-    page: number;
-    pageSize: number;
-  } | null = null;
-  isBulkDelete = false;
 
   constructor(
     private apiService: AdminService,
@@ -471,128 +456,6 @@ export class OrdersComponent implements OnInit {
     else { this.selectedIds = new Set(this.data.map((r: any) => r.id)); }
   }
 
-  onDeleteSelected(): void {
-    if (this.isDeleting || this.isLoading) return;
-    const count = this.selectedCount;
-    if (count === 0) return;
-    this.isBulkDelete = true;
-    this.pendingDeleteId = null;
-    this.pendingBulkDeleteIds = Array.from(this.selectedIds);
-    this.pendingBulkQueryState = {
-      searchTerm: this.searchTerm,
-      selectedStatus: this.selectedStatus,
-      selectedPaymentMethod: this.selectedPaymentMethod,
-      page: this.pagination.page,
-      pageSize: this.pagination.pageSize
-    };
-    this.errorMessage = '';
-    this.confirmMessage = `Bạn có chắc chắn muốn xóa ${count} đơn hàng đã chọn không?`;
-    this.confirmOpen = true;
-  }
-
-  onConfirmDelete(): void {
-    if (this.isDeleting) return;
-
-    if (this.pendingDeleteId) {
-      const deleteId = this.pendingDeleteId;
-      this.isDeleting = true;
-      this.ordersRequestId += 1;
-      this.isLoading = false;
-      this.errorMessage = '';
-      this.apiService.deleteOrder(deleteId).subscribe({
-        next: (res) => {
-          this.isDeleting = false;
-          this.confirmOpen = false;
-          this.pendingDeleteId = null;
-          this.isBulkDelete = false;
-          if (!res?.success) {
-            this.errorMessage = 'Không thể xóa đơn hàng. Vui lòng thử lại.';
-            this.notificationService.error(this.errorMessage);
-            this.loadOrders({ preserveError: true });
-            this.cdr.markForCheck();
-            return;
-          }
-          this.selectedIds.delete(deleteId);
-          this.selectedIds = new Set(this.selectedIds);
-          this.notificationService.success('Xóa đơn hàng thành công.');
-          this.loadOrders();
-          this.cdr.markForCheck();
-        },
-        error: (err) => {
-          this.isDeleting = false;
-          this.confirmOpen = false;
-          this.pendingDeleteId = null;
-          this.isBulkDelete = false;
-          this.errorMessage = 'Không thể xóa đơn hàng. Vui lòng thử lại.';
-          this.notificationService.error(this.errorMessage);
-          this.loadOrders({ preserveError: true });
-          console.error('Lỗi xóa đơn hàng:', err);
-          this.cdr.markForCheck();
-        }
-      });
-    } else if (this.isBulkDelete && this.pendingBulkDeleteIds.length > 0) {
-      const deleteIds = [...this.pendingBulkDeleteIds];
-      this.isDeleting = true;
-      this.ordersRequestId += 1;
-      this.isLoading = false;
-      this.errorMessage = '';
-      this.apiService.bulkDeleteOrders(deleteIds).subscribe({
-        next: (res) => {
-          this.isDeleting = false;
-          this.confirmOpen = false;
-          this.isBulkDelete = false;
-          if (!res?.success) {
-            this.restorePendingBulkQueryState();
-            this.pendingBulkDeleteIds = [];
-            this.pendingBulkQueryState = null;
-            this.selectedIds = new Set(deleteIds);
-            this.errorMessage = 'Không thể xóa các đơn hàng đã chọn. Vui lòng thử lại.';
-            this.notificationService.error(this.errorMessage);
-            this.loadOrders({ preserveError: true, preserveSelection: true });
-            this.cdr.markForCheck();
-            return;
-          }
-          this.pendingBulkDeleteIds = [];
-          this.pendingBulkQueryState = null;
-          this.selectedIds.clear();
-          this.notificationService.success('Xóa các đơn hàng đã chọn thành công.');
-          this.loadOrders();
-          this.cdr.markForCheck();
-        },
-        error: (err) => {
-          this.isDeleting = false;
-          this.confirmOpen = false;
-          this.isBulkDelete = false;
-          this.restorePendingBulkQueryState();
-          this.pendingBulkDeleteIds = [];
-          this.pendingBulkQueryState = null;
-          this.selectedIds = new Set(deleteIds);
-          this.errorMessage = 'Không thể xóa các đơn hàng đã chọn. Vui lòng thử lại.';
-          this.notificationService.error(this.errorMessage);
-          this.loadOrders({ preserveError: true, preserveSelection: true });
-          console.error('Lỗi xóa hàng loạt đơn hàng:', err);
-          this.cdr.markForCheck();
-        }
-      });
-    } else {
-      this.confirmOpen = false;
-      this.cdr.markForCheck();
-    }
-  }
-
-  onCancelDelete(): void {
-    if (this.isDeleting) return;
-    if (this.isBulkDelete && this.pendingBulkDeleteIds.length > 0) {
-      this.selectedIds = new Set(this.pendingBulkDeleteIds);
-    }
-    this.confirmOpen = false;
-    this.pendingDeleteId = null;
-    this.pendingBulkDeleteIds = [];
-    this.pendingBulkQueryState = null;
-    this.isBulkDelete = false;
-    this.cdr.markForCheck();
-  }
-
   onAction(e: ActionEvent): void {
     if (e.action === 'view') {
       const orderDocId = e.row._id || e.row.id;
@@ -600,31 +463,11 @@ export class OrdersComponent implements OnInit {
     } else if (e.action === 'edit') {
       const orderDocId = e.row._id || e.row.id;
       if (orderDocId) this.router.navigate(['/admin/orders', orderDocId, 'edit']);
-    } else if (e.action === 'delete') {
-      const orderDocId = e.row._id || e.row.id;
-      if (!orderDocId) {
-        this.errorMessage = 'Không thể xác định đơn hàng cần xóa.';
-        this.cdr.markForCheck();
-        return;
-      }
-      this.pendingDeleteId = orderDocId;
-      this.pendingBulkDeleteIds = [];
-      this.pendingBulkQueryState = null;
-      this.isBulkDelete = false;
-      this.confirmMessage = 'Bạn có chắc muốn xóa đơn hàng này?';
-      this.confirmOpen = true;
-      this.errorMessage = '';
-      this.cdr.markForCheck();
     }
   }
 
   onSearch(v: string): void {
     const searchTerm = (v || '').trim();
-    if (this.isDeleting) {
-      this.searchTerm = searchTerm;
-      this.pagination = { ...this.pagination, page: 1 };
-      return;
-    }
     if (!this.prepareForQueryChange()) return;
     if (searchTerm === this.searchTerm && this.pagination.page === 1) return;
     this.searchTerm = searchTerm;
@@ -679,25 +522,7 @@ export class OrdersComponent implements OnInit {
   }
 
   private prepareForQueryChange(): boolean {
-    if (this.isDeleting) return false;
-    if (this.confirmOpen) {
-      this.onCancelDelete();
-    }
     return true;
-  }
-
-  private restorePendingBulkQueryState(): void {
-    if (!this.pendingBulkQueryState) return;
-    const state = this.pendingBulkQueryState;
-    this.searchTerm = state.searchTerm;
-    this.selectedStatus = state.selectedStatus;
-    this.selectedPaymentMethod = state.selectedPaymentMethod;
-    this.pagination = {
-      ...this.pagination,
-      page: state.page,
-      pageSize: state.pageSize
-    };
-    this.syncFilterFieldValues();
   }
 
   private setPaymentFilterOptions(options: Array<{ value: string; label: string }>): void {

@@ -214,6 +214,9 @@ const OrderSchema = new Schema(
 
     // Lịch sử vận trình của carrier (PICKED_UP → IN_TRANSIT → OUT_FOR_DELIVERY → DELIVERED)
     shippingLogs: { type: [ShippingLogSchema], default: [] },
+
+    // Yêu cầu đổi trả / hoàn tiền từ khách hàng
+    returnRequest: { type: Schema.Types.Mixed, default: null },
   },
   {
     timestamps: true,

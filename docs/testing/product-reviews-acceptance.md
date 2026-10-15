@@ -4,9 +4,9 @@ Ngày chạy: 14-10-2026. Môi trường: development MongoDB `cheri`, local Ang
 
 ## Bổ sung sau review toàn nhánh (15-10-2026)
 
-Review độc lập phát hiện hai lỗi quan trọng và đã được sửa trong `24b6cfd` và `51ca97f`: response fallback công khai phải loại mảng review khỏi mọi cấp của `raw` nhưng vẫn trả `reviewSummary`; summary đọc mới phải được lưu trong cache dùng chung để mọi bản sao Product đồng bộ, đồng thời revision ngăn GET cũ ghi đè. Regression kiểm tra cả list/detail fallback, dữ liệu nested, detail top-level `raw`, summary từ người mua khác và request cũ đến muộn.
+Review độc lập phát hiện lỗi response fallback công khai và race summary, được sửa trong `24b6cfd`, `51ca97f` và `a6b7cc9`: serializer loại mảng review khỏi mọi cấp của `raw` nhưng vẫn trả `reviewSummary`; cache giữ summary canonical mới và revision theo product ID bảo vệ khỏi GET cũ mà không chặn cập nhật độc lập của sản phẩm khác. Regression kiểm tra list/detail fallback, dữ liệu nested, detail top-level `raw`, summary từ người mua khác, request cũ đến muộn và GET đồng thời cho product khác nhau.
 
-Sau các sửa đổi: toàn bộ `*.test.cjs` **145 pass, 1 integration skip mặc định, 0 fail**; build server/client và `git diff --check` đều exit 0. Client build vẫn có sáu cảnh báo NG8113 cũ ở các component ngoài task.
+Sau các sửa đổi: toàn bộ `*.test.cjs` **146 pass, 1 integration skip mặc định, 0 fail**; build server/client và `git diff --check` đều exit 0. Client build vẫn có sáu cảnh báo NG8113 cũ ở các component ngoài task.
 
 ## MongoDB thật
 

@@ -177,10 +177,22 @@ export class AuthController {
   @Get('/google/callback')
   @UseGuards(AuthGuard('google'))
   async googleLoginCallback(@Req() req, @Res() res) {
-    const googleUserDto: GoogleUserDto = req.user;
-    const accessToken = await this.authService.signInGoogle(googleUserDto);
-    const tokenUrl = process.env.ORIGIN + '/jwtToken/' + accessToken;
-    res.redirect(tokenUrl);
+    try {
+      const googleUserDto: GoogleUserDto = req.user;
+      const { accessToken, user } = await this.authService.signInGoogle(googleUserDto);
+      const exchangeCode = this.authService.createExchangeCode(accessToken, user);
+      const origin = (process.env.ORIGIN || 'http://localhost:3000').replace(/\/+$/, '');
+      const redirectUrl = `${origin}/jwtToken?code=${exchangeCode}`;
+      res.redirect(redirectUrl);
+    } catch (err) {
+      const origin = (process.env.ORIGIN || 'http://localhost:3000').replace(/\/+$/, '');
+      res.redirect(`${origin}/vi/authorize/signin?error=oauth_failed`);
+    }
+  }
+
+  @Post('/exchange-token')
+  async exchangeToken(@Body() body: { code: string }) {
+    return this.authService.consumeExchangeCode(body?.code);
   }
 
   @Post('/signout')

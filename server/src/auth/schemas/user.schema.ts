@@ -15,7 +15,7 @@ const CartItemSchema = new Schema(
 
 const UserSchema = new Schema(
   {
-    googleId: { type: String },
+    googleId: { type: String, default: null },
     email: {
       type: String,
       required: true,
@@ -23,13 +23,25 @@ const UserSchema = new Schema(
       trim: true,
       lowercase: true,
     },
-    password: { type: String, required: true },
+    password: {
+      type: String,
+      required: function (this: any) {
+        return !this.googleId;
+      },
+      default: '',
+    },
     name: {
       type: String,
-      required: true,
+      default: '',
       trim: true,
     },
-    salt: { type: String, required: true },
+    salt: {
+      type: String,
+      required: function (this: any) {
+        return !this.googleId;
+      },
+      default: '',
+    },
     fullName: { type: String, default: '' },
     phoneNumber: { type: String, default: '' },
     gender: { type: String, default: '' },

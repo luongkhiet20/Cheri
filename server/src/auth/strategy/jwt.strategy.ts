@@ -28,11 +28,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
           return token;
         },
       ]),
-      // Lấy qua configService trước, sau đó process.env, kèm fallback tránh crash
-      secretOrKey:
-        configService.get<string>('JWT_SECRET') ||
-        process.env.JWT_SECRET ||
-        'cheri_fallback_secret_key',
+      // Bắt buộc lấy secret từ configService hoặc biến môi trường, không dùng fallback insecure
+      secretOrKey: (() => {
+        const secret = configService.get<string>('JWT_SECRET') || process.env.JWT_SECRET;
+        if (!secret) {
+          throw new Error('Thiếu cấu hình biến môi trường bắt buộc: JWT_SECRET');
+        }
+        return secret;
+      })(),
     });
   }
 

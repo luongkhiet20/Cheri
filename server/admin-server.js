@@ -2537,7 +2537,7 @@ const VALID_ORDER_TRANSITIONS = {
   PENDING: ['PROCESSING', 'CANCELLED'],
   PROCESSING: ['SHIPPING', 'CANCELLED'],
   SHIPPING: ['DELIVERED', 'CANCELLED'],
-  DELIVERED: [], // final state
+  DELIVERED: ['RETURNED'], // Final delivery can be marked as returned
   CANCELLED: [], // final state
   RETURNED: []
 };
@@ -3893,15 +3893,23 @@ app.get('/api/orders/store-contact', async (req, res) => {
   }
 });
 
-// 4.2 GET /api/orders/:id (Get single order by MongoDB _id)
+// 4.2 GET /api/orders/:id (Get single order by MongoDB _id or orderId)
 app.get('/api/orders/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    if (!ObjectId.isValid(id)) {
-      return res.status(400).json({ success: false, message: 'Mã đơn hàng không hợp lệ (ID phải là MongoDB ObjectId)' });
+    if (!id || typeof id !== 'string' || !id.trim()) {
+      return res.status(400).json({ success: false, message: 'Mã đơn hàng không hợp lệ' });
     }
 
-    const order = await db.collection('orders').findOne({ _id: new ObjectId(id) });
+    const trimmedId = id.trim();
+    let query;
+    if (ObjectId.isValid(trimmedId)) {
+      query = { $or: [{ _id: new ObjectId(trimmedId) }, { orderId: trimmedId }] };
+    } else {
+      query = { orderId: trimmedId };
+    }
+
+    const order = await db.collection('orders').findOne(query);
     if (!order) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
     }
@@ -4099,7 +4107,7 @@ app.patch('/api/admin/orders/:id', async (req, res) => {
 const handleUpdateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!ObjectId.isValid(id)) {
+    if (!id || typeof id !== 'string' || !id.trim()) {
       return res.status(400).json({ success: false, message: 'Mã đơn hàng không hợp lệ' });
     }
 
@@ -4116,7 +4124,15 @@ const handleUpdateOrderStatus = async (req, res) => {
       });
     }
 
-    const order = await db.collection('orders').findOne({ _id: new ObjectId(id) });
+    const trimmedId = id.trim();
+    let query;
+    if (ObjectId.isValid(trimmedId)) {
+      query = { $or: [{ _id: new ObjectId(trimmedId) }, { orderId: trimmedId }] };
+    } else {
+      query = { orderId: trimmedId };
+    }
+
+    const order = await db.collection('orders').findOne(query);
     if (!order) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
     }
@@ -4149,7 +4165,7 @@ const handleUpdateOrderStatus = async (req, res) => {
     };
 
     await db.collection('orders').updateOne(
-      { _id: new ObjectId(id) },
+      { _id: order._id },
       {
         $set: {
           status: targetStatus,
@@ -4164,7 +4180,7 @@ const handleUpdateOrderStatus = async (req, res) => {
       }
     );
 
-    const updatedOrder = await db.collection('orders').findOne({ _id: new ObjectId(id) });
+    const updatedOrder = await db.collection('orders').findOne({ _id: order._id });
     res.json({
       success: true,
       message: `Đã cập nhật trạng thái đơn hàng thành "${ORDER_STATUS_MAP[targetStatus]?.label || targetStatus}"`,

@@ -45,11 +45,18 @@ export const setAppDB = (app: NestExpressApplication): void => {
     }),
   );
 
-  const defaultMongoUri =
-    'mongodb+srv://tinhvttk24411_db_user:gZ7aJJyCWgYffiXa@cluster0.cbvni8r.mongodb.net/cheri?retryWrites=true&w=majority';
+  const mongoUri = process.env.MONGO_URI;
+  if (!mongoUri) {
+    throw new Error('Thiếu cấu hình biến môi trường bắt buộc: MONGO_URI');
+  }
+
+  const cookieKey = process.env.COOKIE_KEY;
+  if (!cookieKey) {
+    throw new Error('Thiếu cấu hình biến môi trường bắt buộc: COOKIE_KEY');
+  }
 
   const clientP: any = mongoose
-    .connect(process.env.MONGO_URI || defaultMongoUri, {})
+    .connect(mongoUri, {})
     .then((m) => m.connection.getClient());
 
   app.use(

@@ -297,29 +297,166 @@ export class AuthService {
     };
   }
 
-  async signInGoogle(googleUserDto: GoogleUserDto) {
-    const { email, profile } = googleUserDto;
-    const user = await this.userModel.findOne({ email });
+  // In-memory store for single-use OAuth exchange codes (60s TTL)
+  private readonly exchangeCodeStore = new Map<
+    string,
+    { accessToken: string; user: any; expiresAt: number }
+  >();
 
-    if (!user) {
-      const googleUser = await new this.userModel({
-        email,
-        googleId: profile.id,
-      });
-      googleUser.save();
+  createExchangeCode(accessToken: string, user: any): string {
+    const code = randomBytes(32).toString('hex');
+    const expiresAt = Date.now() + 60 * 1000;
+    this.exchangeCodeStore.set(code, { accessToken, user, expiresAt });
+
+    // Tự động dọn dẹp các mã hết hạn
+    const now = Date.now();
+    for (const [k, v] of this.exchangeCodeStore.entries()) {
+      if (v.expiresAt <= now) {
+        this.exchangeCodeStore.delete(k);
+      }
+    }
+    return code;
+  }
+
+  consumeExchangeCode(code: string): { accessToken: string; user: any } {
+    if (!code || typeof code !== 'string') {
+      throw new BadRequestException('Mã trao đổi xác thực không hợp lệ');
+    }
+    const record = this.exchangeCodeStore.get(code);
+    if (!record) {
+      throw new UnauthorizedException('Mã xác thực không tồn tại hoặc đã được sử dụng');
+    }
+    // Xóa ngay lập tức -> Sử dụng 1 lần duy nhất (Single-Use)
+    this.exchangeCodeStore.delete(code);
+
+    if (Date.now() > record.expiresAt) {
+      throw new UnauthorizedException('Mã xác thực đã hết hạn');
     }
 
-    const payload: JwtPayload = { email };
+    return { accessToken: record.accessToken, user: record.user };
+  }
+
+  async signInGoogle(googleUserDto: GoogleUserDto): Promise<{
+    accessToken: string;
+    user: any;
+  }> {
+    const { email, profile } = googleUserDto;
+    if (!email) {
+      throw new BadRequestException('Email từ tài khoản Google không hợp lệ');
+    }
+    const cleanEmail = String(email).trim().toLowerCase();
+    let user = await this.userModel.findOne({ email: cleanEmail });
+
+    if (user) {
+      // 1. Kiểm tra tài khoản có bị khóa hay không
+      if (user.status === false) {
+        throw new UnauthorizedException('Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động');
+      }
+
+      let isModified = false;
+      // 2. Liên kết googleId nếu chưa có
+      if (!user.googleId && profile?.id) {
+        user.googleId = profile.id;
+        isModified = true;
+      }
+
+      // 3. Bổ sung thông tin họ tên, avatar nếu tài khoản cũ chưa có
+      const profileName = (profile?.displayName || '').trim();
+      if (!user.name && profileName) {
+        user.name = profileName;
+        isModified = true;
+      }
+      if (!user.fullName && profileName) {
+        user.fullName = profileName;
+        isModified = true;
+      }
+
+      const avatarUrl = profile?.photos?.[0]?.value || '';
+      if (!user.avatar && avatarUrl) {
+        user.avatar = avatarUrl;
+        isModified = true;
+      }
+      if ((!user.images || user.images.length === 0) && avatarUrl) {
+        user.images = [avatarUrl];
+        isModified = true;
+      }
+
+      if (isModified) {
+        await user.save();
+      }
+    } else {
+      // 4. Tạo tài khoản người dùng Google mới
+      const displayName = (profile?.displayName || cleanEmail.split('@')[0] || 'User').trim();
+      const avatarUrl = profile?.photos?.[0]?.value || '';
+
+      user = new this.userModel({
+        email: cleanEmail,
+        googleId: profile?.id || null,
+        name: displayName,
+        fullName: displayName,
+        avatar: avatarUrl,
+        images: avatarUrl ? [avatarUrl] : [],
+        roles: ['user'],
+        status: true,
+      });
+
+      try {
+        await user.save();
+      } catch (err: any) {
+        if (err?.code === 11000) {
+          user = await this.userModel.findOne({ email: cleanEmail });
+          if (!user) {
+            throw new InternalServerErrorException('Lỗi xung đột khi tạo tài khoản Google');
+          }
+        } else {
+          this.logger.error('Lỗi khi lưu tài khoản Google vào CSDL:', err);
+          throw new InternalServerErrorException('Lỗi khi lưu tài khoản Google vào cơ sở dữ liệu');
+        }
+      }
+    }
+
+    // 5. Cấp JWT nhất quán (email, id, roles)
+    const payload: JwtPayload = {
+      email: user.email,
+      id: user._id.toString(),
+      roles: Array.isArray(user.roles) ? user.roles : ['user'],
+    };
     const accessToken: string = await this.jwtService.sign(payload);
 
-    return accessToken;
+    const rawAvatar = user.avatar || (user as any).avatarUrl || ((user as any).images?.[0]?.url || (user as any).images?.[0]) || '';
+    const images = Array.isArray((user as any).images) && (user as any).images.length > 0 ? (user as any).images : rawAvatar ? [rawAvatar] : [];
+
+    const userObj = {
+      id: user._id.toString(),
+      _id: user._id.toString(),
+      email: user.email,
+      roles: user.roles,
+      name: user.name || (user as any).fullName || user.email.split('@')[0],
+      fullName: (user as any).fullName || user.name || user.email.split('@')[0],
+      avatar: rawAvatar,
+      avatarUrl: rawAvatar,
+      images,
+    };
+
+    return { accessToken, user: userObj };
   }
 
   async getGoogleUser(email: string, profile: any) {
-    const user = this.userModel.findOne({ email });
-    const googleUser =
-      user || (await new this.userModel({ email, googleId: profile.id }));
-
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const user = await this.userModel.findOne({ email: cleanEmail });
+    if (user) {
+      return user;
+    }
+    const displayName = (profile?.displayName || cleanEmail.split('@')[0] || 'User').trim();
+    const googleUser = new this.userModel({
+      email: cleanEmail,
+      googleId: profile?.id,
+      name: displayName,
+      fullName: displayName,
+      roles: ['user'],
+      status: true,
+    });
+    await googleUser.save();
     return googleUser;
   }
 
@@ -336,7 +473,7 @@ export class AuthService {
   }
 
   async getAllUsers(): Promise<any[]> {
-    return this.userModel.find({}).sort({ createdAt: -1, dateAdded: -1 }).exec();
+    return this.userModel.find({}).select('-password -salt').sort({ createdAt: -1, dateAdded: -1 }).exec();
   }
 
   async createUser(userData: any): Promise<any> {
@@ -407,7 +544,10 @@ export class AuthService {
 
     try {
       await user.save();
-      return user.toObject();
+      const obj: any = user.toObject();
+      delete obj.password;
+      delete obj.salt;
+      return obj;
     } catch (err: any) {
       if (err.code === 11000) {
         throw new ConflictException('Thông tin người dùng bị trùng lặp trong cơ sở dữ liệu');
@@ -457,6 +597,7 @@ export class AuthService {
     try {
       return await this.userModel
         .findByIdAndUpdate(id, { $set: dataToUpdate }, { new: true })
+        .select('-password -salt')
         .exec();
     } catch (err: any) {
       if (err.code === 11000) {
@@ -471,7 +612,7 @@ export class AuthService {
   }
 
   async getUserById(id: string): Promise<any> {
-    return this.userModel.findById(id).exec();
+    return this.userModel.findById(id).select('-password -salt').exec();
   }
 
   async bulkDeleteUsers(ids: string[]): Promise<any> {

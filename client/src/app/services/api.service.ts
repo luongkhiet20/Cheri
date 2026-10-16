@@ -197,6 +197,14 @@ export class ApiService {
     );
   }
 
+  exchangeToken(code: string): Observable<any> {
+    const exchangeUrl = this.apiUrl + '/api/auth/exchange-token';
+    return this.http.post(exchangeUrl, { code }, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
   requestPasswordReset(email: string): Observable<{ message: string }> {
     return this.http.post<{ message: string }>(
       `${this.apiUrl}/api/auth/forgot-password`,

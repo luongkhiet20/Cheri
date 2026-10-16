@@ -27,7 +27,7 @@ export class OrdersComponent implements OnInit {
   ];
   actions: RowAction[] = [
     { key: 'view', label: 'Xem' },
-    { key: 'edit', label: 'Sửa' },
+    { key: 'edit', label: 'Cập nhật trạng thái' },
   ];
   filterFields: FilterField[] = [
     {
@@ -57,6 +57,8 @@ export class OrdersComponent implements OnInit {
   searchTerm = '';
   selectedStatus = '';
   selectedPaymentMethod = '';
+  isStatusModalOpen = false;
+  selectedOrderForStatus: any = null;
   private hasInitializedQueryState = false;
   private skipNextResetFilterLoad = false;
   private ordersRequestId = 0;
@@ -461,9 +463,24 @@ export class OrdersComponent implements OnInit {
       const orderDocId = e.row._id || e.row.id;
       this.router.navigate(['/admin/orders', orderDocId]);
     } else if (e.action === 'edit') {
-      const orderDocId = e.row._id || e.row.id;
-      if (orderDocId) this.router.navigate(['/admin/orders', orderDocId, 'edit']);
+      this.openStatusModal(e.row);
     }
+  }
+
+  openStatusModal(order: any): void {
+    this.selectedOrderForStatus = order;
+    this.isStatusModalOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  onCloseStatusModal(): void {
+    this.isStatusModalOpen = false;
+    this.selectedOrderForStatus = null;
+    this.cdr.markForCheck();
+  }
+
+  onOrderStatusUpdated(event: { orderId: string; newStatus: string }): void {
+    this.loadOrders({ preserveSelection: true });
   }
 
   onSearch(v: string): void {

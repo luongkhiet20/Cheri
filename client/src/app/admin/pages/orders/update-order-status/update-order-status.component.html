@@ -1,0 +1,61 @@
+<div class="status-modal-overlay" *ngIf="isOpen" (click)="onOverlayClick($event)" role="dialog" aria-modal="true" aria-labelledby="modal-status-label">
+  <div class="status-modal-panel" (click)="$event.stopPropagation()">
+    <div class="status-modal-header">
+      <h3 class="status-modal-title">Cập nhật trạng thái</h3>
+      <button type="button" class="status-modal-close" (click)="onCancel()" aria-label="Đóng" [disabled]="isSaving">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <div class="status-modal-body">
+      <!-- Thông báo lỗi khi lưu thất bại -->
+      <div *ngIf="errorMessage" class="status-error-alert" role="alert">
+        {{ errorMessage }}
+      </div>
+
+      <!-- Thông báo khi đơn hàng đã ở trạng thái kết thúc không thể chuyển tiếp -->
+      <div *ngIf="!hasAvailableTransitions" class="status-info-alert" role="status">
+        Đơn hàng đã ở trạng thái kết thúc, không thể chuyển đổi trạng thái tiếp theo.
+      </div>
+
+      <!-- Duy nhất một thanh chọn trạng thái đơn hàng (chỉ hiển thị các trạng thái hợp lệ) -->
+      <div class="form-group">
+        <label id="modal-status-label" for="modal-order-status-select" class="form-label">
+          Trạng thái đơn hàng
+        </label>
+        <select
+          id="modal-order-status-select"
+          class="form-select status-select"
+          [(ngModel)]="selectedStatus"
+          [disabled]="isSaving || !hasAvailableTransitions">
+          <option *ngFor="let opt of availableOptions" [value]="opt.value">
+            {{ opt.label }}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <div class="status-modal-footer">
+      <button
+        type="button"
+        class="btn btn-cancel"
+        id="btn-cancel-status"
+        (click)="onCancel()"
+        [disabled]="isSaving">
+        Hủy
+      </button>
+      <button
+        type="button"
+        class="btn btn-save"
+        id="btn-save-status"
+        (click)="onSave()"
+        [disabled]="isSaving || isUnchanged || !hasAvailableTransitions">
+        <span *ngIf="isSaving" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        <span>{{ isSaving ? 'Đang lưu...' : 'Lưu' }}</span>
+      </button>
+    </div>
+  </div>
+</div>

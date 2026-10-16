@@ -123,7 +123,7 @@ export class OrderDetailComponent implements OnInit {
   }
 
   onEdit(): void {
-    if (this.orderId) this.router.navigate(['/admin/orders', this.orderId, 'edit']);
+    if (this.orderId) this.router.navigate(['/admin/orders', this.orderId, 'status']);
   }
 
   getStatusMeta(code: string): StatusOption | undefined {

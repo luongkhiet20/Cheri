@@ -72,6 +72,7 @@ export const routes: Routes = [
   { path: 'not-found', component: NotFoundComponent },
   { path: '404', component: NotFoundComponent },
   ...[].concat(...langRoutes),
+  { path: 'jwtToken', loadComponent: () => import('./user/pages/auth/jwtToken/jwtToken.component').then(mod => mod.JwtTokenComponent) },
   { path: 'jwtToken/:accessToken', loadComponent: () => import('./user/pages/auth/jwtToken/jwtToken.component').then(mod => mod.JwtTokenComponent) },
 
   // ── Admin Routes ──────────────────────────────

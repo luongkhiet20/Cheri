@@ -249,6 +249,27 @@ export class OrdersController {
     return this.ordersService.getOrderById(id);
   }
 
+  // ─── Admin: cập nhật riêng trạng thái order (status) ─────────────────────
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @Patch('/:id/status')
+  updateOrderStatus(
+    @Param('id') id: string,
+    @Body() body: { status: string; note?: string },
+    @GetUser() user: User,
+  ) {
+    return this.ordersService.updateOrderStatus(id, body?.status, body?.note, user);
+  }
+
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @Put('/:id/status')
+  updateOrderStatusPut(
+    @Param('id') id: string,
+    @Body() body: { status: string; note?: string },
+    @GetUser() user: User,
+  ) {
+    return this.ordersService.updateOrderStatus(id, body?.status, body?.note, user);
+  }
+
   // ─── Admin: cập nhật order (status, tracking...) ─────────────────────────
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
   @Patch()

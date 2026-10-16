@@ -43,6 +43,7 @@ export class SignInComponent implements OnInit {
 
   isRequestingAdmin = false;
   currentLoggedUser: any = null;
+  isSubmitting = false;
 
   get isAdminUser(): boolean {
     return checkIsAdmin(this.currentLoggedUser);
@@ -72,17 +73,52 @@ export class SignInComponent implements OnInit {
 
   ngOnInit(): void {
     const returnUrl = this.route.snapshot.queryParams['returnUrl'];
+    const errorParam = this.route.snapshot.queryParams['error'];
+    if (errorParam === 'oauth_failed') {
+      this.snackBar.open('Đăng nhập bằng Google không thành công hoặc đã bị hủy. Vui lòng thử lại!', 'Đóng', {
+        duration: 5000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom'
+      });
+    }
+
     this.isRequestingAdmin = Boolean(returnUrl && returnUrl.startsWith('/admin'));
     this.currentLoggedUser = this.selectors.user();
 
     if (this.currentLoggedUser && (this.currentLoggedUser.email || this.currentLoggedUser.accessToken)) {
-      if (checkIsAdmin(this.currentLoggedUser)) {
-        const target = this.isRequestingAdmin ? returnUrl : '/admin';
+      if (this.isRequestingAdmin) {
+        if (checkIsAdmin(this.currentLoggedUser)) {
+          this.router.navigateByUrl(returnUrl || '/admin');
+        }
+      } else {
+        const defaultHome = '/' + (this.translate.lang || 'vi');
+        const target = this.getSafeReturnUrl(returnUrl, defaultHome);
         this.router.navigateByUrl(target);
-      } else if (!this.isRequestingAdmin) {
-        this.router.navigateByUrl(returnUrl || '/');
       }
     }
+  }
+
+  private getSafeReturnUrl(url: string | null | undefined, fallback: string): string {
+    if (!url || typeof url !== 'string') {
+      return fallback;
+    }
+    const cleanUrl = url.trim();
+    if (!cleanUrl.startsWith('/') || cleanUrl.startsWith('//')) {
+      return fallback;
+    }
+    const lower = cleanUrl.toLowerCase();
+    if (
+      lower.includes('/authorize') ||
+      lower.includes('/signin') ||
+      lower.includes('/signup') ||
+      lower.includes('/login') ||
+      lower.includes('/register') ||
+      lower.includes('/jwttoken') ||
+      lower.startsWith('/admin')
+    ) {
+      return fallback;
+    }
+    return cleanUrl;
   }
 
   togglePasswordVisibility(): void {
@@ -216,9 +252,10 @@ export class SignInComponent implements OnInit {
   }
 
   submit() {
-    if (this.signInForm.invalid) {
+    if (this.isSubmitting || this.signInForm.invalid) {
       return;
     }
+    this.isSubmitting = true;
     const credentials = this.signInForm.value;
     const returnUrl = this.route.snapshot.queryParams['returnUrl'];
     const isRequestingAdmin = Boolean(returnUrl && returnUrl.startsWith('/admin'));
@@ -243,6 +280,7 @@ export class SignInComponent implements OnInit {
       })
     ).subscribe({
       next: ({ user, lang, isDeniedAdmin }: any) => {
+        this.isSubmitting = false;
         if (isDeniedAdmin) {
           this.snackBar.open('Tài khoản này không có quyền Quản trị viên (Admin). Vui lòng đăng nhập bằng tài khoản Admin!', 'Đóng', {
             duration: 5000,
@@ -257,18 +295,13 @@ export class SignInComponent implements OnInit {
           this.signInForm.reset();
           this.store.mergeGuestCartIfAny(lang || 'vi');
 
-          const isAdmin = checkIsAdmin(user);
-
           if (isRequestingAdmin) {
             const target = returnUrl || '/admin';
             this.router.navigateByUrl(target);
           } else {
-            if (isAdmin) {
-              this.router.navigateByUrl('/admin');
-            } else {
-              const target = (returnUrl && !returnUrl.startsWith('/admin')) ? returnUrl : '/';
-              this.router.navigateByUrl(target);
-            }
+            const defaultHome = '/' + (lang || 'vi');
+            const target = this.getSafeReturnUrl(returnUrl, defaultHome);
+            this.router.navigateByUrl(target);
           }
         } else {
           this.snackBar.open('Đăng nhập thất bại. Vui lòng kiểm tra lại email hoặc mật khẩu!', 'Đóng', {
@@ -279,6 +312,7 @@ export class SignInComponent implements OnInit {
         }
       },
       error: () => {
+        this.isSubmitting = false;
         this.selectors.userState.update((state) => ({ ...state, loading: false }));
         this.snackBar.open('Đăng nhập thất bại. Vui lòng thử lại sau!', 'Đóng', {
           duration: 4000,
@@ -295,7 +329,8 @@ export class SignInComponent implements OnInit {
       horizontalPosition: 'center',
       verticalPosition: 'bottom'
     });
-    window.location.href = '/api/auth/google';
+    const backendBase = (this.apiService.apiUrl || '').replace(/\/+$/, '');
+    window.location.href = `${backendBase}/api/auth/google`;
   }
 
   signInWithFacebook(): void {

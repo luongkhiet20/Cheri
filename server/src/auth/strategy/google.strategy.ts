@@ -19,11 +19,19 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     request: any,
     accessToken: string,
     refreshToken: string,
-    profile,
+    profile: any,
     done: Function,
   ) {
-    const { emails } = profile;
-    const email = emails.filter((mail) => mail.value)[0].value;
+    const emails = profile?.emails;
+    const primaryEmail = Array.isArray(emails)
+      ? emails.find((mail: any) => mail?.value) || emails[0]
+      : null;
+
+    if (!primaryEmail || !primaryEmail.value) {
+      return done(new Error('Không thể lấy thông tin email từ tài khoản Google'), null);
+    }
+
+    const email = String(primaryEmail.value).trim().toLowerCase();
     const googleUserInfo: GoogleUserDto = { email, profile };
 
     done(null, googleUserInfo);

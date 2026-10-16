@@ -571,6 +571,83 @@ export class OrdersService {
     return order;
   }
 
+  // ─── Cập nhật riêng trường status (admin) ──────────────────────────────────
+  async updateOrderStatus(id: string, status: string, note?: string, user?: any): Promise<any> {
+    if (!status || typeof status !== 'string') {
+      throw new BadRequestException('Vui lòng cung cấp trạng thái mới');
+    }
+
+    const targetStatus = status.trim().toUpperCase();
+    const VALID_STATUSES: Record<string, string> = {
+      DELIVERED: 'Đã giao',
+      SHIPPING: 'Đang giao',
+      PROCESSING: 'Đang xử lý',
+      PENDING: 'Chờ xác nhận',
+      CANCELLED: 'Đã hủy',
+      RETURNED: 'Đã hoàn trả',
+    };
+
+    if (!VALID_STATUSES[targetStatus]) {
+      throw new BadRequestException(
+        `Trạng thái không hợp lệ. Các trạng thái được chấp nhận: ${Object.keys(VALID_STATUSES).join(', ')}`
+      );
+    }
+
+    const trimmedId = id ? id.trim() : '';
+    const query = isValidObjectId(trimmedId)
+      ? { $or: [{ _id: trimmedId }, { orderId: trimmedId }] }
+      : { orderId: trimmedId };
+
+    const order = await this.orderModel.findOne(query);
+    if (!order) {
+      throw new NotFoundException('Không tìm thấy đơn hàng');
+    }
+
+    const currentStatus = (order.status || 'PENDING').toUpperCase();
+    if (currentStatus === targetStatus) {
+      throw new BadRequestException(
+        `Đơn hàng hiện tại đã ở trạng thái "${VALID_STATUSES[currentStatus] || currentStatus}".`
+      );
+    }
+
+    const VALID_TRANSITIONS: Record<string, string[]> = {
+      PENDING: ['PROCESSING', 'CANCELLED'],
+      PROCESSING: ['SHIPPING', 'CANCELLED'],
+      SHIPPING: ['DELIVERED', 'CANCELLED'],
+      DELIVERED: ['RETURNED'],
+      CANCELLED: [],
+      RETURNED: [],
+    };
+
+    const allowedTransitions = VALID_TRANSITIONS[currentStatus] || [];
+    if (!allowedTransitions.includes(targetStatus)) {
+      const allowedLabels = allowedTransitions.map(s => VALID_STATUSES[s] || s).join(', ') || 'Không có';
+      throw new BadRequestException(
+        `Trạng thái mới không hợp lệ với trạng thái hiện tại. Từ "${VALID_STATUSES[currentStatus] || currentStatus}" chỉ có thể chuyển sang: ${allowedLabels}.`
+      );
+    }
+
+    const now = new Date();
+    order.status = targetStatus as any;
+    if (!Array.isArray(order.statusHistory)) {
+      order.statusHistory = [];
+    }
+    order.statusHistory.unshift({
+      status: targetStatus as any,
+      updatedAt: now,
+      updatedBy: user?._id && isValidObjectId(user._id) ? new Types.ObjectId(user._id) : null,
+      note: note || `Admin cập nhật trạng thái từ ${VALID_STATUSES[currentStatus] || currentStatus} sang ${VALID_STATUSES[targetStatus] || targetStatus}`,
+    } as any);
+
+    await order.save();
+
+    return {
+      success: true,
+      message: `Đã cập nhật trạng thái đơn hàng thành "${VALID_STATUSES[targetStatus] || targetStatus}"`,
+      data: order,
+    };
+  }
+
   // ─── Xóa order (Vô hiệu hóa để bảo vệ dữ liệu nghiệp vụ) ──────────────────
   async removeOrder(id: string): Promise<any> {
     throw new MethodNotAllowedException(

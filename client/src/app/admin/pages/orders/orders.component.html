@@ -36,4 +36,12 @@
     [selectable]="true" [selectedIds]="selectedIds" totalLabel="đơn hàng" (actionClick)="onAction($event)"
     (selectionChange)="onSelectionChange($event)" (pageChange)="onPageChange($event)"
     (pageSizeChange)="onPageSizeChange($event)"></app-admin-table>
+
+  <!-- Popup cập nhật trạng thái đơn hàng -->
+  <app-update-order-status
+    [isOpen]="isStatusModalOpen"
+    [order]="selectedOrderForStatus"
+    (close)="onCloseStatusModal()"
+    (statusUpdated)="onOrderStatusUpdated($event)">
+  </app-update-order-status>
 </div>

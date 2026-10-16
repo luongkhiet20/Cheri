@@ -1,5 +1,5 @@
 import { take, switchMap, map } from 'rxjs/operators';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Inject, OnDestroy, PLATFORM_ID } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Inject, OnInit, OnDestroy, PLATFORM_ID } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { Observable, of, Subscription } from 'rxjs';
 import { AbstractControl, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
@@ -21,7 +21,7 @@ import { accessTokenKey } from '../../../shared/constants';
   imports: [CommonModule, TranslatePipe, RouterLink, MatInputModule, FormsModule, ReactiveFormsModule, MatSnackBarModule],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class SignUpComponent implements OnDestroy {
+export class SignUpComponent implements OnInit, OnDestroy {
 
   signUpForm: FormGroup;
   lang$: Observable<string>;
@@ -29,6 +29,7 @@ export class SignUpComponent implements OnDestroy {
   private langSub?: Subscription;
 
   showRegPassword = false;
+  isSubmitting = false;
 
   constructor(
     private translate: TranslateService,
@@ -66,6 +67,15 @@ export class SignUpComponent implements OnDestroy {
       }
       this.signUpForm.get('password')?.updateValueAndValidity({ emitEvent: false });
     });
+  }
+
+  ngOnInit(): void {
+    if (isPlatformBrowser(this.platformId)) {
+      const currentUser = this.selectors.user();
+      if (currentUser && (currentUser.email || currentUser.accessToken)) {
+        this.router.navigate(['/' + (this.lang || 'vi')]);
+      }
+    }
   }
 
   ngOnDestroy(): void {
@@ -176,6 +186,7 @@ export class SignUpComponent implements OnDestroy {
   }
 
   private handleRegistrationError(err: any): void {
+    this.isSubmitting = false;
     this.selectors.userState.update((state) => ({ ...state, loading: false }));
     const rawMsg = err?.error?.message || err?.message || '';
     const status = err?.status || err?.error?.statusCode;
@@ -211,6 +222,9 @@ export class SignUpComponent implements OnDestroy {
   }
 
   submit() {
+    if (this.isSubmitting) {
+      return;
+    }
     if (this.signUpForm.invalid) {
       const emailCtrl = this.signUpForm.get('email');
       const passCtrl = this.signUpForm.get('password');
@@ -276,6 +290,7 @@ export class SignUpComponent implements OnDestroy {
       }
       return;
     }
+    this.isSubmitting = true;
     const { email, name, password } = this.signUpForm.value;
     const cleanEmail = String(email || '').trim().toLowerCase();
     const resolvedName = (name && String(name).trim()) || cleanEmail.split('@')[0];
@@ -324,6 +339,7 @@ export class SignUpComponent implements OnDestroy {
       })
     ).subscribe({
       next: ({ user, lang, error }: any) => {
+        this.isSubmitting = false;
         if (error) {
           this.handleRegistrationError(error);
           return;
@@ -344,6 +360,7 @@ export class SignUpComponent implements OnDestroy {
         this.router.navigate(['/' + targetLang]);
       },
       error: (err: any) => {
+        this.isSubmitting = false;
         this.handleRegistrationError(err);
       }
     });
@@ -355,7 +372,8 @@ export class SignUpComponent implements OnDestroy {
       horizontalPosition: 'center',
       verticalPosition: 'bottom'
     });
-    window.location.href = '/api/auth/google';
+    const backendBase = (this.apiService.apiUrl || '').replace(/\/+$/, '');
+    window.location.href = `${backendBase}/api/auth/google`;
   }
 
   signUpWithFacebook(): void {

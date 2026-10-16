@@ -449,9 +449,9 @@
               @if (item.variant) {
               <p class="otp-item-variant">{{ formatVariant(item.variant) }}</p>
               }
-              <p class="otp-item-qty">SL: {{ item.quantity }} × {{ item.unitPrice | priceFormat }}</p>
+              <p class="otp-item-qty">SL: {{ item.quantity }} × {{ item.unitPrice | priceFormat }} đ</p>
             </div>
-            <span class="otp-item-subtotal">{{ item.subtotal | priceFormat }}</span>
+            <span class="otp-item-subtotal">{{ item.subtotal | priceFormat }} đ</span>
           </div>
           }
         </div>
@@ -472,7 +472,7 @@
           @if (trackingResult.refundedAmount) {
           <div class="otp-meta-row">
             <span class="otp-meta-label">Số tiền đã hoàn</span>
-            <span class="otp-meta-val">{{ trackingResult.refundedAmount | priceFormat }} {{ trackingResult.currency || 'VND' }}</span>
+            <span class="otp-meta-val">{{ trackingResult.refundedAmount | priceFormat }} {{ trackingResult.currency || 'đ' }}</span>
           </div>
           }
           @if (trackingResult.dateAdded) {
@@ -484,7 +484,7 @@
           @if (trackingResult.subtotal) {
           <div class="otp-meta-row">
             <span class="otp-meta-label">Tiền hàng</span>
-            <span class="otp-meta-val">{{ trackingResult.subtotal | priceFormat }} {{ trackingResult.currency || 'VND'
+            <span class="otp-meta-val">{{ trackingResult.subtotal | priceFormat }} {{ trackingResult.currency || 'đ'
               }}</span>
           </div>
           }
@@ -492,13 +492,13 @@
           <div class="otp-meta-row">
             <span class="otp-meta-label">Phí vận chuyển</span>
             <span class="otp-meta-val">{{ trackingResult.shippingFee | priceFormat }} {{ trackingResult.currency ||
-              'VND' }}</span>
+              'đ' }}</span>
           </div>
           }
           <div class="otp-meta-row otp-meta-row--total">
             <span class="otp-meta-label">Tổng thanh toán</span>
             <span class="otp-meta-val otp-meta-val--total">
-              {{ (trackingResult.totalAmount || 0) | priceFormat }} {{ trackingResult.currency || 'VND' }}
+              {{ (trackingResult.totalAmount || 0) | priceFormat }} {{ trackingResult.currency || 'đ' }}
             </span>
           </div>
         </div>

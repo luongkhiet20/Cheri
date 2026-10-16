@@ -21,6 +21,8 @@ import { Product } from '../../../../shared/models';
 import { ApiService } from '../../../../../services/api.service';
 import { SignalStore } from '../../../../../store/signal.store';
 import { WishlistButtonComponent } from '../../../../shared/wishlist-button/wishlist-button.component';
+import { NotificationService } from '../../../../shared/notification/notification.service';
+import { formatVND } from '../../../../../pipes/price.pipe';
 
 @Component({
   selector: 'app-product-recommendations',
@@ -66,6 +68,7 @@ export class ProductRecommendationsComponent implements OnInit, OnChanges, After
     private apiService: ApiService,
     private router: Router,
     private store: SignalStore,
+    private notify: NotificationService,
     private cdr: ChangeDetectorRef,
     @Inject(PLATFORM_ID) platformId: Object
   ) {
@@ -281,15 +284,19 @@ export class ProductRecommendationsComponent implements OnInit, OnChanges, After
     return s === '0' || s === 'out' || s === 'outOfStock' || s === 'unavailable';
   }
 
-  formatVND(price: number): string {
-    if (price === undefined || price === null) return '0 ₫';
-    return new Intl.NumberFormat('vi-VN').format(price) + ' ₫';
+  formatVND(price: any): string {
+    return formatVND(price);
   }
 
   addToCart(product: any): void {
     const id = product?._id || product?.id;
-    if (!id || this.isOutOfStock(product)) return;
+    if (!id) return;
+    if (this.isOutOfStock(product)) {
+      this.notify.warning('✨Sản phẩm hiện đã hết hàng✨');
+      return;
+    }
     this.store.addToCart('?id=' + id);
+    this.notify.success('✨Đã thêm sản phẩm vào giỏ hàng✨');
   }
 
   onOpenQuickView(product: any): void {

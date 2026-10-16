@@ -6,7 +6,7 @@ import {
   OnChanges,
   SimpleChanges,
 } from '@angular/core';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { NotificationService } from '../../../shared/notification/notification.service';
 import { SignalStore } from '../../../../store/signal.store';
 
 @Component({
@@ -37,7 +37,7 @@ export class CartVariantPopupComponent implements OnChanges {
 
   constructor(
     private store: SignalStore,
-    private snackBar: MatSnackBar,
+    private notify: NotificationService,
   ) {}
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -259,11 +259,7 @@ export class CartVariantPopupComponent implements OnChanges {
       target = 1;
     } else if (this.modalStock > 0 && target > this.modalStock) {
       target = this.modalStock;
-      this.snackBar.open(
-        `Tồn kho chỉ còn ${this.modalStock} sản phẩm`,
-        'Đóng',
-        { duration: 2500 },
-      );
+      this.notify.warning(`✨Tồn kho chỉ còn ${this.modalStock} sản phẩm✨`);
     }
     this.modalQuantity = target;
     input.value = String(target);
@@ -341,9 +337,7 @@ export class CartVariantPopupComponent implements OnChanges {
     this.store.getCart(lang);
     this.isModalSubmitting = false;
     this.modalError = '';
-    this.snackBar.open('Đã cập nhật sản phẩm trong giỏ hàng', 'Đóng', {
-      duration: 2500,
-    });
+    this.notify.success('✨Đã cập nhật sản phẩm trong giỏ hàng✨');
     this.updated.emit();
     this.close.emit();
   }

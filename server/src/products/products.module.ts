@@ -7,6 +7,7 @@ import CategorySchema from './schemas/category.schema';
 import ProductVariantSchema from './schemas/product-variant.schema';
 
 import { ImageSearchService } from './image-search.service';
+import { SmartSearchService } from './smart-search/smart-search.service';
 
 @Module({
   imports: [
@@ -21,7 +22,7 @@ import { ImageSearchService } from './image-search.service';
     ]),
   ],
   controllers: [ProductsController],
-  providers: [ProductsService, ImageSearchService],
-  exports: [MongooseModule, ProductsService, ImageSearchService],
+  providers: [ProductsService, ImageSearchService, SmartSearchService],
+  exports: [MongooseModule, ProductsService, ImageSearchService, SmartSearchService],
 })
 export class ProductsModule {}

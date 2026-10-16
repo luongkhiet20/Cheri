@@ -9,6 +9,8 @@ import { SignalStore } from '../../../store/signal.store';
 import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
 import { User, Order } from '../../shared/models';
 import { accessTokenKey } from '../../shared/constants';
+import { NotificationService } from '../../shared/notification/notification.service';
+import { formatVND, PriceFormatPipe } from '../../../pipes/price.pipe';
 import { OrderCancelDialogComponent } from './order-cancel-dialog/order-cancel-dialog.component';
 import { ProductReviewDialogComponent } from './product-review-dialog.component/product-review-dialog.component';
 import { OrderReturnRefundDialogComponent } from './order-return-refund-dialog.component/order-return-refund-dialog.component';
@@ -20,6 +22,7 @@ import { OrderReturnRefundDialogComponent } from './order-return-refund-dialog.c
     CommonModule,
     RouterLink,
     FormsModule,
+    PriceFormatPipe,
     OrderCancelDialogComponent,
     ProductReviewDialogComponent,
     OrderReturnRefundDialogComponent
@@ -100,6 +103,7 @@ export class Profile implements OnInit {
     private selectors: SignalStoreSelectors,
     private translate: TranslateService,
     private apiService: ApiService,
+    private notify: NotificationService,
     private router: Router,
     private cdr: ChangeDetectorRef
   ) {
@@ -258,11 +262,13 @@ export class Profile implements OnInit {
         // Reset preview vì state đã có ảnh chính thức từ MongoDB
         this.previewAvatar = null;
         this.updateSyncTime();
+        this.notify.success('✨Đã cập nhật ảnh đại diện thành công✨');
       },
       error: (err: any) => {
         this.isUploadingAvatar = false;
         this.previewAvatar = null;
         this.avatarUploadError = err?.error?.message || 'Không thể cập nhật ảnh đại diện. Vui lòng thử lại.';
+        this.notify.error(`✨${this.avatarUploadError}✨`);
       }
     });
   }
@@ -382,12 +388,12 @@ export class Profile implements OnInit {
 
   formatAmount(order: Order): string {
     const total = order.totalAmount ?? order.amount ?? order.subtotal ?? 0;
-    return total.toLocaleString('vi-VN') + ' đ';
+    return formatVND(total);
   }
 
   formatItemPrice(item: any): string {
     const val = item?.subtotal ?? (item?.unitPrice ? item.unitPrice * (item.quantity || 1) : 0);
-    return val.toLocaleString('vi-VN') + ' đ';
+    return formatVND(val);
   }
 
   getItemImage(item: any): string {
@@ -520,6 +526,7 @@ export class Profile implements OnInit {
       this.store.getUserOrders();
       this.updateSyncTime();
     }
+    this.notify.success('✨Đã hủy đơn hàng thành công✨');
     this.cdr.markForCheck();
   }
 
@@ -542,6 +549,7 @@ export class Profile implements OnInit {
     if (isPlatformBrowser(this.platformId)) {
       this.updateSyncTime();
     }
+    this.notify.success('✨Đã gửi đánh giá sản phẩm thành công✨');
     this.cdr.markForCheck();
   }
 
@@ -566,7 +574,45 @@ export class Profile implements OnInit {
       this.store.getUserOrders();
       this.updateSyncTime();
     }
+    this.notify.success('✨Đã gửi yêu cầu trả hàng / hoàn tiền✨');
     this.cdr.markForCheck();
+  }
+
+  getLatestReturnRequest(order: any): any {
+    if (!order) return null;
+    if (Array.isArray(order.returnRequests) && order.returnRequests.length > 0) {
+      return order.returnRequests[order.returnRequests.length - 1];
+    }
+    return order.returnRequest || null;
+  }
+
+  getReturnRequestStatusLabel(status: string): string {
+    const s = (status || '').toUpperCase();
+    switch (s) {
+      case 'PENDING': return 'Chờ duyệt';
+      case 'APPROVED': return 'Đã duyệt';
+      case 'REJECTED': return 'Từ chối';
+      case 'WAITING_FOR_RETURN_SHIPMENT': return 'Chờ gửi hàng hoàn';
+      case 'RETURN_SHIPPED': return 'Đã gửi hàng';
+      case 'RETURN_RECEIVED': return 'Chéri đã nhận hàng';
+      case 'INSPECTED': return 'Đã kiểm tra hàng';
+      case 'COMPLETED': return 'Hoàn tất';
+      case 'CANCELLED': return 'Đã hủy';
+      default: return status || '—';
+    }
+  }
+
+  getRefundStatusLabel(status: string): string {
+    const s = (status || '').toUpperCase();
+    switch (s) {
+      case 'NOT_REQUIRED': return 'Không hoàn tiền';
+      case 'PENDING': return 'Chờ xử lý';
+      case 'PROCESSING': return 'Đang xử lý';
+      case 'COMPLETED': return 'Đã hoàn tiền';
+      case 'FAILED': return 'Hoàn tiền thất bại';
+      case 'CANCELLED': return 'Đã hủy';
+      default: return status || '—';
+    }
   }
 
   // ── Save profile (Gửi API cập nhật MongoDB & đồng bộ state tức thì) ──
@@ -643,6 +689,7 @@ export class Profile implements OnInit {
         this.formConfirmPassword = '';
         this.saveSuccess = true;
         this.updateSyncTime();
+        this.notify.success('✨Đã cập nhật thông tin tài khoản✨');
         this.cdr.markForCheck();
         setTimeout(() => {
           this.saveSuccess = false;
@@ -652,6 +699,7 @@ export class Profile implements OnInit {
       error: (err: any) => {
         this.isSaving = false;
         this.saveError = err?.error?.message || 'Có lỗi kết nối máy chủ. Vui lòng thử lại.';
+        this.notify.error(`✨${this.saveError}✨`);
         this.cdr.markForCheck();
       }
     });

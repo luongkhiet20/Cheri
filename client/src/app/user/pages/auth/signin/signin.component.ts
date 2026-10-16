@@ -10,7 +10,7 @@ import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../../../pipes/translate.pipe';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { MatInputModule } from '@angular/material/input';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { NotificationService } from '../../../shared/notification/notification.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { SignalStore } from '../../../../store/signal.store';
 import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
@@ -22,7 +22,7 @@ import { checkIsAdmin } from '../../../../services/auth.guard';
   selector: 'app-signin',
   templateUrl: './signin.component.html',
   styleUrls: ['./signin.component.css'],
-  imports: [CommonModule, TranslatePipe, RouterLink, MatInputModule, FormsModule, ReactiveFormsModule, MatSnackBarModule]
+  imports: [CommonModule, TranslatePipe, RouterLink, MatInputModule, FormsModule, ReactiveFormsModule]
 })
 export class SignInComponent implements OnInit {
   signInForm: FormGroup;
@@ -55,7 +55,7 @@ export class SignInComponent implements OnInit {
     private selectors: SignalStoreSelectors,
     private apiService: ApiService,
     private fb: FormBuilder,
-    private snackBar: MatSnackBar,
+    private notify: NotificationService,
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef
@@ -75,11 +75,7 @@ export class SignInComponent implements OnInit {
     const returnUrl = this.route.snapshot.queryParams['returnUrl'];
     const errorParam = this.route.snapshot.queryParams['error'];
     if (errorParam === 'oauth_failed') {
-      this.snackBar.open('Đăng nhập bằng Google không thành công hoặc đã bị hủy. Vui lòng thử lại!', 'Đóng', {
-        duration: 5000,
-        horizontalPosition: 'center',
-        verticalPosition: 'bottom'
-      });
+      this.notify.error('✨Đăng nhập bằng Google không thành công hoặc đã bị hủy. Vui lòng thử lại✨');
     }
 
     this.isRequestingAdmin = Boolean(returnUrl && returnUrl.startsWith('/admin'));
@@ -150,11 +146,7 @@ export class SignInComponent implements OnInit {
         this.forgotEmail = email;
         this.forgotStep = 'verify';
         this.cdr.detectChanges();
-        this.snackBar.open(response.message, 'Đóng', {
-          duration: 4000,
-          horizontalPosition: 'center',
-          verticalPosition: 'bottom',
-        });
+        this.notify.success(`✨${response.message || 'Đã gửi mã xác minh đặt lại mật khẩu'}✨`);
       },
       error: (error: unknown) => {
         this.isPasswordResetBusy = false;
@@ -199,11 +191,7 @@ export class SignInComponent implements OnInit {
     }
 
     if (this.newPassword !== this.confirmNewPassword) {
-      this.snackBar.open('Mật khẩu xác nhận không khớp.', 'Đóng', {
-        duration: 4000,
-        horizontalPosition: 'center',
-        verticalPosition: 'bottom',
-      });
+      this.notify.warning('✨Mật khẩu xác nhận không khớp. Vui lòng kiểm tra lại✨');
       return;
     }
 
@@ -221,11 +209,7 @@ export class SignInComponent implements OnInit {
           this.confirmNewPassword = '';
           this.resetToken = '';
           this.cdr.detectChanges();
-          this.snackBar.open(response.message, 'Đóng', {
-            duration: 4000,
-            horizontalPosition: 'center',
-            verticalPosition: 'bottom',
-          });
+          this.notify.success(`✨${response.message || 'Đặt lại mật khẩu thành công'}✨`);
         },
         error: (error: unknown) => {
           this.isPasswordResetBusy = false;
@@ -244,11 +228,7 @@ export class SignInComponent implements OnInit {
       typeof error.error?.message === 'string'
         ? error.error.message
         : fallback;
-    this.snackBar.open(message, 'Đóng', {
-      duration: 5000,
-      horizontalPosition: 'center',
-      verticalPosition: 'bottom',
-    });
+    this.notify.error(`✨${message}✨`);
   }
 
   submit() {
@@ -282,11 +262,7 @@ export class SignInComponent implements OnInit {
       next: ({ user, lang, isDeniedAdmin }: any) => {
         this.isSubmitting = false;
         if (isDeniedAdmin) {
-          this.snackBar.open('Tài khoản này không có quyền Quản trị viên (Admin). Vui lòng đăng nhập bằng tài khoản Admin!', 'Đóng', {
-            duration: 5000,
-            horizontalPosition: 'center',
-            verticalPosition: 'bottom'
-          });
+          this.notify.error('✨Tài khoản này không có quyền Quản trị viên (Admin)✨');
           this.signInForm.get('password')?.reset();
           return;
         }
@@ -294,6 +270,7 @@ export class SignInComponent implements OnInit {
         if (user && !user.error && (user.accessToken || user.email)) {
           this.signInForm.reset();
           this.store.mergeGuestCartIfAny(lang || 'vi');
+          this.notify.success('✨Đăng nhập thành công✨');
 
           if (isRequestingAdmin) {
             const target = returnUrl || '/admin';
@@ -304,40 +281,24 @@ export class SignInComponent implements OnInit {
             this.router.navigateByUrl(target);
           }
         } else {
-          this.snackBar.open('Đăng nhập thất bại. Vui lòng kiểm tra lại email hoặc mật khẩu!', 'Đóng', {
-            duration: 4000,
-            horizontalPosition: 'center',
-            verticalPosition: 'bottom'
-          });
+          this.notify.error('✨Đăng nhập thất bại. Vui lòng kiểm tra lại email hoặc mật khẩu✨');
         }
       },
       error: () => {
         this.isSubmitting = false;
         this.selectors.userState.update((state) => ({ ...state, loading: false }));
-        this.snackBar.open('Đăng nhập thất bại. Vui lòng thử lại sau!', 'Đóng', {
-          duration: 4000,
-          horizontalPosition: 'center',
-          verticalPosition: 'bottom'
-        });
+        this.notify.error('✨Đăng nhập thất bại. Vui lòng thử lại sau✨');
       }
     });
   }
 
   signInWithGoogle(): void {
-    this.snackBar.open('Đang kết nối cổng đăng nhập Google...', 'Đóng', {
-      duration: 3500,
-      horizontalPosition: 'center',
-      verticalPosition: 'bottom'
-    });
+    this.notify.info('✨Đang kết nối cổng đăng nhập Google...✨');
     const backendBase = (this.apiService.apiUrl || '').replace(/\/+$/, '');
     window.location.href = `${backendBase}/api/auth/google`;
   }
 
   signInWithFacebook(): void {
-    this.snackBar.open('Đang kết nối cổng đăng nhập Facebook...', 'Đóng', {
-      duration: 3500,
-      horizontalPosition: 'center',
-      verticalPosition: 'bottom'
-    });
+    this.notify.info('✨Tính năng đăng nhập Facebook đang được kết nối...✨');
   }
 }

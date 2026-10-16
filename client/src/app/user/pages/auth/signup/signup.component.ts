@@ -8,7 +8,7 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { TranslateService } from '../../../../services/translate.service';
 import { TranslatePipe } from '../../../../pipes/translate.pipe';
 import { MatInputModule } from '@angular/material/input';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { NotificationService } from '../../../shared/notification/notification.service';
 import { SignalStore } from '../../../../store/signal.store';
 import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
 import { ApiService } from '../../../../services/api.service';
@@ -18,7 +18,7 @@ import { accessTokenKey } from '../../../shared/constants';
   selector: 'app-signup',
   templateUrl: './signup.component.html',
   styleUrls: ['./signup.component.css'],
-  imports: [CommonModule, TranslatePipe, RouterLink, MatInputModule, FormsModule, ReactiveFormsModule, MatSnackBarModule],
+  imports: [CommonModule, TranslatePipe, RouterLink, MatInputModule, FormsModule, ReactiveFormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SignUpComponent implements OnInit, OnDestroy {
@@ -37,7 +37,7 @@ export class SignUpComponent implements OnInit, OnDestroy {
     private store: SignalStore,
     private selectors: SignalStoreSelectors,
     private apiService: ApiService,
-    private snackBar: MatSnackBar,
+    private notify: NotificationService,
     private router: Router,
     private cdr: ChangeDetectorRef,
     @Inject(PLATFORM_ID) private platformId: Object
@@ -202,11 +202,7 @@ export class SignUpComponent implements OnInit, OnDestroy {
       this.signUpForm.get('email')?.setErrors({ emailTaken: true });
       this.signUpForm.get('email')?.markAsTouched();
       this.cdr.markForCheck();
-      this.snackBar.open('Email này đã được đăng ký. Vui lòng sử dụng email khác hoặc đăng nhập.', 'Đóng', {
-        duration: 5000,
-        horizontalPosition: 'center',
-        verticalPosition: 'bottom'
-      });
+      this.notify.error('✨Email này đã được đăng ký. Vui lòng sử dụng email khác hoặc đăng nhập✨');
       return;
     }
 
@@ -214,11 +210,7 @@ export class SignUpComponent implements OnInit, OnDestroy {
       ? rawMsg.join(', ')
       : (rawMsg || 'Có lỗi xảy ra khi đăng ký. Vui lòng thử lại sau!');
 
-    this.snackBar.open(errorMsg, 'Đóng', {
-      duration: 4500,
-      horizontalPosition: 'center',
-      verticalPosition: 'bottom'
-    });
+    this.notify.error(`✨${errorMsg}✨`);
   }
 
   submit() {
@@ -230,63 +222,25 @@ export class SignUpComponent implements OnInit, OnDestroy {
       const passCtrl = this.signUpForm.get('password');
 
       if (!emailCtrl?.value) {
-        this.snackBar.open('Vui lòng nhập địa chỉ email để đăng ký!', 'Đóng', {
-          duration: 4000,
-          horizontalPosition: 'center',
-          verticalPosition: 'bottom'
-        });
+        this.notify.warning('✨Vui lòng nhập địa chỉ email để đăng ký✨');
       } else if (emailCtrl?.errors?.['emailTaken']) {
-        this.snackBar.open('Email này đã được đăng ký. Vui lòng sử dụng email khác hoặc đăng nhập.', 'Đóng', {
-          duration: 4500,
-          horizontalPosition: 'center',
-          verticalPosition: 'bottom'
-        });
+        this.notify.error('✨Email này đã được đăng ký. Vui lòng sử dụng email khác hoặc đăng nhập✨');
       } else if (emailCtrl?.invalid) {
-        this.snackBar.open('Email không đúng định dạng. Vui lòng nhập địa chỉ email hợp lệ (ví dụ: example@gmail.com, student@university.edu.vn)!', 'Đóng', {
-          duration: 4500,
-          horizontalPosition: 'center',
-          verticalPosition: 'bottom'
-        });
+        this.notify.warning('✨Email không đúng định dạng. Vui lòng nhập địa chỉ email hợp lệ✨');
       } else if (passCtrl?.errors?.['required']) {
-        this.snackBar.open('Vui lòng nhập mật khẩu!', 'Đóng', {
-          duration: 4000,
-          horizontalPosition: 'center',
-          verticalPosition: 'bottom'
-        });
+        this.notify.warning('✨Vui lòng nhập mật khẩu✨');
       } else if (passCtrl?.errors?.['minlength']) {
-        this.snackBar.open('Mật khẩu phải có tối thiểu 8 ký tự!', 'Đóng', {
-          duration: 4000,
-          horizontalPosition: 'center',
-          verticalPosition: 'bottom'
-        });
+        this.notify.warning('✨Mật khẩu phải có tối thiểu 8 ký tự✨');
       } else if (passCtrl?.errors?.['weakPassword']) {
-        this.snackBar.open(
-          passCtrl.errors['weakPasswordMsg'] || 'Mật khẩu quá đơn giản hoặc phổ biến. Vui lòng chọn mật khẩu an toàn hơn!',
-          'Đóng',
-          {
-            duration: 5000,
-            horizontalPosition: 'center',
-            verticalPosition: 'bottom'
-          }
+        this.notify.warning(
+          `✨${passCtrl.errors['weakPasswordMsg'] || 'Mật khẩu quá đơn giản hoặc phổ biến. Vui lòng chọn mật khẩu an toàn hơn'}✨`
         );
       } else if (this.signUpForm.errors?.['passwordMismatch']) {
-        this.snackBar.open('Mật khẩu nhập lại không khớp. Vui lòng kiểm tra lại!', 'Đóng', {
-          duration: 4000,
-          horizontalPosition: 'center',
-          verticalPosition: 'bottom'
-        });
+        this.notify.warning('✨Mật khẩu nhập lại không khớp. Vui lòng kiểm tra lại✨');
       } else if (!this.signUpForm.get('agreeTerms')?.value) {
-        this.snackBar.open('Vui lòng tích chọn "Chấp nhận điều khoản sử dụng và Chính sách bảo mật" để tạo tài khoản!', 'Đóng', {
-          duration: 4000,
-          horizontalPosition: 'center',
-          verticalPosition: 'bottom'
-        });
+        this.notify.warning('✨Vui lòng tích chọn đồng ý điều khoản sử dụng và chính sách bảo mật✨');
       } else {
-        this.snackBar.open('Vui lòng điền đầy đủ và chính xác thông tin đăng ký!', 'Đóng', {
-          duration: 3500,
-          horizontalPosition: 'center',
-          verticalPosition: 'bottom'
-        });
+        this.notify.warning('✨Vui lòng điền đầy đủ và chính xác thông tin đăng ký✨');
       }
       return;
     }
@@ -350,11 +304,7 @@ export class SignUpComponent implements OnInit, OnDestroy {
         const targetLang = lang || 'vi';
         this.store.mergeGuestCartIfAny(targetLang);
 
-        this.snackBar.open('Đăng ký tài khoản thành công!', 'Đóng', {
-          duration: 3000,
-          horizontalPosition: 'center',
-          verticalPosition: 'bottom'
-        });
+        this.notify.success('✨Đăng ký tài khoản thành công✨');
 
         // 4. Navigate to Home after auth state is established
         this.router.navigate(['/' + targetLang]);
@@ -367,21 +317,13 @@ export class SignUpComponent implements OnInit, OnDestroy {
   }
 
   signUpWithGoogle(): void {
-    this.snackBar.open('Đang chuyển hướng tới cổng xác thực Google...', 'Đóng', {
-      duration: 3500,
-      horizontalPosition: 'center',
-      verticalPosition: 'bottom'
-    });
+    this.notify.info('✨Đang chuyển hướng tới cổng xác thực Google...✨');
     const backendBase = (this.apiService.apiUrl || '').replace(/\/+$/, '');
     window.location.href = `${backendBase}/api/auth/google`;
   }
 
   signUpWithFacebook(): void {
-    this.snackBar.open('Tính năng đăng ký bằng Facebook đang được kết nối...', 'Đóng', {
-      duration: 3500,
-      horizontalPosition: 'center',
-      verticalPosition: 'bottom'
-    });
+    this.notify.info('✨Tính năng đăng ký bằng Facebook đang được kết nối...✨');
   }
 }
 

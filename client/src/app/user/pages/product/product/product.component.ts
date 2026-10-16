@@ -1,6 +1,6 @@
 import { toObservable } from '@angular/core/rxjs-interop';
 import { JsonLDService } from '../../../../services/jsonLD.service';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { NotificationService } from '../../../shared/notification/notification.service';
 import { filter, map, take, distinctUntilChanged, skip, withLatestFrom } from 'rxjs/operators';
 import { Component, OnDestroy, Signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -84,7 +84,7 @@ export class ProductComponent implements OnDestroy {
     private meta: Meta,
     private title: Title,
     public dialog: MatDialog,
-    private snackBar: MatSnackBar,
+    private notify: NotificationService,
     private router: Router,
     private translate: TranslateService,
     private jsonLDService: JsonLDService,
@@ -418,12 +418,13 @@ export class ProductComponent implements OnDestroy {
     if (!product || this.isOutOfStock) return;
 
     if (!this.isSelectionComplete()) {
-      this.snackBar.open('Vui lòng chọn đầy đủ thông tin sản phẩm.', 'Đóng', { duration: 3000 });
+      this.notify.warning('✨Vui lòng chọn đầy đủ thông tin sản phẩm✨');
       return;
     }
 
     const params = this.buildAddToCartParams(product);
     this.store.addToCart(params);
+    this.notify.success('✨Đã thêm sản phẩm vào giỏ hàng✨');
   }
 
   handleBuyNow(): void {
@@ -431,7 +432,7 @@ export class ProductComponent implements OnDestroy {
     if (!product || this.isOutOfStock) return;
 
     if (!this.isSelectionComplete()) {
-      this.snackBar.open('Vui lòng chọn đầy đủ thông tin sản phẩm.', 'Đóng', { duration: 3000 });
+      this.notify.warning('✨Vui lòng chọn đầy đủ thông tin sản phẩm✨');
       return;
     }
 

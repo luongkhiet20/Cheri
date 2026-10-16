@@ -26,10 +26,11 @@ import { isRouteAllowedDuringMaintenance } from './services/maintenance.guard';
 import { FooterComponent } from './user/layout/footer/footer.component';
 import { HeaderComponent } from './user/layout/header/header.component';
 import { ChatWidgetComponent } from './user/shared/chat-widget/chat-widget.component';
+import { NotificationComponent } from './user/shared/notification/notification.component';
 
 @Component({
   selector: 'cheri-app',
-  imports: [CommonModule, RouterOutlet, FooterComponent, HeaderComponent, ChatWidgetComponent],
+  imports: [CommonModule, RouterOutlet, FooterComponent, HeaderComponent, ChatWidgetComponent, NotificationComponent],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })

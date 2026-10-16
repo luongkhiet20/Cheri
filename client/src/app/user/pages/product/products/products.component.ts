@@ -1,4 +1,4 @@
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { NotificationService } from '../../../shared/notification/notification.service';
 import { map, distinctUntilChanged, filter, take, skip } from 'rxjs/operators';
 import { Component, ChangeDetectionStrategy, ChangeDetectorRef, OnDestroy, Signal, computed, effect, signal, Inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
@@ -134,7 +134,7 @@ export class ProductsComponent implements OnDestroy {
     private selectors: SignalStoreSelectors,
     private route: ActivatedRoute,
     private router: Router,
-    private snackBar: MatSnackBar,
+    private notify: NotificationService,
     private meta: Meta,
     private title: Title,
     private translate: TranslateService,
@@ -199,10 +199,11 @@ export class ProductsComponent implements OnDestroy {
   addToCart(id: string): void {
     const p = (this.products() || []).find((item: any) => (item._id || item.id) === id);
     if (p && (this.isOutOfStock(p) || p.visibility === false)) {
-      this.snackBar.open('Sản phẩm hiện đã hết hàng', 'Đóng', { duration: 3000 });
+      this.notify.warning('✨Sản phẩm hiện đã hết hàng✨');
       return;
     }
     this.store.addToCart('?id=' + id);
+    this.notify.success('✨Đã thêm sản phẩm vào giỏ hàng✨');
   }
 
   removeFromCart(id: string): void {

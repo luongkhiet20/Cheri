@@ -14,7 +14,7 @@
       @if (cart(); as cart) {
       <div class="home-promo">
         <span class="home-promo-basic">{{ 'Home_promo' | translate | async }}</span>
-        <span class="home-promo-shipping">{{ 'Free_shipping_limit' | translate | async }} {{ cart.shippingLimit }} {{
+        <span class="home-promo-shipping">{{ 'Free_shipping_limit' | translate | async }} {{ cart.shippingLimit | priceFormat }} {{
           currency() }}</span>
       </div>
       }
@@ -175,9 +175,9 @@
                           }
                           <h4 class="home-product-name">{{ product.title }}</h4>
                           <div class="home-product-prices">
-                            <span class="home-product-price">{{ product.salePrice || product.regularPrice }} {{ currency() }}</span>
+                            <span class="home-product-price">{{ (product.salePrice || product.regularPrice) | priceFormat }} {{ currency() }}</span>
                             @if (product.onSale && product.salePrice) {
-                              <span class="home-product-original">{{ product.regularPrice }} {{ currency() }}</span>
+                              <span class="home-product-original">{{ product.regularPrice | priceFormat }} {{ currency() }}</span>
                             }
                           </div>
                         </div>
@@ -232,9 +232,9 @@
                           }
                           <h4 class="home-product-name">{{ product.title }}</h4>
                           <div class="home-product-prices">
-                            <span class="home-product-price">{{ product.salePrice || product.regularPrice }} {{ currency() }}</span>
+                            <span class="home-product-price">{{ (product.salePrice || product.regularPrice) | priceFormat }} {{ currency() }}</span>
                             @if (product.onSale && product.salePrice) {
-                              <span class="home-product-original">{{ product.regularPrice }} {{ currency() }}</span>
+                              <span class="home-product-original">{{ product.regularPrice | priceFormat }} {{ currency() }}</span>
                             }
                           </div>
                         </div>
@@ -440,9 +440,9 @@
                 }
                 <h4 class="home-product-name">{{ product.title }}</h4>
                 <div class="home-product-prices">
-                  <span class="home-product-price">{{ product.salePrice || product.regularPrice }} {{ currency() }}</span>
+                  <span class="home-product-price">{{ (product.salePrice || product.regularPrice) | priceFormat }} {{ currency() }}</span>
                   @if (product.onSale && product.salePrice) {
-                  <span class="home-product-original">{{ product.regularPrice }} {{ currency() }}</span>
+                  <span class="home-product-original">{{ product.regularPrice | priceFormat }} {{ currency() }}</span>
                   }
                 </div>
               </div>

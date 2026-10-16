@@ -1000,3 +1000,176 @@ button {
   font-style: italic;
 }
 
+/* ── Return & Refund Tracking in Order Bill ── */
+.bill-return-section {
+  margin-top: 24px;
+  padding: 20px;
+  background-color: #FDF2F3;
+  border: 1px solid #FCE7E9;
+  border-radius: 12px;
+}
+
+.badge-requests-count {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 12px;
+  background: #74070E;
+  color: #ffffff;
+  margin-left: 8px;
+}
+
+.return-requests-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.user-return-req-card {
+  background: #ffffff;
+  border: 1px solid #FCE7E9;
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.return-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px dashed #E5E7EB;
+  padding-bottom: 8px;
+}
+
+.return-card-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.return-id {
+  font-size: 13.5px;
+  color: #1F1F1F;
+}
+
+.return-date {
+  font-size: 12px;
+  color: #6B7280;
+}
+
+.return-card-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.user-pill {
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.user-pill-status {
+  background-color: #74070E;
+  color: #ffffff;
+}
+
+.user-pill-refund {
+  background-color: #ffffff;
+  color: #74070E;
+  border: 1px solid #FECDD3;
+}
+
+.return-reason-box {
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.5;
+}
+
+.return-reason-box p {
+  margin: 0 0 4px 0;
+}
+
+.rejection-alert {
+  color: #DC2626 !important;
+  background: #FEF2F2;
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid #FECACA;
+  margin-top: 6px !important;
+}
+
+.return-items-summary {
+  font-size: 12.5px;
+  color: #4B5563;
+  background: #F9FAFB;
+  padding: 10px 12px;
+  border-radius: 6px;
+}
+
+.items-summary-label {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.return-items-ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.return-items-ul li {
+  margin-bottom: 2px;
+}
+
+.price-val {
+  font-weight: 600;
+  color: #74070E;
+}
+
+.return-guide-box {
+  background: #FFFBEB;
+  border: 1px solid #FEF3C7;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: #92400E;
+}
+
+.return-guide-box p {
+  margin: 4px 0 0 0;
+}
+
+.return-inspect-box {
+  font-size: 12.5px;
+  color: #374151;
+}
+
+.inspect-notes {
+  margin: 2px 0 0 0;
+  color: #6B7280;
+  font-style: italic;
+}
+
+.return-refund-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  border-top: 1px dashed #E5E7EB;
+  padding-top: 8px;
+}
+
+.approved-val {
+  font-size: 14px;
+  color: #059669;
+}
+
+

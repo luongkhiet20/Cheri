@@ -37,8 +37,6 @@ export class SearchModalComponent implements OnInit, OnDestroy, OnChanges {
   isLoading: boolean = false;
   errorMessage: string = '';
 
-  // 14. Suggestion chips
-  suggestions: string[] = ['lụa', 'chân váy', 'đầm', 'satin'];
 
   private langSub: Subscription;
   currentLang: string = 'vi';
@@ -91,11 +89,6 @@ export class SearchModalComponent implements OnInit, OnDestroy, OnChanges {
     this.close.emit();
   }
 
-  selectSuggestion(chip: string): void {
-    this.keyword = chip;
-    this.errorMessage = '';
-    this.submitSearch();
-  }
 
   onFileSelected(event: any): void {
     this.errorMessage = '';

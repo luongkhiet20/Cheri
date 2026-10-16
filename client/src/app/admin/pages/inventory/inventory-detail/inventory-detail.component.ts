@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { AdminService } from '../../../services/admin.service';
 import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
+import { formatVND } from '../../../../pipes/price.pipe';
 
 @Component({
   selector: 'app-inventory-detail',
@@ -78,9 +79,7 @@ export class InventoryDetailComponent implements OnInit {
   }
 
   formatCurrency(value: any): string {
-    const num = Number(value);
-    if (isNaN(num)) return '0 ₫';
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num);
+    return formatVND(value);
   }
 
   formatNumber(value: any): string {

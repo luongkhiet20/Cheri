@@ -138,7 +138,7 @@ export class SignalStore {
     // Reset ngay lập tức cart trong state bộ nhớ của client để không bị lộ cho user khác hay guest
     this.selectors.productState.update((state) => ({ ...state, cart: null, userOrders: null, order: null }));
     this.selectors.dashboardState.update((state) => ({ ...state, orders: null, order: null, allProducts: [], allCategories: [] }));
-    this.apiService.clearGuestCartLocal();
+    this.apiService.clearGuestCartLocal(true);
 
     this.apiService.signOut().subscribe({
       next: () => {
@@ -385,13 +385,17 @@ export class SignalStore {
         if (callback) callback(response);
         return;
       }
+      const updatedCart = response.cart || { items: [], totalQty: 0, totalPrice: 0 };
       this.selectors.productState.update((state) => ({
         ...state,
         order: response.result,
-        cart: response.cart,
+        cart: updatedCart,
         error: '',
         loading: false,
       }));
+      if (!this.selectors.user()) {
+        this.apiService.saveGuestCartLocal(updatedCart);
+      }
       if (callback) callback(response);
     });
   };
@@ -410,15 +414,31 @@ export class SignalStore {
         if (callback) callback(response);
         return;
       }
+      const updatedCart = response.cart || { items: [], totalQty: 0, totalPrice: 0 };
       this.selectors.productState.update((state) => ({
         ...state,
         order: response.result,
-        cart: response.cart,
+        cart: updatedCart,
         error: '',
         loading: false,
       }));
+      if (!this.selectors.user()) {
+        this.apiService.saveGuestCartLocal(updatedCart);
+      }
       if (callback) callback(response);
     });
+  };
+
+  clearCart = (lang = 'vi') => {
+    return this.apiService.clearCart(lang).pipe(
+      map((response: any) => {
+        if (response && !response.error) {
+          this.selectors.productState.update((state) => ({ ...state, cart: response }));
+          this.apiService.clearGuestCartLocal(false);
+        }
+        return response;
+      }),
+    );
   };
 
   getStripeSession = (payload) => {

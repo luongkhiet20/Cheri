@@ -4,11 +4,15 @@ import { Model, Types, isValidObjectId } from 'mongoose';
 import Stripe from 'stripe';
 import { buildPublicTrackingResponse } from './tracking-response.cjs';
 
-import { Order, OrderStatus, PaymentStatus } from './models/order.model';
+import { Order, OrderStatus, PaymentStatus, ReturnRequestStatus, RefundStatus } from './models/order.model';
+import * as fs from 'fs';
+import { join } from 'path';
 import { User } from '../auth/models/user.model';
 import { OrderDto } from './dto/order.dto';
 import { sendMsg } from '../shared/utils/email/mailer';
 import { Translation } from '../translations/translation.model';
+import { prepareCart } from '../shared/utils/prepareUtils';
+import { Cart } from '../cart/utils/cart';
 
 const secret = process.env.STRIPE_SECRETKEY;
 export const stripe = new Stripe(secret, { apiVersion: '2020-08-27' });
@@ -392,6 +396,30 @@ export class OrdersService {
     };
   }
 
+  private saveBase64Image(dataUri: string, folderName = 'returns'): string | null {
+    if (!dataUri || typeof dataUri !== 'string') return null;
+    if (dataUri.startsWith('http://') || dataUri.startsWith('https://') || dataUri.startsWith('/uploads/')) {
+      return dataUri;
+    }
+    const match = dataUri.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/);
+    if (!match) return null;
+    try {
+      const mime = match[1];
+      const base64Data = match[2];
+      const ext = mime.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
+      const filename = `return_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
+      const targetDir = join(process.cwd(), 'server', 'uploads', folderName);
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+      fs.writeFileSync(join(targetDir, filename), Buffer.from(base64Data, 'base64'));
+      return `/uploads/${folderName}/${filename}`;
+    } catch (e) {
+      this.logger.error('Failed to save return image: ' + e?.message);
+      return null;
+    }
+  }
+
   // ─── Yêu cầu Trả hàng / Hoàn tiền (Khách hàng sở hữu đơn hàng đã giao) ────
   async createReturnRequest(
     id: string,
@@ -426,9 +454,12 @@ export class OrdersService {
       throw new BadRequestException('Chỉ có thể gửi yêu cầu trả hàng / hoàn tiền cho đơn hàng đã giao thành công.');
     }
 
-    // 3. Chống gửi yêu cầu trùng lặp
-    if (order.returnRequest && order.returnRequest.status === 'PENDING') {
-      throw new ConflictException('Đơn hàng này đã có yêu cầu trả hàng / hoàn tiền đang được xử lý.');
+    // 3. Chống gửi yêu cầu trùng lặp khi đang có yêu cầu PENDING
+    const existingRequests: any[] = Array.isArray(order.returnRequests) ? order.returnRequests : [];
+    const hasPending = existingRequests.some((r: any) => r.status === ReturnRequestStatus.PENDING) ||
+      (order.returnRequest && order.returnRequest.status === 'PENDING');
+    if (hasPending) {
+      throw new ConflictException('Đơn hàng này đang có yêu cầu trả hàng / hoàn tiền chờ xử lý. Vui lòng chờ phản hồi từ Chéri trước khi gửi thêm yêu cầu mới.');
     }
 
     // 4. Kiểm tra lý do
@@ -443,9 +474,16 @@ export class OrdersService {
       throw new BadRequestException('Vui lòng chọn ít nhất một sản phẩm cần trả hàng.');
     }
 
-    // Xác minh từng sản phẩm và số lượng trả
+    // Tính toán phân bổ giảm giá thực tế của đơn hàng (nếu có)
     const orderItems = Array.isArray(order.items) ? order.items : [];
+    const orderSubtotal = Number(order.subtotal) || orderItems.reduce((acc: number, it: any) => acc + (Number(it.unitPrice) || 0) * (Number(it.quantity) || 1), 0);
+    const totalDiscounts = (Number(order.discountAmount) || 0) + (Number(order.couponDiscount) || 0);
+    const discountRatio = orderSubtotal > 0 ? Math.min(1, Math.max(0, totalDiscounts / orderSubtotal)) : 0;
+
+    // Xác minh từng sản phẩm, số lượng đã trả ở các yêu cầu trước đó
     const sanitizedItems: any[] = [];
+    let totalRequestedAmount = 0;
+
     for (const item of items) {
       const pId = String(item.productId || item.id || '');
       const matchedOrderItem = orderItems.find((oi: any) => {
@@ -457,53 +495,548 @@ export class OrdersService {
         throw new BadRequestException(`Sản phẩm với mã ${pId} không tồn tại trong đơn hàng này.`);
       }
 
-      const returnQty = Number(item.quantity) || 1;
       const boughtQty = Number(matchedOrderItem.quantity) || 1;
-      if (returnQty <= 0 || returnQty > boughtQty) {
-        throw new BadRequestException(`Số lượng trả cho sản phẩm "${matchedOrderItem.productSnapshot?.title || pId}" không hợp lệ.`);
+
+      // Tính tổng số lượng sản phẩm này đã được yêu cầu trả ở các yêu cầu trước (ngoại trừ bị REJECTED hoặc CANCELLED)
+      let previouslyReturnedQty = 0;
+      for (const req of existingRequests) {
+        if (req.status !== ReturnRequestStatus.REJECTED && req.status !== ReturnRequestStatus.CANCELLED) {
+          for (const reqItem of (req.items || [])) {
+            const reqPid = String(reqItem.productId?._id || reqItem.productId || reqItem.productSnapshot?.id || reqItem.productSnapshot?._id || '');
+            if (reqPid === pId) {
+              previouslyReturnedQty += Number(reqItem.quantity) || 0;
+            }
+          }
+        }
       }
 
+      const remainingAvailableQty = Math.max(0, boughtQty - previouslyReturnedQty);
+      const returnQty = Number(item.quantity) || 1;
+
+      if (returnQty <= 0) {
+        throw new BadRequestException(`Số lượng trả cho sản phẩm "${matchedOrderItem.productSnapshot?.title || pId}" phải lớn hơn 0.`);
+      }
+      if (returnQty > remainingAvailableQty) {
+        throw new BadRequestException(`Số lượng yêu cầu trả (${returnQty}) vượt quá số lượng còn đủ điều kiện trả (${remainingAvailableQty}) của sản phẩm "${matchedOrderItem.productSnapshot?.title || pId}".`);
+      }
+
+      const baseUnitPrice = Number(matchedOrderItem.unitPrice) || 0;
+      // Giá sau khi phân bổ giảm giá thực tế của đơn hàng
+      const effectiveUnitPrice = Math.max(0, Math.round(baseUnitPrice * (1 - discountRatio)));
+      const lineSubtotal = effectiveUnitPrice * returnQty;
+      totalRequestedAmount += lineSubtotal;
+
       sanitizedItems.push({
-        productId: matchedOrderItem.productId,
-        productSnapshot: matchedOrderItem.productSnapshot,
+        productId: matchedOrderItem.productId || matchedOrderItem.id,
+        variantId: matchedOrderItem.variantId || null,
+        productSnapshot: matchedOrderItem.productSnapshot || {
+          title: matchedOrderItem.title || 'Sản phẩm',
+          sku: matchedOrderItem.sku || '',
+          unitPrice: baseUnitPrice,
+        },
         quantity: returnQty,
         boughtQuantity: boughtQty,
-        unitPrice: matchedOrderItem.unitPrice,
+        unitPrice: effectiveUnitPrice,
+        subtotal: lineSubtotal,
         reason: item.reason || reason,
       });
     }
 
-    // 6. Lưu thông tin yêu cầu trả hàng
+    // 6. Xử lý ảnh minh chứng (tối đa 5 ảnh, lưu vào disk)
+    const rawImages = Array.isArray(payload?.images) ? payload.images : [];
+    const savedImages: string[] = [];
+    for (const img of rawImages.slice(0, 5)) {
+      const saved = this.saveBase64Image(img);
+      if (saved) savedImages.push(saved);
+    }
+
     const requestedAt = new Date();
-    const returnRequest = {
+    const orderCode = order.orderId || String(order._id).slice(-6).toUpperCase();
+    const requestId = `RET-${orderCode}-${Date.now().toString().slice(-4)}`;
+
+    const newReturnRequest: any = {
+      requestId,
       requestedAt,
       reason,
       description: String(payload?.description || '').trim(),
-      items: sanitizedItems,
+      images: savedImages,
       refundMethod: String(payload?.refundMethod || 'ORIGINAL_PAYMENT'),
-      status: 'PENDING',
+      status: ReturnRequestStatus.PENDING,
+      rejectionReason: '',
+      items: sanitizedItems,
+      returnShipping: {
+        carrier: '',
+        trackingCode: '',
+        shippedAt: null,
+        receivedAt: null,
+        instructions: '',
+      },
+      inspection: {
+        inspectedAt: null,
+        inspectedBy: null,
+        conditionNotes: '',
+        isEligible: null,
+        restocked: false,
+      },
+      refund: {
+        status: RefundStatus.PENDING,
+        requestedAmount: totalRequestedAmount,
+        approvedAmount: 0,
+        refundedAmount: 0,
+        transactionId: '',
+        bankName: '',
+        accountNumber: '',
+        accountHolder: '',
+        refundedAt: null,
+        failureReason: '',
+        notes: '',
+      },
+      history: [
+        {
+          action: 'CREATED',
+          fromStatus: '',
+          toStatus: ReturnRequestStatus.PENDING,
+          updatedAt: requestedAt,
+          updatedBy: user?._id || null,
+          note: `Khách hàng gửi yêu cầu trả hàng / hoàn tiền cho ${sanitizedItems.length} sản phẩm. Tổng tiền đề nghị: ${totalRequestedAmount.toLocaleString('vi-VN')} đ`,
+        },
+      ],
     };
 
-    order.returnRequest = returnRequest;
+    if (!Array.isArray(order.returnRequests)) {
+      order.returnRequests = [];
+    }
+    order.returnRequests.push(newReturnRequest);
 
-    const noteEntry = `[Yêu cầu Trả hàng / Hoàn tiền - ${requestedAt.toISOString().slice(0, 10)}] Lý do: ${reason}. Chi tiết: ${returnRequest.description || 'Không có'}`;
+    // Đồng bộ legacy returnRequest
+    order.returnRequest = newReturnRequest;
+
+    const noteEntry = `[Yêu cầu Trả hàng / Hoàn tiền - ${requestId}] Lý do: ${reason}. Số lượng món: ${sanitizedItems.length}. Đề nghị hoàn: ${totalRequestedAmount.toLocaleString('vi-VN')} đ`;
     order.notes = order.notes ? `${order.notes}\n${noteEntry}` : noteEntry;
 
     if (Array.isArray(order.statusHistory)) {
       order.statusHistory.push({
         status: order.status,
         updatedAt: requestedAt,
-        note: `Khách hàng gửi yêu cầu trả hàng / hoàn tiền: ${reason}`,
+        note: `Khách hàng gửi yêu cầu đổi trả mã ${requestId}`,
         updatedBy: user?._id || null,
       });
     }
+
+    order.markModified('returnRequests');
+    order.markModified('returnRequest');
+    await order.save();
+
+    return {
+      success: true,
+      message: 'Yêu cầu trả hàng / hoàn tiền đã được tiếp nhận thành công. Chéri sẽ kiểm tra và phản hồi sớm nhất.',
+      data: newReturnRequest,
+      order,
+    };
+  }
+
+  // ─── Admin: Xử lý quy trình Trả hàng & Hoàn tiền ──────────────────────────
+  async updateReturnRequestWorkflow(
+    orderId: string,
+    reqId: string,
+    action: string,
+    body: any,
+    adminUser: any,
+  ): Promise<any> {
+    const idQuery = isValidObjectId(orderId)
+      ? { $or: [{ orderId: orderId }, { _id: new Types.ObjectId(orderId) }] }
+      : { orderId: orderId };
+
+    const order: any = await this.orderModel.findOne(idQuery);
+    if (!order) {
+      throw new NotFoundException('Không tìm thấy đơn hàng.');
+    }
+
+    const requests: any[] = Array.isArray(order.returnRequests) ? order.returnRequests : [];
+    let reqIndex = requests.findIndex((r: any) => r.requestId === reqId || String(r._id) === reqId);
+
+    // Nếu chưa có trong returnRequests nhưng có legacy returnRequest
+    if (reqIndex === -1 && order.returnRequest && (order.returnRequest.requestId === reqId || reqId === 'legacy' || reqId === 'latest')) {
+      order.returnRequests = [order.returnRequest];
+      reqIndex = 0;
+    }
+
+    if (reqIndex === -1) {
+      throw new NotFoundException(`Không tìm thấy yêu cầu trả hàng với mã ${reqId}.`);
+    }
+
+    const req = order.returnRequests[reqIndex];
+    const now = new Date();
+
+    switch ((action || '').toUpperCase()) {
+      case 'APPROVE': {
+        if (req.status !== ReturnRequestStatus.PENDING) {
+          throw new BadRequestException(`Chỉ có thể duyệt yêu cầu khi đang ở trạng thái Chờ duyệt (PENDING). Trạng thái hiện tại: ${req.status}`);
+        }
+        const requestedAmt = Number(req.refund?.requestedAmount) || 0;
+        const approvedAmt = Number(body?.approvedAmount) >= 0 ? Number(body.approvedAmount) : requestedAmt;
+
+        req.status = ReturnRequestStatus.APPROVED;
+        req.refund = req.refund || {};
+        req.refund.approvedAmount = approvedAmt;
+        if (body?.instructions) {
+          req.returnShipping = req.returnShipping || {};
+          req.returnShipping.instructions = String(body.instructions).trim();
+        }
+
+        req.history.push({
+          action: 'APPROVED',
+          fromStatus: ReturnRequestStatus.PENDING,
+          toStatus: ReturnRequestStatus.APPROVED,
+          updatedAt: now,
+          updatedBy: adminUser?._id || null,
+          note: `Admin duyệt yêu cầu. Số tiền duyệt dự kiến: ${approvedAmt.toLocaleString('vi-VN')} đ. ${body?.note || ''}`.trim(),
+        });
+        break;
+      }
+
+      case 'REJECT': {
+        if (req.status === ReturnRequestStatus.COMPLETED || req.status === ReturnRequestStatus.CANCELLED) {
+          throw new BadRequestException(`Không thể từ chối yêu cầu đã ở trạng thái ${req.status}`);
+        }
+        const reason = String(body?.reason || '').trim();
+        if (!reason) {
+          throw new BadRequestException('Từ chối yêu cầu bắt buộc phải có lý do cụ thể.');
+        }
+
+        const prevStatus = req.status;
+        req.status = ReturnRequestStatus.REJECTED;
+        req.rejectionReason = reason;
+        req.refund = req.refund || {};
+        req.refund.status = RefundStatus.NOT_REQUIRED;
+
+        req.history.push({
+          action: 'REJECTED',
+          fromStatus: prevStatus,
+          toStatus: ReturnRequestStatus.REJECTED,
+          updatedAt: now,
+          updatedBy: adminUser?._id || null,
+          note: `Admin từ chối yêu cầu. Lý do: ${reason}`,
+        });
+        break;
+      }
+
+      case 'CUSTOMER_SHIPPED': {
+        if (req.status !== ReturnRequestStatus.APPROVED && req.status !== ReturnRequestStatus.WAITING_FOR_RETURN_SHIPMENT) {
+          throw new BadRequestException('Chỉ có thể xác nhận đã gửi hàng sau khi yêu cầu đã được duyệt.');
+        }
+
+        const prevStatus = req.status;
+        req.status = ReturnRequestStatus.RETURN_SHIPPED;
+        req.returnShipping = req.returnShipping || {};
+        req.returnShipping.carrier = String(body?.carrier || req.returnShipping.carrier || '').trim();
+        req.returnShipping.trackingCode = String(body?.trackingCode || req.returnShipping.trackingCode || '').trim();
+        req.returnShipping.shippedAt = body?.shippedAt ? new Date(body.shippedAt) : now;
+
+        req.history.push({
+          action: 'CUSTOMER_SHIPPED',
+          fromStatus: prevStatus,
+          toStatus: ReturnRequestStatus.RETURN_SHIPPED,
+          updatedAt: now,
+          updatedBy: adminUser?._id || null,
+          note: `Xác nhận khách đã gửi hàng hoàn. ĐVVC: ${req.returnShipping.carrier || 'Chưa rõ'}, Mã vận đơn: ${req.returnShipping.trackingCode || 'Chưa rõ'}`,
+        });
+        break;
+      }
+
+      case 'RECEIVE_GOODS': {
+        if (req.status !== ReturnRequestStatus.RETURN_SHIPPED && req.status !== ReturnRequestStatus.APPROVED) {
+          throw new BadRequestException('Chỉ có thể xác nhận đã nhận hàng sau khi đơn hàng hoàn đã được gửi hoặc duyệt.');
+        }
+
+        const prevStatus = req.status;
+        req.status = ReturnRequestStatus.RETURN_RECEIVED;
+        req.returnShipping = req.returnShipping || {};
+        req.returnShipping.receivedAt = now;
+
+        req.history.push({
+          action: 'RECEIVE_GOODS',
+          fromStatus: prevStatus,
+          toStatus: ReturnRequestStatus.RETURN_RECEIVED,
+          updatedAt: now,
+          updatedBy: adminUser?._id || null,
+          note: 'Chéri đã nhận kiện hàng hoàn từ khách hàng. Sẵn sàng chuyển qua bước kiểm tra sản phẩm.',
+        });
+        break;
+      }
+
+      case 'INSPECT_GOODS': {
+        if (
+          req.status !== ReturnRequestStatus.RETURN_RECEIVED &&
+          req.status !== ReturnRequestStatus.RETURN_SHIPPED &&
+          req.status !== ReturnRequestStatus.APPROVED
+        ) {
+          throw new BadRequestException('Chỉ có thể kiểm tra sản phẩm sau khi đã nhận được hàng hoàn.');
+        }
+
+        const prevStatus = req.status;
+        req.status = ReturnRequestStatus.INSPECTED;
+        const isEligible = Boolean(body?.isEligible !== false && body?.isEligible !== 'false');
+        const conditionNotes = String(body?.conditionNotes || '').trim();
+        const restock = Boolean(body?.restock);
+
+        req.inspection = {
+          inspectedAt: now,
+          inspectedBy: adminUser?._id || null,
+          conditionNotes,
+          isEligible,
+          restocked: restock,
+        };
+
+        req.refund = req.refund || {};
+        if (isEligible) {
+          const approvedAmount = Number(body?.approvedAmount) >= 0
+            ? Number(body.approvedAmount)
+            : (Number(req.refund?.approvedAmount) || Number(req.refund?.requestedAmount) || 0);
+          req.refund.approvedAmount = approvedAmount;
+          req.refund.status = RefundStatus.PENDING;
+
+          // Cập nhật tồn kho nếu Admin xác nhận hàng đủ điều kiện nhập kho lại
+          if (restock) {
+            for (const item of (req.items || [])) {
+              try {
+                const qtyToRestock = Number(item.quantity) || 0;
+                if (qtyToRestock > 0) {
+                  // Cập nhật Product Variant nếu có SKU
+                  const sku = item.productSnapshot?.sku;
+                  if (sku) {
+                    await this.variantModel.updateOne({ sku }, { $inc: { stock: qtyToRestock } });
+                  }
+                  // Cập nhật Product Model
+                  const pId = item.productId;
+                  if (pId && isValidObjectId(pId)) {
+                    await this.productModel.updateOne(
+                      { _id: new Types.ObjectId(String(pId)) },
+                      { $inc: { 'quantity': qtyToRestock } },
+                    );
+                  }
+                }
+              } catch (restockErr) {
+                this.logger.error('Lỗi khi hoàn kho sản phẩm: ' + restockErr?.message);
+              }
+            }
+          }
+        } else {
+          req.refund.status = RefundStatus.NOT_REQUIRED;
+          req.refund.approvedAmount = 0;
+        }
+
+        req.history.push({
+          action: 'INSPECT_GOODS',
+          fromStatus: prevStatus,
+          toStatus: ReturnRequestStatus.INSPECTED,
+          updatedAt: now,
+          updatedBy: adminUser?._id || null,
+          note: `Kiểm tra sản phẩm: ${isEligible ? 'Đủ điều kiện hoàn tiền' : 'Không đủ điều kiện'}. Ghi chú: ${conditionNotes || 'Không có'}. ${restock ? 'Đã cộng hoàn lại tồn kho.' : ''}`,
+        });
+        break;
+      }
+
+      case 'PROCESS_REFUND': {
+        // Phải phân biệt rõ COD và Thanh toán trước, tuân thủ nguyên tắc an toàn
+        const paymentMethod = (order.payment?.method || order.paymentMethodSnapshot?.method || '').toUpperCase();
+        const paymentStatus = (order.payment?.status || '').toUpperCase();
+        const codCollected = Boolean(order.payment?.codCollected);
+
+        // 1. Kiểm tra điều kiện thu tiền thực tế
+        let actualCollected = Number(order.payment?.actualCollectedAmount) || 0;
+
+        if (paymentMethod === 'COD') {
+          if (!codCollected && paymentStatus !== 'PAID') {
+            throw new BadRequestException(
+              'Đơn hàng COD chưa có xác nhận đã thu tiền thực tế hoặc chưa đối soát. Không thể ghi nhận hoàn tiền cho đơn hàng chưa thu tiền.',
+            );
+          }
+          if (actualCollected <= 0) {
+            actualCollected = Number(order.totalAmount) || Number(order.total) || 0;
+          }
+        } else {
+          // Thanh toán trước (BANK_TRANSFER, STRIPE, ONEPAY, MOMO, PAYPAL, etc.)
+          if (paymentStatus !== 'PAID' && paymentStatus !== 'PARTIALLY_REFUNDED') {
+            throw new BadRequestException(
+              'Đơn hàng thanh toán trực tuyến chưa hoàn tất thanh toán thành công (Trạng thái: ' + (paymentStatus || 'UNPAID') + '). Không thể thực hiện hoàn tiền.',
+            );
+          }
+          if (actualCollected <= 0) {
+            actualCollected = Number(order.totalAmount) || Number(order.total) || 0;
+          }
+        }
+
+        // 2. Kiểm tra số tiền có thể hoàn
+        const totalRefundedSoFar = Number(order.payment?.refundedAmount) || 0;
+        const remainingRefundable = Math.max(0, actualCollected - totalRefundedSoFar);
+
+        const refundAmt = Number(body?.refundAmount) > 0
+          ? Number(body.refundAmount)
+          : (Number(req.refund?.approvedAmount) || Number(req.refund?.requestedAmount) || 0);
+
+        if (refundAmt <= 0) {
+          throw new BadRequestException('Số tiền hoàn phải lớn hơn 0.');
+        }
+
+        if (refundAmt > remainingRefundable) {
+          throw new BadRequestException(
+            `Số tiền hoàn (${refundAmt.toLocaleString('vi-VN')} đ) vượt quá số tiền thực tế đã thu còn có thể hoàn (${remainingRefundable.toLocaleString('vi-VN')} đ).`,
+          );
+        }
+
+        // 3. Ghi nhận giao dịch hoàn tiền
+        const txId = String(body?.transactionId || `RFD-${order.orderId || String(order._id).slice(-6)}-${Date.now().toString().slice(-4)}`).trim();
+        const bankName = String(body?.bankName || '').trim();
+        const accountNumber = String(body?.accountNumber || '').trim();
+        const accountHolder = String(body?.accountHolder || '').trim();
+        const notes = String(body?.notes || '').trim();
+
+        req.refund = req.refund || {};
+        req.refund.status = RefundStatus.COMPLETED;
+        req.refund.refundedAmount = refundAmt;
+        req.refund.transactionId = txId;
+        req.refund.bankName = bankName;
+        req.refund.accountNumber = accountNumber;
+        req.refund.accountHolder = accountHolder;
+        req.refund.refundedAt = now;
+        req.refund.notes = notes;
+
+        // Trạng thái trả hàng hoàn tất
+        req.status = ReturnRequestStatus.COMPLETED;
+
+        // Cập nhật Order payment
+        order.payment = order.payment || {};
+        const newTotalRefunded = totalRefundedSoFar + refundAmt;
+        order.payment.refundedAmount = newTotalRefunded;
+        order.payment.refundedAt = now;
+        order.refundedAmount = newTotalRefunded;
+        order.refundedAt = now;
+
+        if (newTotalRefunded >= actualCollected) {
+          order.payment.status = 'REFUNDED';
+        } else {
+          order.payment.status = 'PARTIALLY_REFUNDED';
+        }
+
+        req.history.push({
+          action: 'PROCESS_REFUND',
+          fromStatus: req.status,
+          toStatus: ReturnRequestStatus.COMPLETED,
+          updatedAt: now,
+          updatedBy: adminUser?._id || null,
+          note: `Xác nhận hoàn tiền thành công: ${refundAmt.toLocaleString('vi-VN')} đ. Mã GD: ${txId}. ${bankName ? 'Ngân hàng: ' + bankName + ' - STK: ' + accountNumber + ' - Chủ TK: ' + accountHolder : ''}. Ghi chú: ${notes || 'Không'}`,
+        });
+
+        if (Array.isArray(order.statusHistory)) {
+          order.statusHistory.push({
+            status: order.status,
+            updatedAt: now,
+            note: `Ghi nhận hoàn tiền ${refundAmt.toLocaleString('vi-VN')} đ cho yêu cầu ${req.requestId}. Trạng thái TT: ${order.payment.status}`,
+            updatedBy: adminUser?._id || null,
+          });
+        }
+        break;
+      }
+
+      case 'REFUND_FAILED': {
+        const failureReason = String(body?.reason || body?.failureReason || 'Giao dịch hoàn tiền không thành công').trim();
+        req.refund = req.refund || {};
+        req.refund.status = RefundStatus.FAILED;
+        req.refund.failureReason = failureReason;
+
+        req.history.push({
+          action: 'REFUND_FAILED',
+          fromStatus: req.status,
+          toStatus: req.status,
+          updatedAt: now,
+          updatedBy: adminUser?._id || null,
+          note: `Hoàn tiền thất bại: ${failureReason}. Cho phép Admin kiểm tra và thực hiện lại an toàn.`,
+        });
+        break;
+      }
+
+      default:
+        throw new BadRequestException(`Hành động "${action}" không hợp lệ trong quy trình xử lý trả hàng.`);
+    }
+
+    // Luôn đồng bộ vào legacy field returnRequest
+    order.returnRequest = req;
+    order.markModified('returnRequests');
+    order.markModified('returnRequest');
+    order.markModified('payment');
 
     await order.save();
 
     return {
       success: true,
-      message: 'Yêu cầu trả hàng / hoàn tiền đã được tiếp nhận thành công. Chéri sẽ liên hệ với quý khách trong thời gian sớm nhất.',
-      data: returnRequest,
+      message: `Đã thực hiện thao tác ${action} thành công cho yêu cầu ${req.requestId}.`,
+      data: req,
+      order,
+    };
+  }
+
+  // ─── Admin: Cập nhật xác nhận thu tiền / Đối soát COD ───────────────────────
+  async updateCodReconciliation(
+    orderId: string,
+    body: any,
+    adminUser: any,
+  ): Promise<any> {
+    const idQuery = isValidObjectId(orderId)
+      ? { $or: [{ orderId: orderId }, { _id: new Types.ObjectId(orderId) }] }
+      : { orderId: orderId };
+
+    const order: any = await this.orderModel.findOne(idQuery);
+    if (!order) {
+      throw new NotFoundException('Không tìm thấy đơn hàng.');
+    }
+
+    const codCollected = Boolean(body?.codCollected);
+    const orderTotal = Number(order.totalAmount) || Number(order.total) || 0;
+    const actualCollectedAmount = Number(body?.actualCollectedAmount) >= 0
+      ? Number(body.actualCollectedAmount)
+      : (codCollected ? orderTotal : 0);
+    const codReconciliationStatus = String(body?.codReconciliationStatus || (codCollected ? 'COLLECTED_UNRECONCILED' : 'UNCOLLECTED'));
+    const notes = String(body?.notes || '').trim();
+    const now = new Date();
+
+    order.payment = order.payment || {};
+    order.payment.codCollected = codCollected;
+    if (codCollected && !order.payment.codCollectedAt) {
+      order.payment.codCollectedAt = now;
+    } else if (!codCollected) {
+      order.payment.codCollectedAt = null;
+    }
+
+    order.payment.actualCollectedAmount = actualCollectedAmount;
+    order.payment.codReconciliationStatus = codReconciliationStatus;
+    if (codReconciliationStatus === 'RECONCILED') {
+      order.payment.codReconciledAt = now;
+    }
+
+    // Nếu đã thu tiền COD thực tế và trạng thái thanh toán đang là UNPAID hoặc PENDING, cập nhật sang PAID
+    if (codCollected && (order.payment.status === 'UNPAID' || order.payment.status === 'PENDING' || !order.payment.status)) {
+      order.payment.status = 'PAID';
+      order.payment.paidAt = order.payment.paidAt || now;
+    } else if (!codCollected && order.payment.status === 'PAID') {
+      order.payment.status = 'UNPAID';
+    }
+
+    if (Array.isArray(order.statusHistory)) {
+      order.statusHistory.push({
+        status: order.status,
+        updatedAt: now,
+        note: `Admin cập nhật đối soát COD: ${codCollected ? 'ĐÃ THU TIỀN' : 'CHƯA THU TIỀN'} (Số tiền thực thu: ${actualCollectedAmount.toLocaleString('vi-VN')} đ, Trạng thái: ${codReconciliationStatus}). Ghi chú: ${notes || 'Không'}`,
+        updatedBy: adminUser?._id || null,
+      });
+    }
+
+    order.markModified('payment');
+    await order.save();
+
+    return {
+      success: true,
+      message: 'Cập nhật thông tin thu tiền và đối soát COD thành công.',
       order,
     };
   }
@@ -869,6 +1402,7 @@ export class OrdersService {
       await this.decreaseStock(newOrder.items);
 
       // Xóa các sản phẩm đã đặt khỏi giỏ hàng của user
+      let updatedGuestCart: any = null;
       if (user) {
         if (orderDto.selectedItemIds && orderDto.selectedItemIds.length > 0) {
           const selectedSet = new Set(orderDto.selectedItemIds.map(id => String(id)));
@@ -888,23 +1422,14 @@ export class OrdersService {
           });
         }
       } else if (session) {
-        // Dọn giỏ hàng session của khách vãng lai
-        const guestKey = guestCartId ? `cart_${guestCartId}` : 'cart';
-        if (session[guestKey]) {
-          if (orderDto.selectedItemIds && orderDto.selectedItemIds.length > 0) {
-            const selectedSet = new Set(orderDto.selectedItemIds.map(id => String(id)));
-            if (Array.isArray(session[guestKey].items)) {
-              session[guestKey].items = session[guestKey].items.filter((item: any) => {
-                const pId = String(item.productId || item.id || item.item?._id || item.item?.id || '');
-                const vId = item.variantId ? String(item.variantId) : null;
-                const compoundId = vId ? `${pId}_${vId}` : pId;
-                return !selectedSet.has(compoundId) && !selectedSet.has(pId) && (!item.id || !selectedSet.has(String(item.id)));
-              });
-            }
-          } else {
-            session[guestKey] = { items: [], totalQty: 0, totalPrice: 0 };
-          }
-        }
+        // Dọn giỏ hàng session của khách vãng lai & đồng bộ dữ liệu chuẩn
+        updatedGuestCart = await this.syncGuestCartAfterOrder(
+          session,
+          guestCartId,
+          orderDto.selectedItemIds,
+          newOrder.items,
+          lang,
+        );
       }
 
       if (newOrder.couponCode) {
@@ -915,7 +1440,11 @@ export class OrdersService {
       }
 
       await this.sendOrderEmail(newOrder, lang);
-      return { error: '', result: newOrder };
+      return {
+        error: '',
+        result: newOrder,
+        ...(updatedGuestCart ? { cart: updatedGuestCart } : {}),
+      };
     } catch (err) {
       this.logger.error(err.stack || err.message);
       return { error: err.message || 'ORDER_CREATION_FAIL', result: null };
@@ -929,7 +1458,7 @@ export class OrdersService {
     lang = 'vi',
     session?: any,
     guestCartId?: string,
-  ): Promise<{ error: string; result: Order }> {
+  ): Promise<{ error: string; result: Order; cart?: any }> {
     try {
       if (await this.isMaintenanceMode()) {
         return { error: 'Hệ thống đang bảo trì. Quý khách vui lòng quay lại sau.', result: null };
@@ -951,6 +1480,7 @@ export class OrdersService {
       });
 
       const capturePayment = await stripe.charges.capture(charge.id);
+      let updatedGuestCart: any = null;
       if (capturePayment) {
         newOrder.paymentStatus = PaymentStatus.PAID;
         newOrder.paidAt = new Date();
@@ -980,22 +1510,13 @@ export class OrdersService {
             });
           }
         } else if (session) {
-          const guestKey = guestCartId ? `cart_${guestCartId}` : 'cart';
-          if (session[guestKey]) {
-            if (body.selectedItemIds && body.selectedItemIds.length > 0) {
-              const selectedSet = new Set(body.selectedItemIds.map((id: any) => String(id)));
-              if (Array.isArray(session[guestKey].items)) {
-                session[guestKey].items = session[guestKey].items.filter((item: any) => {
-                  const pId = String(item.productId || item.id || item.item?._id || item.item?.id || '');
-                  const vId = item.variantId ? String(item.variantId) : null;
-                  const compoundId = vId ? `${pId}_${vId}` : pId;
-                  return !selectedSet.has(compoundId) && !selectedSet.has(pId) && (!item.id || !selectedSet.has(String(item.id)));
-                });
-              }
-            } else {
-              session[guestKey] = { items: [], totalQty: 0, totalPrice: 0 };
-            }
-          }
+          updatedGuestCart = await this.syncGuestCartAfterOrder(
+            session,
+            guestCartId,
+            body.selectedItemIds,
+            newOrder.items,
+            lang,
+          );
         }
 
         if (newOrder.couponCode) {
@@ -1008,11 +1529,95 @@ export class OrdersService {
         await this.sendOrderEmail(newOrder, lang);
       }
 
-      return { error: '', result: newOrder };
+      return {
+        error: '',
+        result: newOrder,
+        ...(updatedGuestCart ? { cart: updatedGuestCart } : {}),
+      };
     } catch (err) {
       this.logger.error(err.stack || err.message);
       return { error: 'ORDER_CREATION_FAIL', result: null };
     }
+  }
+
+  /**
+   * Đồng bộ & làm sạch giỏ hàng của khách vãng lai sau khi đơn hàng được tạo thành công
+   */
+  private async syncGuestCartAfterOrder(
+    session: any,
+    guestCartId: string | undefined,
+    selectedItemIds: string[] | undefined,
+    purchasedItems: any[],
+    lang = 'vi',
+  ): Promise<any> {
+    if (!session) return { items: [], totalQty: 0, totalPrice: 0 };
+
+    const guestKey = guestCartId ? `cart_${guestCartId}` : null;
+    const existingGuestCart = (guestKey && session[guestKey]) ? session[guestKey] : session.cart;
+    const rawItems: any[] = Array.isArray(existingGuestCart?.items) ? existingGuestCart.items : [];
+
+    let remainingItems: any[] = [];
+
+    if (rawItems.length > 0) {
+      const selectedSet = new Set((selectedItemIds || []).map((id: any) => String(id)));
+
+      const purchasedMatchList = (Array.isArray(purchasedItems) ? purchasedItems : []).map((p: any) => {
+        const prodId = String(p.productId || p.item?._id || p.item?.id || p.id || '');
+        const varId = (p.variantId !== undefined && p.variantId !== null && p.variantId !== '') ? String(p.variantId).trim() : null;
+        return { prodId, varId, compoundId: varId ? `${prodId}_${varId}` : prodId };
+      });
+
+      remainingItems = rawItems.filter((item: any) => {
+        const rawPId = item.productId || item.item?._id || item.item?.id || item.id || '';
+        const pId = String(typeof rawPId === 'string' && rawPId.includes('_') ? rawPId.split('_')[0] : rawPId);
+        const vId = (item.variantId !== undefined && item.variantId !== null && item.variantId !== '') ? String(item.variantId).trim() : null;
+        const compoundId = vId ? `${pId}_${vId}` : pId;
+        const itemId = item.id ? String(item.id) : '';
+
+        const isSelected = selectedSet.size > 0 && (
+          selectedSet.has(compoundId) ||
+          selectedSet.has(itemId) ||
+          selectedSet.has(pId)
+        );
+
+        const isPurchased = purchasedMatchList.some((p: any) => {
+          if (p.prodId && p.prodId === pId) {
+            if (p.varId || vId) {
+              return p.varId === vId;
+            }
+            return true;
+          }
+          return false;
+        });
+
+        if (selectedSet.size > 0) {
+          return !isSelected && !isPurchased;
+        } else {
+          return !isPurchased;
+        }
+      });
+    }
+
+    const updatedCartObj = new Cart({ items: remainingItems } as any);
+    if (guestKey) {
+      session[guestKey] = updatedCartObj;
+    }
+    session.cart = updatedCartObj;
+
+    if (typeof session.save === 'function') {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          session.save((err: any) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+      } catch (err: any) {
+        this.logger.error(`Error saving guest cart session: ${err?.message || err}`);
+      }
+    }
+
+    return prepareCart(updatedCartObj, lang, session?.config);
   }
 
   // ─── Build order data từ cart của user ────────────────────────────────────

@@ -18,6 +18,9 @@ import { ProductVariantDocument } from './models/product-variant.model';
 import { User } from '../auth/models/user.model';
 import { prepareProduct, toSlug } from '../shared/utils/prepareUtils';
 import { languages, paginationLimit } from '../shared/constans';
+import { SmartSearchService, ScoredProduct } from './smart-search/smart-search.service';
+import { extractFashionAttributes } from './smart-search/vietnamese-normalizer';
+import { SortOptions } from './models/sort.enum';
 
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -58,6 +61,7 @@ export class ProductsService {
     @InjectModel('Category') private categoryModel: Model<CategoryModel>,
     @InjectModel('ProductVariant')
     private productVariantModel: Model<ProductVariantDocument>,
+    private smartSearchService: SmartSearchService,
   ) {}
 
   async getProducts(
@@ -77,74 +81,7 @@ export class ProductsService {
       pageSize,
     } = getProductsDto;
 
-    // Multi-field Vietnamese & Token-based Search Query
-    let searchQuery: any = {};
-    if (search && search.trim().length > 0) {
-      const cleanSearch = search.trim().replace(/\s+/g, ' ');
-      const tokens = cleanSearch.split(' ').map((t) => t.trim()).filter(Boolean);
-
-      const searchFields = [
-        'vi.title',
-        'title',
-        'variants.sku',
-        'sku',
-        'variants.classification',
-        'variants.color',
-        'variants.size',
-        'vi.categoryLevel1',
-        'categoryLevel1',
-        'vi.categoryLevel2',
-        'categoryLevel2',
-        'vi.productType',
-        'productType',
-        'vi.classifications',
-        'classifications',
-        'vi.colors.name',
-        'colors.name',
-        'vi.sizes',
-        'sizes',
-        'tags',
-        'vi.description',
-        'description',
-        'titleUrl',
-      ];
-
-      const fullPattern = buildVietnameseRegexPattern(cleanSearch);
-      const fullRegex = new RegExp(fullPattern, 'i');
-      const rawRegex = new RegExp(escapeRegex(cleanSearch), 'i');
-
-      const phraseConditions: any[] = [];
-      for (const field of searchFields) {
-        phraseConditions.push({ [field]: fullRegex });
-        phraseConditions.push({ [field]: rawRegex });
-      }
-
-      // Token conditions: all tokens must be present somewhere in the search fields
-      if (tokens.length > 1) {
-        const allTokensCondition = {
-          $and: tokens.map((token) => {
-            const tokenPattern = buildVietnameseRegexPattern(token);
-            const tokenRegex = new RegExp(tokenPattern, 'i');
-            const tokenRawRegex = new RegExp(escapeRegex(token), 'i');
-            return {
-              $or: searchFields.flatMap((f) => [
-                { [f]: tokenRegex },
-                { [f]: tokenRawRegex },
-              ]),
-            };
-          }),
-        };
-        searchQuery = {
-          $or: [...phraseConditions, allTokensCondition],
-        };
-      } else {
-        searchQuery = {
-          $or: phraseConditions,
-        };
-      }
-    }
-
-    // Image search product IDs filter (if provided by image similarity search)
+    // Base filters: Image search product IDs filter
     let imageProductQuery: any = {};
     if (productIds && productIds.trim().length > 0) {
       const validIds = productIds
@@ -155,6 +92,7 @@ export class ProductsService {
         imageProductQuery = { _id: { $in: validIds } };
       }
     }
+
     // Category filter: single or multiple (comma-separated or array)
     let categoryQuery: any = {};
     if (category) {
@@ -215,14 +153,130 @@ export class ProductsService {
       visibilityQuery['vi.visibility'] = { $ne: false };
     }
 
-    const filterConditions = [categoryQuery, stockQuery, ratingQuery]
-      .filter((condition) => Object.keys(condition).length > 0);
+    const filterConditions = [
+      imageProductQuery,
+      categoryQuery,
+      priceQuery,
+      stockQuery,
+      ratingQuery,
+      visibilityQuery,
+    ].filter((condition) => Object.keys(condition).length > 0);
+
+    const baseAndFilter = filterConditions.length > 0 ? { $and: filterConditions } : {};
+
+    // SMART PRODUCT SEARCH FLOW (When search query is provided)
+    if (search && search.trim().length > 0) {
+      const candidateSearchQuery = this.smartSearchService.buildCandidateQuery(search, currentLang);
+      const initialCandidateQuery = {
+        ...candidateSearchQuery,
+        ...baseAndFilter,
+      };
+
+      let candidates = await this.productModel.find(initialCandidateQuery).lean();
+
+      // Controlled expansion: if candidate count is below minimum threshold (e.g. 8),
+      // expand search to related attributes (colors, materials, garment types, or tags)
+      const MIN_EXPANSION_THRESHOLD = 8;
+      if (candidates.length < MIN_EXPANSION_THRESHOLD) {
+        const attrs = extractFashionAttributes(search);
+        const broaderOr: any[] = [];
+
+        if (attrs.colors.length > 0) {
+          for (const c of attrs.colors) {
+            broaderOr.push({ [`${currentLang}.title`]: new RegExp(escapeRegex(c), 'i') });
+            broaderOr.push({ 'vi.title': new RegExp(escapeRegex(c), 'i') });
+            broaderOr.push({ 'vi.colors.name': new RegExp(escapeRegex(c), 'i') });
+          }
+        }
+        if (attrs.materials.length > 0) {
+          for (const m of attrs.materials) {
+            broaderOr.push({ [`${currentLang}.title`]: new RegExp(escapeRegex(m), 'i') });
+            broaderOr.push({ 'vi.title': new RegExp(escapeRegex(m), 'i') });
+            broaderOr.push({ 'vi.description': new RegExp(escapeRegex(m), 'i') });
+          }
+        }
+        if (attrs.garmentTypes.length > 0) {
+          for (const g of attrs.garmentTypes) {
+            broaderOr.push({ [`${currentLang}.title`]: new RegExp(escapeRegex(g), 'i') });
+            broaderOr.push({ 'vi.title': new RegExp(escapeRegex(g), 'i') });
+            broaderOr.push({ tags: new RegExp(escapeRegex(g), 'i') });
+          }
+        }
+
+        if (broaderOr.length > 0) {
+          const existingIds = candidates.map((c: any) => c._id);
+          const expandedQuery = {
+            _id: { $nin: existingIds },
+            $or: broaderOr,
+            ...baseAndFilter,
+          };
+          const additionalCandidates = await this.productModel
+            .find(expandedQuery)
+            .limit(30)
+            .lean();
+          candidates = candidates.concat(additionalCandidates);
+        }
+      }
+
+      // Deduplicate candidates by _id
+      const uniqueMap = new Map<string, any>();
+      for (const c of candidates) {
+        uniqueMap.set(String(c._id), c);
+      }
+      const uniqueCandidates = Array.from(uniqueMap.values());
+
+      // Score and rank candidates using 5-tier relevance architecture
+      const searchResult = this.smartSearchService.scoreAndRankProducts(
+        uniqueCandidates,
+        search,
+        currentLang,
+        MIN_EXPANSION_THRESHOLD
+      );
+
+      let scoredList = searchResult.scoredProducts;
+
+      // Handle user explicit sorting (e.g. priceasc, pricedesc, ratingdesc, etc.)
+      // By default (or when 'newest'), relevance score is primary, with newest as secondary
+      if (sort && sort !== SortOptions.newest) {
+        scoredList = this.sortScoredProducts(scoredList, sort, currentLang);
+      }
+
+      const total = scoredList.length;
+      const limit = Number(pageSize) || paginationLimit;
+      const currentPage = parseFloat(page) || 1;
+      const pages = Math.ceil(total / limit) || 1;
+      const startIndex = (currentPage - 1) * limit;
+      const pagedScored = scoredList.slice(startIndex, startIndex + limit);
+      const pagedProducts = pagedScored.map((sp) => sp.product);
+
+      // Attach variants for the current page items
+      const foundProductIds = pagedProducts.map((product: any) => product._id);
+      const variantsList = await this.productVariantModel
+        .find({ productId: { $in: foundProductIds }, isActive: true })
+        .lean();
+      const variantMap = new Map<string, any[]>();
+      for (const v of variantsList) {
+        const pid = v.productId.toString();
+        if (!variantMap.has(pid)) variantMap.set(pid, []);
+        variantMap.get(pid)!.push(v);
+      }
+
+      return {
+        all: pagedProducts.map((product) => {
+          const pid = product._id ? product._id.toString() : '';
+          const attachedVariants = variantMap.get(pid) || product.variants || [];
+          return prepareProduct(product, lang, true, attachedVariants);
+        }),
+        total,
+        limit,
+        page: currentPage,
+        pages,
+      };
+    }
+
+    // REGULAR BROWSING FLOW (When no search query is provided)
     const query = {
-      ...searchQuery,
-      ...imageProductQuery,
-      ...priceQuery,
-      ...visibilityQuery,
-      ...(filterConditions.length > 0 ? { $and: filterConditions } : {}),
+      ...baseAndFilter,
     };
     const options = {
       page: parseFloat(page) || 1,
@@ -258,6 +312,46 @@ export class ProductsService {
     };
   }
 
+  private sortScoredProducts(
+    scoredList: ScoredProduct[],
+    sort: string,
+    lang: string
+  ): ScoredProduct[] {
+    const sorted = [...scoredList];
+    switch (sort) {
+      case 'newest':
+        return sorted.sort((a, b) => {
+          const tA = new Date(a.product.dateAdded || 0).getTime();
+          const tB = new Date(b.product.dateAdded || 0).getTime();
+          return tB - tA;
+        });
+      case 'oldest':
+        return sorted.sort((a, b) => {
+          const tA = new Date(a.product.dateAdded || 0).getTime();
+          const tB = new Date(b.product.dateAdded || 0).getTime();
+          return tA - tB;
+        });
+      case 'priceasc':
+        return sorted.sort((a, b) => {
+          const pA = a.product[lang]?.salePrice ?? a.product.vi?.salePrice ?? 0;
+          const pB = b.product[lang]?.salePrice ?? b.product.vi?.salePrice ?? 0;
+          return pA - pB;
+        });
+      case 'pricedesc':
+        return sorted.sort((a, b) => {
+          const pA = a.product[lang]?.salePrice ?? a.product.vi?.salePrice ?? 0;
+          const pB = b.product[lang]?.salePrice ?? b.product.vi?.salePrice ?? 0;
+          return pB - pA;
+        });
+      case 'ratingdesc':
+        return sorted.sort((a, b) => (b.product.rating || 0) - (a.product.rating || 0));
+      case 'ratingasc':
+        return sorted.sort((a, b) => (a.product.rating || 0) - (b.product.rating || 0));
+      default:
+        return sorted;
+    }
+  }
+
   async getCategories(lang: string): Promise<Category[]> {
     const query = { [`${lang}.visibility`]: true };
     const categories = await this.categoryModel
@@ -267,10 +361,12 @@ export class ProductsService {
   }
 
   async getProductsTitles(search: string): Promise<string[]> {
-    const products = await this.productModel.find({
-      titleUrl: new RegExp(search, 'i'),
-    });
-    return products.map((product) => product.titleUrl);
+    if (!search || !search.trim()) return [];
+    const candidateQuery = this.smartSearchService.buildCandidateQuery(search, 'vi');
+    const candidates = await this.productModel.find(candidateQuery).limit(40).lean();
+    if (!candidates || candidates.length === 0) return [];
+    const ranked = this.smartSearchService.scoreAndRankProducts(candidates, search, 'vi', 5);
+    return ranked.scoredProducts.slice(0, 10).map((sp) => sp.product.titleUrl || sp.product.title);
   }
 
   async getProductByName(

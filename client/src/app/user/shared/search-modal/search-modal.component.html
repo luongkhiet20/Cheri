@@ -3,7 +3,7 @@
   <!-- Backdrop Overlay (tối nhẹ phía sau) -->
   <div class="cheri-search-backdrop"></div>
 
-  <!-- Thanh tìm kiếm sát phía trên viewport, chiếm toàn bộ chiều rộng màn hình -->
+  <!-- Thanh tìm kiếm căn giữa Header với khoảng cách cân đối ở hai bên -->
   <div class="cheri-top-search-bar" (click)="$event.stopPropagation()">
     <form class="cheri-search-bar-form" (ngSubmit)="submitSearch()">
       <!-- Biểu tượng kính lúp SVG bên trái -->
@@ -14,7 +14,7 @@
         </svg>
       </button>
 
-      <!-- Ô nhập từ khóa ở giữa, tận dụng toàn bộ không gian còn lại -->
+      <!-- Ô nhập từ khóa ở giữa, tận dụng toàn bộ không gian còn lại (font 18px kế thừa) -->
       <input
         #searchInput
         type="text"
@@ -38,37 +38,6 @@
         </svg>
       </button>
     </form>
-
-    <!-- Dropdown gợi ý tìm kiếm & thông báo lỗi bên dưới thanh tìm kiếm -->
-    @if (errorMessage || (suggestions && suggestions.length > 0)) {
-    <div class="cheri-search-dropdown-panel">
-      <!-- Error alert -->
-      @if (errorMessage) {
-      <div class="cheri-search-error">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="8" x2="12" y2="12"></line>
-          <line x1="12" y1="16" x2="12.01" y2="16"></line>
-        </svg>
-        <span>{{ errorMessage }}</span>
-      </div>
-      }
-
-      <!-- Suggestions chips -->
-      @if (suggestions && suggestions.length > 0) {
-      <div class="cheri-suggestions-row">
-        <span class="cheri-suggestions-label">Gợi ý tìm kiếm:</span>
-        <div class="cheri-suggestions-list">
-          @for (s of suggestions; track s) {
-          <button type="button" class="cheri-suggestion-chip" (click)="selectSuggestion(s)">
-            {{ s }}
-          </button>
-          }
-        </div>
-      </div>
-      }
-    </div>
-    }
   </div>
 </div>
 }

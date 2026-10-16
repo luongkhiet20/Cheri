@@ -84,10 +84,10 @@
           <div class="cheri-price-status-container">
             <div class="cheri-price-group">
               @if (isOnSale && displayRegularPrice > displaySalePrice) {
-              <span class="cheri-price-sale">{{ displaySalePrice | priceFormat }} ₫</span>
-              <span class="cheri-price-regular">{{ displayRegularPrice | priceFormat }} ₫</span>
+              <span class="cheri-price-sale">{{ displaySalePrice | priceFormat }} đ</span>
+              <span class="cheri-price-regular">{{ displayRegularPrice | priceFormat }} đ</span>
               } @else {
-              <span class="cheri-price-sale">{{ (displaySalePrice || displayRegularPrice) | priceFormat }} ₫</span>
+              <span class="cheri-price-sale">{{ (displaySalePrice || displayRegularPrice) | priceFormat }} đ</span>
               }
             </div>
 
@@ -197,13 +197,13 @@
               @if (shippingInfo.basicCost !== null) {
               <div class="shipping-fee-line">
                 <span class="fee-name">Phí cơ bản:</span>
-                <span class="fee-val">{{ shippingInfo.basicCost | priceFormat }} ₫</span>
+                <span class="fee-val">{{ shippingInfo.basicCost | priceFormat }} đ</span>
               </div>
               }
               @if (shippingInfo.extendedCost !== null) {
               <div class="shipping-fee-line">
                 <span class="fee-name">Phí mở rộng:</span>
-                <span class="fee-val">{{ shippingInfo.extendedCost | priceFormat }} ₫</span>
+                <span class="fee-val">{{ shippingInfo.extendedCost | priceFormat }} đ</span>
               </div>
               }
               @if (shippingInfo.note) {

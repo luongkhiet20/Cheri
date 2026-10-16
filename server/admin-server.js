@@ -2191,7 +2191,7 @@ app.get('/api/categories', async (req, res) => {
         ]
       });
 
-      const isVisible = c.vi?.visibility !== false;
+      const isVisible = c.vi?.visibility !== false && c.visibility !== false;
       const position = typeof c.vi?.position === 'number' ? c.vi.position : (typeof c.position === 'number' ? c.position : 0);
       return {
         id: c._id.toString(),
@@ -2200,6 +2200,7 @@ app.get('/api/categories', async (req, res) => {
         slug: c.titleUrl || '',
         productCount: productCount || 0,
         position,
+        visibility: isVisible,
         status: isVisible ? 'Hiển thị' : 'Ẩn',
         statusVariant: isVisible ? 'success' : 'neutral',
         image: c.mainImage?.url || ''
@@ -2362,35 +2363,39 @@ app.put('/api/categories/:id', async (req, res) => {
     if (!ObjectId.isValid(id)) {
       return res.status(400).json({ success: false, message: 'ID danh mục không hợp lệ' });
     }
-    const body = req.body || {};
-    const vi = body.vi || {};
-    const title = (vi.title || body.name || '').trim();
-
-    if (!title) {
-      return res.status(400).json({ success: false, message: 'Tên danh mục không được để trống' });
-    }
-
-    const slug = (body.titleUrl || body.slug || generateSlug(title)).trim();
-
-    // Check duplicate with other category
-    const existing = await db.collection('categories').findOne({
-      _id: { $ne: new ObjectId(id) },
-      $or: [
-        { 'vi.title': { $regex: `^${title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } },
-        { titleUrl: slug }
-      ]
-    });
-
-    if (existing) {
-      return res.status(400).json({ success: false, message: 'Tên danh mục hoặc mã slug đã tồn tại trong hệ thống' });
-    }
 
     const oldCat = await db.collection('categories').findOne({ _id: new ObjectId(id) });
     if (!oldCat) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy danh mục' });
     }
     const oldVi = oldCat.vi || {};
-    const oldTitle = oldVi.title || oldCat.title;
+    const oldTitle = oldVi.title || oldCat.title || oldCat.titleUrl || '';
+
+    const body = req.body || {};
+    const vi = body.vi || {};
+    const title = (vi.title !== undefined ? vi.title : (body.name !== undefined ? body.name : oldTitle)).trim();
+
+    if (!title) {
+      return res.status(400).json({ success: false, message: 'Tên danh mục không được để trống' });
+    }
+
+    const slug = (body.titleUrl || body.slug || (title !== oldTitle ? generateSlug(title) : (oldCat.titleUrl || generateSlug(title)))).trim();
+
+    // Check duplicate with other category (only if title or slug changed)
+    if (title !== oldTitle || slug !== oldCat.titleUrl) {
+      const existing = await db.collection('categories').findOne({
+        _id: { $ne: new ObjectId(id) },
+        $or: [
+          { 'vi.title': { $regex: `^${title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } },
+          { titleUrl: slug }
+        ]
+      });
+
+      if (existing) {
+        return res.status(400).json({ success: false, message: 'Tên danh mục hoặc mã slug đã tồn tại trong hệ thống' });
+      }
+    }
+
     const oldPosition = typeof oldVi.position === 'number' ? oldVi.position : (typeof oldCat.position === 'number' ? oldCat.position : 0);
     const oldParentIdObj = oldCat.parentId || null;
 
@@ -2408,20 +2413,22 @@ app.put('/api/categories/:id', async (req, res) => {
     const position = Number.isInteger(parsedPos) && parsedPos >= 0 ? parsedPos : oldPosition;
 
     // Reorder siblings in the parent group to avoid duplicate positions
-    await reorderSiblingCategories(db, {
-      categoryId: id,
-      parentIdObj,
-      newPosition: position,
-      oldPosition,
-      oldParentIdObj
-    });
+    if (position !== oldPosition || String(parentIdObj) !== String(oldParentIdObj)) {
+      await reorderSiblingCategories(db, {
+        categoryId: id,
+        parentIdObj,
+        newPosition: position,
+        oldPosition,
+        oldParentIdObj
+      });
+    }
 
     const mainImageUrl = body.mainImage?.url !== undefined ? body.mainImage.url : (body.image || oldCat.mainImage?.url || '');
     const mainImageName = body.mainImage?.name || title;
 
     // Preserve existing vi fields if not explicitly overridden
     const description = vi.description !== undefined ? String(vi.description).trim() : (body.description !== undefined ? String(body.description).trim() : (oldVi.description || ''));
-    const visibility = vi.visibility !== undefined ? vi.visibility : (body.visibility !== undefined ? body.visibility : (oldVi.visibility !== false));
+    const visibility = vi.visibility !== undefined ? vi.visibility : (body.visibility !== undefined ? body.visibility : (oldVi.visibility !== false && oldCat.visibility !== false));
     const menuHidden = vi.menuHidden !== undefined ? !!vi.menuHidden : (oldVi.menuHidden !== undefined ? !!oldVi.menuHidden : false);
 
     const updateFields = {
@@ -2430,6 +2437,7 @@ app.put('/api/categories/:id', async (req, res) => {
       'mainImage.name': mainImageName,
       parentId: parentIdObj,
       updatedAt: new Date().toISOString(),
+      visibility: visibility,
       'vi.title': title,
       'vi.description': description,
       'vi.position': position,
@@ -2458,10 +2466,55 @@ app.put('/api/categories/:id', async (req, res) => {
         _id: id,
         name: title,
         slug,
-        position
+        position,
+        visibility,
+        status: visibility ? 'Hiển thị' : 'Ẩn'
       }
     });
   } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Toggle category visibility (PATCH /api/categories/:id/toggle or PATCH /api/categories/:id)
+app.patch(['/api/categories/:id/toggle', '/api/categories/:id'], async (req, res) => {
+  try {
+    const id = req.params.id;
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'ID danh mục không hợp lệ' });
+    }
+    const cat = await db.collection('categories').findOne({ _id: new ObjectId(id) });
+    if (!cat) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy danh mục' });
+    }
+    const currentVis = cat.vi?.visibility !== false && cat.visibility !== false;
+    const nextVis = req.body?.visibility !== undefined ? Boolean(req.body.visibility) : (req.body?.vi?.visibility !== undefined ? Boolean(req.body.vi.visibility) : !currentVis);
+
+    await db.collection('categories').updateOne(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          'vi.visibility': nextVis,
+          visibility: nextVis,
+          updatedAt: new Date().toISOString()
+        }
+      }
+    );
+
+    res.json({
+      success: true,
+      visibility: nextVis,
+      status: nextVis ? 'Hiển thị' : 'Ẩn',
+      message: `Đã ${nextVis ? 'bật' : 'tắt'} hiển thị danh mục thành công`,
+      data: {
+        id,
+        _id: id,
+        visibility: nextVis,
+        status: nextVis ? 'Hiển thị' : 'Ẩn'
+      }
+    });
+  } catch (error) {
+    console.error('Error toggling category visibility:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });

@@ -265,9 +265,9 @@
                   </span>
                   <span *ngIf="!row.hasVariant" class="text-muted text-xs">Không có biến thể</span>
                 </td>
-                <td class="text-right font-medium">{{ row.price ? (row.price | number:'1.0-0') + '₫' : '—' }}</td>
-                <td class="text-right text-success">{{ row.discountPrice > 0 ? (row.discountPrice | number:'1.0-0') +
-                  '₫' : '—' }}</td>
+                <td class="text-right font-medium">{{ row.price ? (row.price | priceFormat) + ' đ' : '—' }}</td>
+                <td class="text-right text-success">{{ row.discountPrice > 0 ? (row.discountPrice | priceFormat) +
+                  ' đ' : '—' }}</td>
                 <td class="text-right font-medium">{{ row.stock | number }}</td>
                 <td class="text-center">
                   <span class="badge" [ngClass]="row.isUpdate ? 'badge-warning' : 'badge-primary'">

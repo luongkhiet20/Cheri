@@ -114,6 +114,18 @@ export class AdminService {
     return this.http.put(`${this.baseUrl}/categories/${id}`, data);
   }
 
+  toggleCategoryVisibility(id: string, visibility: boolean, name?: string): Observable<any> {
+    const payload: any = {
+      visibility,
+      vi: { visibility }
+    };
+    if (name) {
+      payload.name = name;
+      payload.vi.title = name;
+    }
+    return this.http.put(`${this.baseUrl}/categories/${id}`, payload);
+  }
+
   deleteCategory(id: string): Observable<any> {
     return this.http.delete(`${this.baseUrl}/categories/${id}`);
   }
@@ -158,6 +170,14 @@ export class AdminService {
 
   patchOrderStatus(id: string, status: string, note?: string): Observable<any> {
     return this.http.patch(`${this.baseUrl}/orders/${id}/status`, { status, note });
+  }
+
+  updateReturnRequestWorkflow(orderId: string, reqId: string, action: string, data: any = {}): Observable<any> {
+    return this.http.patch(`${this.baseUrl}/orders/${orderId}/return-requests/${reqId}/status`, { action, ...data });
+  }
+
+  updateCodReconciliation(orderId: string, data: any): Observable<any> {
+    return this.http.patch(`${this.baseUrl}/orders/${orderId}/cod-reconciliation`, data);
   }
 
 

@@ -114,6 +114,119 @@ const ShippingLogSchema = new Schema(
   { _id: false },
 );
 
+// ─── Return & Refund Sub-schemas ─────────────────────────────────────────────
+
+export enum ReturnRequestStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  WAITING_FOR_RETURN_SHIPMENT = 'WAITING_FOR_RETURN_SHIPMENT',
+  RETURN_SHIPPED = 'RETURN_SHIPPED',
+  RETURN_RECEIVED = 'RETURN_RECEIVED',
+  INSPECTED = 'INSPECTED',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
+}
+
+export enum RefundStatus {
+  NOT_REQUIRED = 'NOT_REQUIRED',
+  PENDING = 'PENDING',
+  PROCESSING = 'PROCESSING',
+  COMPLETED = 'COMPLETED',
+  FAILED = 'FAILED',
+  CANCELLED = 'CANCELLED',
+}
+
+const ReturnItemSchema = new Schema(
+  {
+    productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
+    variantId: { type: Schema.Types.Mixed, default: null },
+    productSnapshot: { type: ProductSnapshotSchema, required: true },
+    quantity: { type: Number, required: true, min: 1 },
+    boughtQuantity: { type: Number, required: true, min: 1 },
+    unitPrice: { type: Number, required: true, min: 0 },
+    subtotal: { type: Number, required: true, min: 0 },
+    reason: { type: String, default: '' },
+    inspectedQuantity: { type: Number, default: 0 },
+    eligibleQuantity: { type: Number, default: 0 },
+    damagedQuantity: { type: Number, default: 0 },
+    isEligible: { type: Boolean, default: null },
+    conditionNotes: { type: String, default: '' },
+  },
+  { _id: false },
+);
+
+const ReturnHistorySchema = new Schema(
+  {
+    action: { type: String, required: true },
+    fromStatus: { type: String, default: '' },
+    toStatus: { type: String, required: true },
+    updatedAt: { type: Date, default: Date.now },
+    updatedBy: { type: Schema.Types.Mixed, default: null },
+    note: { type: String, default: '' },
+  },
+  { _id: false },
+);
+
+const ReturnRequestSchema = new Schema(
+  {
+    requestId: { type: String, required: true },
+    requestedAt: { type: Date, default: Date.now },
+    reason: { type: String, required: true },
+    description: { type: String, default: '' },
+    images: { type: [String], default: [] },
+    refundMethod: { type: String, default: 'ORIGINAL_PAYMENT' },
+    status: {
+      type: String,
+      required: true,
+      enum: Object.values(ReturnRequestStatus),
+      default: ReturnRequestStatus.PENDING,
+    },
+    rejectionReason: { type: String, default: '' },
+    items: { type: [ReturnItemSchema], default: [] },
+
+    // Return shipment (customer sends back to Cheri)
+    returnShipping: {
+      carrier: { type: String, default: '' },
+      trackingCode: { type: String, default: '' },
+      shippedAt: { type: Date, default: null },
+      receivedAt: { type: Date, default: null },
+      instructions: { type: String, default: '' },
+    },
+
+    // Warehouse inspection
+    inspection: {
+      inspectedAt: { type: Date, default: null },
+      inspectedBy: { type: Schema.Types.Mixed, default: null },
+      conditionNotes: { type: String, default: '' },
+      isEligible: { type: Boolean, default: null },
+      restocked: { type: Boolean, default: false },
+    },
+
+    // Refund details
+    refund: {
+      status: {
+        type: String,
+        enum: Object.values(RefundStatus),
+        default: RefundStatus.PENDING,
+      },
+      requestedAmount: { type: Number, default: 0, min: 0 },
+      approvedAmount: { type: Number, default: 0, min: 0 },
+      refundedAmount: { type: Number, default: 0, min: 0 },
+      transactionId: { type: String, default: '' },
+      bankName: { type: String, default: '' },
+      accountNumber: { type: String, default: '' },
+      accountHolder: { type: String, default: '' },
+      refundedAt: { type: Date, default: null },
+      failureReason: { type: String, default: '' },
+      notes: { type: String, default: '' },
+    },
+
+    history: { type: [ReturnHistorySchema], default: [] },
+  },
+  { _id: false },
+);
+
 // ─── Main Order Schema ────────────────────────────────────────────────────────
 
 const OrderSchema = new Schema(
@@ -177,6 +290,15 @@ const OrderSchema = new Schema(
       paidAt: { type: Date, default: null },
       refundedAmount: { type: Number, default: 0, min: 0 },
       refundedAt: { type: Date, default: null },
+      actualCollectedAmount: { type: Number, default: 0, min: 0 },
+      codCollected: { type: Boolean, default: false },
+      codCollectedAt: { type: Date, default: null },
+      codReconciliationStatus: {
+        type: String,
+        default: 'NOT_APPLICABLE',
+        enum: ['NOT_APPLICABLE', 'UNRECONCILED', 'RECONCILED'],
+      },
+      codReconciledAt: { type: Date, default: null },
     },
     paymentMethodId: { type: Schema.Types.ObjectId, ref: 'PaymentMethod', index: true, default: null },
     paymentMethodSnapshot: { type: PaymentMethodSnapshotSchema, default: null },
@@ -192,6 +314,7 @@ const OrderSchema = new Schema(
     paidAt: { type: Date, default: null },
     refundedAmount: { type: Number, default: 0, min: 0 },
     refundedAt: { type: Date, default: null },
+    actualCollectedAmount: { type: Number, default: 0, min: 0 },
 
     // Tổng tiền
     subtotal: { type: Number, required: true, min: 0, default: 0 },
@@ -215,7 +338,10 @@ const OrderSchema = new Schema(
     // Lịch sử vận trình của carrier (PICKED_UP → IN_TRANSIT → OUT_FOR_DELIVERY → DELIVERED)
     shippingLogs: { type: [ShippingLogSchema], default: [] },
 
-    // Yêu cầu đổi trả / hoàn tiền từ khách hàng
+    // Danh sách các yêu cầu đổi trả / hoàn tiền từ khách hàng
+    returnRequests: { type: [ReturnRequestSchema], default: [] },
+
+    // Yêu cầu đổi trả / hoàn tiền gần nhất (đồng bộ tương thích ngược)
     returnRequest: { type: Schema.Types.Mixed, default: null },
   },
   {

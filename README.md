@@ -169,10 +169,7 @@ npm run lint:css:fix
 
 ## 🐳 Triển Khai Với Docker (Tùy Chọn)
 
-```bash
-# Kéo image Docker
-docker pull pararel/eshop-mean:latest
+
 
 # Chạy Docker kèm file .env
-docker run --env-file .env --network=host pararel/eshop-mean:latest
-```
+docker run --env-file .env 

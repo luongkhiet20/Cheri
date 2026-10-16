@@ -2,6 +2,7 @@ import { Component, EventEmitter, Input, Output, OnInit, OnChanges, SimpleChange
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../../services/api.service';
+import { formatVND } from '../../../../pipes/price.pipe';
 
 export interface ReturnRefundResult {
   orderId: string;
@@ -162,7 +163,7 @@ export class OrderReturnRefundDialogComponent implements OnInit, OnChanges {
 
   formatAmount(val: number | undefined): string {
     if (!val && val !== 0) return '—';
-    return Number(val).toLocaleString('vi-VN') + ' đ';
+    return formatVND(val);
   }
 
   formatDate(dateVal: any): string {
@@ -302,7 +303,8 @@ export class OrderReturnRefundDialogComponent implements OnInit, OnChanges {
       reason: finalReason,
       description: trimmedDesc,
       items: selectedItems,
-      refundMethod: this.refundMethod
+      refundMethod: this.refundMethod,
+      images: this.selectedImages.map(img => img.preview)
     };
 
     this.isSubmitting = true;

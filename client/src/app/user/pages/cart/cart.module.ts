@@ -9,9 +9,8 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatStepperModule } from '@angular/material/stepper';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSelectModule } from '@angular/material/select';
 
 import { CartComponent } from './cart/cart.component';
 import { CardComponent } from './card/card.component';
@@ -40,7 +39,6 @@ import { OrderInfoComponent } from '../../shared/order-info/order-info.component
     MatStepperModule,
     MatSelectModule,
     MatCheckboxModule,
-    MatSnackBarModule,
     OrderInfoComponent,
     RouterModule.forChild([
       { path: '', component: CartComponent }

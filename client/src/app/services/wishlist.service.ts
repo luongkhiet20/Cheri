@@ -1,8 +1,8 @@
 import { Injectable, Inject, PLATFORM_ID, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { Router, NavigationEnd } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { filter, take } from 'rxjs/operators';
+import { NotificationService } from '../user/shared/notification/notification.service';
 
 @Injectable({
   providedIn: 'root'
@@ -14,7 +14,7 @@ export class WishlistService {
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
     private router: Router,
-    private snackBar: MatSnackBar
+    private notificationService: NotificationService
   ) {
     this._initWishlist();
   }
@@ -153,18 +153,10 @@ export class WishlistService {
       }
     }
 
-    const msg = isIn ? 'Đã bỏ khỏi yêu thích' : 'Đã thêm vào yêu thích ♡';
-    const action = isIn ? 'Đóng' : 'Xem yêu thích';
-    const snackBarRef = this.snackBar.open(msg, action, {
-      duration: 3000,
-      horizontalPosition: 'center',
-      verticalPosition: 'bottom'
-    });
-
-    if (!isIn) {
-      snackBarRef.onAction().pipe(take(1)).subscribe(() => {
-        this.router.navigate(['/' + (lang || 'vi') + '/wishlist']);
-      });
+    if (isIn) {
+      this.notificationService.info('✨Đã xóa khỏi danh sách yêu thích✨');
+    } else {
+      this.notificationService.success('✨Đã thêm vào danh sách yêu thích✨');
     }
 
     return !isIn;

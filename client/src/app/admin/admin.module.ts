@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Routes } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { DragDropModule } from '@angular/cdk/drag-drop';
+import { PriceFormatPipe } from '../pipes/price.pipe';
 
 // Layout
 import { AdminLayout } from './layout/admin-layout/admin-layout';
@@ -178,6 +179,7 @@ const routes: Routes = [
     FormsModule,
     ReactiveFormsModule,
     DragDropModule,
+    PriceFormatPipe,
     RouterModule.forChild(routes),
   ],
   exports: [

@@ -175,7 +175,7 @@ export class OrdersController {
     @GetUser() user: User,
     @Session() session: any,
     @Headers('x-guest-cart-id') guestCartId?: string,
-  ): Promise<{ error: string; result: Order }> {
+  ): Promise<{ error: string; result: Order; cart?: any }> {
     return this.ordersService.addOrder(orderDto, user, 'vi', session, guestCartId);
   }
 
@@ -187,7 +187,7 @@ export class OrdersController {
     @GetUser() user: User,
     @Session() session: any,
     @Headers('x-guest-cart-id') guestCartId?: string,
-  ): Promise<{ error: string; result: Order }> {
+  ): Promise<{ error: string; result: Order; cart?: any }> {
     return this.ordersService.orderWithStripe(body, user, 'vi', session, guestCartId);
   }
 
@@ -281,6 +281,29 @@ export class OrdersController {
   @Put()
   updateOrderPut(@Body() order, @GetUser() user: User) {
     return this.ordersService.updateOrder({ ...order, updatedBy: user?._id || null });
+  }
+
+  // ─── Admin: Xử lý quy trình trả hàng & hoàn tiền ────────────────────────
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @Patch('/:id/return-requests/:reqId/status')
+  updateReturnRequestWorkflow(
+    @Param('id') id: string,
+    @Param('reqId') reqId: string,
+    @Body() body: { action: string; [key: string]: any },
+    @GetUser() user: User,
+  ) {
+    return this.ordersService.updateReturnRequestWorkflow(id, reqId, body?.action, body, user);
+  }
+
+  // ─── Admin: Cập nhật đối soát COD ───────────────────────────────────────
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @Patch('/:id/cod-reconciliation')
+  updateCodReconciliation(
+    @Param('id') id: string,
+    @Body() body: any,
+    @GetUser() user: User,
+  ) {
+    return this.ordersService.updateCodReconciliation(id, body, user);
   }
 
   // ─── Admin: xóa order (Vô hiệu hóa để bảo vệ dữ liệu nghiệp vụ) ───────────

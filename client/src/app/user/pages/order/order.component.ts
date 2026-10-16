@@ -421,4 +421,45 @@ export class OrderComponent implements OnInit, OnDestroy {
       window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     }
   }
+
+  // ── Return & Refund Tracking ──
+  getReturnRequests(): any[] {
+    if (!this.currentOrder) return [];
+    if (Array.isArray(this.currentOrder.returnRequests) && this.currentOrder.returnRequests.length > 0) {
+      return this.currentOrder.returnRequests;
+    }
+    if (this.currentOrder.returnRequest) {
+      return [this.currentOrder.returnRequest];
+    }
+    return [];
+  }
+
+  getReturnRequestStatusLabel(status: string): string {
+    const s = (status || '').toUpperCase();
+    switch (s) {
+      case 'PENDING': return 'Chờ duyệt';
+      case 'APPROVED': return 'Đã duyệt';
+      case 'REJECTED': return 'Từ chối';
+      case 'WAITING_FOR_RETURN_SHIPMENT': return 'Chờ gửi hàng hoàn';
+      case 'RETURN_SHIPPED': return 'Đã gửi hàng hoàn';
+      case 'RETURN_RECEIVED': return 'Chéri đã nhận hàng';
+      case 'INSPECTED': return 'Đã kiểm tra hàng';
+      case 'COMPLETED': return 'Hoàn tất trả hàng';
+      case 'CANCELLED': return 'Đã hủy';
+      default: return status || '—';
+    }
+  }
+
+  getRefundStatusLabel(status: string): string {
+    const s = (status || '').toUpperCase();
+    switch (s) {
+      case 'NOT_REQUIRED': return 'Không phát sinh hoàn tiền';
+      case 'PENDING': return 'Chờ xử lý';
+      case 'PROCESSING': return 'Đang xử lý';
+      case 'COMPLETED': return 'Đã hoàn tiền thành công';
+      case 'FAILED': return 'Hoàn tiền thất bại';
+      case 'CANCELLED': return 'Đã hủy';
+      default: return status || '—';
+    }
+  }
 }

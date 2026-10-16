@@ -185,12 +185,12 @@
 .cheri-gallery-col {
   flex: 0 0 46%;
   max-width: 46%;
-  padding: 32px 28px;
+  padding: 16px 28px 24px 28px;
   background: #FFFFFF;
   border-right: 1px solid #F0ECE9;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   box-sizing: border-box;
   position: sticky;
   top: 85px;
@@ -200,7 +200,8 @@
 .cheri-main-image-container {
   position: relative;
   width: 100%;
-  height: 480px;
+  height: 580px;
+  min-height: 520px;
   background: #FFFFFF;
   border-radius: 8px;
   border: 1px solid #EFEAE6;
@@ -210,6 +211,7 @@
   justify-content: center;
   cursor: zoom-in;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  margin-top: 0;
 }
 
 .cheri-main-image {
@@ -218,8 +220,10 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
+  object-position: center;
   background: #FFFFFF;
   transition: transform 0.35s ease;
+  display: block;
 }
 
 .cheri-main-image-container:hover .cheri-main-image {
@@ -797,11 +801,12 @@
     position: static;
     border-right: none;
     border-bottom: 1px solid #F0ECE9;
-    padding: 24px 20px;
+    padding: 16px 20px 20px 20px;
   }
 
   .cheri-main-image-container {
-    height: 380px;
+    height: 440px;
+    min-height: 380px;
   }
 
   .cheri-details-col {
@@ -829,11 +834,12 @@
   }
 
   .cheri-gallery-col {
-    padding: 16px 12px;
+    padding: 12px 12px 16px 12px;
   }
 
   .cheri-main-image-container {
-    height: 320px;
+    height: 360px;
+    min-height: 300px;
   }
 
   .cheri-details-col {
@@ -848,4 +854,4 @@
   .cheri-action-btn {
     width: 100%;
   }
-}
+}

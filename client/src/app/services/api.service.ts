@@ -76,6 +76,10 @@ export class ApiService {
         return;
       }
       if (cartData && Array.isArray(cartData.items)) {
+        if (cartData.items.length === 0) {
+          localStorage.removeItem('cheri_guest_cart');
+          return;
+        }
         const items = cartData.items.map((ci: any) => ({
           productId: ci.item?._id || ci.item?.id || (ci.id && ci.id.includes('_') ? ci.id.split('_')[0] : ci.id),
           variantId: ci.variantId || null,
@@ -85,15 +89,19 @@ export class ApiService {
           selectedSize: ci.selectedSize || null,
         }));
         localStorage.setItem('cheri_guest_cart', JSON.stringify(items));
+      } else if (cartData && !cartData.items) {
+        localStorage.removeItem('cheri_guest_cart');
       }
     } catch {}
   }
 
-  public clearGuestCartLocal(): void {
+  public clearGuestCartLocal(removeId: boolean = false): void {
     if (!isPlatformBrowser(this.platformId)) return;
     try {
       localStorage.removeItem('cheri_guest_cart');
-      localStorage.removeItem('cheri_guest_cart_id');
+      if (removeId) {
+        localStorage.removeItem('cheri_guest_cart_id');
+      }
     } catch {}
   }
 
@@ -759,6 +767,16 @@ export class ApiService {
   mergeCart(guestItems: any[], lang = 'vi') {
     const url = `${this.apiUrl}/api/cart/merge?lang=${lang}`;
     return this.http.post(url, { items: guestItems }, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  clearCart(lang = 'vi') {
+    this.ranNumber = this.ranNumber + 1;
+    const randomNum = '&random=' + this.ranNumber;
+    const url = `${this.apiUrl}/api/cart/clear?lang=${lang}${randomNum}`;
+    return this.http.get(url, this.getRequestOptions()).pipe(
       map((response: any) => response),
       catchError((error: Error) => of({ error })),
     );

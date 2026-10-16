@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
 import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
+import { formatVND } from '../../../../pipes/price.pipe';
 
 @Component({
   selector: 'app-coupon-detail',
@@ -98,7 +99,7 @@ export class CouponDetailComponent implements OnInit {
     if (this.coupon.discountType === 'PERCENTAGE') {
       return `${this.coupon.discountValue}%`;
     }
-    return `${Number(this.coupon.discountValue).toLocaleString('vi-VN')} ₫`;
+    return formatVND(this.coupon.discountValue);
   }
 
   get maxDiscountFormatted(): string {
@@ -106,15 +107,15 @@ export class CouponDetailComponent implements OnInit {
     if (!this.coupon.maxDiscount || Number(this.coupon.maxDiscount) <= 0) {
       return 'Không giới hạn';
     }
-    return `${Number(this.coupon.maxDiscount).toLocaleString('vi-VN')} ₫`;
+    return formatVND(this.coupon.maxDiscount);
   }
 
   get minOrderValueFormatted(): string {
     if (!this.coupon) return '—';
     if (!this.coupon.minOrderValue || Number(this.coupon.minOrderValue) <= 0) {
-      return '0 ₫ (Không yêu cầu)';
+      return '0 đ (Không yêu cầu)';
     }
-    return `${Number(this.coupon.minOrderValue).toLocaleString('vi-VN')} ₫`;
+    return formatVND(this.coupon.minOrderValue);
   }
 
   formatDate(dateStr: string | null): string {

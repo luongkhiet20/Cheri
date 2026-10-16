@@ -90,6 +90,9 @@
                 <span class="status-pill" [ngClass]="getStatusClass(order.status)">
                   <span>{{ getStatusLabel(order.status) }}</span>
                 </span>
+                <span class="status-pill status-pill-return" *ngIf="getLatestReturnRequest(order) as retReq">
+                  <span>Đổi trả: {{ getReturnRequestStatusLabel(retReq.status) }}</span>
+                </span>
               </div>
             </header>
 
@@ -187,6 +190,44 @@
             <div class="order-shipping-strip">
               <div class="shipping-strip-text">
                 Giao đến: Sđt <strong>{{ getOrderPhone(order) }}</strong> | Địa chỉ: {{ getOrderAddress(order) }}
+              </div>
+            </div>
+
+            <!-- Return / Refund Tracking Box -->
+            <div class="order-return-tracking-box" *ngIf="getLatestReturnRequest(order) as retReq">
+              <div class="return-box-header">
+                <div class="return-box-title">
+                  <strong>Yêu cầu trả hàng & hoàn tiền</strong> ({{ retReq.requestId }})
+                </div>
+                <div class="return-box-badges">
+                  <span class="return-status-pill">{{ getReturnRequestStatusLabel(retReq.status) }}</span>
+                  <span class="return-refund-pill" *ngIf="retReq.refund?.status">
+                    Hoàn tiền: {{ getRefundStatusLabel(retReq.refund.status) }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="return-box-details">
+                <div *ngIf="retReq.rejectionReason" class="return-detail-item reject">
+                  <span class="item-label">Lý do từ chối:</span>
+                  <span class="item-val">{{ retReq.rejectionReason }}</span>
+                </div>
+                <div *ngIf="retReq.returnShipping?.instructions" class="return-detail-item instructions">
+                  <span class="item-label">Hướng dẫn gửi hàng hoàn:</span>
+                  <span class="item-val">{{ retReq.returnShipping.instructions }}</span>
+                </div>
+                <div *ngIf="retReq.returnShipping?.carrier || retReq.returnShipping?.trackingCode" class="return-detail-item">
+                  <span class="item-label">Vận chuyển hoàn:</span>
+                  <span class="item-val">{{ retReq.returnShipping.carrier || 'Chưa rõ ĐVVC' }} — Mã vận đơn: {{ retReq.returnShipping.trackingCode || '—' }}</span>
+                </div>
+                <div *ngIf="retReq.inspection?.conditionNotes" class="return-detail-item">
+                  <span class="item-label">Kiểm tra sản phẩm:</span>
+                  <span class="item-val">{{ retReq.inspection.conditionNotes }}</span>
+                </div>
+                <div *ngIf="retReq.refund?.approvedAmount" class="return-detail-item refund">
+                  <span class="item-label">Số tiền duyệt hoàn:</span>
+                  <span class="item-val font-bold">{{ retReq.refund.approvedAmount | priceFormat }} đ</span>
+                </div>
               </div>
             </div>
 

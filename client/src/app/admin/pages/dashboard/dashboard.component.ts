@@ -6,8 +6,8 @@ import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { AdminService } from '../../services/admin.service';
-
 import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
+import { formatVND } from '../../../pipes/price.pipe';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 export interface DonutSegment {
@@ -614,7 +614,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   formatVND(v: number): string {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(v);
+    return formatVND(v);
   }
 
   // ── DONUT helpers ────────────────────────────────────────────────────────

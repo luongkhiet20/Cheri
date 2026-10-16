@@ -1,11 +1,12 @@
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
+import { Observable, Subscription } from 'rxjs';
 import { filter, take, withLatestFrom } from 'rxjs/operators';
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Location } from '@angular/common';
 import { FormBuilder, FormGroup, FormControl, Validators } from '@angular/forms';
-import { Observable, Subscription } from 'rxjs';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { NotificationService } from '../../../shared/notification/notification.service';
+import { formatVND } from '../../../../pipes/price.pipe';
 
 import { TranslateService } from '../../../../services/translate.service';
 import { Cart, User, Order, PaymentMethod } from '../../../shared/models';
@@ -136,7 +137,7 @@ export class CartComponent implements OnInit, OnDestroy {
     private location: Location,
     private translate: TranslateService,
     private addressService: VietnamAddressService,
-    private snackBar: MatSnackBar
+    private notify: NotificationService
   ) {
     this.store.cleanError();
 
@@ -188,7 +189,7 @@ export class CartComponent implements OnInit, OnDestroy {
     this.error$.pipe(filter((err) => !!err)).subscribe((err) => {
       const msg = typeof err === 'string' ? err : 'Đặt hàng thất bại. Vui lòng thử lại.';
       if (typeof window !== 'undefined') {
-        this.snackBar.open(msg, 'Đóng', { duration: 4000 });
+        this.notify.error(`✨${msg}✨`);
       }
     });
   }
@@ -562,7 +563,7 @@ export class CartComponent implements OnInit, OnDestroy {
     }
 
     if (!matchedVariant) {
-      this.snackBar.open('Tùy chọn này hiện chưa có sẵn cho sản phẩm', 'Đóng', { duration: 2500 });
+      this.notify.warning('✨Tùy chọn này hiện chưa có sẵn cho sản phẩm✨');
       return;
     }
 
@@ -586,17 +587,15 @@ export class CartComponent implements OnInit, OnDestroy {
           next: (res: any) => {
             this.updatingItemId = null;
             if (res && res.error) {
-              this.snackBar.open('Cập nhật biến thể thất bại', 'Đóng', { duration: 2500 });
+              this.notify.error('✨Cập nhật biến thể thất bại✨');
               return;
             }
             if (res?.capped) {
-              this.snackBar.open(
-                `Số lượng đã được tự động điều chỉnh về ${res.newQty} theo tồn kho của biến thể mới`,
-                'Đóng',
-                { duration: 3500 },
+              this.notify.info(
+                `✨Số lượng đã được tự động điều chỉnh về ${res.newQty} theo tồn kho của biến thể mới✨`
               );
             } else {
-              this.snackBar.open('Đã đổi biến thể sản phẩm', 'Đóng', { duration: 2000 });
+              this.notify.success('✨Đã đổi biến thể sản phẩm thành công✨');
             }
             if (this.appliedCoupon && this.latestCart) {
               this.revalidateAppliedCoupon(this.latestCart);
@@ -604,7 +603,7 @@ export class CartComponent implements OnInit, OnDestroy {
           },
           error: () => {
             this.updatingItemId = null;
-            this.snackBar.open('Cập nhật biến thể thất bại', 'Đóng', { duration: 2500 });
+            this.notify.error('✨Cập nhật biến thể thất bại✨');
           },
         });
     });
@@ -767,7 +766,7 @@ export class CartComponent implements OnInit, OnDestroy {
       target = 1;
     } else if (this.modalStock > 0 && target > this.modalStock) {
       target = this.modalStock;
-      this.snackBar.open(`Tồn kho chỉ còn ${this.modalStock} sản phẩm`, 'Đóng', { duration: 2500 });
+      this.notify.warning(`✨Tồn kho chỉ còn ${this.modalStock} sản phẩm✨`);
     }
     this.modalQuantity = target;
     input.value = String(target);
@@ -835,7 +834,7 @@ export class CartComponent implements OnInit, OnDestroy {
   private finishModalSubmit(): void {
     this.isModalSubmitting = false;
     this.closeVariantModal();
-    this.snackBar.open('Đã cập nhật sản phẩm thành công', 'Đóng', { duration: 2500 });
+    this.notify.success('✨Đã cập nhật sản phẩm thành công✨');
     if (this.appliedCoupon && this.latestCart) {
       this.revalidateAppliedCoupon(this.latestCart);
     }
@@ -881,7 +880,7 @@ export class CartComponent implements OnInit, OnDestroy {
     if (this.updatingItemId) return;
     const maxStock = this.getItemStock(cartItem);
     if (cartItem.qty >= maxStock) {
-      this.snackBar.open(`Số lượng đã đạt giới hạn tồn kho (${maxStock})`, 'Đóng', { duration: 2500 });
+      this.notify.warning(`✨Số lượng đã đạt giới hạn tồn kho (${maxStock})✨`);
       return;
     }
 
@@ -891,7 +890,7 @@ export class CartComponent implements OnInit, OnDestroy {
         next: (res: any) => {
           this.updatingItemId = null;
           if (res?.error) {
-            this.snackBar.open('Cập nhật số lượng thất bại', 'Đóng', { duration: 2000 });
+            this.notify.error('✨Cập nhật số lượng thất bại✨');
             return;
           }
           if (this.appliedCoupon && this.latestCart) {
@@ -900,7 +899,7 @@ export class CartComponent implements OnInit, OnDestroy {
         },
         error: () => {
           this.updatingItemId = null;
-          this.snackBar.open('Cập nhật số lượng thất bại', 'Đóng', { duration: 2000 });
+          this.notify.error('✨Cập nhật số lượng thất bại✨');
         },
       });
     });
@@ -909,7 +908,7 @@ export class CartComponent implements OnInit, OnDestroy {
   decreaseQuantity(cartItem: any): void {
     if (this.updatingItemId) return;
     if (cartItem.qty <= 1) {
-      this.snackBar.open('Số lượng sản phẩm tối thiểu là 1', 'Đóng', { duration: 1500 });
+      this.notify.warning('✨Số lượng sản phẩm tối thiểu là 1✨');
       return;
     }
 
@@ -919,7 +918,7 @@ export class CartComponent implements OnInit, OnDestroy {
         next: (res: any) => {
           this.updatingItemId = null;
           if (res?.error) {
-            this.snackBar.open('Cập nhật số lượng thất bại', 'Đóng', { duration: 2000 });
+            this.notify.error('✨Cập nhật số lượng thất bại✨');
             return;
           }
           if (this.appliedCoupon && this.latestCart) {
@@ -928,7 +927,7 @@ export class CartComponent implements OnInit, OnDestroy {
         },
         error: () => {
           this.updatingItemId = null;
-          this.snackBar.open('Cập nhật số lượng thất bại', 'Đóng', { duration: 2000 });
+          this.notify.error('✨Cập nhật số lượng thất bại✨');
         },
       });
     });
@@ -945,7 +944,7 @@ export class CartComponent implements OnInit, OnDestroy {
     } else if (maxStock > 0 && targetQty > maxStock) {
       targetQty = maxStock;
       input.value = String(maxStock);
-      this.snackBar.open(`Tồn kho chỉ còn ${maxStock} sản phẩm`, 'Đóng', { duration: 2500 });
+      this.notify.warning(`✨Tồn kho chỉ còn ${maxStock} sản phẩm✨`);
     }
 
     if (targetQty === cartItem.qty) return;
@@ -957,7 +956,7 @@ export class CartComponent implements OnInit, OnDestroy {
           this.updatingItemId = null;
           if (res?.error) {
             input.value = String(cartItem.qty);
-            this.snackBar.open('Không thể cập nhật số lượng', 'Đóng', { duration: 2000 });
+            this.notify.error('✨Không thể cập nhật số lượng✨');
             return;
           }
           if (this.appliedCoupon && this.latestCart) {
@@ -967,7 +966,7 @@ export class CartComponent implements OnInit, OnDestroy {
         error: () => {
           this.updatingItemId = null;
           input.value = String(cartItem.qty);
-          this.snackBar.open('Không thể cập nhật số lượng', 'Đóng', { duration: 2000 });
+          this.notify.error('✨Không thể cập nhật số lượng✨');
         },
       });
     });
@@ -985,17 +984,17 @@ export class CartComponent implements OnInit, OnDestroy {
           this.saveSelectionToStorage();
           this.updatingItemId = null;
           if (res?.error) {
-            this.snackBar.open('Xóa sản phẩm thất bại', 'Đóng', { duration: 2000 });
+            this.notify.error('✨Xóa sản phẩm thất bại✨');
             return;
           }
-          this.snackBar.open('Đã xóa sản phẩm khỏi giỏ hàng', 'Đóng', { duration: 2000 });
+          this.notify.success('✨Đã xóa sản phẩm khỏi giỏ hàng✨');
           if (this.appliedCoupon && this.latestCart) {
             this.revalidateAppliedCoupon(this.latestCart);
           }
         },
         error: () => {
           this.updatingItemId = null;
-          this.snackBar.open('Xóa sản phẩm thất bại', 'Đóng', { duration: 2000 });
+          this.notify.error('✨Xóa sản phẩm thất bại✨');
         },
       });
     });
@@ -1004,7 +1003,7 @@ export class CartComponent implements OnInit, OnDestroy {
   deleteSelectedItems(cart: Cart): void {
     const selectedIds = Array.from(this.selectedItemIds);
     if (selectedIds.length === 0) {
-      this.snackBar.open('Chưa chọn sản phẩm nào để xóa', 'Đóng', { duration: 2000 });
+      this.notify.warning('✨Chưa chọn sản phẩm nào để xóa✨');
       return;
     }
 
@@ -1014,17 +1013,17 @@ export class CartComponent implements OnInit, OnDestroy {
           this.selectedItemIds.clear();
           this.saveSelectionToStorage();
           if (res?.error) {
-            this.snackBar.open('Xóa các sản phẩm thất bại', 'Đóng', { duration: 2000 });
+            this.notify.error('✨Xóa các sản phẩm thất bại✨');
             return;
           }
-          this.snackBar.open(`Đã xóa ${selectedIds.length} sản phẩm`, 'Đóng', { duration: 2500 });
+          this.notify.success(`✨Đã xóa ${selectedIds.length} sản phẩm✨`);
           this.store.getCart(lang);
           if (this.appliedCoupon && this.latestCart) {
             this.revalidateAppliedCoupon(this.latestCart);
           }
         },
         error: () => {
-          this.snackBar.open('Xóa các sản phẩm thất bại', 'Đóng', { duration: 2000 });
+          this.notify.error('✨Xóa các sản phẩm thất bại✨');
         },
       });
     });
@@ -1377,7 +1376,7 @@ export class CartComponent implements OnInit, OnDestroy {
           };
           this.couponSuccess = res.message || `Đã áp dụng mã giảm giá ${res.code}`;
           this.couponInput = '';
-          this.snackBar.open(this.couponSuccess, 'Đóng', { duration: 3000 });
+          this.notify.success(`✨${this.couponSuccess}✨`);
         } else {
           this.appliedCoupon = null;
           this.couponError = res.message || 'Mã giảm giá không hợp lệ hoặc không đủ điều kiện';
@@ -1395,7 +1394,7 @@ export class CartComponent implements OnInit, OnDestroy {
     this.couponInput = '';
     this.couponError = '';
     this.couponSuccess = '';
-    this.snackBar.open('Đã gỡ bỏ mã giảm giá', 'Đóng', { duration: 2000 });
+    this.notify.info('✨Đã gỡ bỏ mã giảm giá✨');
   }
 
   private revalidateAppliedCoupon(cart: Cart): void {
@@ -1408,10 +1407,10 @@ export class CartComponent implements OnInit, OnDestroy {
     }
 
     if (this.appliedCoupon.minOrderValue && this.appliedCoupon.minOrderValue > 0 && subtotal < this.appliedCoupon.minOrderValue) {
-      const minV = this.appliedCoupon.minOrderValue.toLocaleString('vi-VN');
+      const minV = formatVND(this.appliedCoupon.minOrderValue);
       const removedCode = this.appliedCoupon.code;
       this.appliedCoupon = null;
-      this.couponError = `Mã ${removedCode} yêu cầu đơn hàng từ ${minV} ₫ trở lên`;
+      this.couponError = `Mã ${removedCode} yêu cầu đơn hàng từ ${minV} trở lên`;
       return;
     }
 
@@ -1930,23 +1929,32 @@ export class CartComponent implements OnInit, OnDestroy {
   private cleanUpGuestCartAfterOrder(): void {
     try {
       const guestLocal = this.apiService.getGuestCartLocal();
-      if (!guestLocal || guestLocal.length === 0) return;
-
       const selectedIds = this.selectedItemIds;
-      const remaining = guestLocal.filter(item => {
-        const pId = String(item.productId || '');
-        const vId = item.variantId ? String(item.variantId) : null;
-        const compoundId = vId ? `${pId}_${vId}` : pId;
-        return !selectedIds.has(compoundId) && !selectedIds.has(pId);
-      });
+
+      let remaining: any[] = [];
+      if (guestLocal && guestLocal.length > 0) {
+        remaining = guestLocal.filter(item => {
+          const rawPId = item.productId || item.item?._id || item.item?.id || item.id || '';
+          const pId = String(typeof rawPId === 'string' && rawPId.includes('_') ? rawPId.split('_')[0] : rawPId);
+          const vId = (item.variantId !== undefined && item.variantId !== null && item.variantId !== '') ? String(item.variantId).trim() : null;
+          const compoundId = vId ? `${pId}_${vId}` : pId;
+          const itemId = item.id ? String(item.id) : '';
+          return !selectedIds.has(compoundId) && !selectedIds.has(itemId) && !selectedIds.has(pId);
+        });
+      }
 
       if (remaining.length > 0) {
         if (typeof window !== 'undefined' && window.localStorage) {
           window.localStorage.setItem('cheri_guest_cart', JSON.stringify(remaining));
         }
       } else {
-        this.apiService.clearGuestCartLocal();
+        this.apiService.clearGuestCartLocal(false);
       }
+
+      this.selectedItemIds.clear();
+      this.knownCartItemIds.clear();
+      this.saveSelectionToStorage();
+
       const lang = this.translate?.lang || 'vi';
       this.store.getCart(lang);
     } catch (_) {}
@@ -1956,18 +1964,18 @@ export class CartComponent implements OnInit, OnDestroy {
     if (this.isSubmittingOrder) return;
 
     if (this.selectedItemIds.size === 0) {
-      this.snackBar.open('Vui lòng chọn ít nhất 1 sản phẩm để thanh toán', 'Đóng', { duration: 3000 });
+      this.notify.warning('✨Vui lòng chọn ít nhất 1 sản phẩm để thanh toán✨');
       return;
     }
 
     if (this.orderForm.invalid) {
       this.orderForm.markAllAsTouched();
-      this.snackBar.open('Vui lòng điền đầy đủ và chính xác thông tin nhận hàng', 'Đóng', { duration: 3000 });
+      this.notify.warning('✨Vui lòng điền đầy đủ và chính xác thông tin nhận hàng✨');
       return;
     }
 
     if (this.paymentMethodControl.invalid || !this.selectedPaymentMethodId) {
-      this.snackBar.open('Vui lòng chọn phương thức thanh toán', 'Đóng', { duration: 3000 });
+      this.notify.warning('✨Vui lòng chọn phương thức thanh toán✨');
       return;
     }
 
@@ -1996,6 +2004,7 @@ export class CartComponent implements OnInit, OnDestroy {
           if (!user) {
             this.cleanUpGuestCartAfterOrder();
           }
+          this.notify.success('✨Đặt hàng và thanh toán thành công✨');
           const lang = this.translate?.lang || 'vi';
           this.router.navigate(['/' + lang + '/order'], {
             queryParams: { orderId: createdOrder.orderId }
@@ -2004,7 +2013,7 @@ export class CartComponent implements OnInit, OnDestroy {
           const errMsg = typeof response.error === 'string'
             ? response.error
             : (response.error.message || 'Thanh toán thất bại. Vui lòng thử lại.');
-          this.snackBar.open(errMsg, 'Đóng', { duration: 4000 });
+          this.notify.error(`✨${errMsg}✨`);
         }
       });
     });
@@ -2014,18 +2023,18 @@ export class CartComponent implements OnInit, OnDestroy {
     if (this.isSubmittingOrder) return;
 
     if (this.selectedItemIds.size === 0) {
-      this.snackBar.open('Vui lòng chọn ít nhất 1 sản phẩm để thanh toán', 'Đóng', { duration: 3000 });
+      this.notify.warning('✨Vui lòng chọn ít nhất 1 sản phẩm để thanh toán✨');
       return;
     }
 
     if (this.orderForm.invalid) {
       this.orderForm.markAllAsTouched();
-      this.snackBar.open('Vui lòng điền đầy đủ và chính xác thông tin nhận hàng', 'Đóng', { duration: 3000 });
+      this.notify.warning('✨Vui lòng điền đầy đủ và chính xác thông tin nhận hàng✨');
       return;
     }
 
     if (this.paymentMethodControl.invalid || !this.selectedPaymentMethodId) {
-      this.snackBar.open('Vui lòng chọn phương thức thanh toán', 'Đóng', { duration: 3000 });
+      this.notify.warning('✨Vui lòng chọn phương thức thanh toán✨');
       return;
     }
 
@@ -2052,6 +2061,7 @@ export class CartComponent implements OnInit, OnDestroy {
           if (!user) {
             this.cleanUpGuestCartAfterOrder();
           }
+          this.notify.success('✨Đặt hàng thành công✨');
           const lang = this.translate?.lang || 'vi';
           this.router.navigate(['/' + lang + '/order'], {
             queryParams: { orderId: createdOrder.orderId }
@@ -2060,7 +2070,7 @@ export class CartComponent implements OnInit, OnDestroy {
           const errMsg = typeof response.error === 'string'
             ? response.error
             : (response.error.message || 'Đặt hàng thất bại. Vui lòng thử lại.');
-          this.snackBar.open(errMsg, 'Đóng', { duration: 4000 });
+          this.notify.error(`✨${errMsg}✨`);
         }
       });
       this.scrollToTop();

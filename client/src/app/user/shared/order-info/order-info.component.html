@@ -8,7 +8,7 @@
       <h4>{{ order?.orderId }}</h4>
       <div class="product-info">
         <div class="stock">Status: {{ order?.status }}</div>
-        <div class="price">{{ 'Amount' | translate | async }}: {{ order?.amount }} {{ order.currency }}</div>
+        <div class="price">{{ 'Amount' | translate | async }}: {{ order?.amount | priceFormat }} {{ order.currency || 'đ' }}</div>
       </div>
       <mat-chip-listbox class="order-tags">
         <mat-chip-option>{{ 'Customer' | translate | async }}: {{ order?.customerEmail }}</mat-chip-option>
@@ -21,7 +21,7 @@
       <p>{{ 'Customer' | translate | async }}: {{ order?.customerEmail }}</p>
       <p>{{ 'Created' | translate | async }}: {{ order.dateAdded | date: 'dd-MM-yy' }}</p>
       <p>{{ 'Paid' | translate | async }}: {{ order?.outcome?.seller_message }}</p>
-      <p>{{ 'Total_price' | translate | async }}: {{ order?.cart?.totalPrice }}</p>
+      <p>{{ 'Total_price' | translate | async }}: {{ order?.cart?.totalPrice | priceFormat }} {{ order.currency || 'đ' }}</p>
       <p>{{ 'Total_quantity' | translate | async }}: {{ order?.cart?.totalQty }}</p>
     </div>
   </mat-card-content>
@@ -49,7 +49,7 @@
           </a>
           <div class="order-cart-text">
             <span>{{ cartItem.qty }} ks </span> {{ cartItem?.item.title }} <br />
-            <span>{{ cartItem.price }} {{ order.currency }}</span>
+            <span>{{ cartItem.price | priceFormat }} {{ order.currency || 'đ' }}</span>
           </div>
         </div>
       </div>

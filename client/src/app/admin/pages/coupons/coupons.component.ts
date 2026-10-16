@@ -4,6 +4,7 @@ import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } fr
 import { AdminService } from '../../services/admin.service';
 import { NotificationService } from '../../shared/notification/notification.service';
 import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
+import { formatVND } from '../../../pipes/price.pipe';
 
 @Component({
   selector: 'app-coupons',
@@ -131,15 +132,15 @@ export class CouponsComponent implements OnInit {
             if (discountType === 'PERCENTAGE') {
               discountValueFormatted = `${item.discountValue}%`;
               if (item.maxDiscount > 0) {
-                discountValueFormatted += ` (tối đa ${Number(item.maxDiscount).toLocaleString('vi-VN')} ₫)`;
+                discountValueFormatted += ` (tối đa ${formatVND(item.maxDiscount)})`;
               }
             } else {
-              discountValueFormatted = `${Number(item.discountValue).toLocaleString('vi-VN')} ₫`;
+              discountValueFormatted = formatVND(item.discountValue);
             }
 
             const minOrderValueFormatted = item.minOrderValue > 0
-              ? `${Number(item.minOrderValue).toLocaleString('vi-VN')} ₫`
-              : '0 ₫';
+              ? formatVND(item.minOrderValue)
+              : '0 đ';
 
             const usedCount = Number(item.usedCount) || 0;
             const usageLimit = Number(item.usageLimit) || 0;

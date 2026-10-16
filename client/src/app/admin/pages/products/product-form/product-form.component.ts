@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
 import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
+import { formatVND } from '../../../../pipes/price.pipe';
 
 export interface ProductVariant {
   key: string;            // Identity key e.g. "class:áo|color:đỏ|size:m"
@@ -732,7 +733,7 @@ export class ProductFormComponent implements OnInit {
 
         if (v.discountPrice !== undefined && v.discountPrice !== null && Number(v.discountPrice) > 0) {
           if (Number(v.discountPrice) >= Number(v.price)) {
-            this.errors['discount_' + i] = `Biến thể #${i + 1} (${v.sku}): Giá khuyến mãi (${Number(v.discountPrice).toLocaleString('vi-VN')}₫) phải nhỏ hơn giá bán (${Number(v.price).toLocaleString('vi-VN')}₫).`;
+            this.errors['discount_' + i] = `Biến thể #${i + 1} (${v.sku}): Giá khuyến mãi (${formatVND(v.discountPrice)}) phải nhỏ hơn giá bán (${formatVND(v.price)}).`;
           }
         }
 
@@ -747,7 +748,7 @@ export class ProductFormComponent implements OnInit {
       }
       if (vi.onSale || (vi.salePrice !== undefined && vi.salePrice > 0)) {
         if (Number(vi.salePrice) >= Number(vi.regularPrice)) {
-          this.errors['salePrice'] = `Giá khuyến mãi (${Number(vi.salePrice).toLocaleString('vi-VN')}₫) phải nhỏ hơn giá niêm yết (${Number(vi.regularPrice).toLocaleString('vi-VN')}₫).`;
+          this.errors['salePrice'] = `Giá khuyến mãi (${formatVND(vi.salePrice)}) phải nhỏ hơn giá niêm yết (${formatVND(vi.regularPrice)}).`;
         }
       }
     }

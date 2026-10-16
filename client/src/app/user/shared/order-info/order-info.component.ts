@@ -1,8 +1,9 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Order } from '../models';
 
 import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
+import { PriceFormatPipe } from '../../../pipes/price.pipe';
 import { MatProgressBar } from '@angular/material/progress-bar';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
@@ -12,7 +13,7 @@ import { RouterLink } from '@angular/router';
   selector: 'app-order-info',
   templateUrl: './order-info.component.html',
   styleUrls: ['./order-info.component.css'],
-  imports: [CommonModule, TranslatePipe, RouterLink, MatProgressBar, MatCardModule, MatChipsModule],
+  imports: [CommonModule, TranslatePipe, PriceFormatPipe, RouterLink, MatProgressBar, MatCardModule, MatChipsModule],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class OrderInfoComponent {

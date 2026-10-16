@@ -6,6 +6,7 @@ import { AdminService } from '../../services/admin.service';
 import { NotificationService } from '../../shared/notification/notification.service';
 import { escapeCsvTextField, paymentStatusLabel } from './orders-report-csv.cjs';
 import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
+import { formatVND } from '../../../pipes/price.pipe';
 
 @Component({
   selector: 'app-orders',
@@ -345,7 +346,7 @@ export class OrdersComponent implements OnInit {
         if (it.productSnapshot?.variant?.classification) variantParts.push(it.productSnapshot.variant.classification);
         const variantText = variantParts.length > 0 ? ` (${variantParts.join(' - ')})` : '';
         const qty = it.quantity != null ? it.quantity : 1;
-        const price = it.unitPrice != null ? it.unitPrice.toLocaleString('vi-VN') + 'đ' : '';
+        const price = it.unitPrice != null ? formatVND(it.unitPrice) : '';
         itemSummaries.push(`${title}${variantText} x ${qty} [${price}]`);
       }
       const itemsField = this.escapeCsvField(itemSummaries.join(' | '));

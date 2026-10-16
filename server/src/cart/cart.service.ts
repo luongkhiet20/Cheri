@@ -609,6 +609,30 @@ export class CartService {
     return { newCart: activeCart, langCart: prepareCart(activeCart, lang || 'vi', config) };
   }
 
+  async clearCart(
+    user: User | null,
+    session: any,
+    lang: string,
+    guestCartId?: string,
+  ): Promise<{ newCart: Cart; langCart: CartModel }> {
+    const config = session?.config;
+    const currentLang = lang || 'vi';
+    const emptyCart = new Cart({ items: [] } as any);
+
+    if (user) {
+      await this.userModel.findByIdAndUpdate(user._id, {
+        $set: { 'cart.items': [] },
+      });
+    } else {
+      this.setGuestCart(session, emptyCart, guestCartId);
+    }
+
+    return {
+      newCart: emptyCart,
+      langCart: prepareCart(emptyCart, currentLang, config),
+    };
+  }
+
   // ─── MERGE GUEST CART INTO USER CART UPON LOGIN ───────────────────────────
 
   async mergeCart(

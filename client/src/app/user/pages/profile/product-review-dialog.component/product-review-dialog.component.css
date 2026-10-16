@@ -111,6 +111,12 @@
   background: #f0e6e2;
 }
 
+.dialog-close-svg {
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+}
+
 .dialog-close-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
@@ -526,6 +532,12 @@
   justify-content: center;
   font-weight: 700;
   font-size: 12px;
+  flex-shrink: 0;
+}
+
+.alert-svg {
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
 }
 

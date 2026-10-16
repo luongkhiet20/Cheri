@@ -967,3 +967,104 @@
     gap: 12px;
   }
 }
+
+/* ── Return & Refund Tracking in Profile ── */
+.status-pill-return {
+  background: #fdf2f3;
+  color: #74070e;
+  border: 1px solid #fecdd3;
+  margin-left: 6px;
+  font-weight: 600;
+}
+
+.order-return-tracking-box {
+  margin: 12px 18px 0;
+  padding: 12px 16px;
+  background: #fdf2f3;
+  border: 1px solid #fce7e9;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.return-box-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px dashed #fecdd3;
+  padding-bottom: 8px;
+}
+
+.return-box-title {
+  font-size: 13px;
+  color: #74070e;
+}
+
+.return-box-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.return-status-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #74070e;
+  color: #fff;
+}
+
+.return-refund-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #74070e;
+  border: 1px solid #fecdd3;
+}
+
+.return-box-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #334155;
+}
+
+.return-detail-item {
+  display: flex;
+  gap: 6px;
+  line-height: 1.4;
+}
+
+.return-detail-item.reject {
+  color: #b91c1c;
+  background: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #fca5a5;
+}
+
+.return-detail-item.instructions {
+  color: #92400e;
+  background: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #fef3c7;
+}
+
+.return-detail-item.refund {
+  color: #15803d;
+  font-size: 13px;
+}
+
+.return-detail-item .item-label {
+  font-weight: 600;
+  white-space: nowrap;
+}
+

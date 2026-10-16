@@ -293,7 +293,90 @@
         </div>
       </section>
 
+      <!-- 7.5. THEO DÕI YÊU CẦU TRẢ HÀNG & HOÀN TIỀN -->
+      @if (getReturnRequests().length > 0) {
+      <section class="bill-return-section no-print">
+        <div class="bill-section-title-wrap">
+          <mat-icon class="section-title-icon">replay</mat-icon>
+          <h2 class="bill-section-title">Theo dõi Yêu cầu Trả hàng & Hoàn tiền</h2>
+          <span class="badge-requests-count">{{ getReturnRequests().length }} yêu cầu</span>
+        </div>
 
+        <div class="return-requests-list">
+          @for (req of getReturnRequests(); track req.requestId || $index) {
+          <div class="user-return-req-card">
+            <div class="return-card-top">
+              <div class="return-card-left">
+                <span class="return-id">Mã yêu cầu: <strong>{{ req.requestId }}</strong></span>
+                <span class="return-date">Thời gian gửi: {{ req.requestedAt | date: 'dd/MM/yyyy HH:mm' }}</span>
+              </div>
+              <div class="return-card-badges">
+                <span class="user-pill user-pill-status">
+                  {{ getReturnRequestStatusLabel(req.status) }}
+                </span>
+                <span class="user-pill user-pill-refund">
+                  Hoàn tiền: {{ getRefundStatusLabel(req.refund?.status) }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Lý do & mô tả -->
+            <div class="return-reason-box">
+              <p><strong>Lý do:</strong> {{ req.reason }}</p>
+              @if (req.description) {
+              <p><strong>Mô tả:</strong> {{ req.description }}</p>
+              }
+              @if (req.rejectionReason) {
+              <p class="rejection-alert"><strong>Lý do từ chối:</strong> {{ req.rejectionReason }}</p>
+              }
+            </div>
+
+            <!-- Sản phẩm trả -->
+            @if (req.items && req.items.length > 0) {
+            <div class="return-items-summary">
+              <span class="items-summary-label">Sản phẩm yêu cầu trả:</span>
+              <ul class="return-items-ul">
+                @for (it of req.items; track it.productId || $index) {
+                <li>
+                  {{ it.productSnapshot?.title || 'Sản phẩm' }} (x{{ it.quantity }}) —
+                  <span class="price-val">{{ it.subtotal | priceFormat }} đ</span>
+                </li>
+                }
+              </ul>
+            </div>
+            }
+
+            <!-- Hướng dẫn vận chuyển nếu được duyệt -->
+            @if (req.returnShipping?.instructions) {
+            <div class="return-guide-box">
+              <strong>Hướng dẫn gửi hàng hoàn:</strong>
+              <p>{{ req.returnShipping.instructions }}</p>
+            </div>
+            }
+
+            <!-- Trạng thái nhận và kiểm tra hàng -->
+            @if (req.inspection?.inspectedAt) {
+            <div class="return-inspect-box">
+              <strong>Kết quả kiểm tra:</strong>
+              <span>{{ req.inspection.isEligible ? 'Đủ điều kiện hoàn tiền' : 'Không đủ điều kiện' }}</span>
+              @if (req.inspection.conditionNotes) {
+              <p class="inspect-notes">{{ req.inspection.conditionNotes }}</p>
+              }
+            </div>
+            }
+
+            <!-- Số tiền hoàn -->
+            @if (req.refund?.approvedAmount) {
+            <div class="return-refund-summary">
+              <span>Số tiền duyệt hoàn:</span>
+              <strong class="approved-val">{{ req.refund.approvedAmount | priceFormat }} đ</strong>
+            </div>
+            }
+          </div>
+          }
+        </div>
+      </section>
+      }
 
       <!-- GUEST ADVICE & VOLUNTARY ACCOUNT SIGNUP BANNER -->
       @if (!currentUser) {

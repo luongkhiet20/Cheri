@@ -17,8 +17,13 @@ export class NotificationComponent implements OnDestroy {
     return this.notifyService.notification();
   }
 
+  getCleanMessage(message: string | null | undefined): string {
+    if (!message) return '';
+    return message.replace(/^[✨\s]+/, '').replace(/[✨\s]+$/, '').trim();
+  }
+
   onClose(): void {
-    this.notifyService.dismiss();
+    this.notifyService.startDismiss();
   }
 
   ngOnDestroy(): void {
@@ -27,4 +32,3 @@ export class NotificationComponent implements OnDestroy {
 }
 
 export { NotificationComponent as Notification };
-

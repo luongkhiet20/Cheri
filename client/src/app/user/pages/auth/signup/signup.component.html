@@ -18,7 +18,7 @@
           <h3 class="auth-title">Đăng ký</h3>
         </div>
 
-        <form class="sign-form auth-inner-form" [formGroup]="signUpForm" (ngSubmit)="submit()">
+        <form class="sign-form auth-inner-form" [formGroup]="signUpForm" (ngSubmit)="submit()" novalidate>
 
           <!-- Name -->
           <div class="form-group sign-field">
@@ -29,7 +29,7 @@
           <!-- Email -->
           <div class="form-group sign-field">
             <label class="form-label">Địa chỉ Email <span class="required-star">*</span></label>
-            <input type="email" required placeholder="example@gmail.com" formControlName="email" name="email"
+            <input type="email" placeholder="example@gmail.com" formControlName="email" name="email"
               class="form-input"
               [class.input-error]="signUpForm.get('email')?.touched && signUpForm.get('email')?.invalid" />
             <div class="field-error-msg" *ngIf="signUpForm.get('email')?.touched && signUpForm.get('email')?.invalid">
@@ -99,7 +99,7 @@
 
           </div>
 
-          <button type="submit" class="submit-sign-button auth-submit-btn" [disabled]="signUpForm.invalid || isSubmitting"
+          <button type="submit" class="submit-sign-button auth-submit-btn" [disabled]="isSubmitting"
             [title]="getSubmitButtonTitle()">
             <span>{{ isSubmitting ? 'ĐANG ĐĂNG KÝ...' : 'ĐĂNG KÝ' }}</span>
             <svg class="btn-sparkle" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"

@@ -179,13 +179,24 @@ export class AuthController {
   async googleLoginCallback(@Req() req, @Res() res) {
     try {
       const googleUserDto: GoogleUserDto = req.user;
-      const { accessToken, user } = await this.authService.signInGoogle(googleUserDto);
-      const exchangeCode = this.authService.createExchangeCode(accessToken, user);
+      if (!googleUserDto || !googleUserDto.email) {
+        const origin = (process.env.ORIGIN || 'http://localhost:3000').replace(/\/+$/, '');
+        return res.redirect(`${origin}/vi/authorize/signin?error=oauth_identity_failed`);
+      }
+      const { accessToken, user, isNewUser } = await this.authService.signInGoogle(googleUserDto);
+      const exchangeCode = this.authService.createExchangeCode(accessToken, user, isNewUser);
       const origin = (process.env.ORIGIN || 'http://localhost:3000').replace(/\/+$/, '');
       const redirectUrl = `${origin}/jwtToken?code=${exchangeCode}`;
       res.redirect(redirectUrl);
-    } catch (err) {
+    } catch (err: any) {
       const origin = (process.env.ORIGIN || 'http://localhost:3000').replace(/\/+$/, '');
+      const msg = String(err?.message || '').toLowerCase();
+      if (msg.includes('bị khóa') || msg.includes('ngừng hoạt động') || msg.includes('disabled') || msg.includes('blocked')) {
+        return res.redirect(`${origin}/vi/authorize/signin?error=account_locked`);
+      }
+      if (msg.includes('không hợp lệ') || msg.includes('invalid')) {
+        return res.redirect(`${origin}/vi/authorize/signin?error=oauth_token_invalid`);
+      }
       res.redirect(`${origin}/vi/authorize/signin?error=oauth_failed`);
     }
   }

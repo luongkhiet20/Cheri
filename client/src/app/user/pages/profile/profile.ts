@@ -710,16 +710,43 @@ export class Profile implements OnInit {
     const currentLang = (this.translate as any)?.lang || 'vi';
     const targetUrl = `/${currentLang}`;
 
+    let hadToken = false;
+    let localCleanFailed = false;
+
     if (isPlatformBrowser(this.platformId)) {
+      hadToken = Boolean(localStorage.getItem(accessTokenKey) || sessionStorage.getItem(accessTokenKey));
       try {
         localStorage.removeItem(accessTokenKey);
         sessionStorage.removeItem(accessTokenKey);
       } catch (e) {
-        // ignore
+        localCleanFailed = true;
       }
     }
 
-    this.store.signOut(() => {
+    if (!hadToken) {
+      this.notify.info('Phiên đăng nhập đã hết hạn. Bạn đã được đưa về trạng thái chưa đăng nhập.');
+      this.store.signOut(() => {
+        this.router.navigateByUrl(targetUrl);
+      });
+      return;
+    }
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      this.notify.error('Không thể kết nối đến máy chủ để hoàn tất đăng xuất.');
+      return;
+    }
+
+    this.store.signOut((res) => {
+      if (res?.networkError) {
+        this.notify.error('Không thể kết nối đến máy chủ để hoàn tất đăng xuất.');
+      } else if (res?.serverError) {
+        this.notify.error('Chưa thể hoàn tất đăng xuất. Vui lòng thử lại.');
+      } else if (localCleanFailed) {
+        this.notify.warning('Đã đăng xuất khỏi tài khoản, nhưng không thể xóa toàn bộ dữ liệu phiên trên thiết bị. Vui lòng tải lại trang.');
+      } else {
+        this.notify.success('Bạn đã đăng xuất thành công. Hẹn gặp lại tại Chéri!');
+      }
+
       this.router.navigateByUrl(targetUrl);
     });
   }

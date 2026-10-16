@@ -9,6 +9,7 @@ import { ApiService } from '../../../../services/api.service';
 import { SignalStore } from '../../../../store/signal.store';
 import { TranslateService } from '../../../../services/translate.service';
 
+import { NotificationService } from '../../../shared/notification/notification.service';
 import { of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
@@ -25,6 +26,7 @@ export class JwtTokenComponent implements OnInit {
     private apiService: ApiService,
     private router: Router,
     private translate: TranslateService,
+    private notify: NotificationService,
     @Inject(PLATFORM_ID)
     private platformId: Object
   ) { }
@@ -49,23 +51,43 @@ export class JwtTokenComponent implements OnInit {
         switchMap((res: any) => {
           if (res && !res.error && res.accessToken) {
             localStorage.setItem(accessTokenKey, res.accessToken);
-            if (res.user) {
-              return of(res.user);
+            const userObj = res.user ? { ...res.user, isNewUser: Boolean(res.isNewUser) } : null;
+            if (userObj) {
+              return of(userObj);
             }
-            return this.apiService.getUser();
+            return this.apiService.getUser().pipe(
+              map((u: any) => ({ ...u, isNewUser: Boolean(res.isNewUser) }))
+            );
           }
-          return of({ error: 'invalid_code' });
+          return of({ error: res?.error || 'oauth_token_invalid' });
         }),
-        catchError(() => of({ error: 'exchange_failed' }))
+        catchError((err: any) => {
+          const status = err?.status || 0;
+          let errCode = 'oauth_failed';
+          if (status === 0 || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+            errCode = 'oauth_network_failed';
+          } else if (status === 401) {
+            errCode = 'oauth_token_invalid';
+          }
+          return of({ error: errCode });
+        })
       ).subscribe((user: any) => {
         if (user && !user.error && (user.email || user.accessToken || user.id)) {
           this.store.storeUser(user);
           this.apiService.currentUser$.next(user);
           this.store.getUserOrders();
           this.store.mergeGuestCartIfAny(currentLang);
+
+          if (user.isNewUser) {
+            this.notify.success('Đăng ký bằng Google thành công. Chào mừng bạn đến với Chéri!');
+          } else {
+            this.notify.success('Đăng nhập bằng Google thành công. Chào mừng bạn trở lại!');
+          }
+
           this.router.navigateByUrl(safeTarget);
         } else {
-          this.router.navigate(['/' + currentLang + '/authorize/signin'], { queryParams: { error: 'oauth_failed' } });
+          const errCode = user?.error || 'oauth_failed';
+          this.router.navigate(['/' + currentLang + '/authorize/signin'], { queryParams: { error: errCode } });
         }
       });
     } else if (paramToken) {
@@ -80,6 +102,7 @@ export class JwtTokenComponent implements OnInit {
           this.apiService.currentUser$.next(user);
           this.store.getUserOrders();
           this.store.mergeGuestCartIfAny(currentLang);
+          this.notify.success('Đăng nhập bằng Google thành công. Chào mừng bạn trở lại!');
         }
         this.router.navigateByUrl(safeTarget);
       });

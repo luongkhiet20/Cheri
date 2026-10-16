@@ -18,6 +18,7 @@ import { SignalStore } from '../../../store/signal.store';
 import { accessTokenKey } from '../../../user/shared/constants';
 import { SettingsService } from '../../pages/settings/settings.service';
 import { NotificationPopupComponent } from '../../shared/notification-popup/notification-popup.component';
+import { NotificationService as UserNotificationService } from '../../../user/shared/notification/notification.service';
 
 @Component({
   selector: 'app-admin-header',
@@ -57,6 +58,7 @@ export class AdminHeaderComponent implements OnInit, OnDestroy {
     private settingsService: SettingsService,
     private router: Router,
     private store: SignalStore,
+    private userNotify: UserNotificationService,
     private cdr: ChangeDetectorRef,
     @Inject(PLATFORM_ID) private platformId: Object
   ) { }
@@ -161,7 +163,12 @@ export class AdminHeaderComponent implements OnInit, OnDestroy {
 
   onLogout(): void {
     this.closeUserMenu();
+
+    let hadToken = false;
+    let localCleanFailed = false;
+
     if (isPlatformBrowser(this.platformId)) {
+      hadToken = Boolean(localStorage.getItem(accessTokenKey) || sessionStorage.getItem(accessTokenKey));
       try {
         localStorage.removeItem(accessTokenKey);
         sessionStorage.clear();
@@ -169,10 +176,36 @@ export class AdminHeaderComponent implements OnInit, OnDestroy {
         document.cookie = 'token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
         document.cookie = 'accessToken=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
         document.cookie = 'connect.sid=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-      } catch (e) {}
+      } catch (e) {
+        localCleanFailed = true;
+      }
     }
 
-    this.store.signOut(() => {
+    if (!hadToken) {
+      this.userNotify.setPending('Phiên đăng nhập đã hết hạn. Bạn đã được đưa về trạng thái chưa đăng nhập.', 'info');
+      this.store.signOut(() => {
+        this.router.navigate(['/vi/authorize/signin']);
+      });
+      return;
+    }
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      this.userNotify.setPending('Không thể kết nối đến máy chủ để hoàn tất đăng xuất.', 'error');
+      this.router.navigate(['/vi/authorize/signin']);
+      return;
+    }
+
+    this.store.signOut((res) => {
+      if (res?.networkError) {
+        this.userNotify.setPending('Không thể kết nối đến máy chủ để hoàn tất đăng xuất.', 'error');
+      } else if (res?.serverError) {
+        this.userNotify.setPending('Chưa thể hoàn tất đăng xuất. Vui lòng thử lại.', 'error');
+      } else if (localCleanFailed) {
+        this.userNotify.setPending('Đã đăng xuất khỏi tài khoản, nhưng không thể xóa toàn bộ dữ liệu phiên trên thiết bị. Vui lòng tải lại trang.', 'warning');
+      } else {
+        this.userNotify.setPending('Bạn đã đăng xuất thành công. Hẹn gặp lại tại Chéri!', 'success');
+      }
+
       this.router.navigate(['/vi/authorize/signin']);
     });
   }

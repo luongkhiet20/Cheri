@@ -1,44 +1,20 @@
 <div class="cheri-notification-container" *ngIf="current as notif" aria-live="polite" role="status">
-  <div class="cheri-notification-pill" [ngClass]="'type-' + notif.type">
-    <!-- Icon Container -->
-    <span class="notify-icon-wrap" [ngSwitch]="notif.type" aria-hidden="true">
-      <!-- SUCCESS ICON: Circle Checkmark -->
-      <svg *ngSwitchCase="'success'" class="notify-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="10"></circle>
-        <polyline points="8 12 11 15 16 9"></polyline>
-      </svg>
+  <div
+    class="cheri-notification-pill"
+    [ngClass]="['type-' + notif.type, notif.isLeaving ? 'is-leaving' : '']"
+    (click)="onClose()"
+    tabindex="0"
+    (keydown.enter)="onClose()"
+    (keydown.space)="onClose()"
+    title="Nhấp để đóng thông báo"
+  >
+    <!-- Biểu tượng ✨ bên trái -->
+    <span class="notify-sparkle notify-sparkle-left" aria-hidden="true">✨</span>
 
-      <!-- ERROR ICON: Circle Exclamation -->
-      <svg *ngSwitchCase="'error'" class="notify-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="10"></circle>
-        <line x1="12" y1="8" x2="12" y2="12"></line>
-        <line x1="12" y1="16" x2="12.01" y2="16"></line>
-      </svg>
+    <!-- Nội dung thông báo ở chính giữa -->
+    <span class="notify-text">{{ getCleanMessage(notif.message) }}</span>
 
-      <!-- WARNING ICON: Triangle Warning -->
-      <svg *ngSwitchCase="'warning'" class="notify-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-        <line x1="12" y1="9" x2="12" y2="13"></line>
-        <line x1="12" y1="17" x2="12.01" y2="17"></line>
-      </svg>
-
-      <!-- INFO ICON (Default): Circle Info -->
-      <svg *ngSwitchDefault class="notify-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="10"></circle>
-        <line x1="12" y1="16" x2="12" y2="12"></line>
-        <line x1="12" y1="8" x2="12.01" y2="8"></line>
-      </svg>
-    </span>
-
-    <!-- Message text -->
-    <span class="notify-text">{{ notif.message }}</span>
-
-    <!-- Close button -->
-    <button type="button" class="notify-close-btn" (click)="onClose()" aria-label="Đóng thông báo">
-      <svg class="notify-close-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <line x1="18" y1="6" x2="6" y2="18"></line>
-        <line x1="6" y1="6" x2="18" y2="18"></line>
-      </svg>
-    </button>
+    <!-- Biểu tượng ✨ bên phải -->
+    <span class="notify-sparkle notify-sparkle-right" aria-hidden="true">✨</span>
   </div>
 </div>

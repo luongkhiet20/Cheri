@@ -3,7 +3,7 @@ import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
-import { paymentStatusLabel } from '../orders-report-csv.cjs';
+import { paymentStatusLabel } from '../../../../utils/orders-report-csv.cjs';
 import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 interface StatusOption {

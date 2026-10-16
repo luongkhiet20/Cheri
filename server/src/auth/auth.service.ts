@@ -300,13 +300,13 @@ export class AuthService {
   // In-memory store for single-use OAuth exchange codes (60s TTL)
   private readonly exchangeCodeStore = new Map<
     string,
-    { accessToken: string; user: any; expiresAt: number }
+    { accessToken: string; user: any; isNewUser: boolean; expiresAt: number }
   >();
 
-  createExchangeCode(accessToken: string, user: any): string {
+  createExchangeCode(accessToken: string, user: any, isNewUser: boolean = false): string {
     const code = randomBytes(32).toString('hex');
     const expiresAt = Date.now() + 60 * 1000;
-    this.exchangeCodeStore.set(code, { accessToken, user, expiresAt });
+    this.exchangeCodeStore.set(code, { accessToken, user, isNewUser, expiresAt });
 
     // Tự động dọn dẹp các mã hết hạn
     const now = Date.now();
@@ -318,7 +318,7 @@ export class AuthService {
     return code;
   }
 
-  consumeExchangeCode(code: string): { accessToken: string; user: any } {
+  consumeExchangeCode(code: string): { accessToken: string; user: any; isNewUser: boolean } {
     if (!code || typeof code !== 'string') {
       throw new BadRequestException('Mã trao đổi xác thực không hợp lệ');
     }
@@ -333,12 +333,13 @@ export class AuthService {
       throw new UnauthorizedException('Mã xác thực đã hết hạn');
     }
 
-    return { accessToken: record.accessToken, user: record.user };
+    return { accessToken: record.accessToken, user: record.user, isNewUser: record.isNewUser || false };
   }
 
   async signInGoogle(googleUserDto: GoogleUserDto): Promise<{
     accessToken: string;
     user: any;
+    isNewUser: boolean;
   }> {
     const { email, profile } = googleUserDto;
     if (!email) {
@@ -346,8 +347,10 @@ export class AuthService {
     }
     const cleanEmail = String(email).trim().toLowerCase();
     let user = await this.userModel.findOne({ email: cleanEmail });
+    let isNewUser = false;
 
     if (user) {
+      isNewUser = false;
       // 1. Kiểm tra tài khoản có bị khóa hay không
       if (user.status === false) {
         throw new UnauthorizedException('Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động');
@@ -385,6 +388,7 @@ export class AuthService {
         await user.save();
       }
     } else {
+      isNewUser = true;
       // 4. Tạo tài khoản người dùng Google mới
       const displayName = (profile?.displayName || cleanEmail.split('@')[0] || 'User').trim();
       const avatarUrl = profile?.photos?.[0]?.value || '';
@@ -438,7 +442,7 @@ export class AuthService {
       images,
     };
 
-    return { accessToken, user: userObj };
+    return { accessToken, user: userObj, isNewUser };
   }
 
   async getGoogleUser(email: string, profile: any) {

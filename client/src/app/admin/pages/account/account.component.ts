@@ -10,7 +10,7 @@ import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.c
   selector: 'app-account',
   standalone: false,
   templateUrl: './account.component.html',
-  styleUrls: ['./account.component.scss']
+  styleUrls: ['./account.component.css']
 })
 export class AccountComponent implements OnInit, OnDestroy {
   breadcrumbItems: BreadcrumbItem[] = [

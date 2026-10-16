@@ -7,13 +7,14 @@ export interface UserNotification {
   message: string;
   type: NotificationType;
   duration?: number;
+  isLeaving?: boolean;
 }
 
 const DEFAULT_DURATIONS: Record<NotificationType, number> = {
-  success: 3000,
-  error: 5000,
-  warning: 4000,
-  info: 3000
+  success: 2800, // 2.5 - 3s mặc định
+  error: 4500,
+  warning: 3500,
+  info: 2800
 };
 
 @Injectable({
@@ -22,30 +23,52 @@ const DEFAULT_DURATIONS: Record<NotificationType, number> = {
 export class NotificationService implements OnDestroy {
   private counter = 0;
   private timerRef: any = null;
+  private leaveTimerRef: any = null;
 
   readonly notification = signal<UserNotification | null>(null);
 
-  /**
-   * Chuẩn hóa thông điệp theo loại thông báo:
-   * - 'success': ✨Nội dung thông báo✨ (chuẩn hóa đúng một ký tự ✨ ở mỗi đầu, không trùng lặp)
-   * - 'error' | 'warning' | 'info': Loại bỏ ký tự ✨ ở hai đầu nếu có
-   */
-  private formatMessage(content: string, type: NotificationType): string {
-    if (!content) return '';
-    let msg = content.trim();
-    // Loại bỏ tất cả ký tự ✨ và khoảng trắng ở đầu và cuối
-    msg = msg.replace(/^[✨\s]+/, '').replace(/[✨\s]+$/, '').trim();
+  constructor() {
+    this.checkPendingNotification();
+  }
 
-    if (type === 'success') {
-      return `✨${msg}✨`;
+  private checkPendingNotification(): void {
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = sessionStorage.getItem('cheri_pending_notify');
+        if (raw) {
+          sessionStorage.removeItem('cheri_pending_notify');
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.message) {
+            setTimeout(() => {
+              this.show(parsed.message, parsed.type || 'info', parsed.duration);
+            }, 300);
+          }
+        }
+      } catch {}
     }
-    return msg;
+  }
+
+  setPending(message: string, type: NotificationType = 'info', duration?: number): void {
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('cheri_pending_notify', JSON.stringify({ message, type, duration }));
+      } catch {}
+    }
+  }
+
+  /**
+   * Chuẩn hóa nội dung thông điệp: loại bỏ các ký tự ✨ và khoảng trắng thừa ở hai đầu
+   */
+  private formatMessage(content: string, _type: NotificationType): string {
+    if (!content) return '';
+    const msg = content.trim();
+    return msg.replace(/^[✨\s]+/, '').replace(/[✨\s]+$/, '').trim();
   }
 
   show(message: string, type: NotificationType = 'info', duration?: number): void {
     if (!message) return;
 
-    this.clearTimer();
+    this.clearAllTimers();
 
     const formatted = this.formatMessage(message, type);
     const finalDuration = duration !== undefined ? duration : DEFAULT_DURATIONS[type];
@@ -54,40 +77,75 @@ export class NotificationService implements OnDestroy {
       id: ++this.counter,
       message: formatted,
       type,
-      duration: finalDuration
+      duration: finalDuration,
+      isLeaving: false
     };
 
     this.notification.set(item);
 
     if (finalDuration > 0 && typeof window !== 'undefined') {
       this.timerRef = setTimeout(() => {
-        this.dismiss(item.id);
+        this.startDismiss(item.id);
       }, finalDuration);
     }
   }
 
-  success(message: string, duration: number = 3000): void {
+  success(message: string, duration: number = 2800): void {
     this.show(message, 'success', duration);
   }
 
-  error(message: string, duration: number = 5000): void {
+  error(message: string, duration: number = 4500): void {
     this.show(message, 'error', duration);
   }
 
-  warning(message: string, duration: number = 4000): void {
+  warning(message: string, duration: number = 3500): void {
     this.show(message, 'warning', duration);
   }
 
-  info(message: string, duration: number = 3000): void {
+  info(message: string, duration: number = 2800): void {
     this.show(message, 'info', duration);
   }
 
+  /**
+   * Kích hoạt hiệu ứng biến mất trước khi gỡ khỏi DOM (trượt lên và mờ dần)
+   */
+  startDismiss(targetId?: number): void {
+    const current = this.notification();
+    if (!current) return;
+
+    if (targetId !== undefined && current.id !== targetId) {
+      return;
+    }
+
+    if (current.isLeaving) {
+      return;
+    }
+
+    this.clearTimer();
+
+    this.notification.set({
+      ...current,
+      isLeaving: true
+    });
+
+    if (typeof window !== 'undefined') {
+      this.leaveTimerRef = setTimeout(() => {
+        this.dismiss(current.id);
+      }, 280);
+    } else {
+      this.dismiss(current.id);
+    }
+  }
+
+  /**
+   * Đóng và gỡ bỏ thông báo ngay lập tức
+   */
   dismiss(targetId?: number): void {
     const current = this.notification();
     if (!current) return;
 
     if (targetId === undefined || current.id === targetId) {
-      this.clearTimer();
+      this.clearAllTimers();
       this.notification.set(null);
     }
   }
@@ -99,7 +157,19 @@ export class NotificationService implements OnDestroy {
     }
   }
 
-  ngOnDestroy(): void {
+  private clearLeaveTimer(): void {
+    if (this.leaveTimerRef) {
+      clearTimeout(this.leaveTimerRef);
+      this.leaveTimerRef = null;
+    }
+  }
+
+  private clearAllTimers(): void {
     this.clearTimer();
+    this.clearLeaveTimer();
+  }
+
+  ngOnDestroy(): void {
+    this.clearAllTimers();
   }
 }

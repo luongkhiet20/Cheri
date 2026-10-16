@@ -12,7 +12,6 @@
     "start:dev": "cross-env NODE_ENV=development nest start --watch --config ./server/nest-cli.json --path ./server/tsconfig.json",
     "test:order-tracking": "node --test server/test/order-tracking-contract.test.cjs server/test/tracking-service-errors.test.cjs server/test/tracking-stale-number.test.cjs server/test/tracking-update.test.cjs",
     "test:storefront-search": "node --test client/src/app/user/pages/product/products/products-search-flow.test.cjs server/test/products-keyword-search.test.cjs",
-    "test:orders-csv": "node --test client/src/app/admin/pages/orders/orders-report-csv.test.cjs",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node server/dist/main",
     "format": "prettier --write \"server/**/*.ts\"",

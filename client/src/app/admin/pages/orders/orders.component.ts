@@ -4,7 +4,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
 import { NotificationService } from '../../shared/notification/notification.service';
-import { escapeCsvTextField, paymentStatusLabel } from './orders-report-csv.cjs';
+import { escapeCsvTextField, paymentStatusLabel } from '../../../utils/orders-report-csv.cjs';
 import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
 import { formatVND } from '../../../pipes/price.pipe';
 

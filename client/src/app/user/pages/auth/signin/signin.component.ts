@@ -73,9 +73,45 @@ export class SignInComponent implements OnInit {
 
   ngOnInit(): void {
     const returnUrl = this.route.snapshot.queryParams['returnUrl'];
+    const sessionParam = this.route.snapshot.queryParams['session'];
     const errorParam = this.route.snapshot.queryParams['error'];
-    if (errorParam === 'oauth_failed') {
-      this.notify.error('✨Đăng nhập bằng Google không thành công hoặc đã bị hủy. Vui lòng thử lại✨');
+
+    if (sessionParam === 'expired') {
+      this.notify.warning('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+    }
+
+    if (errorParam) {
+      switch (errorParam) {
+        case 'oauth_cancelled':
+        case 'access_denied':
+          this.notify.info('Bạn đã hủy đăng nhập bằng Google.');
+          break;
+        case 'oauth_window_failed':
+          this.notify.error('Không thể mở cửa sổ xác thực Google. Vui lòng thử lại.');
+          break;
+        case 'oauth_denied':
+          this.notify.warning('Xác thực Google chưa hoàn tất. Vui lòng thử lại.');
+          break;
+        case 'oauth_token_invalid':
+          this.notify.error('Phiên xác thực Google không hợp lệ hoặc đã hết hạn. Vui lòng thử lại.');
+          break;
+        case 'oauth_identity_failed':
+          this.notify.error('Không thể xác minh tài khoản Google. Vui lòng thử lại.');
+          break;
+        case 'account_locked':
+          this.notify.error('Không thể đăng nhập vào tài khoản này. Vui lòng liên hệ bộ phận hỗ trợ.');
+          break;
+        case 'no_account':
+          this.notify.info('Bạn chưa có tài khoản Chéri. Vui lòng đăng ký trước khi đăng nhập.');
+          break;
+        case 'oauth_network_failed':
+          this.notify.error('Dịch vụ xác thực đang tạm thời không khả dụng. Vui lòng thử lại sau.');
+          break;
+        case 'oauth_failed':
+        default:
+          this.notify.error('Đăng nhập chưa thành công. Vui lòng thử lại sau.');
+          break;
+      }
     }
 
     this.isRequestingAdmin = Boolean(returnUrl && returnUrl.startsWith('/admin'));
@@ -232,11 +268,49 @@ export class SignInComponent implements OnInit {
   }
 
   submit() {
-    if (this.isSubmitting || this.signInForm.invalid) {
+    if (this.isSubmitting) {
+      this.notify.info('Yêu cầu đang được xử lý. Vui lòng chờ trong giây lát.');
       return;
     }
+
+    const emailCtrl = this.signInForm.get('email');
+    const passCtrl = this.signInForm.get('password');
+    const emailVal = (emailCtrl?.value || '').trim();
+    const passVal = passCtrl?.value || '';
+
+    // 1. Bỏ trống email
+    if (!emailVal) {
+      this.notify.warning('Vui lòng nhập địa chỉ email.');
+      emailCtrl?.markAsTouched();
+      return;
+    }
+
+    // 2. Email sai định dạng
+    const emailRegex = /^[a-zA-Z0-9]+([._%+-][a-zA-Z0-9]+)*@[a-zA-Z0-9]+([.-][a-zA-Z0-9]+)*\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(emailVal) || emailCtrl?.invalid) {
+      this.notify.warning('Địa chỉ email không hợp lệ. Vui lòng kiểm tra lại.');
+      emailCtrl?.markAsTouched();
+      return;
+    }
+
+    // 3. Bỏ trống mật khẩu
+    if (!passVal) {
+      this.notify.warning('Vui lòng nhập mật khẩu.');
+      passCtrl?.markAsTouched();
+      return;
+    }
+
+    // 4. Mất kết nối mạng
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      this.notify.error('Không thể kết nối đến máy chủ. Vui lòng thử lại.');
+      return;
+    }
+
     this.isSubmitting = true;
-    const credentials = this.signInForm.value;
+    const credentials = {
+      ...this.signInForm.value,
+      email: emailVal
+    };
     const returnUrl = this.route.snapshot.queryParams['returnUrl'];
     const isRequestingAdmin = Boolean(returnUrl && returnUrl.startsWith('/admin'));
 
@@ -262,7 +336,7 @@ export class SignInComponent implements OnInit {
       next: ({ user, lang, isDeniedAdmin }: any) => {
         this.isSubmitting = false;
         if (isDeniedAdmin) {
-          this.notify.error('✨Tài khoản này không có quyền Quản trị viên (Admin)✨');
+          this.notify.error('Tài khoản này không có quyền Quản trị viên (Admin).');
           this.signInForm.get('password')?.reset();
           return;
         }
@@ -270,7 +344,7 @@ export class SignInComponent implements OnInit {
         if (user && !user.error && (user.accessToken || user.email)) {
           this.signInForm.reset();
           this.store.mergeGuestCartIfAny(lang || 'vi');
-          this.notify.success('✨Đăng nhập thành công✨');
+          this.notify.success('Đăng nhập thành công. Chào mừng bạn đến với Chéri!');
 
           if (isRequestingAdmin) {
             const target = returnUrl || '/admin';
@@ -281,24 +355,67 @@ export class SignInComponent implements OnInit {
             this.router.navigateByUrl(target);
           }
         } else {
-          this.notify.error('✨Đăng nhập thất bại. Vui lòng kiểm tra lại email hoặc mật khẩu✨');
+          this.notify.error('Email hoặc mật khẩu không chính xác. Vui lòng thử lại.');
         }
       },
-      error: () => {
+      error: (err: any) => {
         this.isSubmitting = false;
         this.selectors.userState.update((state) => ({ ...state, loading: false }));
-        this.notify.error('✨Đăng nhập thất bại. Vui lòng thử lại sau✨');
+
+        const status = err?.status || 0;
+        const rawMsg = String(err?.error?.message || err?.message || '').toLowerCase();
+
+        // Mất kết nối mạng
+        if (status === 0 || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+          this.notify.error('Không thể kết nối đến máy chủ. Vui lòng thử lại.');
+          return;
+        }
+
+        // Đăng nhập quá nhiều lần, bị giới hạn (429 Rate limit)
+        if (status === 429 || rawMsg.includes('quá nhiều lần') || rawMsg.includes('too many')) {
+          this.notify.warning('Bạn đã thử đăng nhập quá nhiều lần. Vui lòng thử lại sau.');
+          return;
+        }
+
+        // Máy chủ gặp sự cố
+        if (status >= 500) {
+          this.notify.error('Hệ thống đang gặp sự cố. Vui lòng thử lại sau.');
+          return;
+        }
+
+        // Tài khoản bị khóa hoặc vô hiệu hóa
+        if (rawMsg.includes('bị khóa') || rawMsg.includes('ngừng hoạt động') || rawMsg.includes('disabled') || rawMsg.includes('blocked')) {
+          this.notify.error('Không thể đăng nhập. Vui lòng liên hệ bộ phận hỗ trợ.');
+          return;
+        }
+
+        // Tài khoản chưa xác minh email (nếu có)
+        if (rawMsg.includes('xác minh email') || rawMsg.includes('verify email') || rawMsg.includes('chưa xác minh')) {
+          this.notify.warning('Vui lòng xác minh email trước khi đăng nhập.');
+          return;
+        }
+
+        // Mặc định lỗi đăng nhập: Không tiết lộ email có tồn tại hay không theo OWASP
+        this.notify.error('Email hoặc mật khẩu không chính xác. Vui lòng thử lại.');
       }
     });
   }
 
   signInWithGoogle(): void {
-    this.notify.info('✨Đang kết nối cổng đăng nhập Google...✨');
-    const backendBase = (this.apiService.apiUrl || '').replace(/\/+$/, '');
-    window.location.href = `${backendBase}/api/auth/google`;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      this.notify.error('Không thể kết nối đến máy chủ. Vui lòng thử lại.');
+      return;
+    }
+    this.notify.info('Đang kết nối cổng đăng nhập Google...');
+    try {
+      const backendBase = (this.apiService.apiUrl || '').replace(/\/+$/, '');
+      window.location.href = `${backendBase}/api/auth/google`;
+    } catch {
+      this.notify.error('Không thể mở cửa sổ xác thực Google. Vui lòng thử lại.');
+    }
   }
 
   signInWithFacebook(): void {
-    this.notify.info('✨Tính năng đăng nhập Facebook đang được kết nối...✨');
+    this.notify.info('Tính năng đăng nhập Facebook đang được kết nối...');
   }
 }

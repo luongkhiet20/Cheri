@@ -126,7 +126,7 @@ export class SignalStore {
     }
   };
 
-  signOut = (callback?: () => void) => {
+  signOut = (callback?: (res: { success: boolean; networkError?: boolean; serverError?: boolean }) => void) => {
     console.log('[Cart] signOut triggered: Clearing user and cart state');
     if (typeof window !== 'undefined') {
       try {
@@ -144,11 +144,13 @@ export class SignalStore {
       next: () => {
         // Tải lại giỏ hàng cho Guest mới (giỏ rỗng)
         this.getCart('vi');
-        if (callback) callback();
+        if (callback) callback({ success: true });
       },
-      error: () => {
+      error: (err: any) => {
         this.getCart('vi');
-        if (callback) callback();
+        const status = err?.status || 0;
+        const isNetwork = status === 0 || (typeof navigator !== 'undefined' && !navigator.onLine);
+        if (callback) callback({ success: false, networkError: isNetwork, serverError: !isNetwork });
       }
     });
   };

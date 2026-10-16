@@ -370,5 +370,98 @@
   letter-spacing: 0.3px;
 }
 
+/* ----- Status Column & Sub-badge ----- */
+.admin-table__status-cell {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+
+.admin-table__empty-dash {
+  display: inline-block;
+  color: #94A3B8;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 0 4px;
+  user-select: none;
+}
+
+.admin-table__sub-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.25;
+  padding: 2.5px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+  transition: all 0.15s ease;
+}
+
+/* Biến thể Chờ duyệt trả hàng - Màu chủ đạo Chéri #74070E */
+.admin-table__sub-badge--pending,
+.admin-table__sub-badge--warning {
+  background-color: rgba(116, 7, 14, 0.08);
+  color: #74070E;
+  border: 1px solid rgba(116, 7, 14, 0.22);
+  font-weight: 700;
+}
+
+/* Đã duyệt */
+.admin-table__sub-badge--approved,
+.admin-table__sub-badge--info {
+  background-color: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
+}
+
+/* Đang gửi / nhận hàng hoàn */
+.admin-table__sub-badge--shipping {
+  background-color: #F5F3FF;
+  color: #6D28D9;
+  border: 1px solid #DDD6FE;
+}
+
+/* Đã kiểm hàng */
+.admin-table__sub-badge--inspecting {
+  background-color: #FDF4FF;
+  color: #A21CAF;
+  border: 1px solid #F5D0FE;
+}
+
+/* Đang xử lý hoàn tiền */
+.admin-table__sub-badge--refunding {
+  background-color: #FFFBEB;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+}
+
+/* Hoàn tất / Đã hoàn tiền */
+.admin-table__sub-badge--completed,
+.admin-table__sub-badge--success {
+  background-color: #F0FDF4;
+  color: #15803D;
+  border: 1px solid #BBF7D0;
+}
+
+/* Từ chối đổi trả */
+.admin-table__sub-badge--rejected,
+.admin-table__sub-badge--danger {
+  background-color: #FEF2F2;
+  color: #B91C1C;
+  border: 1px solid #FECACA;
+}
+
+/* Đã hủy yêu cầu */
+.admin-table__sub-badge--cancelled,
+.admin-table__sub-badge--neutral {
+  background-color: #F1F5F9;
+  color: #64748B;
+  border: 1px solid #E2E8F0;
+}
+
+
 
 

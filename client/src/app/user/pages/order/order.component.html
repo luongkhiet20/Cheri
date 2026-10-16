@@ -32,7 +32,7 @@
 
     <!-- ─── GIAO DIỆN BILL CHI TIẾT ─── -->
     @if (!isLoading && currentOrder) {
-    <div class="bill-card printable-bill bill-print-area">
+    <div class="bill-card printable-bill bill-print-area" [class.not-printable]="!canPrintInvoice">
 
       <!-- 0. THÔNG TIN CỬA HÀNG / ĐỊA CHỈ GỬI (STORE SENDER INFO - CHỈ HIỂN THỊ KHI IN HÓA ĐƠN) -->
       @if (hasStoreContact) {
@@ -311,7 +311,7 @@
                 <span class="return-date">Thời gian gửi: {{ req.requestedAt | date: 'dd/MM/yyyy HH:mm' }}</span>
               </div>
               <div class="return-card-badges">
-                <span class="user-pill user-pill-status">
+                <span class="user-pill user-pill-status" [class.status-completed]="req.status?.toUpperCase() === 'COMPLETED'">
                   {{ getReturnRequestStatusLabel(req.status) }}
                 </span>
                 <span class="user-pill user-pill-refund">
@@ -322,39 +322,39 @@
 
             <!-- Tiến trình 6 bước trực quan theo chuẩn luồng Chéri -->
             @if (req.status !== 'REJECTED') {
-            <div class="return-stepper">
-              <div class="stepper-step" [class.done]="getReturnStepIndex(req) > 1" [class.active]="getReturnStepIndex(req) === 1">
-                <div class="step-circle">1</div>
+            <div class="return-stepper" [class.is-completed]="req.status === 'COMPLETED'">
+              <div class="stepper-step" [class.done]="getReturnStepIndex(req) > 1 || req.status === 'COMPLETED'" [class.active]="req.status !== 'COMPLETED' && getReturnStepIndex(req) === 1">
+                <div class="step-circle">{{ (getReturnStepIndex(req) > 1 || req.status === 'COMPLETED') ? '✓' : '1' }}</div>
                 <div class="step-label">Gửi yêu cầu</div>
               </div>
-              <div class="stepper-line" [class.done]="getReturnStepIndex(req) > 1"></div>
+              <div class="stepper-line" [class.done]="getReturnStepIndex(req) > 1 || req.status === 'COMPLETED'"></div>
 
-              <div class="stepper-step" [class.done]="getReturnStepIndex(req) > 2" [class.active]="getReturnStepIndex(req) === 2">
-                <div class="step-circle">2</div>
+              <div class="stepper-step" [class.done]="getReturnStepIndex(req) > 2 || req.status === 'COMPLETED'" [class.active]="req.status !== 'COMPLETED' && getReturnStepIndex(req) === 2">
+                <div class="step-circle">{{ (getReturnStepIndex(req) > 2 || req.status === 'COMPLETED') ? '✓' : '2' }}</div>
                 <div class="step-label">Đã duyệt</div>
               </div>
-              <div class="stepper-line" [class.done]="getReturnStepIndex(req) > 2"></div>
+              <div class="stepper-line" [class.done]="getReturnStepIndex(req) > 2 || req.status === 'COMPLETED'"></div>
 
-              <div class="stepper-step" [class.done]="getReturnStepIndex(req) > 3" [class.active]="getReturnStepIndex(req) === 3">
-                <div class="step-circle">3</div>
+              <div class="stepper-step" [class.done]="getReturnStepIndex(req) > 3 || req.status === 'COMPLETED'" [class.active]="req.status !== 'COMPLETED' && getReturnStepIndex(req) === 3">
+                <div class="step-circle">{{ (getReturnStepIndex(req) > 3 || req.status === 'COMPLETED') ? '✓' : '3' }}</div>
                 <div class="step-label">Gửi/Nhận hàng</div>
               </div>
-              <div class="stepper-line" [class.done]="getReturnStepIndex(req) > 3"></div>
+              <div class="stepper-line" [class.done]="getReturnStepIndex(req) > 3 || req.status === 'COMPLETED'"></div>
 
-              <div class="stepper-step" [class.done]="getReturnStepIndex(req) > 4" [class.active]="getReturnStepIndex(req) === 4">
-                <div class="step-circle">4</div>
+              <div class="stepper-step" [class.done]="getReturnStepIndex(req) > 4 || req.status === 'COMPLETED'" [class.active]="req.status !== 'COMPLETED' && getReturnStepIndex(req) === 4">
+                <div class="step-circle">{{ (getReturnStepIndex(req) > 4 || req.status === 'COMPLETED') ? '✓' : '4' }}</div>
                 <div class="step-label">Kiểm hàng</div>
               </div>
-              <div class="stepper-line" [class.done]="getReturnStepIndex(req) > 4"></div>
+              <div class="stepper-line" [class.done]="getReturnStepIndex(req) > 4 || req.status === 'COMPLETED'"></div>
 
-              <div class="stepper-step" [class.done]="getReturnStepIndex(req) > 5" [class.active]="getReturnStepIndex(req) === 5">
-                <div class="step-circle">5</div>
+              <div class="stepper-step" [class.done]="getReturnStepIndex(req) > 5 || req.status === 'COMPLETED'" [class.active]="req.status !== 'COMPLETED' && getReturnStepIndex(req) === 5">
+                <div class="step-circle">{{ (getReturnStepIndex(req) > 5 || req.status === 'COMPLETED') ? '✓' : '5' }}</div>
                 <div class="step-label">Xử lý hoàn tiền</div>
               </div>
-              <div class="stepper-line" [class.done]="getReturnStepIndex(req) > 5"></div>
+              <div class="stepper-line" [class.done]="getReturnStepIndex(req) > 5 || req.status === 'COMPLETED'"></div>
 
-              <div class="stepper-step" [class.done]="getReturnStepIndex(req) >= 6" [class.active]="getReturnStepIndex(req) === 6">
-                <div class="step-circle">6</div>
+              <div class="stepper-step" [class.done]="req.status === 'COMPLETED'" [class.active]="req.status !== 'COMPLETED' && getReturnStepIndex(req) === 6">
+                <div class="step-circle">{{ req.status === 'COMPLETED' ? '✓' : '6' }}</div>
                 <div class="step-label">Hoàn tất</div>
               </div>
             </div>
@@ -367,7 +367,7 @@
               <p><strong>Mô tả:</strong> {{ req.description }}</p>
               }
               @if (req.rejectionReason) {
-              <p class="rejection-alert"><strong>Lý do từ chối:</strong> {{ req.rejectionReason }}</p>
+              <p class="rejection-alert"><strong>{{ (req.status === 'CANC' || req.status === 'CANCELLED') ? 'Lý do:' : 'Lý do từ chối:' }}</strong> {{ req.rejectionReason }}</p>
               }
             </div>
 
@@ -398,7 +398,7 @@
             @if (req.returnShipping?.carrier || req.returnShipping?.trackingCode) {
             <div class="return-shipping-box">
               <strong>Thông tin vận chuyển hoàn:</strong>
-              <span>{{ req.returnShipping.carrier || 'Đơn vị vận chuyển' }} — Mã vận đơn: <strong>{{ req.returnShipping.trackingCode || '—' }}</strong></span>
+              <span>{{ req.returnShipping.carrier || 'Đơn vị vận chuyển' }} — Mã vận đơn: <strong class="carrier-tracking-code">{{ req.returnShipping.trackingCode || '—' }}</strong></span>
             </div>
             }
 
@@ -406,7 +406,7 @@
             @if (req.inspection?.inspectedAt) {
             <div class="return-inspect-box">
               <strong>Kết quả kiểm tra:</strong>
-              <span>{{ req.inspection.isEligible ? 'Đủ điều kiện hoàn tiền' : 'Không đủ điều kiện' }}</span>
+              <span class="inspect-result-text">{{ req.inspection.isEligible ? 'Đủ điều kiện hoàn tiền' : 'Không đủ điều kiện' }}</span>
               @if (req.inspection.conditionNotes) {
               <p class="inspect-notes">{{ req.inspection.conditionNotes }}</p>
               }
@@ -416,7 +416,7 @@
             <!-- Số tiền hoàn -->
             @if (req.refund?.approvedAmount) {
             <div class="return-refund-summary">
-              <span>Số tiền duyệt hoàn:</span>
+              <span class="refund-summary-label">Số tiền duyệt hoàn:</span>
               <strong class="approved-val">{{ req.refund.approvedAmount | priceFormat }} đ</strong>
               @if (req.refund.transactionId) {
               <span class="refund-txid"> (Mã GD: {{ req.refund.transactionId }})</span>
@@ -460,9 +460,11 @@
         <button type="button" class="btn-cheri-secondary" (click)="goToTracking()">
           Tra cứu đơn hàng
         </button>
+        @if (canPrintInvoice) {
         <button type="button" class="btn-cheri-outline" (click)="printBill()">
           In hóa đơn
         </button>
+        }
       </footer>
 
     </div>

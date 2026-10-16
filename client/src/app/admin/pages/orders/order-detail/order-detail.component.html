@@ -346,7 +346,7 @@
             </div>
 
             <div class="finance-item">
-              <span class="finance-label">Phương thức / Trạng thái TT</span>
+              <span class="finance-label">Phương thức / Trạng thái thanh toán</span>
               <span class="finance-val font-medium">
                 {{ order.payment || order.paymentMethodSnapshot?.name || '—' }} ({{
                 getPaymentStatusLabel(order.paymentStatus || order.payment?.status) }})
@@ -394,11 +394,11 @@
                   </span>
                 </div>
                 <div class="req-meta-sub">
-                  <span>Khách hàng: <strong>{{ order.customer || '—' }}</strong> ({{ order.customerEmail || '—' }})</span>
+                  <span><span class="meta-label">Khách hàng:</span> <strong>{{ order.customer || '—' }}</strong> ({{ order.customerEmail || '—' }})</span>
                   <span class="sep">•</span>
-                  <span>Thời gian gửi: {{ req.requestedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                  <span><span class="meta-label">Thời gian gửi:</span> {{ req.requestedAt | date:'dd/MM/yyyy HH:mm' }}</span>
                   <span class="sep">•</span>
-                  <span>Phương thức mong muốn: {{ req.refundMethod || 'ORIGINAL_PAYMENT' }}</span>
+                  <span><span class="meta-label">Phương thức mong muốn:</span> {{ req.refundMethod || 'ORIGINAL_PAYMENT' }}</span>
                 </div>
               </div>
 
@@ -613,7 +613,7 @@
                   <div class="req-timeline-dot"></div>
                   <div class="req-timeline-content">
                     <div class="req-timeline-header">
-                      <span class="font-bold action-name">{{ h.action }}</span>
+                      <span class="font-bold action-name">{{ getReturnHistoryActionLabel(h.action) }}</span>
                       <span class="text-muted time">{{ h.updatedAt | date:'dd/MM/yyyy HH:mm:ss' }}</span>
                     </div>
                     <div class="note-text" *ngIf="h.note">{{ h.note }}</div>

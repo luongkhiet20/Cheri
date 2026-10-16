@@ -92,6 +92,22 @@ button.action-btn[id^="action-view-"]:disabled {
   border-color: var(--cheri-primary-hover);
 }
 
+/* Action 'return' / 'Xử lý trả hàng': Viền hồng đào, chữ đỏ rượu Chéri nổi bật */
+.action-btn--return,
+button.action-btn[id^="action-return-"] {
+  background: #FFF1F2;
+  border-color: #FECDD3;
+  color: #74070E;
+  font-weight: 600;
+}
+
+.action-btn--return:hover:not(:disabled),
+button.action-btn[id^="action-return-"]:hover:not(:disabled) {
+  background: #FFE4E6;
+  border-color: #FDA4AF;
+  color: #5F060B;
+}
+
 @media (max-width: 768px) {
   .action-buttons {
     flex-wrap: wrap;

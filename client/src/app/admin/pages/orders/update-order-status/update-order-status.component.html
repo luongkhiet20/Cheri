@@ -1,8 +1,33 @@
 <div class="status-modal-overlay" *ngIf="isOpen" (click)="onOverlayClick($event)" role="dialog" aria-modal="true" aria-labelledby="modal-status-label">
-  <div class="status-modal-panel" (click)="$event.stopPropagation()">
+  <div class="status-modal-panel" [class.status-modal-panel--wide]="hasReturnReq" (click)="$event.stopPropagation()">
+    <!-- Modal Header -->
     <div class="status-modal-header">
-      <h3 class="status-modal-title">Cập nhật trạng thái</h3>
-      <button type="button" class="status-modal-close" (click)="onCancel()" aria-label="Đóng" [disabled]="isSaving">
+      <div class="header-content">
+        <h3 class="status-modal-title">
+          Đơn hàng: <span class="order-code-highlight">{{ order?.code || order?.orderId }}</span>
+        </h3>
+
+        <!-- Tab chuyển đổi khi đơn có yêu cầu đổi trả -->
+        <div *ngIf="hasReturnReq" class="modal-tabs-nav">
+          <button
+            type="button"
+            class="tab-btn"
+            [class.active]="currentTab === 'order'"
+            (click)="switchTab('order')">
+            Trạng thái đơn hàng
+          </button>
+          <button
+            type="button"
+            class="tab-btn tab-btn--return"
+            [class.active]="currentTab === 'return'"
+            (click)="switchTab('return')">
+            Xử lý đổi trả & hoàn tiền
+            <span *ngIf="activeReturnReq?.status === 'PENDING'" class="tab-badge-pending">Chờ duyệt</span>
+          </button>
+        </div>
+      </div>
+
+      <button type="button" class="status-modal-close" (click)="onCancel()" aria-label="Đóng" [disabled]="isSaving || isProcessingReturn">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -10,18 +35,16 @@
       </button>
     </div>
 
-    <div class="status-modal-body">
-      <!-- Thông báo lỗi khi lưu thất bại -->
+    <!-- ── TAB 1: CẬP NHẬT TRẠNG THÁI ĐƠN HÀNG THÔNG THƯỜNG ── -->
+    <div class="status-modal-body" *ngIf="currentTab === 'order'">
       <div *ngIf="errorMessage" class="status-error-alert" role="alert">
         {{ errorMessage }}
       </div>
 
-      <!-- Thông báo khi đơn hàng đã ở trạng thái kết thúc không thể chuyển tiếp -->
       <div *ngIf="!hasAvailableTransitions" class="status-info-alert" role="status">
         Đơn hàng đã ở trạng thái kết thúc, không thể chuyển đổi trạng thái tiếp theo.
       </div>
 
-      <!-- Duy nhất một thanh chọn trạng thái đơn hàng (chỉ hiển thị các trạng thái hợp lệ) -->
       <div class="form-group">
         <label id="modal-status-label" for="modal-order-status-select" class="form-label">
           Trạng thái đơn hàng
@@ -36,26 +59,258 @@
           </option>
         </select>
       </div>
+
+      <div class="form-group mb-3">
+        <label for="modal-order-status-note" class="form-label">
+          Ghi chú cập nhật trạng thái (tùy chọn)
+        </label>
+        <textarea
+          id="modal-order-status-note"
+          class="form-control"
+          rows="2"
+          [(ngModel)]="orderStatusNote"
+          placeholder="Nhập ghi chú hoặc lý do chuyển trạng thái đơn hàng..."
+          [disabled]="isSaving || !hasAvailableTransitions"></textarea>
+      </div>
+
+      <div class="status-modal-footer">
+        <button
+          type="button"
+          class="btn btn-cancel"
+          id="btn-cancel-status"
+          (click)="onCancel()"
+          [disabled]="isSaving">
+          Hủy
+        </button>
+        <button
+          type="button"
+          class="btn btn-save"
+          id="btn-save-status"
+          (click)="onSave()"
+          [disabled]="isSaving || isUnchanged || !hasAvailableTransitions">
+          <span *ngIf="isSaving" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          <span>{{ isSaving ? 'Đang lưu...' : 'Lưu trạng thái đơn' }}</span>
+        </button>
+      </div>
     </div>
 
-    <div class="status-modal-footer">
-      <button
-        type="button"
-        class="btn btn-cancel"
-        id="btn-cancel-status"
-        (click)="onCancel()"
-        [disabled]="isSaving">
-        Hủy
-      </button>
-      <button
-        type="button"
-        class="btn btn-save"
-        id="btn-save-status"
-        (click)="onSave()"
-        [disabled]="isSaving || isUnchanged || !hasAvailableTransitions">
-        <span *ngIf="isSaving" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-        <span>{{ isSaving ? 'Đang lưu...' : 'Lưu' }}</span>
-      </button>
+    <!-- ── TAB 2: QUẢN LÝ XỬ LÝ YÊU CẦU TRẢ HÀNG & HOÀN TIỀN ── -->
+    <div class="status-modal-body status-modal-body--return" *ngIf="currentTab === 'return' && activeReturnReq">
+      <div *ngIf="returnErrorMessage" class="status-error-alert" role="alert">
+        {{ returnErrorMessage }}
+      </div>
+
+      <!-- Return Request Summary Card -->
+      <div class="return-info-card">
+        <div class="return-info-header">
+          <div>
+            <span class="info-id-label">Mã yêu cầu:</span>
+            <strong class="info-id-val">{{ activeReturnReq.requestId }}</strong>
+          </div>
+          <span class="return-stage-badge" [ngClass]="'badge--' + getReturnBadgeClass(activeReturnReq)">
+            {{ getReturnDisplayLabel(activeReturnReq) }}
+          </span>
+        </div>
+
+        <div class="return-info-grid">
+          <div class="info-row">
+            <span class="row-label">Thời gian gửi:</span>
+            <span class="row-val">{{ activeReturnReq.requestedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="row-label">Lý do yêu cầu:</span>
+            <span class="row-val font-semibold text-danger">{{ activeReturnReq.reason || 'Khách không nêu lý do' }}</span>
+          </div>
+          <div class="info-row" *ngIf="activeReturnReq.notes">
+            <span class="row-label">Ghi chú thêm:</span>
+            <span class="row-val italic">{{ activeReturnReq.notes }}</span>
+          </div>
+          <div class="info-row">
+            <span class="row-label">Số tiền yêu cầu:</span>
+            <span class="row-val font-bold text-cheri">{{ (activeReturnReq.refund?.requestedAmount || order?.total || 0) | currency:'VND':'symbol':'1.0-0' }}</span>
+          </div>
+          <div class="info-row" *ngIf="activeReturnReq.refundMethod">
+            <span class="row-label">Hình thức hoàn:</span>
+            <span class="row-val">{{ activeReturnReq.refundMethod === 'ORIGINAL_PAYMENT' ? 'Phương thức thanh toán gốc' : 'Chuyển khoản ngân hàng' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Context Workflow Action Box -->
+      <div class="workflow-action-box">
+        <h4 class="action-box-title">Thao tác theo giai đoạn: {{ getReturnDisplayLabel(activeReturnReq) }}</h4>
+
+        <!-- GIAI ĐOẠN 1: PENDING (Chờ duyệt trả hàng) -->
+        <div *ngIf="activeReturnReq.status === 'PENDING'" class="workflow-step-content">
+          <div class="form-group mb-2">
+            <label class="form-label">Số tiền duyệt hoàn (VNĐ):</label>
+            <input type="number" class="form-control" [(ngModel)]="approveAmount" [disabled]="isProcessingReturn" />
+          </div>
+          <div class="form-group mb-2">
+            <label class="form-label">Hướng dẫn gửi hàng cho khách:</label>
+            <textarea class="form-control" rows="2" [(ngModel)]="approveInstructions" [disabled]="isProcessingReturn"></textarea>
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label">Ghi chú duyệt của Admin (tùy chọn):</label>
+            <textarea class="form-control" rows="2" [(ngModel)]="approveNote" placeholder="Ghi chú nội bộ hoặc lưu ý khi duyệt đơn..." [disabled]="isProcessingReturn"></textarea>
+          </div>
+
+          <div *ngIf="showRejectInput" class="reject-box mb-3">
+            <label class="form-label text-danger font-semibold">Lý do từ chối yêu cầu (bắt buộc):</label>
+            <textarea class="form-control" rows="2" [(ngModel)]="rejectReason" placeholder="Nhập lý do từ chối trả hàng..." [disabled]="isProcessingReturn"></textarea>
+            <div class="d-flex gap-2 mt-2">
+              <button type="button" class="btn btn-sm btn-danger" (click)="onExecuteReturnAction('REJECT')" [disabled]="isProcessingReturn">
+                Xác nhận từ chối
+              </button>
+              <button type="button" class="btn btn-sm btn-secondary" (click)="showRejectInput = false">
+                Quay lại
+              </button>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2" *ngIf="!showRejectInput">
+            <button type="button" class="btn btn-approve" (click)="onExecuteReturnAction('APPROVE')" [disabled]="isProcessingReturn">
+              <span *ngIf="isProcessingReturn" class="spinner-border spinner-border-sm me-1"></span>
+              Duyệt yêu cầu trả hàng
+            </button>
+            <button type="button" class="btn btn-outline-danger" (click)="showRejectInput = true" [disabled]="isProcessingReturn">
+              Từ chối
+            </button>
+          </div>
+        </div>
+
+        <!-- GIAI ĐOẠN 2: APPROVED / WAITING_FOR_RETURN_SHIPMENT (Đã duyệt trả hàng / Đang trả hàng) -->
+        <div *ngIf="activeReturnReq.status === 'APPROVED' || activeReturnReq.status === 'WAITING_FOR_RETURN_SHIPMENT'" class="workflow-step-content">
+          <div class="row g-2 mb-2">
+            <div class="col-6">
+              <label class="form-label">Đơn vị vận chuyển (nếu có):</label>
+              <input type="text" class="form-control" [(ngModel)]="shippingCarrier" placeholder="GHN / Viettel Post..." [disabled]="isProcessingReturn" />
+            </div>
+            <div class="col-6">
+              <label class="form-label">Mã vận đơn hoàn:</label>
+              <input type="text" class="form-control" [(ngModel)]="shippingTrackingCode" placeholder="Mã vận đơn..." [disabled]="isProcessingReturn" />
+            </div>
+          </div>
+          <div class="form-group mb-2">
+            <label class="form-label">Ghi chú vận chuyển (nếu có):</label>
+            <input type="text" class="form-control" [(ngModel)]="shippingNote" placeholder="Ghi chú về việc gửi hàng hoàn..." [disabled]="isProcessingReturn" />
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label">Ghi chú khi nhận hàng tại kho (nếu xác nhận nhận hàng):</label>
+            <input type="text" class="form-control" [(ngModel)]="receiveNote" placeholder="Tình trạng bưu kiện khi nhận..." [disabled]="isProcessingReturn" />
+          </div>
+
+          <div class="d-flex gap-2 flex-wrap">
+            <button type="button" class="btn btn-outline-primary" (click)="onExecuteReturnAction('CUSTOMER_SHIPPED')" [disabled]="isProcessingReturn">
+              Khách đã gửi hàng
+            </button>
+            <button type="button" class="btn btn-primary" (click)="onExecuteReturnAction('RECEIVE_GOODS')" [disabled]="isProcessingReturn">
+              Xác nhận đã nhận hàng tại kho
+            </button>
+            <button type="button" class="btn btn-outline-danger" (click)="showRejectInput = !showRejectInput" [disabled]="isProcessingReturn">
+              Từ chối
+            </button>
+          </div>
+
+          <div *ngIf="showRejectInput" class="reject-box mt-3">
+            <label class="form-label text-danger font-semibold">Lý do từ chối:</label>
+            <textarea class="form-control" rows="2" [(ngModel)]="rejectReason" [disabled]="isProcessingReturn"></textarea>
+            <button type="button" class="btn btn-sm btn-danger mt-2" (click)="onExecuteReturnAction('REJECT')" [disabled]="isProcessingReturn">
+              Xác nhận từ chối
+            </button>
+          </div>
+        </div>
+
+        <!-- GIAI ĐOẠN 3: RETURN_SHIPPED (Đang trả hàng) -->
+        <div *ngIf="activeReturnReq.status === 'RETURN_SHIPPED'" class="workflow-step-content">
+          <p class="text-muted mb-2">
+            Kiện hàng hoàn đang trên đường vận chuyển đến kho Chéri
+            <span *ngIf="activeReturnReq.returnShipping?.trackingCode">
+              (Mã vận đơn: <strong>{{ activeReturnReq.returnShipping?.trackingCode }}</strong> - {{ activeReturnReq.returnShipping?.carrier }})
+            </span>.
+          </p>
+          <div class="form-group mb-3">
+            <label class="form-label">Ghi chú khi nhận hàng tại kho:</label>
+            <input type="text" class="form-control" [(ngModel)]="receiveNote" placeholder="Tình trạng kiện hàng khi nhận về kho..." [disabled]="isProcessingReturn" />
+          </div>
+          <button type="button" class="btn btn-primary" (click)="onExecuteReturnAction('RECEIVE_GOODS')" [disabled]="isProcessingReturn">
+            Xác nhận kho Chéri đã nhận hàng
+          </button>
+        </div>
+
+        <!-- GIAI ĐOẠN 4: RETURN_RECEIVED (Đang kiểm hàng trả) -->
+        <div *ngIf="activeReturnReq.status === 'RETURN_RECEIVED'" class="workflow-step-content">
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="inspectEligibleCheck" [(ngModel)]="inspectEligible" [disabled]="isProcessingReturn">
+            <label class="form-check-label font-semibold" for="inspectEligibleCheck">
+              Sản phẩm đủ điều kiện hoàn tiền
+            </label>
+          </div>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="inspectRestockCheck" [(ngModel)]="inspectRestock" [disabled]="isProcessingReturn">
+            <label class="form-check-label" for="inspectRestockCheck">
+              Cộng hoàn lại số lượng vào tồn kho sản phẩm
+            </label>
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label">Ghi chú tình trạng kiểm tra sản phẩm:</label>
+            <textarea class="form-control" rows="2" [(ngModel)]="inspectNotes" placeholder="Mô tả tem mác, bao bì, tình trạng..." [disabled]="isProcessingReturn"></textarea>
+          </div>
+          <button type="button" class="btn btn-primary" (click)="onExecuteReturnAction('INSPECT_GOODS')" [disabled]="isProcessingReturn">
+            Hoàn tất kiểm hàng
+          </button>
+        </div>
+
+        <!-- GIAI ĐOẠN 5: INSPECTED (Đang hoàn tiền) -->
+        <div *ngIf="activeReturnReq.status === 'INSPECTED' && activeReturnReq.refund?.status !== 'COMPLETED' && activeReturnReq.refund?.status !== 'NOT_REQUIRED'" class="workflow-step-content">
+          <div class="row g-2 mb-2">
+            <div class="col-6">
+              <label class="form-label">Số tiền thực tế hoàn (VNĐ):</label>
+              <input type="number" class="form-control" [(ngModel)]="refundAmount" [disabled]="isProcessingReturn" />
+            </div>
+            <div class="col-6">
+              <label class="form-label">Mã giao dịch ngân hàng / TxID:</label>
+              <input type="text" class="form-control" [(ngModel)]="refundTxId" [disabled]="isProcessingReturn" />
+            </div>
+          </div>
+          <div class="row g-2 mb-2">
+            <div class="col-6">
+              <label class="form-label">Ngân hàng:</label>
+              <input type="text" class="form-control" [(ngModel)]="refundBankName" placeholder="MB Bank / VCB..." [disabled]="isProcessingReturn" />
+            </div>
+            <div class="col-6">
+              <label class="form-label">Số tài khoản nhận:</label>
+              <input type="text" class="form-control" [(ngModel)]="refundAccountNum" [disabled]="isProcessingReturn" />
+            </div>
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label">Ghi chú giao dịch:</label>
+            <input type="text" class="form-control" [(ngModel)]="refundNotes" placeholder="Ghi chú hoàn tiền..." [disabled]="isProcessingReturn" />
+          </div>
+          <button type="button" class="btn btn-success" (click)="onExecuteReturnAction('PROCESS_REFUND')" [disabled]="isProcessingReturn">
+            Xác nhận hoàn tiền thành công
+          </button>
+        </div>
+
+        <!-- GIAI ĐOẠN ĐÃ KẾT THÚC: COMPLETED / REJECTED / CANCELLED -->
+        <div *ngIf="!isReturnActionable(activeReturnReq)" class="workflow-completed-msg">
+          <div *ngIf="activeReturnReq.status === 'COMPLETED' || activeReturnReq.refund?.status === 'COMPLETED'" class="alert alert-success">
+            ✓ <strong>Đã hoàn tiền thành công:</strong> Quy trình trả hàng và hoàn tiền cho yêu cầu này đã hoàn tất.
+          </div>
+          <div *ngIf="activeReturnReq.status === 'REJECTED'" class="alert alert-danger">
+            ✕ <strong>Yêu cầu bị từ chối:</strong> Lý do: {{ activeReturnReq.rejectionReason || 'Không có lý do' }}
+          </div>
+          <div *ngIf="activeReturnReq.status === 'CANCELLED'" class="alert alert-secondary">
+            <strong>Yêu cầu đã hủy:</strong> Khách hàng đã chủ động hủy yêu cầu này.
+          </div>
+        </div>
+      </div>
+
+      <div class="status-modal-footer">
+        <button type="button" class="btn btn-cancel" (click)="onCancel()" [disabled]="isProcessingReturn">
+          Đóng
+        </button>
+      </div>
     </div>
   </div>
 </div>

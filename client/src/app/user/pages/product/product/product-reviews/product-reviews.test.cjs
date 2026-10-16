@@ -226,3 +226,77 @@ test('formatDate formats ISO string to DD/MM/YYYY', () => {
   assert.equal(comp.formatDate(''), '');
   assert.equal(comp.formatDate('invalid-date'), '');
 });
+
+test('async getProductReviewStats is NOT dropped when fetchReviewsOnly starts concurrently', async () => {
+  const { Subject } = require('rxjs');
+  const statsSubject = new Subject();
+  const reviewsSubject = new Subject();
+
+  const comp = createComponent({
+    getProductReviewStats: () => statsSubject.asObservable(),
+    getProductReviews: () => reviewsSubject.asObservable(),
+  });
+
+  comp.productId = 'async-prod-1';
+  comp.ngOnInit();
+
+  // At this point, both calls were dispatched concurrently
+  assert.equal(comp.isLoadingStats, true);
+  assert.equal(comp.isLoadingReviews, true);
+
+  // Reviews finish first
+  reviewsSubject.next({
+    reviews: [{ _id: 'r1', rating: 5, comment: 'Đẹp' }],
+    pagination: { total: 1, totalPages: 1 }
+  });
+  reviewsSubject.complete();
+
+  // Then stats finish later
+  statsSubject.next({
+    averageRating: 5.0,
+    reviewCount: 1,
+    distribution: {
+      '5': { count: 1, percentage: 100 },
+      '4': { count: 0, percentage: 0 },
+      '3': { count: 0, percentage: 0 },
+      '2': { count: 0, percentage: 0 },
+      '1': { count: 0, percentage: 0 }
+    }
+  });
+  statsSubject.complete();
+
+  // Stats MUST NOT be dropped!
+  assert.notEqual(comp.reviewStats, null);
+  assert.equal(comp.totalReviewCount, 1);
+  assert.equal(comp.getStarCount(5), 1);
+  assert.equal(comp.getStarCount(4), 0);
+  assert.equal(comp.getStarPercentage(5), 100);
+});
+
+test('reviewCreated$ triggers reload and updates review counts', () => {
+  const { Subject } = require('rxjs');
+  const reviewCreatedSubject = new Subject();
+  let loadCount = 0;
+
+  const comp = createComponent({
+    reviewCreated$: reviewCreatedSubject.asObservable(),
+    getProductReviewStats: () => {
+      loadCount++;
+      return of({
+        averageRating: 5,
+        reviewCount: loadCount,
+        distribution: { 5: { count: loadCount, percentage: 100 } }
+      });
+    }
+  });
+
+  comp.productId = 'created-prod';
+  comp.ngOnInit();
+  assert.equal(comp.totalReviewCount, 1);
+
+  // New review is created
+  reviewCreatedSubject.next({ productId: 'created-prod' });
+  assert.equal(comp.totalReviewCount, 2);
+  assert.equal(comp.getStarCount(5), 2);
+});
+

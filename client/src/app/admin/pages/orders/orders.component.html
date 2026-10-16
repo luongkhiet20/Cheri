@@ -33,11 +33,13 @@
     totalLabel="đơn hàng" (actionClick)="onAction($event)" (pageChange)="onPageChange($event)"
     (pageSizeChange)="onPageSizeChange($event)"></app-admin-table>
 
-  <!-- Popup cập nhật trạng thái đơn hàng -->
+  <!-- Popup cập nhật trạng thái đơn hàng & xử lý trả hàng hoàn tiền -->
   <app-update-order-status
     [isOpen]="isStatusModalOpen"
     [order]="selectedOrderForStatus"
+    [activeTab]="selectedStatusModalTab"
     (modalClose)="onCloseStatusModal()"
-    (statusUpdated)="onOrderStatusUpdated($event)">
+    (statusUpdated)="onOrderStatusUpdated($event)"
+    (returnUpdated)="onReturnUpdated($event)">
   </app-update-order-status>
 </div>

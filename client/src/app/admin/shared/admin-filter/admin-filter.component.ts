@@ -59,12 +59,29 @@ export class AdminFilterComponent implements OnInit, OnChanges {
     this.closePanel();
   }
 
+  isFieldVisible(field: FilterField): boolean {
+    if (typeof field?.showWhen === 'function') {
+      return field.showWhen(this.values);
+    }
+    return true;
+  }
+
+  private clearHiddenFieldValues(): void {
+    this.fields.forEach(f => {
+      if (!this.isFieldVisible(f)) {
+        this.values[f.key] = '';
+      }
+    });
+  }
+
   onFieldChange(field: FilterField, event: Event): void {
     const val = (event.target as HTMLSelectElement | HTMLInputElement).value;
     this.values[field.key] = val;
+    this.clearHiddenFieldValues();
   }
 
   applyFilters(): void {
+    this.clearHiddenFieldValues();
     this.buildActiveFilters();
     this.filterChange.emit({ ...this.values });
     this.closePanel();
@@ -72,6 +89,7 @@ export class AdminFilterComponent implements OnInit, OnChanges {
 
   removeFilter(key: string): void {
     this.values[key] = '';
+    this.clearHiddenFieldValues();
     this.buildActiveFilters();
     this.filterChange.emit({ ...this.values });
   }
@@ -86,7 +104,7 @@ export class AdminFilterComponent implements OnInit, OnChanges {
 
   private buildActiveFilters(): void {
     this.activeFilters = this.fields
-      .filter(f => this.values[f.key] !== '' && this.values[f.key] !== null && this.values[f.key] !== undefined)
+      .filter(f => this.isFieldVisible(f) && this.values[f.key] !== '' && this.values[f.key] !== null && this.values[f.key] !== undefined)
       .map(f => {
         const val = this.values[f.key];
         const opt = f.options?.find(o => String(o.value) === String(val));
@@ -107,6 +125,7 @@ export class AdminFilterComponent implements OnInit, OnChanges {
         this.values[field.key] = '';
       }
     });
+    this.clearHiddenFieldValues();
     this.buildActiveFilters();
   }
 }

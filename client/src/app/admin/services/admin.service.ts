@@ -135,13 +135,14 @@ export class AdminService {
   }
 
   // ── Orders ─────────────────────────────────
-  getOrders(params?: { page?: number; limit?: number; search?: string; status?: string; paymentMethod?: string; userId?: string }): Observable<any> {
+  getOrders(params?: { page?: number; limit?: number; search?: string; status?: string; returnStatus?: string; paymentMethod?: string; userId?: string }): Observable<any> {
     let httpParams = new HttpParams();
     if (params) {
       if (params.page) httpParams = httpParams.set('page', params.page.toString());
       if (params.limit) httpParams = httpParams.set('limit', params.limit.toString());
       if (params.search) httpParams = httpParams.set('search', params.search);
       if (params.status) httpParams = httpParams.set('status', params.status);
+      if (params.returnStatus) httpParams = httpParams.set('returnStatus', params.returnStatus);
       if (params.paymentMethod) httpParams = httpParams.set('paymentMethod', params.paymentMethod);
       if (params.userId) httpParams = httpParams.set('userId', params.userId);
     }

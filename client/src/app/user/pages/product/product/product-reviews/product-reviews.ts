@@ -44,7 +44,8 @@ export class ProductReviewsComponent implements OnInit, OnChanges, OnDestroy {
   private statsSub: Subscription | null = null;
   private reviewsSub: Subscription | null = null;
   private currentLoadedPid: string | null = null;
-  private currentRequestId: number = 0;
+  private statsRequestId: number = 0;
+  private reviewsRequestId: number = 0;
   private reviewCreatedSub: Subscription | null = null;
 
   constructor(
@@ -61,7 +62,8 @@ export class ProductReviewsComponent implements OnInit, OnChanges, OnDestroy {
     if (this.apiService?.reviewCreated$) {
       this.reviewCreatedSub = this.apiService.reviewCreated$.subscribe((event) => {
         const currentPid = this.productId || this.currentLoadedPid;
-        if (currentPid && event?.productId && String(event.productId) === String(currentPid)) {
+        if (currentPid) {
+          // Tự động tải lại và cập nhật thống kê ngay khi có review mới được tạo thành công
           this.loadProductReviews(currentPid);
         }
       });
@@ -69,11 +71,13 @@ export class ProductReviewsComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['productId'] && !changes['productId'].isFirstChange()) {
+    if (changes['productId']) {
       const prev = changes['productId'].previousValue;
       const curr = changes['productId'].currentValue;
       if (curr && curr !== prev) {
-        this.resetStateForNewProduct();
+        if (!changes['productId'].isFirstChange()) {
+          this.resetStateForNewProduct();
+        }
         this.currentLoadedPid = curr;
         this.loadProductReviews(curr);
       }
@@ -107,7 +111,8 @@ export class ProductReviewsComponent implements OnInit, OnChanges, OnDestroy {
 
   private resetStateForNewProduct(): void {
     this.cancelPendingRequests();
-    this.currentRequestId++;
+    this.statsRequestId++;
+    this.reviewsRequestId++;
     this.reviewStats = null;
     this.reviewsList = [];
     this.reviewsTotal = 0;
@@ -138,17 +143,21 @@ export class ProductReviewsComponent implements OnInit, OnChanges, OnDestroy {
     this.isLoadingStats = true;
     this.cdr.markForCheck();
 
-    const reqId = this.currentRequestId;
+    const reqId = ++this.statsRequestId;
     this.statsSub = this.apiService.getProductReviewStats(productId).subscribe({
       next: (stats) => {
-        if (reqId !== this.currentRequestId) return;
+        if (reqId !== this.statsRequestId) return;
         this.reviewStats = stats;
         this.isLoadingStats = false;
         this.cdr.markForCheck();
       },
       error: () => {
-        if (reqId !== this.currentRequestId) return;
+        if (reqId !== this.statsRequestId) return;
         this.isLoadingStats = false;
+        // Nếu stats lỗi nhưng đã tải được danh sách reviews, đồng bộ fallback từ reviewsList
+        if (!this.reviewStats && this.selectedStarFilter === null && this.reviewsTotal > 0) {
+          this.syncFallbackStatsFromList();
+        }
         this.cdr.markForCheck();
       },
     });
@@ -164,7 +173,7 @@ export class ProductReviewsComponent implements OnInit, OnChanges, OnDestroy {
     this.errorMessage = '';
     this.cdr.markForCheck();
 
-    const reqId = ++this.currentRequestId;
+    const reqId = ++this.reviewsRequestId;
 
     this.reviewsSub = this.apiService
       .getProductReviews(productId, {
@@ -175,16 +184,22 @@ export class ProductReviewsComponent implements OnInit, OnChanges, OnDestroy {
       })
       .subscribe({
         next: (res) => {
-          if (reqId !== this.currentRequestId) return;
+          if (reqId !== this.reviewsRequestId) return;
           this.reviewsList = res?.reviews || [];
           this.reviewsTotal = res?.pagination?.total ?? this.reviewsList.length;
           this.reviewsTotalPages = res?.pagination?.totalPages || 1;
           this.isLoadingReviews = false;
           this.hasError = false;
+
+          // Nếu reviewStats chưa có hoặc chưa tải xong trong khi danh sách có đánh giá, tính fallback tạm thời
+          if (!this.reviewStats && this.selectedStarFilter === null && this.reviewsTotal > 0) {
+            this.syncFallbackStatsFromList();
+          }
+
           this.cdr.markForCheck();
         },
         error: (err) => {
-          if (reqId !== this.currentRequestId) return;
+          if (reqId !== this.reviewsRequestId) return;
           this.reviewsList = [];
           this.isLoadingReviews = false;
           this.hasError = true;
@@ -192,6 +207,36 @@ export class ProductReviewsComponent implements OnInit, OnChanges, OnDestroy {
           this.cdr.markForCheck();
         },
       });
+  }
+
+  private syncFallbackStatsFromList(): void {
+    if (!this.reviewStats && Array.isArray(this.reviewsList) && this.reviewsList.length > 0) {
+      const distribution: { [star: number]: { count: number; percentage: number } } = {
+        1: { count: 0, percentage: 0 },
+        2: { count: 0, percentage: 0 },
+        3: { count: 0, percentage: 0 },
+        4: { count: 0, percentage: 0 },
+        5: { count: 0, percentage: 0 },
+      };
+      let totalScore = 0;
+      for (const rev of this.reviewsList) {
+        const star = Math.round(Number(rev.rating));
+        if (star >= 1 && star <= 5) {
+          distribution[star].count++;
+          totalScore += star;
+        }
+      }
+      const count = this.reviewsTotal || this.reviewsList.length;
+      for (let s = 1; s <= 5; s++) {
+        distribution[s].percentage = Math.round((distribution[s].count / (count || 1)) * 100);
+      }
+      const avg = count > 0 ? Math.round((totalScore / this.reviewsList.length) * 10) / 10 : 5.0;
+      this.reviewStats = {
+        averageRating: avg,
+        reviewCount: count,
+        distribution,
+      };
+    }
   }
 
   // ─── Actions ────────────────────────────────────────────────────────────────
@@ -246,12 +291,37 @@ export class ProductReviewsComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
+  get totalReviewCount(): number {
+    if (this.reviewStats && typeof this.reviewStats.reviewCount === 'number' && this.reviewStats.reviewCount > 0) {
+      return this.reviewStats.reviewCount;
+    }
+    if (this.selectedStarFilter === null && this.reviewsTotal > 0) {
+      return this.reviewsTotal;
+    }
+    return this.reviewStats?.reviewCount || 0;
+  }
+
   getStarCount(star: number): number {
-    return this.reviewStats?.distribution?.[star]?.count || 0;
+    if (this.reviewStats?.distribution) {
+      const dist = this.reviewStats.distribution[star] || this.reviewStats.distribution[String(star)];
+      if (dist && typeof dist.count === 'number') {
+        return dist.count;
+      }
+    }
+    if (!this.reviewStats && this.selectedStarFilter === null && Array.isArray(this.reviewsList) && this.reviewsList.length > 0) {
+      return this.reviewsList.filter((r) => Math.round(Number(r.rating)) === star).length;
+    }
+    return 0;
   }
 
   getStarPercentage(star: number): number {
-    return this.reviewStats?.distribution?.[star]?.percentage || 0;
+    if (this.reviewStats?.distribution) {
+      const dist = this.reviewStats.distribution[star] || this.reviewStats.distribution[String(star)];
+      if (dist && typeof dist.percentage === 'number') {
+        return dist.percentage;
+      }
+    }
+    return 0;
   }
 
   getStarArray(): number[] {

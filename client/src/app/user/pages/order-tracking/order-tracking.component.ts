@@ -695,7 +695,7 @@ export class OrderTrackingComponent implements OnInit {
       DELIVERY_FAILED: 'Giao hàng không thành công',
       DELIVERED: 'Đã giao hàng',
       CANCELLED: 'Đã huỷ',
-      RETURNED: 'Hoàn hàng',
+      RETURNED: 'Trả hàng',
     };
     return map[status] || status;
   }

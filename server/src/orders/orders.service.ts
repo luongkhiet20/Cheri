@@ -291,9 +291,32 @@ export class OrdersService {
       userConditions.push({ _user: objId }, { userId: objId });
     }
 
-    const orders = await this.orderModel
+    const orders: any[] = await this.orderModel
       .find({ $or: userConditions })
-      .sort({ dateAdded: -1, createdAt: -1 });
+      .sort({ dateAdded: -1, createdAt: -1 })
+      .lean();
+
+    try {
+      const reviewsCol = this.orderModel.db.collection('product_reviews');
+      const unreviewedDeliveredCodes = orders
+        .filter((o: any) => !o.isReviewed && (o.status || '').toUpperCase() === 'DELIVERED')
+        .map((o: any) => o.orderId || String(o._id));
+
+      if (unreviewedDeliveredCodes.length > 0) {
+        const reviewedOrders = await reviewsCol.distinct('orderId', { orderId: { $in: unreviewedDeliveredCodes } });
+        if (reviewedOrders && reviewedOrders.length > 0) {
+          const reviewedSet = new Set(reviewedOrders.map((id: any) => String(id)));
+          for (const ord of orders) {
+            const code = ord.orderId || String(ord._id);
+            if (reviewedSet.has(code)) {
+              ord.isReviewed = true;
+              this.orderModel.updateOne({ _id: ord._id }, { $set: { isReviewed: true } }).exec().catch(() => {});
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
     return orders;
   }
 
@@ -454,6 +477,11 @@ export class OrdersService {
       throw new BadRequestException('Chỉ có thể gửi yêu cầu trả hàng / hoàn tiền cho đơn hàng đã giao thành công.');
     }
 
+    // 2.5. Không cho phép gửi yêu cầu trả hàng / hoàn tiền cho đơn hàng đã đánh giá
+    if (order.isReviewed) {
+      throw new BadRequestException('Đơn hàng đã được đánh giá thành công, không thể gửi yêu cầu trả hàng / hoàn tiền.');
+    }
+
     // 3. Chống gửi yêu cầu trùng lặp khi đang có yêu cầu PENDING
     const existingRequests: any[] = Array.isArray(order.returnRequests) ? order.returnRequests : [];
     const hasPending = existingRequests.some((r: any) => r.status === ReturnRequestStatus.PENDING) ||
@@ -487,8 +515,9 @@ export class OrdersService {
     for (const item of items) {
       const pId = String(item.productId || item.id || '');
       const matchedOrderItem = orderItems.find((oi: any) => {
-        const oiPid = String(oi.productId?._id || oi.productId || oi.id || '');
-        return oiPid === pId;
+        const oiPid = String(oi.productId?._id || oi.productId || oi.id || oi.productSnapshot?.id || oi.productSnapshot?._id || '');
+        const oiSku = String(oi.productSnapshot?.sku || oi.sku || '');
+        return oiPid === pId || (oiSku && oiSku === pId);
       });
 
       if (!matchedOrderItem) {
@@ -534,9 +563,12 @@ export class OrdersService {
       const snapshotSku = matchedOrderItem.productSnapshot?.sku
         || matchedOrderItem.sku
         || '';
-      const snapshotImage = matchedOrderItem.productSnapshot?.image
+      let snapshotImage = matchedOrderItem.productSnapshot?.image
         || matchedOrderItem.image
         || '';
+      if (snapshotImage && typeof snapshotImage === 'object') {
+        snapshotImage = snapshotImage.url || snapshotImage.src || '';
+      }
       const snapshotVariant = matchedOrderItem.productSnapshot?.variant
         || matchedOrderItem.variant
         || { color: '', size: '', classification: '' };
@@ -651,6 +683,12 @@ export class OrdersService {
           if (!oi.productSnapshot.sku) {
             oi.productSnapshot.sku = oi.sku || '';
           }
+          if (oi.productSnapshot.image && typeof oi.productSnapshot.image === 'object') {
+            oi.productSnapshot.image = oi.productSnapshot.image.url || oi.productSnapshot.image.src || '';
+          }
+        }
+        if (oi.image && typeof oi.image === 'object') {
+          oi.image = oi.image.url || oi.image.src || '';
         }
       }
     }
@@ -661,12 +699,23 @@ export class OrdersService {
     try {
       await order.save();
     } catch (saveErr: any) {
-      this.logger.error(`Lỗi lưu đơn hàng khi tạo yêu cầu đổi trả (${orderCode}): ${saveErr?.message}`, saveErr?.stack);
-      if (saveErr?.name === 'ValidationError') {
-        const errorDetails = Object.values(saveErr.errors || {}).map((e: any) => e.message).join('; ');
-        throw new BadRequestException(`Dữ liệu đơn hàng chưa hợp lệ: ${errorDetails}`);
+      this.logger.warn(`order.save() gặp lỗi (${saveErr?.message}), tiến hành cập nhật trực tiếp vào MongoDB bằng updateOne...`);
+      try {
+        await this.orderModel.updateOne(
+          { _id: order._id },
+          {
+            $set: {
+              returnRequests: order.returnRequests,
+              returnRequest: order.returnRequest,
+              notes: order.notes,
+              statusHistory: order.statusHistory,
+            },
+          },
+        );
+      } catch (updateErr: any) {
+        this.logger.error(`Lỗi cập nhật đơn hàng khi tạo yêu cầu đổi trả (${orderCode}): ${updateErr?.message}`, updateErr?.stack);
+        throw new BadRequestException(`Không thể lưu yêu cầu trả hàng vào cơ sở dữ liệu: ${updateErr?.message}`);
       }
-      throw saveErr;
     }
 
     return {
@@ -728,12 +777,13 @@ export class OrdersService {
 
     const now = new Date();
     const prevStatus = req.status;
-    req.status = ReturnRequestStatus.CANCELLED;
+    const fixedCancelReason = 'Bạn đã yêu cầu hủy quy trình trả hàng hoàn tiền.';
+
+    req.status = 'CANC';
+    req.rejectionReason = fixedCancelReason;
     if (req.refund) {
       req.refund.status = RefundStatus.CANCELLED;
     }
-
-    const cancelReason = (payload?.reason || '').trim() || 'Khách hàng chủ động hủy yêu cầu trả hàng / hoàn tiền.';
 
     if (!Array.isArray(req.history)) {
       req.history = [];
@@ -741,11 +791,17 @@ export class OrdersService {
     req.history.push({
       action: 'CANCELLED_BY_CUSTOMER',
       fromStatus: prevStatus,
-      toStatus: ReturnRequestStatus.CANCELLED,
+      toStatus: 'CANC',
       updatedAt: now,
       updatedBy: user?._id || null,
-      note: cancelReason,
+      note: fixedCancelReason,
     });
+
+    // Đảm bảo đơn hàng quay trở về trạng thái DELIVERED trong MongoDB
+    if (order.status === OrderStatus.RETURNED || order.status === 'RETURNED' || !order.status) {
+      order.status = OrderStatus.DELIVERED;
+      order.markModified('status');
+    }
 
     // Đồng bộ legacy returnRequest
     if (order.returnRequest && (order.returnRequest.requestId === req.requestId || order.returnRequest.requestId === reqId)) {
@@ -756,7 +812,7 @@ export class OrdersService {
       order.statusHistory.push({
         status: order.status,
         updatedAt: now,
-        note: `Khách hàng hủy yêu cầu trả hàng / hoàn tiền mã ${req.requestId}. Lý do: ${cancelReason}`,
+        note: `Khách hàng hủy yêu cầu trả hàng / hoàn tiền mã ${req.requestId}. Lý do: ${fixedCancelReason}`,
         updatedBy: user?._id || null,
       });
     }
@@ -816,6 +872,10 @@ export class OrdersService {
         const approvedAmt = Number(body?.approvedAmount) >= 0 ? Number(body.approvedAmount) : requestedAmt;
 
         req.status = ReturnRequestStatus.APPROVED;
+        req.approvedAt = now;
+        if (body?.note) {
+          req.approveNote = String(body.note).trim();
+        }
         req.refund = req.refund || {};
         req.refund.approvedAmount = approvedAmt;
         if (body?.instructions) {
@@ -829,7 +889,7 @@ export class OrdersService {
           toStatus: ReturnRequestStatus.APPROVED,
           updatedAt: now,
           updatedBy: adminUser?._id || null,
-          note: `Admin duyệt yêu cầu. Số tiền duyệt dự kiến: ${approvedAmt.toLocaleString('vi-VN')} đ. ${body?.note || ''}`.trim(),
+          note: body?.note ? String(body.note).trim() : `Admin duyệt yêu cầu. Số tiền duyệt dự kiến: ${approvedAmt.toLocaleString('vi-VN')} đ.`.trim(),
         });
         break;
       }
@@ -845,6 +905,7 @@ export class OrdersService {
 
         const prevStatus = req.status;
         req.status = ReturnRequestStatus.REJECTED;
+        req.rejectedAt = now;
         req.rejectionReason = reason;
         req.refund = req.refund || {};
         req.refund.status = RefundStatus.NOT_REQUIRED;
@@ -871,6 +932,9 @@ export class OrdersService {
         req.returnShipping.carrier = String(body?.carrier || req.returnShipping.carrier || '').trim();
         req.returnShipping.trackingCode = String(body?.trackingCode || req.returnShipping.trackingCode || '').trim();
         req.returnShipping.shippedAt = body?.shippedAt ? new Date(body.shippedAt) : now;
+        if (body?.note) {
+          req.returnShipping.notes = String(body.note).trim();
+        }
 
         req.history.push({
           action: 'CUSTOMER_SHIPPED',
@@ -878,7 +942,9 @@ export class OrdersService {
           toStatus: ReturnRequestStatus.RETURN_SHIPPED,
           updatedAt: now,
           updatedBy: adminUser?._id || null,
-          note: `Xác nhận khách đã gửi hàng hoàn. ĐVVC: ${req.returnShipping.carrier || 'Chưa rõ'}, Mã vận đơn: ${req.returnShipping.trackingCode || 'Chưa rõ'}`,
+          note: body?.note
+            ? String(body.note).trim()
+            : `Xác nhận khách đã gửi hàng hoàn. ĐVVC: ${req.returnShipping.carrier || 'Chưa rõ'}, Mã vận đơn: ${req.returnShipping.trackingCode || 'Chưa rõ'}`,
         });
         break;
       }
@@ -892,6 +958,9 @@ export class OrdersService {
         req.status = ReturnRequestStatus.RETURN_RECEIVED;
         req.returnShipping = req.returnShipping || {};
         req.returnShipping.receivedAt = now;
+        if (body?.note) {
+          req.returnShipping.receivedNote = String(body.note).trim();
+        }
 
         req.history.push({
           action: 'RECEIVE_GOODS',
@@ -899,7 +968,9 @@ export class OrdersService {
           toStatus: ReturnRequestStatus.RETURN_RECEIVED,
           updatedAt: now,
           updatedBy: adminUser?._id || null,
-          note: 'Chéri đã nhận kiện hàng hoàn từ khách hàng. Sẵn sàng chuyển qua bước kiểm tra sản phẩm.',
+          note: body?.note
+            ? String(body.note).trim()
+            : 'Chéri đã nhận kiện hàng hoàn từ khách hàng. Sẵn sàng chuyển qua bước kiểm tra sản phẩm.',
         });
         break;
       }
@@ -3104,6 +3175,70 @@ export class OrdersService {
       }
     }
 
+    if (query.returnStatus) {
+      const rs = String(query.returnStatus).trim().toUpperCase();
+      let rsOr: any[] = [];
+      if (rs === 'NONE' || rs === 'NO_REQUEST') {
+        rsOr = [
+          { returnRequests: { $exists: false } },
+          { returnRequests: { $size: 0 } },
+          { returnRequests: null },
+        ];
+      } else if (rs === 'PENDING') {
+        rsOr = [
+          { 'returnRequests.status': ReturnRequestStatus.PENDING },
+          { 'returnRequest.status': 'PENDING' },
+        ];
+      } else if (rs === 'APPROVED') {
+        rsOr = [
+          { 'returnRequests.status': ReturnRequestStatus.APPROVED },
+          { 'returnRequest.status': 'APPROVED' },
+        ];
+      } else if (rs === 'RETURN_SHIPPED') {
+        rsOr = [
+          { 'returnRequests.status': ReturnRequestStatus.RETURN_SHIPPED },
+          { 'returnRequests.status': ReturnRequestStatus.WAITING_FOR_RETURN_SHIPMENT },
+          { 'returnRequest.status': 'RETURN_SHIPPED' },
+        ];
+      } else if (rs === 'RETURN_RECEIVED') {
+        rsOr = [
+          { 'returnRequests.status': ReturnRequestStatus.RETURN_RECEIVED },
+          { 'returnRequest.status': 'RETURN_RECEIVED' },
+        ];
+      } else if (rs === 'INSPECTED') {
+        rsOr = [
+          { 'returnRequests.status': ReturnRequestStatus.INSPECTED },
+          { 'returnRequest.status': 'INSPECTED' },
+        ];
+      } else if (rs === 'COMPLETED') {
+        rsOr = [
+          { 'returnRequests.status': ReturnRequestStatus.COMPLETED },
+          { 'returnRequest.status': 'COMPLETED' },
+        ];
+      } else if (rs === 'REJECTED') {
+        rsOr = [
+          { 'returnRequests.status': ReturnRequestStatus.REJECTED },
+          { 'returnRequest.status': 'REJECTED' },
+        ];
+      } else if (rs === 'CANCELLED') {
+        rsOr = [
+          { 'returnRequests.status': ReturnRequestStatus.CANCELLED },
+          { 'returnRequest.status': 'CANCELLED' },
+        ];
+      }
+
+      if (rsOr.length > 0) {
+        if (filter.$or) {
+          filter.$and = [{ $or: filter.$or }, { $or: rsOr }];
+          delete filter.$or;
+        } else if (filter.$and) {
+          filter.$and.push({ $or: rsOr });
+        } else {
+          filter.$or = rsOr;
+        }
+      }
+    }
+
     if (query.paymentMethod) {
       const pm = String(query.paymentMethod).trim();
       const pmOr = [
@@ -3197,9 +3332,38 @@ export class OrdersService {
       const returnRequests = Array.isArray(o.returnRequests) && o.returnRequests.length > 0
         ? o.returnRequests
         : (o.returnRequest ? [o.returnRequest] : []);
-      const pendingReq = returnRequests.find((r: any) => r.status === ReturnRequestStatus.PENDING || r.status === 'PENDING');
-      const activeReq = pendingReq || (returnRequests.length > 0 ? returnRequests[returnRequests.length - 1] : null);
-      const hasPendingReturn = Boolean(pendingReq);
+
+      const getReturnScore = (st: string) => {
+        const s = String(st || '').toUpperCase();
+        if (s === ReturnRequestStatus.PENDING || s === 'PENDING') return 5;
+        if ([
+          ReturnRequestStatus.APPROVED,
+          ReturnRequestStatus.WAITING_FOR_RETURN_SHIPMENT,
+          ReturnRequestStatus.RETURN_SHIPPED,
+          ReturnRequestStatus.RETURN_RECEIVED,
+          ReturnRequestStatus.INSPECTED,
+          'APPROVED',
+          'WAITING_FOR_RETURN_SHIPMENT',
+          'RETURN_SHIPPED',
+          'RETURN_RECEIVED',
+          'INSPECTED',
+        ].includes(s)) return 4;
+        if (s === ReturnRequestStatus.COMPLETED || s === 'COMPLETED') return 3;
+        if (s === ReturnRequestStatus.REJECTED || s === 'REJECTED') return 2;
+        if (s === ReturnRequestStatus.CANCELLED || s === 'CANCELLED') return 1;
+        return 0;
+      };
+
+      const sortedRequests = [...returnRequests].sort((a: any, b: any) => {
+        const scoreDiff = getReturnScore(b?.status) - getReturnScore(a?.status);
+        if (scoreDiff !== 0) return scoreDiff;
+        const timeA = new Date(a?.requestedAt || a?.createdAt || 0).getTime();
+        const timeB = new Date(b?.requestedAt || b?.createdAt || 0).getTime();
+        return timeB - timeA;
+      });
+
+      const activeReq = sortedRequests.length > 0 ? sortedRequests[0] : null;
+      const hasPendingReturn = returnRequests.some((r: any) => (r.status || '').toUpperCase() === 'PENDING');
 
       return {
         ...o,
@@ -3213,11 +3377,14 @@ export class OrdersService {
         status: o.status,
         statusText: statusMeta.label,
         statusVariant: statusMeta.variant,
+        returnRequests,
+        activeReturnRequest: activeReq,
         returnRequestsCount: returnRequests.length,
         hasPendingReturn,
         latestReturnStatus: activeReq ? activeReq.status : null,
         latestReturnRequestId: activeReq ? activeReq.requestId : null,
-        latestReturnRequestedAmount: activeReq ? (activeReq.refund?.requestedAmount || 0) : 0,
+        latestReturnRefundStatus: activeReq?.refund?.status || null,
+        latestReturnRequestedAmount: activeReq ? (activeReq.refund?.approvedAmount || activeReq.refund?.requestedAmount || 0) : 0,
         createdAt: o.createdAt || o.dateAdded,
       };
     });

@@ -76,7 +76,7 @@ export class OrderDetailComponent implements OnInit {
 
     { code: 'DELIVERED', label: 'Đã giao', variant: 'success' },
     { code: 'CANCELLED', label: 'Đã hủy', variant: 'danger' },
-    { code: 'RETURNED', label: 'Đã hoàn trả', variant: 'warning' }
+    { code: 'RETURNED', label: 'Trả hàng', variant: 'warning' }
   ];
 
   private route = inject(ActivatedRoute);
@@ -452,7 +452,7 @@ export class OrderDetailComponent implements OnInit {
     if (['SHIPPING', 'ĐANG GIAO'].includes(raw)) return 'SHIPPING';
     if (['DELIVERED', 'ĐÃ GIAO', 'COMPLETED'].includes(raw)) return 'DELIVERED';
     if (['CANCELLED', 'CANCELED', 'ĐÃ HỦY'].includes(raw)) return 'CANCELLED';
-    if (['RETURNED', 'ĐÃ TRẢ HÀNG', 'ĐÃ HOÀN TRẢ'].includes(raw)) return 'RETURNED';
+    if (['RETURNED', 'TRẢ HÀNG', 'ĐÃ TRẢ HÀNG', 'ĐÃ HOÀN TRẢ'].includes(raw)) return 'RETURNED';
     if (['DELIVERY_FAILED', 'GIAO THẤT BẠI'].includes(raw)) return 'DELIVERY_FAILED';
 
     return raw;
@@ -529,8 +529,14 @@ export class OrderDetailComponent implements OnInit {
     if (Array.isArray(this.order?.returnRequests) && this.order.returnRequests.length > 0) {
       return this.order.returnRequests;
     }
+    if (Array.isArray(this.order?.raw?.returnRequests) && this.order.raw.returnRequests.length > 0) {
+      return this.order.raw.returnRequests;
+    }
     if (this.order?.returnRequest) {
       return [this.order.returnRequest];
+    }
+    if (this.order?.raw?.returnRequest) {
+      return [this.order.raw.returnRequest];
     }
     return [];
   }
@@ -615,6 +621,40 @@ export class OrderDetailComponent implements OnInit {
       case 'COMPLETED': return 'Hoàn tất trả hàng';
       case 'CANCELLED': return 'Đã hủy';
       default: return status || '—';
+    }
+  }
+
+  getReturnHistoryActionLabel(action: string): string {
+    if (!action) return '—';
+    const a = String(action).toUpperCase().trim();
+    switch (a) {
+      case 'CREATED':
+        return 'Khách gửi yêu cầu';
+      case 'APPROVED':
+        return 'Đã duyệt yêu cầu';
+      case 'REJECTED':
+        return 'Từ chối yêu cầu';
+      case 'CANCELLED_BY_CUSTOMER':
+      case 'CANCELLED':
+        return 'Khách đã hủy yêu cầu';
+      case 'CUSTOMER_SHIPPED':
+        return 'Khách đã gửi hàng hoàn';
+      case 'RETURN_SHIPPED':
+        return 'Đang gửi hàng hoàn';
+      case 'RECEIVE_GOODS':
+      case 'RETURN_RECEIVED':
+        return 'Đã nhận hàng hoàn';
+      case 'INSPECT_GOODS':
+      case 'INSPECTED':
+        return 'Đã kiểm tra hàng hoàn';
+      case 'PROCESS_REFUND':
+        return 'Xử lý hoàn tiền';
+      case 'REFUND_FAILED':
+        return 'Báo lỗi hoàn tiền';
+      case 'COMPLETED':
+        return 'Hoàn tất yêu cầu';
+      default:
+        return action;
     }
   }
 

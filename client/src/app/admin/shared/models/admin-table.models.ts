@@ -52,10 +52,25 @@ export interface FilterField {
   value?: string | number;
   options?: FilterOption[];
   placeholder?: string;
+  showWhen?: (values: Record<string, any>) => boolean;
 }
 
 /** StatusBadge variant */
-export type BadgeVariant = 'success' | 'warning' | 'danger' | 'neutral' | 'primary';
+export type BadgeVariant =
+  | 'success'
+  | 'warning'
+  | 'danger'
+  | 'neutral'
+  | 'primary'
+  | 'pending'
+  | 'approved'
+  | 'shipping'
+  | 'received'
+  | 'refunding'
+  | 'completed'
+  | 'rejected'
+  | 'cancelled'
+  | string;
 
 /** ConfirmDialog config */
 export interface ConfirmDialogConfig {

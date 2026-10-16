@@ -72,8 +72,20 @@
             [style.minWidth]="col.width || null">
 
             <!-- Status Badge -->
-            <app-admin-status-badge *ngIf="isStatusColumn(col)" [label]="formatValue(row, col)"
-              [variant]="row[col.key + 'Variant'] || 'neutral'"></app-admin-status-badge>
+            <div *ngIf="isStatusColumn(col)" class="admin-table__status-cell">
+              <ng-container *ngIf="formatValue(row, col) === '—' || formatValue(row, col) === '-'; else statusBadgeTpl">
+                <span class="admin-table__empty-dash">—</span>
+              </ng-container>
+              <ng-template #statusBadgeTpl>
+                <app-admin-status-badge [label]="formatValue(row, col)"
+                  [variant]="row[col.key + 'Variant'] || 'neutral'"></app-admin-status-badge>
+              </ng-template>
+              <span *ngIf="row[col.key + 'SubBadge']"
+                class="admin-table__sub-badge"
+                [ngClass]="'admin-table__sub-badge--' + (row[col.key + 'SubBadgeVariant'] || 'pending')">
+                {{ row[col.key + 'SubBadge'] }}
+              </span>
+            </div>
 
             <!-- Product Image cell -->
             <div *ngIf="isProductImageColumn(col, row)" class="product-image-wrapper cell-image">

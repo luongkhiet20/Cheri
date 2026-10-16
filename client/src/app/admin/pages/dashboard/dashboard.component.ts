@@ -57,7 +57,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     'shipping',    // 3. Đang giao
     'delivered',   // 4. Đã giao
     'cancelled',   // 5. Đã hủy
-    'returned'     // 6. Đã hoàn trả
+    'returned'     // 6. Trả hàng
   ];
 
   private readonly STATUS_COLOR_MAP: Record<string, string> = {
@@ -66,7 +66,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     shipping: '#EFA9AE',    // Đang giao
     delivered: '#AD1F2A',   // Đã giao
     cancelled: '#82171F',   // Đã hủy
-    returned: '#561015'     // Đã hoàn trả
+    returned: '#561015'     // Trả hàng
   };
 
   private readonly DONUT_COLORS = [
@@ -75,7 +75,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     '#EFA9AE', // Đang giao
     '#AD1F2A', // Đã giao
     '#82171F', // Đã hủy
-    '#561015'  // Đã hoàn trả
+    '#561015'  // Trả hàng
   ];
 
   private readonly STATUS_LABELS: Record<string, string> = {
@@ -84,7 +84,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     shipping: 'Đang giao',
     delivered: 'Đã giao',
     cancelled: 'Đã hủy',
-    returned: 'Đã hoàn trả'
+    returned: 'Trả hàng'
   };
 
   private readonly STATUS_VARIANTS: Record<string, string> = {

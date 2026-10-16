@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   ConflictException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types, isValidObjectId } from 'mongoose';
@@ -16,6 +17,8 @@ import { OrderStatus } from '../orders/schemas/order.schema';
 
 @Injectable()
 export class ReviewsService {
+  private readonly logger = new Logger(ReviewsService.name);
+
   constructor(
     @InjectModel('ProductReview')
     private readonly reviewModel: Model<ProductReview>,
@@ -139,6 +142,18 @@ export class ReviewsService {
       );
     }
 
+    // 1.5. Kiểm tra đơn hàng có yêu cầu đổi trả đang tồn tại không
+    const returnReqs = Array.isArray((matchedOrder as any).returnRequests)
+      ? (matchedOrder as any).returnRequests
+      : ((matchedOrder as any).returnRequest ? [(matchedOrder as any).returnRequest] : []);
+    const hasActiveReturn = returnReqs.some((r: any) => {
+      const st = (r.status || '').toUpperCase();
+      return st && st !== 'CANCELLED';
+    });
+    if (hasActiveReturn) {
+      throw new BadRequestException('Đơn hàng đã có yêu cầu trả hàng / hoàn tiền, không thể gửi đánh giá.');
+    }
+
     const canonicalOrderId = (matchedOrder as any)?.orderId || (dto.orderId ? dto.orderId.trim().replace(/^#/, '').trim() : null);
 
     // 2. Chống gửi đánh giá trùng: không cho phép gửi nhiều đánh giá cho cùng một sản phẩm trong cùng một đơn hàng
@@ -175,6 +190,18 @@ export class ReviewsService {
 
     // 4. Cập nhật lại rating trung bình của sản phẩm
     await this.recalculateProductRating(productObjectId);
+
+    // 5. Đánh dấu đơn hàng đã được đánh giá thành công
+    if ((matchedOrder as any)?._id) {
+      try {
+        await this.orderModel.updateOne(
+          { _id: (matchedOrder as any)._id },
+          { $set: { isReviewed: true, reviewedAt: new Date() } },
+        );
+      } catch (err: any) {
+        this.logger.warn(`Failed to set isReviewed on order ${(matchedOrder as any)._id}: ${err.message}`);
+      }
+    }
 
     return saved;
   }
@@ -352,14 +379,40 @@ export class ReviewsService {
       cleanOrderId,
     );
 
-    const hasDeliveredOrder = await this.orderModel.exists(orderFilter);
+    const matchedOrder = await this.orderModel.findOne(orderFilter).lean();
 
-    if (!hasDeliveredOrder) {
+    if (!matchedOrder) {
       return {
         canReview: false,
         hasReviewed: false,
         existingReview: null,
         reason: 'Bạn chỉ có thể đánh giá sau khi đã mua và nhận sản phẩm thành công',
+      };
+    }
+
+    if ((matchedOrder as any).isReviewed) {
+      return {
+        canReview: false,
+        hasReviewed: true,
+        existingReview: null,
+        reason: 'Đơn hàng này đã được đánh giá thành công',
+      };
+    }
+
+    // Kiểm tra đơn hàng có yêu cầu đổi trả đang tồn tại không
+    const returnReqs = Array.isArray((matchedOrder as any).returnRequests)
+      ? (matchedOrder as any).returnRequests
+      : ((matchedOrder as any).returnRequest ? [(matchedOrder as any).returnRequest] : []);
+    const hasActiveReturn = returnReqs.some((r: any) => {
+      const st = (r.status || '').toUpperCase();
+      return st && st !== 'CANCELLED';
+    });
+    if (hasActiveReturn) {
+      return {
+        canReview: false,
+        hasReviewed: false,
+        existingReview: null,
+        reason: 'Đơn hàng đã có yêu cầu trả hàng / hoàn tiền, không thể đánh giá',
       };
     }
 

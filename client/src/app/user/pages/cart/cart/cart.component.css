@@ -1735,6 +1735,19 @@
   color: #666;
 }
 
+/* Container chứa hai nút điều hướng bước thanh toán (Quay lại & Tiếp tục) */
+:host div:has(> .cart-navigation-button + .cart-navigation-button) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+@supports not (selector(:has(*))) {
+  :host .cart-navigation-button + .cart-navigation-button {
+    margin-left: 10px;
+  }
+}
+
 :host .cart-navigation-button {
   margin: 10px 0 0 0;
   font-family: inherit;

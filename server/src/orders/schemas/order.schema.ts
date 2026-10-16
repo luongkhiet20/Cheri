@@ -29,7 +29,7 @@ const ProductSnapshotSchema = new Schema(
     title: { type: String, default: '' },
     name: { type: String, default: '' },
     sku: { type: String, default: '' },
-    image: { type: String, default: '' },
+    image: { type: Schema.Types.Mixed, default: '' },
     price: { type: Number, default: 0 },
     category: { type: Schema.Types.Mixed, default: null },
     brand: { type: Schema.Types.Mixed, default: null },
@@ -44,12 +44,16 @@ const ProductSnapshotSchema = new Schema(
 
 const OrderItemSchema = new Schema(
   {
-    productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
+    productId: { type: Schema.Types.Mixed, ref: 'Product', required: true },
     variantId: { type: Schema.Types.Mixed, ref: 'ProductVariant', default: null },
     productSnapshot: { type: ProductSnapshotSchema, required: true },
     quantity: { type: Number, required: true, min: 1 },
     unitPrice: { type: Number, required: true, min: 0 },
     subtotal: { type: Number, required: true, min: 0 },
+    image: { type: Schema.Types.Mixed, default: '' },
+    name: { type: String, default: '' },
+    sku: { type: String, default: '' },
+    variant: { type: Schema.Types.Mixed, default: null },
   },
   { _id: false },
 );
@@ -130,6 +134,7 @@ export enum ReturnRequestStatus {
   INSPECTED = 'INSPECTED',
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
+  CANC = 'CANC',
 }
 
 export enum RefundStatus {
@@ -347,6 +352,10 @@ const OrderSchema = new Schema(
 
     // Yêu cầu đổi trả / hoàn tiền gần nhất (đồng bộ tương thích ngược)
     returnRequest: { type: Schema.Types.Mixed, default: null },
+
+    // Trạng thái đánh giá sản phẩm của đơn hàng
+    isReviewed: { type: Boolean, default: false },
+    reviewedAt: { type: Date, default: null },
   },
   {
     timestamps: true,

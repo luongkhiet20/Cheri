@@ -331,14 +331,19 @@
 .orders-loading-bar {
   height: 3px;
   border-radius: 2px;
-  background: linear-gradient(90deg, #ede7de 25%, rgba(116,7,14,0.2) 50%, #ede7de 75%);
+  background: linear-gradient(90deg, #ede7de 25%, rgba(116, 7, 14, 0.2) 50%, #ede7de 75%);
   background-size: 200% 100%;
   animation: ordershimmer 1.4s infinite;
 }
 
 @keyframes ordershimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* Empty State Container (No icon) */
@@ -604,6 +609,25 @@
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+/* Nút Đã đánh giá: Hiển thị trạng thái đơn hàng đã được đánh giá */
+.btn-action-reviewed {
+  background: #FFF4E6;
+  color: #E47A4E;
+  border: 1px solid #FFE2CA;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: default;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: inherit;
+  white-space: nowrap;
+  user-select: none;
 }
 
 .btn-action-primary {
@@ -1017,7 +1041,9 @@
 }
 
 .order-return-tracking-box {
-  margin: 12px 18px 0;
+  margin: 12px 0 0;
+  width: 100%;
+  box-sizing: border-box;
   padding: 12px 16px;
   background: #fdf2f3;
   border: 1px solid #fce7e9;
@@ -1025,6 +1051,11 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.order-return-tracking-box.is-collapsed {
+  gap: 0;
 }
 
 .return-box-header {
@@ -1035,6 +1066,21 @@
   gap: 8px;
   border-bottom: 1px dashed #fecdd3;
   padding-bottom: 8px;
+  transition: border-bottom 0.2s ease, padding-bottom 0.2s ease;
+}
+
+.order-return-tracking-box.is-collapsed .return-box-header {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.return-box-title-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
 }
 
 .return-box-title {
@@ -1048,6 +1094,64 @@
   gap: 6px;
 }
 
+/* Nút Xem / Thu gọn tiến trình */
+.btn-toggle-tracking {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background-color: #ffffff;
+  border: 1px solid #fecdd3;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #74070e;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.btn-toggle-tracking:hover {
+  background-color: #fff1f2;
+  border-color: #74070e;
+}
+
+.btn-toggle-tracking:focus-visible {
+  outline: 2px solid #74070e;
+  outline-offset: 2px;
+}
+
+.toggle-arrow {
+  transition: transform 0.25s ease;
+  stroke: #74070e;
+}
+
+.toggle-arrow.rotated {
+  transform: rotate(180deg);
+}
+
+.return-tracking-collapsible-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+  animation: fadeInReturnBody 0.2s ease-out;
+}
+
+@keyframes fadeInReturnBody {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .return-status-pill {
   font-size: 11px;
   font-weight: 600;
@@ -1055,6 +1159,11 @@
   border-radius: 4px;
   background: #74070e;
   color: #fff;
+}
+
+.return-status-pill.status-completed {
+  background: #15803d;
+  color: #ffffff;
 }
 
 .return-refund-pill {
@@ -1090,16 +1199,28 @@
 }
 
 .return-detail-item.instructions {
+  display: flex;
+  gap: 6px;
+  line-height: 1.4;
   color: #92400e;
-  background: #fff;
-  padding: 4px 8px;
-  border-radius: 4px;
-  border: 1px solid #fef3c7;
+
 }
 
 .return-detail-item.refund {
   color: #15803d;
-  font-size: 13px;
+  font-size: 12px;
+}
+
+.return-detail-item.refund .item-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #15803d;
+}
+
+.return-detail-item.refund .item-val {
+  font-size: 12px;
+  font-weight: 700;
+  color: #15803d;
 }
 
 .return-detail-item .item-label {
@@ -1107,82 +1228,290 @@
   white-space: nowrap;
 }
 
-/* ── Return Stepper (Tiến trình đổi trả 6 bước trực quan) ── */
+/* ── Return Stepper (Timeline đường mảnh 6 giai đoạn - Thin Line Timeline Stepper) ── */
 .return-stepper {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  padding: 8px 4px;
-  background: #ffffff;
-  border-radius: 6px;
-  border: 1px solid #fee2e2;
-  overflow-x: auto;
+  width: 100%;
+  padding: 10px 4px 8px;
+  background: transparent;
+  border-radius: 0;
+  border: none;
+  box-sizing: border-box;
+  margin: 4px 0 8px;
+  overflow: hidden;
 }
 
 .stepper-step {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  min-width: 54px;
   text-align: center;
+  flex: 0 1 76px;
+  min-width: 52px;
+  max-width: 82px;
+  box-sizing: border-box;
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+  transition: transform 0.15s ease;
 }
 
+.stepper-step:hover .step-circle {
+  transform: scale(1.1);
+}
+
+/* Nút tròn kích thước 20px (18–20px), hiển thị số thứ tự hoặc dấu tích ✓ */
 .step-circle {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
   border-radius: 50%;
-  background: #f1f5f9;
-  color: #64748b;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #94a3b8;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid #cbd5e1;
+  text-align: center;
+  line-height: 1;
+  box-sizing: border-box;
   transition: all 0.2s ease;
+  z-index: 2;
 }
 
+/* Đường nối ngang mảnh 1px, liền mạch đi qua tâm các nút (tâm nút 20px là Y=10px) */
+.stepper-line {
+  flex: 1 1 0%;
+  height: 1px;
+  background: #e2e8f0;
+  margin-top: 10px;
+  margin-left: 2px;
+  margin-right: 2px;
+  min-width: 8px;
+  transition: background 0.2s ease;
+}
+
+/* Tên giai đoạn bên dưới nút: khoảng cách 6–8px (7px), font 11–12px, font-weight 400 */
 .step-label {
-  font-size: 10px;
-  font-weight: 500;
+  font-size: 11.5px;
+  font-weight: 400;
+  line-height: 1.3;
   color: #64748b;
-  white-space: nowrap;
+  margin-top: 7px;
+  text-align: center;
+  width: 100%;
+  word-break: normal;
+  overflow-wrap: break-word;
+  white-space: normal;
+  transition: color 0.2s ease, font-weight 0.2s ease;
 }
 
-.stepper-step.active .step-circle {
-  background: #74070e;
-  border-color: #74070e;
-  color: #ffffff;
-  box-shadow: 0 0 0 3px rgba(116, 7, 14, 0.15);
-}
-
-.stepper-step.active .step-label {
-  color: #74070e;
-  font-weight: 700;
-}
-
+/* ═════════════════════════════════════════════════════════════════════════
+   1. Bước đã hoàn thành: Nút tròn màu chuẩn #15803d, dấu ✓, đường nối màu hoàn thành
+   ═════════════════════════════════════════════════════════════════════════ */
 .stepper-step.done .step-circle {
   background: #15803d;
-  border-color: #15803d;
+  border: 1px solid #15803d;
   color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .stepper-step.done .step-label {
   color: #15803d;
-  font-weight: 600;
-}
-
-.stepper-line {
-  flex: 1;
-  height: 2px;
-  background: #e2e8f0;
-  margin: 0 4px;
-  margin-bottom: 16px;
-  transition: background 0.2s ease;
+  font-weight: 400;
 }
 
 .stepper-line.done {
   background: #15803d;
 }
 
+/* ═════════════════════════════════════════════════════════════════════════
+   2. Bước đang xử lý: Số thứ tự trong nút tròn, viền nhấn nhẹ, tên bước font-weight 600
+   ═════════════════════════════════════════════════════════════════════════ */
+.stepper-step.active .step-circle {
+  background: #ffffff;
+  border: 1.5px solid #74070e;
+  color: #74070e;
+  box-shadow: 0 0 0 2px rgba(116, 7, 14, 0.12);
+  font-weight: 600;
+}
+
+.stepper-step.active .step-label {
+  color: #74070e;
+  font-weight: 600;
+}
+
+/* ═════════════════════════════════════════════════════════════════════════
+   3. Giai đoạn đang được chọn nhấn xem chi tiết (is-selected)
+   ═════════════════════════════════════════════════════════════════════════ */
+.stepper-step.is-selected .step-circle {
+  outline: 2px solid #0f172a;
+  outline-offset: 2px;
+}
+
+.stepper-step.done.is-selected .step-circle {
+  outline: 2px solid #15803d;
+  outline-offset: 2px;
+}
+
+.stepper-step.active.is-selected .step-circle {
+  outline: 2px solid #74070e;
+  outline-offset: 2px;
+}
+
+.stepper-step.is-selected .step-label {
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ═════════════════════════════════════════════════════════════════════════
+   4. Khi hoàn tất: Cả 6 bước thể hiện trạng thái hoàn thành
+   ═════════════════════════════════════════════════════════════════════════ */
+.return-stepper.is-completed .step-circle {
+  background: #15803d;
+  border: 1px solid #15803d;
+  color: #ffffff;
+}
+
+.return-stepper.is-completed .step-label {
+  color: #15803d;
+  font-weight: 400;
+}
+
+.return-stepper.is-completed .stepper-step:last-child .step-label {
+  font-weight: 600;
+}
+
+.return-stepper.is-completed .stepper-line {
+  background: #15803d;
+}
+
+/* ═════════════════════════════════════════════════════════════════════════
+   5. Khung chi tiết theo từng giai đoạn (Stage Detail Box)
+   ═════════════════════════════════════════════════════════════════════════ */
+.return-box-stage-detail {
+  margin-top: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.stage-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.stage-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stage-num {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.stage-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.stage-state-tag {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  line-height: 1.2;
+}
+
+.stage-state-tag.tag-done {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.stage-state-tag.tag-current {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.stage-state-tag.tag-future {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.stage-detail-content {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: #334155;
+  animation: fadeInStage 0.18s ease-in-out;
+}
+
+@keyframes fadeInStage {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.return-stage-item {
+  font-size: 12px;
+  color: #334155;
+  padding: 2px 0;
+  line-height: 1.4;
+}
+
+.stage-empty-msg {
+  font-size: 11.5px;
+  color: #64748b;
+  font-style: italic;
+  padding: 4px 0;
+}
+
+@media (max-width: 640px) {
+  .return-stepper {
+    padding: 8px 0 6px;
+  }
+
+  .stepper-step {
+    min-width: 46px;
+    max-width: 62px;
+  }
+
+  .step-label {
+    font-size: 10.5px;
+    margin-top: 6px;
+  }
+
+  .stepper-line {
+    min-width: 4px;
+    margin-left: 1px;
+    margin-right: 1px;
+  }
+}

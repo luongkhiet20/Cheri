@@ -1018,8 +1018,8 @@ button, input, select, textarea, .btn, .form-control {
 
 /* 4.1. Finance Overview Strip */
 .return-finance-overview {
-  background: #fdf2f3;
-  border-bottom: 1px solid #fce7e9;
+  background: #FAF7F7;
+  border-bottom: 1px solid #F1E5E5;
   padding: 16px 20px;
 }
 
@@ -1032,25 +1032,35 @@ button, input, select, textarea, .btn, .form-control {
 .finance-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  justify-content: center;
+  gap: 6px;
+  min-height: 52px;
 }
 
 .finance-label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  text-transform: none;
+  letter-spacing: normal;
+  line-height: 1.35;
 }
 
 .finance-val {
   font-size: 14px;
+  font-weight: 500;
   color: #1a1a1a;
+  line-height: 1.35;
 }
 
 .finance-val.font-bold {
-  font-weight: 700;
-  font-size: 15px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.finance-val.font-medium {
+  font-weight: 500;
+  font-size: 14px;
 }
 
 .unconfirmed-tag {
@@ -1060,11 +1070,13 @@ button, input, select, textarea, .btn, .form-control {
   border: 1px dashed #cbd5e1;
   border-radius: 4px;
   font-size: 12px;
+  font-weight: 400;
   color: #64748b;
 }
 
 .color-success { color: #16a34a !important; }
 .color-warning { color: #d97706 !important; }
+.color-primary { color: #74070E !important; }
 
 /* Empty state */
 .return-empty-box {
@@ -1162,21 +1174,40 @@ button, input, select, textarea, .btn, .form-control {
 .req-id-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
 .req-code-title {
-  font-size: 15px;
+  font-size: 14px;
+  font-weight: 500;
   color: #1a1a1a;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.req-code-title strong {
+  font-weight: 600;
+  font-size: 14px;
+  color: #74070E;
+  letter-spacing: 0.3px;
 }
 
 .req-meta-sub {
   font-size: 13px;
+  font-weight: 400;
   color: #64748b;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  flex-wrap: wrap;
+  line-height: 1.5;
+}
+
+.req-meta-sub .meta-label {
+  color: #74070E;
+  font-weight: 600;
 }
 
 .req-header-actions {
@@ -1312,19 +1343,21 @@ button, input, select, textarea, .btn, .form-control {
 }
 
 .info-block-label {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   color: #64748b;
 }
 
 .info-block-val {
   font-size: 14px;
-  color: #1a1a1a;
+  font-weight: 500;
+  color: #1e293b;
 }
 
 .info-block-desc {
   margin: 0;
   font-size: 13px;
+  font-weight: 400;
   color: #334155;
   line-height: 1.5;
 }
@@ -1395,17 +1428,20 @@ button, input, select, textarea, .btn, .form-control {
 }
 
 .req-items-table th {
-  padding: 10px 12px;
+  padding: 10px 14px;
   background: #f8fafc;
   color: #475569;
+  font-size: 13px;
   font-weight: 600;
   border-bottom: 1px solid #e2e8f0;
 }
 
 .req-items-table td {
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-bottom: 1px solid #f1f5f9;
   vertical-align: middle;
+  font-size: 13px;
+  font-weight: 400;
 }
 
 .item-info-inline {
@@ -1443,7 +1479,14 @@ button, input, select, textarea, .btn, .form-control {
 }
 
 .amount-pill .label {
+  font-size: 13px;
+  font-weight: 500;
   color: #64748b;
+}
+
+.amount-pill .val {
+  font-size: 14px;
+  font-weight: 600;
 }
 
 /* Panels */
@@ -1472,7 +1515,15 @@ button, input, select, textarea, .btn, .form-control {
 
 .panel-box p {
   margin: 0 0 6px 0;
+  font-size: 13px;
+  font-weight: 400;
   color: #334155;
+  line-height: 1.5;
+}
+
+.panel-box p strong {
+  font-weight: 500;
+  color: #475569;
 }
 
 .panel-box p:last-child {
@@ -1538,7 +1589,7 @@ button, input, select, textarea, .btn, .form-control {
 .req-timeline-content {
   background: #f8fafc;
   border: 1px solid #f1f5f9;
-  padding: 8px 12px;
+  padding: 10px 14px;
   border-radius: 6px;
   font-size: 13px;
 }
@@ -1546,20 +1597,27 @@ button, input, select, textarea, .btn, .form-control {
 .req-timeline-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   margin-bottom: 4px;
 }
 
 .req-timeline-header .action-name {
+  font-size: 13px;
+  font-weight: 600;
   color: #74070E;
 }
 
 .req-timeline-header .time {
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 400;
+  color: #64748b;
 }
 
 .note-text {
+  font-size: 13px;
+  font-weight: 400;
   color: #334155;
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
 /* ═════════════════════════════════════════════════════════════════════════

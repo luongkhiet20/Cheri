@@ -8,8 +8,8 @@
       </svg>
       Đánh giá sản phẩm
     </h2>
-    @if (reviewStats && reviewStats.reviewCount > 0) {
-    <span class="cheri-reviews-badge">{{ reviewStats.reviewCount }} nhận xét</span>
+    @if (totalReviewCount > 0) {
+    <span class="cheri-reviews-badge">{{ totalReviewCount }} nhận xét</span>
     }
   </div>
 
@@ -17,14 +17,14 @@
   <div class="cheri-reviews-overview">
     <!-- Cột trái: Điểm số trung bình -->
     <div class="cheri-score-box">
-      @if (reviewStats && reviewStats.reviewCount > 0) {
-      <div class="cheri-score-number">{{ reviewStats.averageRating }}</div>
+      @if (totalReviewCount > 0) {
+      <div class="cheri-score-number">{{ reviewStats?.averageRating || 5.0 }}</div>
       <div class="cheri-score-stars">
         @for (s of [1, 2, 3, 4, 5]; track s) {
-        <i class="material-icons star-icon" [class.is-active]="s <= (reviewStats.averageRating + 0.2)">star</i>
+        <i class="material-icons star-icon" [class.is-active]="s <= ((reviewStats?.averageRating || 5) + 0.2)">star</i>
         }
       </div>
-      <div class="cheri-score-count">Dựa trên {{ reviewStats.reviewCount }} đánh giá</div>
+      <div class="cheri-score-count">Dựa trên {{ totalReviewCount }} đánh giá</div>
       } @else {
       <div class="cheri-score-empty">
         <i class="material-icons empty-icon">star_border</i>
@@ -35,7 +35,7 @@
     </div>
 
     <!-- Cột phải: Thanh phân bố sao 1-5 -->
-    @if (reviewStats && reviewStats.reviewCount > 0) {
+    @if (totalReviewCount > 0) {
     <div class="cheri-distribution-box">
       @for (star of [5, 4, 3, 2, 1]; track star) {
       <div class="cheri-dist-row" (click)="onFilterStar(star)" [class.is-filtered]="selectedStarFilter === star">
@@ -57,7 +57,7 @@
       <div class="filter-chips-list">
         <button type="button" class="filter-chip" [class.is-active]="selectedStarFilter === null"
           (click)="onFilterStar(null)">
-          Tất cả ({{ reviewStats?.reviewCount || 0 }})
+          Tất cả ({{ totalReviewCount }})
         </button>
         @for (s of [5, 4, 3, 2, 1]; track s) {
         <button type="button" class="filter-chip" [class.is-active]="selectedStarFilter === s"

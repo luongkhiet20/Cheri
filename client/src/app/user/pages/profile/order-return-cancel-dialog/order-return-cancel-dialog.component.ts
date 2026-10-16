@@ -114,10 +114,11 @@ export class OrderReturnCancelDialogComponent {
           return;
         }
 
+        const cancelReason = res?.data?.rejectionReason || 'Bạn đã yêu cầu hủy quy trình trả hàng hoàn tiền.';
         this.cancelled.emit({
           orderId: String(targetOrderId),
           requestId: String(targetReqId),
-          reason: finalReason,
+          reason: cancelReason,
           order: res?.order || res?.data || res
         });
         this.close.emit();

@@ -1027,23 +1027,30 @@ button {
 }
 
 .user-return-req-card {
-  background: #ffffff;
-  border: 1px solid #FCE7E9;
-  border-radius: 8px;
-  padding: 16px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+}
+
+.user-return-req-card + .user-return-req-card {
+  border-top: 1px dashed rgba(116, 7, 14, 0.2);
+  padding-top: 14px;
+  margin-top: 6px;
 }
 
 .return-card-top {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  border-bottom: 1px dashed #E5E7EB;
   padding-bottom: 8px;
+  border-bottom: 1px solid rgba(116, 7, 14, 0.12);
 }
 
 .return-card-left {
@@ -1087,108 +1094,17 @@ button {
   border: 1px solid #FECDD3;
 }
 
-.return-reason-box {
-  font-size: 13px;
-  color: #374151;
-  line-height: 1.5;
-}
-
-.return-reason-box p {
-  margin: 0 0 4px 0;
-}
-
-.rejection-alert {
-  color: #DC2626 !important;
-  background: #FEF2F2;
-  padding: 6px 10px;
-  border-radius: 4px;
-  border: 1px solid #FECACA;
-  margin-top: 6px !important;
-}
-
-.return-items-summary {
-  font-size: 12.5px;
-  color: #4B5563;
-  background: #F9FAFB;
-  padding: 10px 12px;
-  border-radius: 6px;
-}
-
-.items-summary-label {
-  font-weight: 600;
-  display: block;
-  margin-bottom: 4px;
-}
-
-.return-items-ul {
-  margin: 0;
-  padding-left: 20px;
-}
-
-.return-items-ul li {
-  margin-bottom: 2px;
-}
-
-.price-val {
-  font-weight: 600;
-  color: #74070E;
-}
-
-.return-guide-box {
-  background: #FFFBEB;
-  border: 1px solid #FEF3C7;
-  padding: 10px 12px;
-  border-radius: 6px;
-  font-size: 12.5px;
-  color: #92400E;
-}
-
-.return-guide-box p {
-  margin: 4px 0 0 0;
-}
-
-.return-inspect-box {
-  font-size: 12.5px;
-  color: #374151;
-}
-
-.inspect-notes {
-  margin: 2px 0 0 0;
-  color: #6B7280;
-  font-style: italic;
-}
-
-.return-refund-summary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  border-top: 1px dashed #E5E7EB;
-  padding-top: 8px;
-}
-
-.approved-val {
-  font-size: 14px;
-  color: #059669;
-}
-
-.refund-txid {
-  font-size: 12px;
-  color: #6B7280;
-  font-weight: normal;
-}
-
-/* ── Return Stepper (Tiến trình đổi trả 6 bước trực quan) ── */
+/* ── Return Stepper (Timeline đường mảnh trực tiếp) ── */
 .return-stepper {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 8px;
-  background: #ffffff;
-  border-radius: 6px;
-  border: 1px solid #fee2e2;
+  padding: 8px 4px 6px 4px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
   overflow-x: auto;
-  margin: 4px 0 8px 0;
+  margin: 2px 0 6px 0;
 }
 
 .stepper-step {
@@ -1196,22 +1112,22 @@ button {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  min-width: 54px;
+  min-width: 52px;
   text-align: center;
 }
 
 .step-circle {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: #f1f5f9;
   color: #64748b;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid #cbd5e1;
+  border: 1px solid #cbd5e1;
   transition: all 0.2s ease;
 }
 
@@ -1226,7 +1142,7 @@ button {
   background: #74070e;
   border-color: #74070e;
   color: #ffffff;
-  box-shadow: 0 0 0 3px rgba(116, 7, 14, 0.15);
+  box-shadow: 0 0 0 2px rgba(116, 7, 14, 0.15);
 }
 
 .stepper-step.active .step-label {
@@ -1247,7 +1163,7 @@ button {
 
 .stepper-line {
   flex: 1;
-  height: 2px;
+  height: 1px;
   background: #e2e8f0;
   margin: 0 4px;
   margin-bottom: 16px;
@@ -1258,17 +1174,150 @@ button {
   background: #15803d;
 }
 
-.return-shipping-box {
-  background: #F0FDF4;
-  border: 1px solid #DCFCE7;
+/* ── Thông tin trực tiếp: Lý do, Từ chối ── */
+.return-reason-box {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.5;
+}
+
+.return-reason-box p {
+  margin: 0 0 4px 0;
+}
+
+.rejection-alert {
+  color: #991B1B !important;
+  background: rgba(254, 226, 226, 0.75);
+  border: none;
+  border-left: 3px solid #DC2626;
+  border-radius: 0 4px 4px 0;
+  padding: 6px 10px;
+  margin-top: 6px !important;
+  font-size: 12.5px;
+}
+
+/* ── Thông tin trực tiếp: Sản phẩm yêu cầu trả ── */
+.return-items-summary {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  font-size: 12.5px;
+  color: #4B5563;
+  line-height: 1.5;
+}
+
+.items-summary-label {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 4px;
+  color: #374151;
+}
+
+.return-items-ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.return-items-ul li {
+  margin-bottom: 2px;
+}
+
+.price-val {
+  font-weight: 600;
+  color: #74070E;
+}
+
+/* ── Hướng dẫn gửi hàng hoàn: Nền màu nhạt, không tạo card viền nổi bật ── */
+.return-guide-box {
+  background-color: rgba(255, 251, 235, 0.75);
+  border: none;
+  border-left: 3px solid #D97706;
+  border-radius: 0 4px 4px 0;
   padding: 8px 12px;
-  border-radius: 6px;
+  font-size: 12px;
+  color: #92400E;
+  line-height: 1.5;
+}
+
+.return-guide-box p {
+  margin: 4px 0 0 0;
+}
+
+/* ── Thông tin trực tiếp: Vận chuyển hoàn ── */
+.return-shipping-box {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
   font-size: 12.5px;
   color: #166534;
   display: flex;
   flex-direction: column;
   gap: 3px;
+  line-height: 1.5;
 }
 
+/* ── Thông tin trực tiếp: Kết quả kiểm tra ── */
+.return-inspect-box {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  font-size: 12.5px;
+  color: #374151;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  line-height: 1.5;
+}
 
+.inspect-notes {
+  margin: 2px 0 0 0;
+  color: #6B7280;
+  font-style: italic;
+}
 
+/* ── Thông tin trực tiếp: Số tiền duyệt hoàn ── */
+.return-refund-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  border-top: 1px dashed rgba(116, 7, 14, 0.15);
+  padding-top: 8px;
+  margin-top: 2px;
+  flex-wrap: wrap;
+}
+
+.approved-val {
+  font-size: 14px;
+  color: #059669;
+}
+
+.refund-txid {
+  font-size: 12px;
+  color: #6B7280;
+  font-weight: normal;
+}
+
+/* ── Responsive adjustments ── */
+@media (max-width: 768px) {
+  .bill-return-section {
+    padding: 12px;
+  }
+
+  .return-card-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .return-stepper {
+    overflow-x: auto;
+    padding-bottom: 6px;
+  }
+}

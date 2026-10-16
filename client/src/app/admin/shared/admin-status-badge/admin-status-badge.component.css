@@ -45,3 +45,77 @@
   color: var(--cheri-text-secondary);
 }
 .status-badge--neutral .status-badge__dot { background-color: var(--cheri-text-light); }
+
+/* Return & Refund Request Status Badges */
+.status-badge--pending {
+  background-color: rgba(116, 7, 14, 0.08);
+  color: #74070E;
+  border: 1px solid rgba(116, 7, 14, 0.22);
+  font-weight: 700;
+}
+.status-badge--pending .status-badge__dot {
+  background-color: #74070E;
+}
+
+.status-badge--approved {
+  background-color: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
+}
+.status-badge--approved .status-badge__dot {
+  background-color: #2563EB;
+}
+
+.status-badge--shipping {
+  background-color: #F5F3FF;
+  color: #6D28D9;
+  border: 1px solid #DDD6FE;
+}
+.status-badge--shipping .status-badge__dot {
+  background-color: #7C3AED;
+}
+
+.status-badge--received {
+  background-color: #FDF4FF;
+  color: #86198F;
+  border: 1px solid #F5D0FE;
+}
+.status-badge--received .status-badge__dot {
+  background-color: #A21CAF;
+}
+
+.status-badge--refunding {
+  background-color: #FFFBEB;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+}
+.status-badge--refunding .status-badge__dot {
+  background-color: #D97706;
+}
+
+.status-badge--completed {
+  background-color: #F0FDF4;
+  color: #15803D;
+  border: 1px solid #BBF7D0;
+}
+.status-badge--completed .status-badge__dot {
+  background-color: #16A34A;
+}
+
+.status-badge--rejected {
+  background-color: #FEF2F2;
+  color: #B91C1C;
+  border: 1px solid #FECACA;
+}
+.status-badge--rejected .status-badge__dot {
+  background-color: #DC2626;
+}
+
+.status-badge--cancelled {
+  background-color: #F1F5F9;
+  color: #64748B;
+  border: 1px solid #E2E8F0;
+}
+.status-badge--cancelled .status-badge__dot {
+  background-color: #94A3B8;
+}

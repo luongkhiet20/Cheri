@@ -5,6 +5,7 @@ import { Observable, Subscription, combineLatest } from 'rxjs';
 import { TranslateService } from '../../../services/translate.service';
 import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
 import { ApiService } from '../../../services/api.service';
+import { NotificationService } from '../../shared/notification/notification.service';
 import { Order } from '../../shared/models';
 
 @Component({
@@ -36,7 +37,8 @@ export class OrderComponent implements OnInit, OnDestroy {
     private location: Location,
     private selectors: SignalStoreSelectors,
     public translate: TranslateService,
-    private apiService: ApiService
+    private apiService: ApiService,
+    private notify: NotificationService
   ) {
     this.orderSignal = this.selectors.order;
     this.lang$ = this.translate.getLang$();
@@ -95,6 +97,7 @@ export class OrderComponent implements OnInit, OnDestroy {
     }
 
     // 2. Kiểm tra sessionStorage
+    let hasSessionCache = false;
     if (typeof window !== 'undefined' && window.sessionStorage) {
       try {
         const cachedRaw = window.sessionStorage.getItem('cheri_last_order');
@@ -103,17 +106,18 @@ export class OrderComponent implements OnInit, OnDestroy {
           if (cached && (!queryOrderId || cached.orderId === queryOrderId || cached._id === queryOrderId)) {
             this.currentOrder = cached;
             this.errorMessage = '';
-            this.resetScrollToTop();
-            return;
+            hasSessionCache = true;
           }
         }
       } catch (_) {}
     }
 
-    // 3. Nếu người dùng đã đăng nhập và có orderId, thử nạp từ getUserOrders()
+    // 3. Nếu người dùng đã đăng nhập và có orderId, luôn nạp mới từ máy chủ qua getUserOrders() để cập nhật trạng thái mới nhất
     const currentUser = this.selectors.user();
     if (currentUser && queryOrderId) {
-      this.isLoading = true;
+      if (!hasSessionCache) {
+        this.isLoading = true;
+      }
       this.errorMessage = '';
       this.apiService.getUserOrders().subscribe({
         next: (orders: any[]) => {
@@ -130,14 +134,22 @@ export class OrderComponent implements OnInit, OnDestroy {
               return;
             }
           }
-          // Thử tiếp qua trackOrder nếu không tìm thấy trong list
-          this.fetchViaTrackOrder(queryOrderId);
+          if (!hasSessionCache) {
+            this.fetchViaTrackOrder(queryOrderId);
+          }
         },
         error: () => {
           this.isLoading = false;
-          this.fetchViaTrackOrder(queryOrderId);
+          if (!hasSessionCache) {
+            this.fetchViaTrackOrder(queryOrderId);
+          }
         }
       });
+      return;
+    }
+
+    if (hasSessionCache) {
+      this.resetScrollToTop();
       return;
     }
 
@@ -242,6 +254,74 @@ export class OrderComponent implements OnInit, OnDestroy {
       default:
         return status || 'Chờ xử lý';
     }
+  }
+
+  // ─── Chuẩn hóa trạng thái đơn hàng (Đồng bộ chuẩn hệ thống Chéri) ───────────────
+  normalizeStatus(status: string | undefined): string {
+    const s = (status || '').toUpperCase().trim();
+    if (s === 'PENDING') return 'PENDING';
+    if (s === 'CONFIRMED') return 'CONFIRMED';
+    if (s === 'PROCESSING') return 'PROCESSING';
+    if (s === 'SHIPPING' || s === 'SHIPPED') return 'SHIPPING';
+    if (s === 'DELIVERY_FAILED') return 'DELIVERY_FAILED';
+    if (s === 'DELIVERED' || s === 'COMPLETED') return 'DELIVERED';
+    if (s === 'CANCELLED' || s === 'CANCELED') return 'CANCELLED';
+    if (s === 'RETURNED' || s === 'REFUNDED') return 'RETURNED';
+    return s;
+  }
+
+  /**
+   * Kiểm tra xem đơn hàng có thực sự thuộc mục "Đã giao" (DELIVERED) hay không.
+   * Chặn tuyệt đối các trường hợp:
+   * 1. Trạng thái chưa giao: PENDING, CONFIRMED, PROCESSING, SHIPPING, DELIVERY_FAILED...
+   * 2. Đơn hàng đã hủy: CANCELLED
+   * 3. Đơn hàng đang hoặc đã qua quy trình trả hàng/hoàn tiền:
+   *    (PENDING, APPROVED, WAITING_FOR_RETURN_SHIPMENT, RETURN_SHIPPED, RETURN_RECEIVED, INSPECTED, COMPLETED)
+   * 4. Trạng thái thanh toán bị hoàn tiền (REFUNDED)
+   */
+  get isDeliveredOrder(): boolean {
+    if (!this.currentOrder) return false;
+    const rawStatus = this.normalizeStatus(this.currentOrder.status);
+    if (rawStatus !== 'DELIVERED') {
+      return false;
+    }
+
+    // Kiểm tra các yêu cầu trả hàng & hoàn tiền
+    const reqs = this.getReturnRequests();
+    if (reqs && reqs.length > 0) {
+      const returnWorkflowStatuses = [
+        'PENDING',
+        'APPROVED',
+        'WAITING_FOR_RETURN_SHIPMENT',
+        'RETURN_SHIPPED',
+        'RETURN_RECEIVED',
+        'INSPECTED',
+        'COMPLETED'
+      ];
+      // Nếu có bất kỳ yêu cầu trả hàng nào đang active hoặc đã hoàn tất quy trình
+      const hasActiveReturn = reqs.some((r: any) => {
+        const s = (r?.status || '').toUpperCase();
+        return returnWorkflowStatuses.includes(s);
+      });
+      if (hasActiveReturn) {
+        return false;
+      }
+    }
+
+    const payStatus = (this.currentOrder.paymentStatus || this.currentOrder.payment?.status || '').toUpperCase();
+    if (payStatus === 'REFUNDED') {
+      return false;
+    }
+
+    return true;
+  }
+
+  get isOrderCancelled(): boolean {
+    return this.normalizeStatus(this.currentOrder?.status) === 'CANCELLED';
+  }
+
+  get canPrintInvoice(): boolean {
+    return this.isDeliveredOrder;
   }
 
   getOrderStatusClass(status: string): string {
@@ -371,6 +451,10 @@ export class OrderComponent implements OnInit, OnDestroy {
   }
 
   printBill(): void {
+    if (!this.canPrintInvoice) {
+      this.notify.warning('Chỉ đơn hàng ở trạng thái Đã giao mới được phép in hóa đơn điện tử.');
+      return;
+    }
     if (typeof window === 'undefined') return;
     if (this.storeContact) {
       window.print();
@@ -380,9 +464,17 @@ export class OrderComponent implements OnInit, OnDestroy {
           if (contact && (contact.email || contact.phone || contact.address)) {
             this.storeContact = contact;
           }
+          if (!this.canPrintInvoice) {
+            this.notify.warning('Chỉ đơn hàng ở trạng thái Đã giao mới được phép in hóa đơn điện tử.');
+            return;
+          }
           window.print();
         },
         error: () => {
+          if (!this.canPrintInvoice) {
+            this.notify.warning('Chỉ đơn hàng ở trạng thái Đã giao mới được phép in hóa đơn điện tử.');
+            return;
+          }
           window.print();
         }
       });

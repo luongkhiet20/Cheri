@@ -34,14 +34,13 @@ export class OrdersComponent implements OnInit {
   filterFields: FilterField[] = [
     {
       key: 'status', label: 'Trạng thái', type: 'select', value: '', options: [
+        { value: 'RETURN_PENDING', label: 'Yêu cầu đổi trả (Chờ duyệt)' },
+        { value: 'RETURNED', label: 'Đã hoàn trả / Trả hàng' },
         { value: 'DELIVERED', label: 'Đã giao' },
         { value: 'SHIPPING', label: 'Đang giao' },
-
         { value: 'PROCESSING', label: 'Đang xử lý' },
         { value: 'PENDING', label: 'Chờ xác nhận' },
-
         { value: 'CANCELLED', label: 'Đã hủy' },
-        { value: 'RETURNED', label: 'Đã hoàn trả' },
       ]
     },
     {
@@ -59,21 +58,16 @@ export class OrdersComponent implements OnInit {
   searchTerm = '';
   selectedStatus = '';
   selectedPaymentMethod = '';
+  pendingReturnCount = 0;
   isStatusModalOpen = false;
   selectedOrderForStatus: any = null;
   private hasInitializedQueryState = false;
   private skipNextResetFilterLoad = false;
   private ordersRequestId = 0;
   private readonly orderStatusCodes = new Set([
-    'DELIVERED', 'SHIPPING', 'PROCESSING', 'PENDING', 'CANCELLED', 'RETURNED'
+    'DELIVERED', 'SHIPPING', 'PROCESSING', 'PENDING', 'CANCELLED', 'RETURNED', 'RETURN_PENDING', 'RETURN_REQUESTS'
   ]);
 
-  selectedIds: Set<any> = new Set();
-  get selectedCount(): number { return this.selectedIds.size; }
-  get allSelected(): boolean {
-    return this.data.length > 0 && this.data.every((r: any) => this.selectedIds.has(r.id));
-  }
-  get isIndeterminate(): boolean { return this.selectedCount > 0 && !this.allSelected; }
   get displayTotal(): number { return this.pagination?.total ?? this.data.length; }
 
   private apiService = inject(AdminService);
@@ -176,12 +170,24 @@ export class OrdersComponent implements OnInit {
         if (requestId !== this.ordersRequestId) return;
         this.isLoading = false;
         if (res.success) {
-          this.data = (res.data || []).map((o: any) => ({
-            ...o,
-            id: o._id || o.id,
-            status: o.statusText || o.status,
-            statusVariant: o.statusVariant || 'neutral'
-          }));
+          this.pendingReturnCount = Number(res.pendingReturnCount) || 0;
+          this.data = (res.data || []).map((o: any) => {
+            let statusText = o.statusText || o.status;
+            let statusVariant = o.statusVariant || 'neutral';
+            if (o.hasPendingReturn) {
+              statusText = 'Đổi trả: Chờ duyệt';
+              statusVariant = 'warning';
+            } else if (o.returnRequestsCount > 0 && o.status !== 'RETURNED') {
+              statusText = `Đổi trả: ${this.getReturnStatusText(o.latestReturnStatus)}`;
+              statusVariant = 'primary';
+            }
+            return {
+              ...o,
+              id: o._id || o.id,
+              status: statusText,
+              statusVariant: statusVariant
+            };
+          });
           const responsePagination = res.pagination || {};
           const responsePage = Number(responsePagination.page);
           const responsePageSize = Number(responsePagination.pageSize);
@@ -193,9 +199,6 @@ export class OrdersComponent implements OnInit {
               : this.pagination.pageSize,
             total: Number.isFinite(responseTotal) && responseTotal >= 0 ? responseTotal : this.data.length
           };
-          if (!options.preserveSelection) {
-            this.selectedIds.clear();
-          }
         } else {
           this.errorMessage = 'Không thể tải danh sách đơn hàng. Vui lòng thử lại.';
         }
@@ -211,8 +214,6 @@ export class OrdersComponent implements OnInit {
     });
   }
 
-  onSelectionChange(ids: Set<any>): void { this.selectedIds = new Set(ids); }
-
   onAddOrder(): void {
     this.router.navigate(['/admin/orders/add']);
   }
@@ -223,17 +224,7 @@ export class OrdersComponent implements OnInit {
     this.isExporting = true;
     this.errorMessage = '';
 
-    // Nếu người dùng đã tick chọn một số đơn hàng cụ thể trên bảng
-    if (this.selectedCount > 0) {
-      const selectedOrders = this.data.filter((r: any) => this.selectedIds.has(r.id));
-      this.generateAndDownloadReport(selectedOrders);
-      this.isExporting = false;
-      this.notificationService.success(`Đã xuất báo cáo thành công cho ${selectedOrders.length} đơn hàng đã chọn.`);
-      this.cdr.markForCheck();
-      return;
-    }
-
-    // Nếu không tick chọn đơn cụ thể, tiến hành lấy toàn bộ đơn hàng phù hợp với bộ lọc hiện tại
+    // Tiến hành lấy toàn bộ đơn hàng phù hợp với bộ lọc hiện tại để xuất báo cáo
     this.fetchAllOrdersForExport(1, []);
   }
 
@@ -453,10 +444,6 @@ export class OrdersComponent implements OnInit {
     return paymentStatusLabel(status);
   }
 
-  onToolbarSelectAll(): void {
-    if (this.allSelected) { this.selectedIds = new Set(); }
-    else { this.selectedIds = new Set(this.data.map((r: any) => r.id)); }
-  }
 
   onAction(e: ActionEvent): void {
     if (e.action === 'view') {
@@ -591,6 +578,20 @@ export class OrdersComponent implements OnInit {
     );
     const optionCode = this.normalizePaymentValue(matchingOption?.value);
     return this.orderStatusCodes.has(optionCode) ? optionCode : '';
+  }
+
+  getReturnStatusText(status: string): string {
+    const s = (status || '').toUpperCase();
+    switch (s) {
+      case 'PENDING': return 'Chờ duyệt';
+      case 'APPROVED': return 'Đã duyệt';
+      case 'REJECTED': return 'Đã từ chối';
+      case 'RETURN_SHIPPED': return 'Đang chuyển hoàn';
+      case 'RETURN_RECEIVED': return 'Đã nhận hàng';
+      case 'INSPECTED': return 'Đã kiểm hàng';
+      case 'COMPLETED': return 'Hoàn tất';
+      default: return status || 'Đang xử lý';
+    }
   }
 
   private getDisplayString(value: any): string | null {

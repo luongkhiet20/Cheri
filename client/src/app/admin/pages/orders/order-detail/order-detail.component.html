@@ -26,9 +26,7 @@
         </svg>
         <span>Quay lại</span>
       </button>
-      <button type="button" class="btn btn-primary" (click)="onEdit()" id="btn-edit-order">
-        Cập nhật trạng thái
-      </button>
+
 
     </div>
   </div>
@@ -290,7 +288,8 @@
           </div>
 
           <div class="card-head-actions" *ngIf="isCodMethod()">
-            <button type="button" class="btn btn-sm btn-outline-primary" (click)="openActionModal('COD_RECONCILE', null)">
+            <button type="button" class="btn btn-sm btn-outline-primary"
+              (click)="openActionModal('COD_RECONCILE', null)">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="2" y="4" width="20" height="16" rx="2"></rect>
                 <line x1="12" y1="8" x2="12" y2="16"></line>
@@ -330,7 +329,8 @@
 
             <div class="finance-item">
               <span class="finance-label">Còn có thể hoàn</span>
-              <span class="finance-val font-bold" [ngClass]="getRemainingRefundableAmount() > 0 ? 'color-warning' : 'text-muted'">
+              <span class="finance-val font-bold"
+                [ngClass]="getRemainingRefundableAmount() > 0 ? 'color-warning' : 'text-muted'">
                 {{ getRemainingRefundableAmount() | priceFormat }} {{ order.currency || 'đ' }}
               </span>
             </div>
@@ -338,7 +338,8 @@
             <div class="finance-item" *ngIf="isCodMethod()">
               <span class="finance-label">Trạng thái đối soát COD</span>
               <span class="finance-val">
-                <span class="badge" [ngClass]="order.payment?.codCollected ? (order.payment?.codReconciliationStatus === 'RECONCILED' ? 'badge-success' : 'badge-warning') : 'badge-neutral'">
+                <span class="badge"
+                  [ngClass]="order.payment?.codCollected ? (order.payment?.codReconciliationStatus === 'RECONCILED' ? 'badge-success' : 'badge-warning') : 'badge-neutral'">
                   {{ getCodReconciliationStatusLabel() }}
                 </span>
               </span>
@@ -347,7 +348,8 @@
             <div class="finance-item">
               <span class="finance-label">Phương thức / Trạng thái TT</span>
               <span class="finance-val font-medium">
-                {{ order.payment || order.paymentMethodSnapshot?.name || '—' }} ({{ getPaymentStatusLabel(order.paymentStatus || order.payment?.status) }})
+                {{ order.payment || order.paymentMethodSnapshot?.name || '—' }} ({{
+                getPaymentStatusLabel(order.paymentStatus || order.payment?.status) }})
               </span>
             </div>
           </div>
@@ -366,10 +368,7 @@
         <div *ngIf="getReturnRequests().length > 0" class="return-requests-container">
           <!-- Request Selection Tabs (khi có nhiều yêu cầu) -->
           <div class="return-tabs-nav" *ngIf="getReturnRequests().length > 1">
-            <button
-              *ngFor="let req of getReturnRequests(); let i = index"
-              type="button"
-              class="return-tab-btn"
+            <button *ngFor="let req of getReturnRequests(); let i = index" type="button" class="return-tab-btn"
               [class.active]="(selectedReturnReqId ? (req.requestId === selectedReturnReqId || req._id === selectedReturnReqId) : (i === 0))"
               (click)="selectReturnRequest(req.requestId || req._id)">
               <span class="tab-index-tag">#{{ i + 1 }}</span>
@@ -395,6 +394,8 @@
                   </span>
                 </div>
                 <div class="req-meta-sub">
+                  <span>Khách hàng: <strong>{{ order.customer || '—' }}</strong> ({{ order.customerEmail || '—' }})</span>
+                  <span class="sep">•</span>
                   <span>Thời gian gửi: {{ req.requestedAt | date:'dd/MM/yyyy HH:mm' }}</span>
                   <span class="sep">•</span>
                   <span>Phương thức mong muốn: {{ req.refundMethod || 'ORIGINAL_PAYMENT' }}</span>
@@ -415,7 +416,8 @@
 
                 <!-- Khi APPROVED hoặc WAITING_FOR_RETURN_SHIPMENT -->
                 <ng-container *ngIf="req.status === 'APPROVED' || req.status === 'WAITING_FOR_RETURN_SHIPMENT'">
-                  <button type="button" class="btn btn-sm btn-outline-primary" (click)="openActionModal('CUSTOMER_SHIPPED', req)">
+                  <button type="button" class="btn btn-sm btn-outline-primary"
+                    (click)="openActionModal('CUSTOMER_SHIPPED', req)">
                     Khách đã gửi hàng
                   </button>
                   <button type="button" class="btn btn-sm btn-primary" (click)="openActionModal('RECEIVE_GOODS', req)">
@@ -441,12 +443,22 @@
                 </ng-container>
 
                 <!-- Khi INSPECTED & đủ điều kiện hoàn tiền (hoặc refund đang PENDING/FAILED/PROCESSING) -->
-                <ng-container *ngIf="req.status === 'INSPECTED' && (req.refund?.status === 'PENDING' || req.refund?.status === 'FAILED' || req.refund?.status === 'PROCESSING')">
-                  <button type="button" class="btn btn-sm btn-success" (click)="openActionModal('PROCESS_REFUND', req)">
+                <ng-container
+                  *ngIf="req.status === 'INSPECTED' && (req.refund?.status === 'PENDING' || req.refund?.status === 'FAILED' || req.refund?.status === 'PROCESSING')">
+                  <button type="button" class="btn btn-sm btn-success" (click)="openActionModal('PROCESS_REFUND', req)"
+                    [disabled]="!canProcessRefund()"
+                    [title]="getRefundBlockReason() || 'Thực hiện chuyển khoản hoàn tiền cho khách'">
                     Xử lý hoàn tiền
                   </button>
-                  <button type="button" class="btn btn-sm btn-outline-warning" (click)="openActionModal('REFUND_FAILED', req)">
+                  <button type="button" class="btn btn-sm btn-outline-warning"
+                    (click)="openActionModal('REFUND_FAILED', req)">
                     Báo lỗi hoàn tiền
+                  </button>
+                  <!-- Gợi ý đối soát COD nếu đơn COD chưa thu tiền -->
+                  <button *ngIf="isCodMethod() && !order?.payment?.codCollected" type="button"
+                    class="btn btn-sm btn-outline-primary" (click)="openActionModal('COD_RECONCILE', null)"
+                    title="Cần đối soát COD xác nhận đã thu tiền trước khi hoàn tiền">
+                    Đối soát COD ngay
                   </button>
                 </ng-container>
               </div>
@@ -513,16 +525,21 @@
                   <tr *ngFor="let it of (req.items || [])">
                     <td>
                       <div class="item-info-inline">
-                        <img *ngIf="it.productSnapshot?.image" [src]="it.productSnapshot.image" class="item-mini-thumb" />
+                        <img *ngIf="it.productSnapshot?.image" [src]="it.productSnapshot.image"
+                          class="item-mini-thumb" />
                         <div>
                           <div class="item-title font-medium">{{ it.productSnapshot?.title || 'Sản phẩm' }}</div>
-                          <div class="item-sub text-muted" *ngIf="it.productSnapshot?.sku">SKU: {{ it.productSnapshot.sku }}</div>
+                          <div class="item-sub text-muted" *ngIf="getItemVariantText(it)">Phân loại: {{ getItemVariantText(it) }}</div>
+                          <div class="item-sub text-muted" *ngIf="it.productSnapshot?.sku">SKU: {{
+                            it.productSnapshot.sku }}</div>
                         </div>
                       </div>
                     </td>
                     <td class="text-right">{{ it.unitPrice | priceFormat }} đ</td>
-                    <td class="text-center font-bold">x{{ it.quantity }} <span class="text-muted font-normal">/ {{ it.boughtQuantity }} đã mua</span></td>
-                    <td class="text-right font-bold color-primary">{{ (it.subtotal || (it.unitPrice * it.quantity)) | priceFormat }} đ</td>
+                    <td class="text-center font-bold">x{{ it.quantity }} <span class="text-muted font-normal">/ {{
+                        it.boughtQuantity }} đã mua</span></td>
+                    <td class="text-right font-bold color-primary">{{ (it.subtotal || (it.unitPrice * it.quantity)) |
+                      priceFormat }} đ</td>
                   </tr>
                 </tbody>
               </table>
@@ -545,14 +562,19 @@
             </div>
 
             <!-- Thông tin gửi hàng hoàn & Kiểm tra kho (nếu có) -->
-            <div class="req-extra-panels" *ngIf="req.returnShipping?.carrier || req.inspection?.inspectedAt || req.refund?.transactionId">
+            <div class="req-extra-panels"
+              *ngIf="req.returnShipping?.carrier || req.inspection?.inspectedAt || req.refund?.transactionId">
               <div class="panel-box" *ngIf="req.returnShipping?.carrier || req.returnShipping?.trackingCode">
                 <h5 class="panel-box-title">Vận chuyển hàng hoàn</h5>
                 <p><strong>Đơn vị vận chuyển:</strong> {{ req.returnShipping.carrier || 'Chưa rõ' }}</p>
-                <p *ngIf="req.returnShipping.trackingCode"><strong>Mã vận đơn:</strong> {{ req.returnShipping.trackingCode }}</p>
-                <p *ngIf="req.returnShipping.shippedAt"><strong>Ngày khách gửi:</strong> {{ req.returnShipping.shippedAt | date:'dd/MM/yyyy HH:mm' }}</p>
-                <p *ngIf="req.returnShipping.receivedAt"><strong>Ngày Chéri nhận:</strong> {{ req.returnShipping.receivedAt | date:'dd/MM/yyyy HH:mm' }}</p>
-                <p *ngIf="req.returnShipping.instructions" class="instructions-note"><strong>Hướng dẫn gửi:</strong> {{ req.returnShipping.instructions }}</p>
+                <p *ngIf="req.returnShipping.trackingCode"><strong>Mã vận đơn:</strong> {{
+                  req.returnShipping.trackingCode }}</p>
+                <p *ngIf="req.returnShipping.shippedAt"><strong>Ngày khách gửi:</strong> {{ req.returnShipping.shippedAt
+                  | date:'dd/MM/yyyy HH:mm' }}</p>
+                <p *ngIf="req.returnShipping.receivedAt"><strong>Ngày Chéri nhận:</strong> {{
+                  req.returnShipping.receivedAt | date:'dd/MM/yyyy HH:mm' }}</p>
+                <p *ngIf="req.returnShipping.instructions" class="instructions-note"><strong>Hướng dẫn gửi:</strong> {{
+                  req.returnShipping.instructions }}</p>
               </div>
 
               <div class="panel-box" *ngIf="req.inspection?.inspectedAt">
@@ -564,8 +586,10 @@
                   </span>
                 </p>
                 <p><strong>Thời gian kiểm tra:</strong> {{ req.inspection.inspectedAt | date:'dd/MM/yyyy HH:mm' }}</p>
-                <p *ngIf="req.inspection.conditionNotes"><strong>Ghi chú tình trạng:</strong> {{ req.inspection.conditionNotes }}</p>
-                <p *ngIf="req.inspection.restocked"><strong>Nhập hoàn kho:</strong> <span class="badge badge-primary">Đã cộng tồn kho lại</span></p>
+                <p *ngIf="req.inspection.conditionNotes"><strong>Ghi chú tình trạng:</strong> {{
+                  req.inspection.conditionNotes }}</p>
+                <p *ngIf="req.inspection.restocked"><strong>Nhập hoàn kho:</strong> <span class="badge badge-primary">Đã
+                    cộng tồn kho lại</span></p>
               </div>
 
               <div class="panel-box" *ngIf="req.refund?.transactionId">
@@ -573,8 +597,10 @@
                 <p><strong>Mã giao dịch hoàn:</strong> <code>{{ req.refund.transactionId }}</code></p>
                 <p *ngIf="req.refund.bankName"><strong>Ngân hàng thụ hưởng:</strong> {{ req.refund.bankName }}</p>
                 <p *ngIf="req.refund.accountNumber"><strong>Số tài khoản:</strong> {{ req.refund.accountNumber }}</p>
-                <p *ngIf="req.refund.accountHolder"><strong>Tên chủ tài khoản:</strong> {{ req.refund.accountHolder }}</p>
-                <p *ngIf="req.refund.refundedAt"><strong>Thời gian hoàn tất:</strong> {{ req.refund.refundedAt | date:'dd/MM/yyyy HH:mm' }}</p>
+                <p *ngIf="req.refund.accountHolder"><strong>Tên chủ tài khoản:</strong> {{ req.refund.accountHolder }}
+                </p>
+                <p *ngIf="req.refund.refundedAt"><strong>Thời gian hoàn tất:</strong> {{ req.refund.refundedAt |
+                  date:'dd/MM/yyyy HH:mm' }}</p>
                 <p *ngIf="req.refund.notes"><strong>Ghi chú:</strong> {{ req.refund.notes }}</p>
               </div>
             </div>
@@ -846,7 +872,8 @@
           <div class="info-row">
             <span class="info-label">Loại tài khoản:</span>
             <span class="info-value">
-              <span class="badge" [ngClass]="(order.userId && order.userId !== 'null') ? 'badge-primary' : 'badge-neutral'">
+              <span class="badge"
+                [ngClass]="(order.userId && order.userId !== 'null') ? 'badge-primary' : 'badge-neutral'">
                 {{ (order.userId && order.userId !== 'null') ? 'Tài khoản thành viên' : 'Khách vãng lai' }}
               </span>
             </span>
@@ -928,7 +955,8 @@
       <h3 class="custom-modal-title">
         <ng-container *ngIf="activeModalAction === 'APPROVE'">Duyệt yêu cầu trả hàng / hoàn tiền</ng-container>
         <ng-container *ngIf="activeModalAction === 'REJECT'">Từ chối yêu cầu trả hàng</ng-container>
-        <ng-container *ngIf="activeModalAction === 'CUSTOMER_SHIPPED'">Xác nhận khách hàng đã gửi kiện hàng hoàn</ng-container>
+        <ng-container *ngIf="activeModalAction === 'CUSTOMER_SHIPPED'">Xác nhận khách hàng đã gửi kiện hàng
+          hoàn</ng-container>
         <ng-container *ngIf="activeModalAction === 'RECEIVE_GOODS'">Xác nhận Chéri đã nhận hàng hoàn</ng-container>
         <ng-container *ngIf="activeModalAction === 'INSPECT_GOODS'">Ghi nhận kết quả kiểm tra sản phẩm</ng-container>
         <ng-container *ngIf="activeModalAction === 'PROCESS_REFUND'">Ghi nhận giao dịch hoàn tiền</ng-container>
@@ -946,10 +974,41 @@
 
       <!-- FORM APPROVE -->
       <div *ngIf="activeModalAction === 'APPROVE'" class="modal-form-fields">
+        <!-- Tóm tắt chi tiết yêu cầu cần duyệt -->
+        <div class="approve-summary-card">
+          <div class="summary-line">
+            <span class="lbl">Mã yêu cầu:</span>
+            <strong>{{ modalTargetReq?.requestId }}</strong>
+          </div>
+          <div class="summary-line">
+            <span class="lbl">Lý do trả hàng:</span>
+            <span class="font-medium">{{ modalTargetReq?.reason }}</span>
+          </div>
+          <div class="summary-line" *ngIf="modalTargetReq?.description">
+            <span class="lbl">Mô tả chi tiết:</span>
+            <span class="desc-text">{{ modalTargetReq?.description }}</span>
+          </div>
+          <div class="summary-line">
+            <span class="lbl">Sản phẩm trả:</span>
+            <div class="summary-items-list">
+              <div *ngFor="let it of (modalTargetReq?.items || [])" class="summary-item-row">
+                <span>{{ it.productSnapshot?.title || 'Sản phẩm' }}</span>
+                <span class="item-variant-mini" *ngIf="getItemVariantText(it)">({{ getItemVariantText(it) }})</span>
+                <strong class="color-primary">x{{ it.quantity }}</strong>
+              </div>
+            </div>
+          </div>
+          <div class="summary-line highlight">
+            <span class="lbl">Số tiền khách đề nghị:</span>
+            <strong class="color-primary">{{ (modalTargetReq?.refund?.requestedAmount || 0) | priceFormat }} đ</strong>
+          </div>
+        </div>
+
         <div class="form-group">
-          <label>Số tiền duyệt hoàn dự kiến (VNĐ):</label>
+          <label class="font-bold">Số tiền duyệt hoàn dự kiến (VNĐ):</label>
           <input type="number" class="form-input" [(ngModel)]="approveForm.approvedAmount" min="0" />
-          <small class="form-hint">Mặc định theo số tiền đề nghị: {{ (modalTargetReq?.refund?.requestedAmount || 0) | priceFormat }} đ</small>
+          <small class="form-hint">Mặc định theo số tiền đề nghị: {{ (modalTargetReq?.refund?.requestedAmount || 0) |
+            priceFormat }} đ</small>
         </div>
         <div class="form-group">
           <label>Hướng dẫn gửi hàng hoàn cho khách:</label>
@@ -965,7 +1024,8 @@
       <div *ngIf="activeModalAction === 'REJECT'" class="modal-form-fields">
         <div class="form-group">
           <label class="required font-bold">Lý do từ chối yêu cầu (bắt buộc):</label>
-          <textarea class="form-textarea" rows="3" [(ngModel)]="rejectForm.reason" placeholder="Ví dụ: Sản phẩm đã quá thời hạn 7 ngày đổi trả, sản phẩm không bị lỗi như mô tả..."></textarea>
+          <textarea class="form-textarea" rows="3" [(ngModel)]="rejectForm.reason"
+            placeholder="Ví dụ: Sản phẩm đã quá thời hạn 7 ngày đổi trả, sản phẩm không bị lỗi như mô tả..."></textarea>
         </div>
       </div>
 
@@ -973,7 +1033,8 @@
       <div *ngIf="activeModalAction === 'CUSTOMER_SHIPPED'" class="modal-form-fields">
         <div class="form-group">
           <label>Đơn vị vận chuyển hoàn hàng:</label>
-          <input type="text" class="form-input" [(ngModel)]="shippingForm.carrier" placeholder="GHN, Viettel Post, GHTK..." />
+          <input type="text" class="form-input" [(ngModel)]="shippingForm.carrier"
+            placeholder="GHN, Viettel Post, GHTK..." />
         </div>
         <div class="form-group">
           <label>Mã vận đơn gửi hàng hoàn:</label>
@@ -987,12 +1048,34 @@
 
       <!-- FORM RECEIVE_GOODS -->
       <div *ngIf="activeModalAction === 'RECEIVE_GOODS'" class="modal-form-fields">
-        <p>Xác nhận Chéri đã nhận được kiện hàng hoàn từ khách hàng cho yêu cầu <strong>{{ modalTargetReq?.requestId }}</strong>.</p>
-        <p class="text-muted">Sau khi xác nhận, đơn hàng sẽ chuyển sang trạng thái sẵn sàng để nhân viên kho kiểm tra tình trạng hàng hóa.</p>
+        <p>Xác nhận Chéri đã nhận được kiện hàng hoàn từ khách hàng cho yêu cầu <strong>{{ modalTargetReq?.requestId
+            }}</strong>.</p>
+        <div class="receive-items-box">
+          <label class="font-semibold">Danh sách sản phẩm kiểm nhận:</label>
+          <div class="summary-items-list mt-1">
+            <div *ngFor="let it of (modalTargetReq?.items || [])" class="summary-item-row">
+              <span>{{ it.productSnapshot?.title || 'Sản phẩm' }}</span>
+              <span class="item-variant-mini" *ngIf="getItemVariantText(it)">({{ getItemVariantText(it) }})</span>
+              <strong class="color-primary">x{{ it.quantity }}</strong>
+            </div>
+          </div>
+        </div>
+        <p class="text-muted mt-2">Sau khi xác nhận, yêu cầu sẽ chuyển sang trạng thái <strong>Đã nhận hàng (RETURN_RECEIVED)</strong> và sẵn sàng kiểm tra sản phẩm.</p>
       </div>
 
       <!-- FORM INSPECT_GOODS -->
       <div *ngIf="activeModalAction === 'INSPECT_GOODS'" class="modal-form-fields">
+        <div class="inspect-items-box mb-3">
+          <label class="font-semibold">Sản phẩm cần kiểm tra chất lượng & tem mác:</label>
+          <div class="summary-items-list mt-1">
+            <div *ngFor="let it of (modalTargetReq?.items || [])" class="summary-item-row">
+              <span>{{ it.productSnapshot?.title || 'Sản phẩm' }}</span>
+              <span class="item-variant-mini" *ngIf="getItemVariantText(it)">({{ getItemVariantText(it) }})</span>
+              <strong class="color-primary">x{{ it.quantity }}</strong>
+            </div>
+          </div>
+        </div>
+
         <div class="form-group">
           <label class="font-bold">Đánh giá điều kiện sản phẩm:</label>
           <div class="radio-row">
@@ -1014,7 +1097,8 @@
 
         <div class="form-group">
           <label>Ghi chú tình trạng sản phẩm:</label>
-          <textarea class="form-textarea" rows="3" [(ngModel)]="inspectForm.conditionNotes" placeholder="Mô tả hiện trạng sản phẩm, tem mác, bao bì..."></textarea>
+          <textarea class="form-textarea" rows="3" [(ngModel)]="inspectForm.conditionNotes"
+            placeholder="Mô tả hiện trạng sản phẩm, tem mác, bao bì..."></textarea>
         </div>
 
         <div class="form-group" *ngIf="inspectForm.isEligible">
@@ -1044,22 +1128,26 @@
 
         <div class="form-group">
           <label class="required font-bold">Số tiền hoàn (VNĐ):</label>
-          <input type="number" class="form-input font-bold" [(ngModel)]="refundForm.refundAmount" min="1" [max]="getRemainingRefundableAmount()" />
+          <input type="number" class="form-input font-bold" [(ngModel)]="refundForm.refundAmount" min="1"
+            [max]="getRemainingRefundableAmount()" />
         </div>
 
         <div class="form-group">
           <label>Mã giao dịch hoàn tiền:</label>
-          <input type="text" class="form-input" [(ngModel)]="refundForm.transactionId" placeholder="Nhập mã giao dịch ngân hàng" />
+          <input type="text" class="form-input" [(ngModel)]="refundForm.transactionId"
+            placeholder="Nhập mã giao dịch ngân hàng" />
         </div>
 
         <div class="form-row-2">
           <div class="form-group">
             <label>Tên ngân hàng:</label>
-            <input type="text" class="form-input" [(ngModel)]="refundForm.bankName" placeholder="Vietcombank, MB, Techcombank..." />
+            <input type="text" class="form-input" [(ngModel)]="refundForm.bankName"
+              placeholder="Vietcombank, MB, Techcombank..." />
           </div>
           <div class="form-group">
             <label>Số tài khoản nhận:</label>
-            <input type="text" class="form-input" [(ngModel)]="refundForm.accountNumber" placeholder="Số tài khoản khách hàng" />
+            <input type="text" class="form-input" [(ngModel)]="refundForm.accountNumber"
+              placeholder="Số tài khoản khách hàng" />
           </div>
         </div>
 
@@ -1078,7 +1166,8 @@
       <div *ngIf="activeModalAction === 'REFUND_FAILED'" class="modal-form-fields">
         <div class="form-group">
           <label>Lý do giao dịch thất bại:</label>
-          <textarea class="form-textarea" rows="3" [(ngModel)]="rejectForm.reason" placeholder="Ví dụ: Sai số tài khoản thụ hưởng, ngân hàng bảo trì..."></textarea>
+          <textarea class="form-textarea" rows="3" [(ngModel)]="rejectForm.reason"
+            placeholder="Ví dụ: Sai số tài khoản thụ hưởng, ngân hàng bảo trì..."></textarea>
         </div>
       </div>
 
@@ -1107,7 +1196,8 @@
 
         <div class="form-group">
           <label>Ghi chú đối soát:</label>
-          <textarea class="form-textarea" rows="2" [(ngModel)]="codForm.notes" placeholder="Mã phiên đối soát, ngày nhận tiền từ bưu tá..."></textarea>
+          <textarea class="form-textarea" rows="2" [(ngModel)]="codForm.notes"
+            placeholder="Mã phiên đối soát, ngày nhận tiền từ bưu tá..."></textarea>
         </div>
       </div>
     </div>

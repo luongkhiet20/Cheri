@@ -21,20 +21,16 @@
     </div>
   </div>
 
-
-
   <div *ngIf="errorMessage" class="alert-box alert-error mb-3" role="alert">
     <div class="alert-content">{{ errorMessage }}</div>
   </div>
 
-  <app-admin-toolbar searchPlaceholder="Tìm kiếm..." [searchValue]="searchTerm" [filterFields]="filterFields" [selectable]="true"
-    [allSelected]="allSelected" [indeterminate]="isIndeterminate" [selectedCount]="selectedCount"
+  <app-admin-toolbar searchPlaceholder="Tìm kiếm..." [searchValue]="searchTerm" [filterFields]="filterFields"
     [total]="displayTotal" [isLoading]="isLoading" (searchChange)="onSearch($event)"
-    (filterChange)="onFilter($event)" (filterReset)="onFilterReset()" (refresh)="onRefresh()" (selectAllChange)="onToolbarSelectAll()"></app-admin-toolbar>
+    (filterChange)="onFilter($event)" (filterReset)="onFilterReset()" (refresh)="onRefresh()"></app-admin-toolbar>
 
   <app-admin-table [columns]="columns" [data]="data" [loading]="isLoading" [actions]="actions" [pagination]="pagination"
-    [selectable]="true" [selectedIds]="selectedIds" totalLabel="đơn hàng" (actionClick)="onAction($event)"
-    (selectionChange)="onSelectionChange($event)" (pageChange)="onPageChange($event)"
+    totalLabel="đơn hàng" (actionClick)="onAction($event)" (pageChange)="onPageChange($event)"
     (pageSizeChange)="onPageSizeChange($event)"></app-admin-table>
 
   <!-- Popup cập nhật trạng thái đơn hàng -->

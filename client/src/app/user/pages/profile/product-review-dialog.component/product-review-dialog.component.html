@@ -1,29 +1,19 @@
-<div
-  class="dialog-backdrop"
-  (click)="onBackdropClick($event)"
-  role="dialog"
-  aria-modal="true"
-  aria-labelledby="review-dialog-title"
->
+<div class="dialog-backdrop" (click)="onBackdropClick($event)" role="dialog" aria-modal="true"
+  aria-labelledby="review-dialog-title">
   <div class="dialog-card">
 
     <!-- Card Header -->
     <div class="dialog-header">
       <div class="dialog-title-group">
-        <h3 class="dialog-title" id="review-dialog-title">ĐÁNH GIÁ SẢN PHẨM</h3>
+        <h3 class="dialog-title" id="review-dialog-title">Đánh giá sản phẩm</h3>
         <span class="dialog-order-badge" *ngIf="order?.orderId">
           Mã đơn: #{{ order.orderId }}
         </span>
       </div>
-      <button
-        type="button"
-        class="dialog-close-btn"
-        (click)="onClose()"
-        [disabled]="isSubmitting"
-        title="Đóng"
-        aria-label="Đóng popup"
-      >
-        <svg class="dialog-close-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <button type="button" class="dialog-close-btn" (click)="onClose()" [disabled]="isSubmitting" title="Đóng"
+        aria-label="Đóng popup">
+        <svg class="dialog-close-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>
         </svg>
@@ -40,14 +30,8 @@
       <div class="product-selector-bar" *ngIf="orderItems.length > 1">
         <span class="selector-label">Chọn sản phẩm đánh giá:</span>
         <div class="product-tabs-list">
-          <button
-            type="button"
-            *ngFor="let item of orderItems; let idx = index"
-            class="product-tab-btn"
-            [class.active]="selectedProductIndex === idx"
-            (click)="selectProduct(idx)"
-            [disabled]="isSubmitting"
-          >
+          <button type="button" *ngFor="let item of orderItems; let idx = index" class="product-tab-btn"
+            [class.active]="selectedProductIndex === idx" (click)="selectProduct(idx)" [disabled]="isSubmitting">
             <img [src]="getItemImage(item)" [alt]="item.productSnapshot?.title || 'Sản phẩm'" class="tab-thumb" />
             <span class="tab-title">{{ item.productSnapshot?.title || ('Sản phẩm ' + (idx + 1)) }}</span>
           </button>
@@ -57,11 +41,8 @@
       <!-- Selected Product Info Card -->
       <div class="reviewed-product-card" *ngIf="activeItem">
         <div class="product-thumb-wrap">
-          <img
-            [src]="getItemImage(activeItem)"
-            [alt]="activeItem.productSnapshot?.title || 'Sản phẩm'"
-            class="product-thumb-img"
-          />
+          <img [src]="getItemImage(activeItem)" [alt]="activeItem.productSnapshot?.title || 'Sản phẩm'"
+            class="product-thumb-img" />
         </div>
         <div class="product-meta">
           <h4 class="product-name">{{ activeItem.productSnapshot?.title || 'Sản phẩm Chéri' }}</h4>
@@ -71,7 +52,7 @@
           <div class="product-badges-row">
             <span class="badge-verified" title="Đã xác thực đơn hàng thành công">
               <svg viewBox="0 0 24 24" class="badge-icon" fill="currentColor">
-                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
               </svg>
               Đã mua hàng tại Chéri
             </span>
@@ -89,20 +70,12 @@
         </label>
 
         <div class="stars-picker-row" role="radiogroup" aria-label="Đánh giá sao">
-          <button
-            type="button"
-            *ngFor="let star of stars"
-            class="star-btn"
-            [class.active]="(hoverRating || rating) >= star"
-            [class.selected]="rating >= star"
-            (click)="onRate(star)"
-            (mouseenter)="onStarHover(star)"
-            (mouseleave)="onStarLeave()"
-            [disabled]="isSubmitting"
-            [attr.aria-label]="star + ' sao'"
-          >
+          <button type="button" *ngFor="let star of stars" class="star-btn"
+            [class.active]="(hoverRating || rating) >= star" [class.selected]="rating >= star" (click)="onRate(star)"
+            (mouseenter)="onStarHover(star)" (mouseleave)="onStarLeave()" [disabled]="isSubmitting"
+            [attr.aria-label]="star + ' sao'">
             <svg viewBox="0 0 24 24" class="star-icon" fill="currentColor">
-              <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+              <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
             </svg>
           </button>
 
@@ -123,16 +96,9 @@
           </span>
         </div>
 
-        <textarea
-          id="review-comment-textarea"
-          class="review-textarea"
-          [(ngModel)]="comment"
-          (ngModelChange)="validationError = ''"
-          [disabled]="isSubmitting"
-          rows="4"
-          [maxlength]="maxCommentLength"
-          placeholder="Chất liệu, kiểu dáng, màu sắc, chất lượng sản phẩm... Hãy chia sẻ trải nghiệm thực tế của bạn."
-        ></textarea>
+        <textarea id="review-comment-textarea" class="review-textarea" [(ngModel)]="comment"
+          (ngModelChange)="validationError = ''" [disabled]="isSubmitting" rows="4" [maxlength]="maxCommentLength"
+          placeholder="Chất liệu, kiểu dáng, màu sắc, chất lượng sản phẩm... Hãy chia sẻ trải nghiệm thực tế của bạn."></textarea>
       </div>
 
       <!-- Photo Attachment Section -->
@@ -146,30 +112,18 @@
           <!-- Thumbnail Previews -->
           <div class="photo-preview-box" *ngFor="let img of selectedImages; let i = index">
             <img [src]="img.preview" [alt]="img.name" class="photo-preview-img" />
-            <button
-              type="button"
-              class="photo-remove-btn"
-              (click)="removeImage(i)"
-              [disabled]="isSubmitting"
-              title="Xóa ảnh"
-              aria-label="Xóa ảnh"
-            >
+            <button type="button" class="photo-remove-btn" (click)="removeImage(i)" [disabled]="isSubmitting"
+              title="Xóa ảnh" aria-label="Xóa ảnh">
               &times;
             </button>
           </div>
 
           <!-- Add Photo Button -->
           <label class="photo-upload-btn" *ngIf="selectedImages.length < 5" [class.disabled]="isSubmitting">
-            <input
-              type="file"
-              accept="image/png, image/jpeg, image/jpg, image/webp"
-              multiple
-              (change)="onFilesSelected($event)"
-              [disabled]="isSubmitting"
-              class="photo-file-input"
-            />
+            <input type="file" accept="image/png, image/jpeg, image/jpg, image/webp" multiple
+              (change)="onFilesSelected($event)" [disabled]="isSubmitting" class="photo-file-input" />
             <svg viewBox="0 0 24 24" class="upload-icon" fill="currentColor">
-              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
             </svg>
             <span class="upload-text">Thêm hình ảnh</span>
           </label>
@@ -178,7 +132,8 @@
 
       <!-- Validation Error -->
       <div class="dialog-alert alert-validation" *ngIf="validationError">
-        <svg class="alert-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <svg class="alert-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="12" cy="12" r="10"></circle>
           <line x1="12" y1="8" x2="12" y2="12"></line>
           <line x1="12" y1="16" x2="12.01" y2="16"></line>
@@ -188,7 +143,8 @@
 
       <!-- Server Error -->
       <div class="dialog-alert alert-server" *ngIf="errorMessage">
-        <svg class="alert-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <svg class="alert-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="12" cy="12" r="10"></circle>
           <line x1="12" y1="8" x2="12" y2="12"></line>
           <line x1="12" y1="16" x2="12.01" y2="16"></line>
@@ -198,7 +154,8 @@
 
       <!-- Success Message -->
       <div class="dialog-alert alert-success" *ngIf="successMessage">
-        <svg class="alert-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <svg class="alert-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <polyline points="20 6 9 17 4 12"></polyline>
         </svg>
         <span class="alert-text">{{ successMessage }}</span>
@@ -208,23 +165,15 @@
 
     <!-- Card Footer -->
     <div class="dialog-footer">
-      <button
-        type="button"
-        class="btn-dialog-back"
-        (click)="onClose()"
-        [disabled]="isSubmitting"
-      >
+      <button type="button" class="btn-dialog-back" (click)="onClose()" [disabled]="isSubmitting">
         Hủy
       </button>
 
-      <button
-        type="button"
-        class="btn-dialog-confirm"
-        (click)="onSubmit()"
-        [disabled]="isSubmitting || alreadyReviewed || isCheckingEligibility || !isOrderDelivered()"
-      >
+      <button type="button" class="btn-dialog-confirm" (click)="onSubmit()"
+        [disabled]="isSubmitting || alreadyReviewed || isCheckingEligibility || !isOrderDelivered()">
         <span class="btn-spinner" *ngIf="isSubmitting || isCheckingEligibility"></span>
-        <span>{{ alreadyReviewed ? 'Đã đánh giá' : (isSubmitting ? 'Đang gửi đánh giá...' : (isCheckingEligibility ? 'Đang kiểm tra...' : 'Gửi đánh giá')) }}</span>
+        <span>{{ alreadyReviewed ? 'Đã đánh giá' : (isSubmitting ? 'Đang gửi đánh giá...' : (isCheckingEligibility ?
+          'Đang kiểm tra...' : 'Gửi đánh giá')) }}</span>
       </button>
     </div>
 

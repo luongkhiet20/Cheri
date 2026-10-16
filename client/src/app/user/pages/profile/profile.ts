@@ -14,6 +14,7 @@ import { formatVND, PriceFormatPipe } from '../../../pipes/price.pipe';
 import { OrderCancelDialogComponent } from './order-cancel-dialog/order-cancel-dialog.component';
 import { ProductReviewDialogComponent } from './product-review-dialog.component/product-review-dialog.component';
 import { OrderReturnRefundDialogComponent } from './order-return-refund-dialog.component/order-return-refund-dialog.component';
+import { OrderReturnCancelDialogComponent } from './order-return-cancel-dialog/order-return-cancel-dialog.component';
 
 @Component({
   selector: 'app-profile',
@@ -25,7 +26,8 @@ import { OrderReturnRefundDialogComponent } from './order-return-refund-dialog.c
     PriceFormatPipe,
     OrderCancelDialogComponent,
     ProductReviewDialogComponent,
-    OrderReturnRefundDialogComponent
+    OrderReturnRefundDialogComponent,
+    OrderReturnCancelDialogComponent
   ],
   templateUrl: './profile.html',
   styleUrl: './profile.css'
@@ -61,6 +63,11 @@ export class Profile implements OnInit {
   // Return / refund dialog state
   isReturnRefundDialogOpen: boolean = false;
   selectedOrderToReturn: any = null;
+
+  // Cancel return request dialog state
+  isReturnCancelDialogOpen: boolean = false;
+  selectedOrderToCancelReturn: any = null;
+  selectedReturnRequestToCancel: any = null;
 
   // Form fields
   formName: string = '';
@@ -471,11 +478,11 @@ export class Profile implements OnInit {
     if (isPlatformBrowser(this.platformId) && typeof window !== 'undefined' && window.sessionStorage) {
       try {
         window.sessionStorage.setItem('cheri_last_order', JSON.stringify(order));
-      } catch (_) {}
+      } catch (_) { }
     }
     try {
       this.selectors.productState.update((state: any) => ({ ...state, order }));
-    } catch (_) {}
+    } catch (_) { }
     const currentLang = (this.translate as any)?.lang || 'vi';
     this.router.navigate(['/' + currentLang + '/order', targetId], {
       queryParams: { orderId: order.orderId }
@@ -518,7 +525,7 @@ export class Profile implements OnInit {
           });
           return { ...state, userOrders: updated };
         });
-      } catch (_) {}
+      } catch (_) { }
     }
 
     // 2. Đồng bộ bộ đếm trạng thái và danh sách đơn hàng chính thức từ máy chủ
@@ -580,11 +587,173 @@ export class Profile implements OnInit {
 
   getLatestReturnRequest(order: any): any {
     if (!order) return null;
-    if (Array.isArray(order.returnRequests) && order.returnRequests.length > 0) {
-      return order.returnRequests[order.returnRequests.length - 1];
-    }
-    return order.returnRequest || null;
+    return this.getActiveReturnRequest(order);
   }
+
+  // ── Các hàm nghiệp vụ kiểm tra điều kiện thao tác Trả hàng & Đánh giá ──
+  getActiveReturnRequest(order: any): any {
+    if (!order) return null;
+    const requests: any[] = Array.isArray(order.returnRequests) && order.returnRequests.length > 0
+      ? order.returnRequests
+      : (order.returnRequest ? [order.returnRequest] : []);
+    if (!requests.length) return null;
+
+    // Ưu tiên yêu cầu đang trong tiến trình xử lý (active)
+    const activeStatuses = ['PENDING', 'APPROVED', 'WAITING_FOR_RETURN_SHIPMENT', 'RETURN_SHIPPED', 'RETURN_RECEIVED', 'INSPECTED'];
+    const activeReq = requests.find((r: any) => activeStatuses.includes((r.status || '').toUpperCase()));
+    if (activeReq) return activeReq;
+
+    // Nếu không có yêu cầu đang xử lý, lấy yêu cầu cuối cùng (COMPLETED, REJECTED hoặc CANCELLED)
+    return requests[requests.length - 1];
+  }
+
+  isReturnCompleted(order: any): boolean {
+    if (!order) return false;
+    const st = this.normalizeStatus(order.status);
+    const paySt = (order.paymentStatus || order.payment?.status || '').toUpperCase();
+    if (st === 'RETURNED' || paySt === 'REFUNDED') return true;
+
+    const requests: any[] = Array.isArray(order.returnRequests) && order.returnRequests.length > 0
+      ? order.returnRequests
+      : (order.returnRequest ? [order.returnRequest] : []);
+    return requests.some((r: any) => {
+      const reqSt = (r.status || '').toUpperCase();
+      const refSt = (r.refund?.status || '').toUpperCase();
+      return reqSt === 'COMPLETED' && (refSt === 'COMPLETED' || refSt === 'NOT_REQUIRED');
+    });
+  }
+
+  hasActiveReturnRequest(order: any): boolean {
+    if (!order) return false;
+    const activeReq = this.getActiveReturnRequest(order);
+    if (!activeReq) return false;
+    const s = (activeReq.status || '').toUpperCase();
+    return ['PENDING', 'APPROVED', 'WAITING_FOR_RETURN_SHIPMENT', 'RETURN_SHIPPED', 'RETURN_RECEIVED', 'INSPECTED'].includes(s);
+  }
+
+  isReturnPending(order: any): boolean {
+    if (!order) return false;
+    const activeReq = this.getActiveReturnRequest(order);
+    return (activeReq?.status || '').toUpperCase() === 'PENDING';
+  }
+
+  canReviewOrder(order: any): boolean {
+    if (!order) return false;
+    if (this.normalizeStatus(order.status) !== 'DELIVERED') return false;
+    if (this.isReturnCompleted(order)) return false;
+
+    const req = this.getActiveReturnRequest(order);
+    if (!req) {
+      // 1. Giao thành công (chưa có yêu cầu trả hàng) -> Hiển thị: Đánh giá
+      return true;
+    }
+
+    const reqStatus = (req.status || '').toUpperCase();
+
+    // 2. Yêu cầu đang chờ duyệt (PENDING) -> Ẩn Đánh giá (chỉ hiện Hủy yêu cầu)
+    if (reqStatus === 'PENDING') return false;
+
+    // 3. Yêu cầu trả hàng bị từ chối (REJECTED) -> Hiển thị: Đánh giá
+    if (reqStatus === 'REJECTED') return true;
+
+    // Nếu yêu cầu trước đó bị khách hủy (CANCELLED) -> coi như đơn giao thành công, cho phép Đánh giá
+    if (reqStatus === 'CANCELLED') return true;
+
+    // 4, 5, 6, 7: Yêu cầu đang duyệt (APPROVED), đang vận chuyển/kiểm hàng, đang hoàn tiền hoặc đã hoàn tất -> Ẩn Đánh giá
+    return false;
+  }
+
+  canRequestReturn(order: any): boolean {
+    if (!order) return false;
+    if (this.normalizeStatus(order.status) !== 'DELIVERED') return false;
+    if (this.isReturnCompleted(order)) return false;
+
+    const req = this.getActiveReturnRequest(order);
+    if (!req) {
+      // 1. Giao thành công (chưa có yêu cầu trả hàng) -> Hiển thị: Trả hàng/hoàn tiền
+      return true;
+    }
+
+    const reqStatus = (req.status || '').toUpperCase();
+
+    // Nếu yêu cầu cũ đã bị khách tự HỦY (CANCELLED) -> cho phép gửi lại yêu cầu mới
+    if (reqStatus === 'CANCELLED') return true;
+
+    // 2 (PENDING), 3 (REJECTED - theo quy tắc 3 chỉ hiện Đánh giá & Chi tiết), 4 (APPROVED), 5 (SHIPPED/RECEIVED/INSPECTED), 6 (REFUNDING), 7 (COMPLETED) -> Ẩn Trả hàng/hoàn tiền
+    return false;
+  }
+
+  canCancelReturnRequest(order: any): boolean {
+    if (!order) return false;
+    const req = this.getActiveReturnRequest(order);
+    if (!req) return false;
+    // 2. Chỉ hiển thị Hủy yêu cầu khi yêu cầu đang ở PENDING (Chờ duyệt)
+    return (req.status || '').toUpperCase() === 'PENDING';
+  }
+
+  openReturnCancelDialog(order: Order | any): void {
+    if (!order) return;
+    const req = this.getActiveReturnRequest(order);
+    if (!req || (req.status || '').toUpperCase() !== 'PENDING') return;
+    this.selectedOrderToCancelReturn = order;
+    this.selectedReturnRequestToCancel = req;
+    this.isReturnCancelDialogOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  closeReturnCancelDialog(): void {
+    this.isReturnCancelDialogOpen = false;
+    this.selectedOrderToCancelReturn = null;
+    this.selectedReturnRequestToCancel = null;
+    this.cdr.markForCheck();
+  }
+
+  onReturnRequestCancelled(event: any): void {
+    const orderId = event?.orderId;
+    const reqId = event?.requestId;
+    this.closeReturnCancelDialog();
+
+    // 1. Cập nhật ngay trong local store để UI phản hồi tức thì
+    if (orderId && reqId) {
+      try {
+        this.selectors.productState.update((state: any) => {
+          if (!state?.userOrders) return state;
+          const updated = state.userOrders.map((o: any) => {
+            if (o._id === orderId || o.orderId === orderId) {
+              const clonedOrder = { ...o };
+              if (Array.isArray(clonedOrder.returnRequests)) {
+                clonedOrder.returnRequests = clonedOrder.returnRequests.map((r: any) => {
+                  if (r.requestId === reqId || r._id === reqId) {
+                    return { ...r, status: 'CANCELLED', refund: { ...(r.refund || {}), status: 'CANCELLED' } };
+                  }
+                  return r;
+                });
+              }
+              if (clonedOrder.returnRequest && (clonedOrder.returnRequest.requestId === reqId || clonedOrder.returnRequest._id === reqId)) {
+                clonedOrder.returnRequest = {
+                  ...clonedOrder.returnRequest,
+                  status: 'CANCELLED',
+                  refund: { ...(clonedOrder.returnRequest.refund || {}), status: 'CANCELLED' }
+                };
+              }
+              return clonedOrder;
+            }
+            return o;
+          });
+          return { ...state, userOrders: updated };
+        });
+      } catch (_) { }
+    }
+
+    // 2. Đồng bộ danh sách đơn hàng chính thức từ máy chủ
+    if (isPlatformBrowser(this.platformId)) {
+      this.store.getUserOrders();
+      this.updateSyncTime();
+    }
+    this.notify.success('✨Đã hủy yêu cầu trả hàng / hoàn tiền thành công✨');
+    this.cdr.markForCheck();
+  }
+
 
   getReturnRequestStatusLabel(status: string): string {
     const s = (status || '').toUpperCase();
@@ -613,6 +782,21 @@ export class Profile implements OnInit {
       case 'CANCELLED': return 'Đã hủy';
       default: return status || '—';
     }
+  }
+
+  getReturnStepIndex(req: any): number {
+    if (!req) return 1;
+    const s = (req.status || '').toUpperCase();
+    if (s === 'REJECTED') return -1;
+    if (s === 'PENDING') return 1;
+    if (s === 'APPROVED' || s === 'WAITING_FOR_RETURN_SHIPMENT') return 2;
+    if (s === 'RETURN_SHIPPED' || s === 'RETURN_RECEIVED') return 3;
+    if (s === 'INSPECTED') {
+      const refSt = (req.refund?.status || '').toUpperCase();
+      return (refSt === 'PROCESSING' || refSt === 'COMPLETED') ? 5 : 4;
+    }
+    if (s === 'COMPLETED') return 6;
+    return 1;
   }
 
   // ── Save profile (Gửi API cập nhật MongoDB & đồng bộ state tức thì) ──
@@ -650,7 +834,7 @@ export class Profile implements OnInit {
 
     const user = this.user$();
     if (!user) {
-      this.saveError = 'Không tìm thấy phiên đăng nhập. Vui lòng đăng nhập lại.';
+      this.saveError = 'Không tìm thấy phiên đăng nhập, vui lòng đăng nhập lại.';
       return;
     }
 
@@ -724,7 +908,7 @@ export class Profile implements OnInit {
     }
 
     if (!hadToken) {
-      this.notify.info('Phiên đăng nhập đã hết hạn. Bạn đã được đưa về trạng thái chưa đăng nhập.');
+      this.notify.info('Phiên đăng nhập đã hết hạn.');
       this.store.signOut(() => {
         this.router.navigateByUrl(targetUrl);
       });
@@ -744,7 +928,7 @@ export class Profile implements OnInit {
       } else if (localCleanFailed) {
         this.notify.warning('Đã đăng xuất khỏi tài khoản, nhưng không thể xóa toàn bộ dữ liệu phiên trên thiết bị. Vui lòng tải lại trang.');
       } else {
-        this.notify.success('Bạn đã đăng xuất thành công. Hẹn gặp lại tại Chéri!');
+        this.notify.success('Hẹn gặp lại tại Chéri!');
       }
 
       this.router.navigateByUrl(targetUrl);

@@ -1774,3 +1774,69 @@ button, input, select, textarea, .btn, .form-control {
   background: rgba(255, 255, 255, 0.4);
 }
 
+/* Approve summary card */
+.approve-summary-card {
+  background: #fffdf5;
+  border: 1px solid #fef08a;
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+.summary-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.summary-line .lbl {
+  color: #64748b;
+  font-weight: 500;
+  min-width: 130px;
+}
+
+.summary-line.highlight {
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+.summary-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.summary-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8fafc;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.item-variant-mini {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.receive-items-box,
+.inspect-items-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  margin: 10px 0;
+}
+
+

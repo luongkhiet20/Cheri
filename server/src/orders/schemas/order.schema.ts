@@ -26,9 +26,13 @@ export enum PaymentStatus {
 
 const ProductSnapshotSchema = new Schema(
   {
-    title: { type: String, required: true },
-    sku: { type: String, required: true },
+    title: { type: String, default: '' },
+    name: { type: String, default: '' },
+    sku: { type: String, default: '' },
     image: { type: String, default: '' },
+    price: { type: Number, default: 0 },
+    category: { type: Schema.Types.Mixed, default: null },
+    brand: { type: Schema.Types.Mixed, default: null },
     variant: {
       color: { type: String, default: '' },
       size: { type: String, default: '' },
@@ -139,13 +143,13 @@ export enum RefundStatus {
 
 const ReturnItemSchema = new Schema(
   {
-    productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
+    productId: { type: Schema.Types.Mixed, default: null },
     variantId: { type: Schema.Types.Mixed, default: null },
-    productSnapshot: { type: ProductSnapshotSchema, required: true },
+    productSnapshot: { type: ProductSnapshotSchema, default: () => ({}) },
     quantity: { type: Number, required: true, min: 1 },
-    boughtQuantity: { type: Number, required: true, min: 1 },
-    unitPrice: { type: Number, required: true, min: 0 },
-    subtotal: { type: Number, required: true, min: 0 },
+    boughtQuantity: { type: Number, default: 1 },
+    unitPrice: { type: Number, default: 0, min: 0 },
+    subtotal: { type: Number, default: 0, min: 0 },
     reason: { type: String, default: '' },
     inspectedQuantity: { type: Number, default: 0 },
     eligibleQuantity: { type: Number, default: 0 },

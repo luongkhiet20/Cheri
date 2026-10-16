@@ -526,13 +526,31 @@ export class OrdersService {
       const lineSubtotal = effectiveUnitPrice * returnQty;
       totalRequestedAmount += lineSubtotal;
 
+      const snapshotTitle = matchedOrderItem.productSnapshot?.title
+        || matchedOrderItem.productSnapshot?.name
+        || matchedOrderItem.title
+        || matchedOrderItem.name
+        || 'Sản phẩm';
+      const snapshotSku = matchedOrderItem.productSnapshot?.sku
+        || matchedOrderItem.sku
+        || '';
+      const snapshotImage = matchedOrderItem.productSnapshot?.image
+        || matchedOrderItem.image
+        || '';
+      const snapshotVariant = matchedOrderItem.productSnapshot?.variant
+        || matchedOrderItem.variant
+        || { color: '', size: '', classification: '' };
+
       sanitizedItems.push({
         productId: matchedOrderItem.productId || matchedOrderItem.id,
         variantId: matchedOrderItem.variantId || null,
-        productSnapshot: matchedOrderItem.productSnapshot || {
-          title: matchedOrderItem.title || 'Sản phẩm',
-          sku: matchedOrderItem.sku || '',
-          unitPrice: baseUnitPrice,
+        productSnapshot: {
+          title: snapshotTitle,
+          name: snapshotTitle,
+          sku: snapshotSku,
+          image: snapshotImage,
+          price: baseUnitPrice,
+          variant: snapshotVariant,
         },
         quantity: returnQty,
         boughtQuantity: boughtQty,
@@ -623,14 +641,135 @@ export class OrdersService {
       });
     }
 
+    // Chuẩn hóa và làm sạch dữ liệu các item cũ trong order để tránh lỗi validation khi lưu
+    if (Array.isArray(order.items)) {
+      for (const oi of order.items) {
+        if (oi.productSnapshot) {
+          if (!oi.productSnapshot.title) {
+            oi.productSnapshot.title = oi.productSnapshot.name || oi.name || oi.title || 'Sản phẩm';
+          }
+          if (!oi.productSnapshot.sku) {
+            oi.productSnapshot.sku = oi.sku || '';
+          }
+        }
+      }
+    }
+
     order.markModified('returnRequests');
     order.markModified('returnRequest');
-    await order.save();
+
+    try {
+      await order.save();
+    } catch (saveErr: any) {
+      this.logger.error(`Lỗi lưu đơn hàng khi tạo yêu cầu đổi trả (${orderCode}): ${saveErr?.message}`, saveErr?.stack);
+      if (saveErr?.name === 'ValidationError') {
+        const errorDetails = Object.values(saveErr.errors || {}).map((e: any) => e.message).join('; ');
+        throw new BadRequestException(`Dữ liệu đơn hàng chưa hợp lệ: ${errorDetails}`);
+      }
+      throw saveErr;
+    }
 
     return {
       success: true,
       message: 'Yêu cầu trả hàng / hoàn tiền đã được tiếp nhận thành công. Chéri sẽ kiểm tra và phản hồi sớm nhất.',
       data: newReturnRequest,
+      order,
+    };
+  }
+
+  // ─── Khách hàng: Hủy yêu cầu Trả hàng / Hoàn tiền (khi còn PENDING) ─────────
+  async cancelReturnRequest(
+    orderId: string,
+    reqId: string,
+    payload: { reason?: string },
+    user: User,
+  ): Promise<any> {
+    const idQuery = isValidObjectId(orderId)
+      ? { $or: [{ orderId: orderId }, { _id: new Types.ObjectId(orderId) }] }
+      : { orderId: orderId };
+
+    const order: any = await this.orderModel.findOne(idQuery);
+    if (!order) {
+      throw new NotFoundException('Không tìm thấy đơn hàng cần hủy yêu cầu đổi trả.');
+    }
+
+    // 1. Kiểm tra quyền sở hữu đơn hàng
+    const orderUserId = (order.userId || order._user)?.toString();
+    const currentUserId = user?._id?.toString();
+    const orderEmail = (order.customerEmail || order.customer?.email || '').toLowerCase().trim();
+    const userEmail = (user?.email || '').toLowerCase().trim();
+
+    const isOwner = (orderUserId && currentUserId && orderUserId === currentUserId) ||
+      (orderEmail && userEmail && orderEmail === userEmail);
+
+    if (!isOwner) {
+      throw new ForbiddenException('Bạn không có quyền hủy yêu cầu đổi trả cho đơn hàng này.');
+    }
+
+    // 2. Tìm yêu cầu trả hàng
+    const requests: any[] = Array.isArray(order.returnRequests) ? order.returnRequests : [];
+    let reqIndex = requests.findIndex((r: any) => r.requestId === reqId || String(r._id) === reqId);
+
+    if (reqIndex === -1 && order.returnRequest && (order.returnRequest.requestId === reqId || reqId === 'latest')) {
+      order.returnRequests = [order.returnRequest];
+      reqIndex = 0;
+    }
+
+    if (reqIndex === -1) {
+      throw new NotFoundException(`Không tìm thấy yêu cầu trả hàng với mã ${reqId}.`);
+    }
+
+    const req = order.returnRequests[reqIndex];
+
+    // 3. Chỉ cho phép hủy khi đang ở trạng thái PENDING
+    if (req.status !== ReturnRequestStatus.PENDING) {
+      throw new BadRequestException('Chỉ có thể hủy yêu cầu khi đang ở trạng thái Chờ duyệt. Yêu cầu này đã được tiếp nhận hoặc đã đóng.');
+    }
+
+    const now = new Date();
+    const prevStatus = req.status;
+    req.status = ReturnRequestStatus.CANCELLED;
+    if (req.refund) {
+      req.refund.status = RefundStatus.CANCELLED;
+    }
+
+    const cancelReason = (payload?.reason || '').trim() || 'Khách hàng chủ động hủy yêu cầu trả hàng / hoàn tiền.';
+
+    if (!Array.isArray(req.history)) {
+      req.history = [];
+    }
+    req.history.push({
+      action: 'CANCELLED_BY_CUSTOMER',
+      fromStatus: prevStatus,
+      toStatus: ReturnRequestStatus.CANCELLED,
+      updatedAt: now,
+      updatedBy: user?._id || null,
+      note: cancelReason,
+    });
+
+    // Đồng bộ legacy returnRequest
+    if (order.returnRequest && (order.returnRequest.requestId === req.requestId || order.returnRequest.requestId === reqId)) {
+      order.returnRequest = req;
+    }
+
+    if (Array.isArray(order.statusHistory)) {
+      order.statusHistory.push({
+        status: order.status,
+        updatedAt: now,
+        note: `Khách hàng hủy yêu cầu trả hàng / hoàn tiền mã ${req.requestId}. Lý do: ${cancelReason}`,
+        updatedBy: user?._id || null,
+      });
+    }
+
+    order.markModified('returnRequests');
+    order.markModified('returnRequest');
+
+    await order.save();
+
+    return {
+      success: true,
+      message: 'Đã hủy yêu cầu trả hàng / hoàn tiền thành công.',
+      data: req,
       order,
     };
   }
@@ -796,24 +935,47 @@ export class OrdersService {
           req.refund.approvedAmount = approvedAmount;
           req.refund.status = RefundStatus.PENDING;
 
-          // Cập nhật tồn kho nếu Admin xác nhận hàng đủ điều kiện nhập kho lại
+          // Cập nhật tồn kho nếu Admin xác nhận hàng đủ điều kiện nhập kho lại (Inventory Hook)
           if (restock) {
             for (const item of (req.items || [])) {
               try {
                 const qtyToRestock = Number(item.quantity) || 0;
                 if (qtyToRestock > 0) {
-                  // Cập nhật Product Variant nếu có SKU
-                  const sku = item.productSnapshot?.sku;
-                  if (sku) {
-                    await this.variantModel.updateOne({ sku }, { $inc: { stock: qtyToRestock } });
+                  const vIdStr = item.variantId ? String(item.variantId).trim() : null;
+                  const sku = item.productSnapshot?.sku || item.sku;
+                  let variantUpdated = false;
+
+                  // 1. Cập nhật ProductVariant collection
+                  if (vIdStr && isValidObjectId(vIdStr)) {
+                    const res = await this.variantModel.findByIdAndUpdate(vIdStr, {
+                      $inc: { stock: qtyToRestock },
+                    });
+                    if (res) variantUpdated = true;
                   }
-                  // Cập nhật Product Model
-                  const pId = item.productId;
-                  if (pId && isValidObjectId(pId)) {
-                    await this.productModel.updateOne(
-                      { _id: new Types.ObjectId(String(pId)) },
-                      { $inc: { 'quantity': qtyToRestock } },
+
+                  if (!variantUpdated && (sku || vIdStr)) {
+                    const skuQuery = sku || vIdStr;
+                    const res = await this.variantModel.findOneAndUpdate(
+                      { sku: skuQuery },
+                      { $inc: { stock: qtyToRestock } },
                     );
+                    if (res) variantUpdated = true;
+                  }
+
+                  // 2. Cập nhật Product Model (cả quantity và stock)
+                  const pId = item.productId;
+                  if (pId && isValidObjectId(String(pId))) {
+                    await this.productModel.findByIdAndUpdate(String(pId), {
+                      $inc: { quantity: qtyToRestock, stock: qtyToRestock },
+                    });
+
+                    // Cập nhật subdocument embedded variants nếu có
+                    if (sku) {
+                      await this.productModel.updateOne(
+                        { _id: new Types.ObjectId(String(pId)), 'variants.sku': sku },
+                        { $inc: { 'variants.$.stock': qtyToRestock } },
+                      );
+                    }
                   }
                 }
               } catch (restockErr) {
@@ -840,7 +1002,7 @@ export class OrdersService {
       case 'PROCESS_REFUND': {
         // Phải phân biệt rõ COD và Thanh toán trước, tuân thủ nguyên tắc an toàn
         const paymentMethod = (order.payment?.method || order.paymentMethodSnapshot?.method || '').toUpperCase();
-        const paymentStatus = (order.payment?.status || '').toUpperCase();
+        const paymentStatus = (order.payment?.status || order.paymentStatus || '').toUpperCase();
         const codCollected = Boolean(order.payment?.codCollected);
 
         // 1. Kiểm tra điều kiện thu tiền thực tế
@@ -849,7 +1011,7 @@ export class OrdersService {
         if (paymentMethod === 'COD') {
           if (!codCollected && paymentStatus !== 'PAID') {
             throw new BadRequestException(
-              'Đơn hàng COD chưa có xác nhận đã thu tiền thực tế hoặc chưa đối soát. Không thể ghi nhận hoàn tiền cho đơn hàng chưa thu tiền.',
+              'Đơn hàng COD chưa có xác nhận đã thu tiền thực tế (chưa đối soát COD). Vui lòng cập nhật đối soát COD trước khi thực hiện hoàn tiền.',
             );
           }
           if (actualCollected <= 0) {
@@ -893,6 +1055,7 @@ export class OrdersService {
         const notes = String(body?.notes || '').trim();
 
         req.refund = req.refund || {};
+        const prevReqStatus = req.status;
         req.refund.status = RefundStatus.COMPLETED;
         req.refund.refundedAmount = refundAmt;
         req.refund.transactionId = txId;
@@ -913,15 +1076,44 @@ export class OrdersService {
         order.refundedAmount = newTotalRefunded;
         order.refundedAt = now;
 
-        if (newTotalRefunded >= actualCollected) {
-          order.payment.status = 'REFUNDED';
+        // Tính tổng số lượng sản phẩm đặt hàng ban đầu của đơn
+        const totalOrderedQty = Array.isArray(order.items) && order.items.length > 0
+          ? order.items.reduce((sum: number, it: any) => sum + (Number(it.quantity) || 0), 0)
+          : (Number(order.cart?.totalQty) || 0);
+
+        // Tính tổng số lượng sản phẩm hoàn trả thành công từ tất cả yêu cầu đã COMPLETED
+        const allRequests: any[] = Array.isArray(order.returnRequests) ? order.returnRequests : [];
+        let totalReturnedQty = 0;
+        for (const r of allRequests) {
+          if (r.status === ReturnRequestStatus.COMPLETED || r.requestId === req.requestId) {
+            for (const it of (r.items || [])) {
+              totalReturnedQty += (Number(it.quantity) || 0);
+            }
+          }
+        }
+
+        // Quy tắc cập nhật trạng thái đơn hàng cha (order.status):
+        // - Trả hết toàn bộ sản phẩm: order.status = RETURNED & paymentStatus = REFUNDED
+        // - Trả 1 phần sản phẩm: order.status giữ nguyên (DELIVERED) & paymentStatus = PARTIALLY_REFUNDED
+        const isFullReturn = totalOrderedQty > 0 && totalReturnedQty >= totalOrderedQty;
+
+        if (isFullReturn) {
+          order.status = OrderStatus.RETURNED;
+          order.payment.status = PaymentStatus.REFUNDED;
+          order.paymentStatus = PaymentStatus.REFUNDED;
         } else {
-          order.payment.status = 'PARTIALLY_REFUNDED';
+          if (newTotalRefunded >= actualCollected) {
+            order.payment.status = PaymentStatus.REFUNDED;
+            order.paymentStatus = PaymentStatus.REFUNDED;
+          } else {
+            order.payment.status = PaymentStatus.PARTIALLY_REFUNDED;
+            order.paymentStatus = PaymentStatus.PARTIALLY_REFUNDED;
+          }
         }
 
         req.history.push({
           action: 'PROCESS_REFUND',
-          fromStatus: req.status,
+          fromStatus: prevReqStatus,
           toStatus: ReturnRequestStatus.COMPLETED,
           updatedAt: now,
           updatedBy: adminUser?._id || null,
@@ -932,7 +1124,9 @@ export class OrdersService {
           order.statusHistory.push({
             status: order.status,
             updatedAt: now,
-            note: `Ghi nhận hoàn tiền ${refundAmt.toLocaleString('vi-VN')} đ cho yêu cầu ${req.requestId}. Trạng thái TT: ${order.payment.status}`,
+            note: isFullReturn
+              ? `Hoàn trả toàn bộ đơn hàng (${totalReturnedQty}/${totalOrderedQty} sản phẩm). Đơn hàng chuyển sang ĐÃ HOÀN TRẢ (RETURNED). Hoàn tiền: ${refundAmt.toLocaleString('vi-VN')} đ.`
+              : `Hoàn trả một phần (${totalReturnedQty}/${totalOrderedQty} sản phẩm). Đơn hàng giữ trạng thái ${order.status}, trạng thái thanh toán: ${order.paymentStatus}. Hoàn tiền: ${refundAmt.toLocaleString('vi-VN')} đ.`,
             updatedBy: adminUser?._id || null,
           });
         }
@@ -2261,6 +2455,8 @@ export class OrdersService {
     const returnOrders = orders.filter(
       o => o.status === OrderStatus.RETURNED ||
            (o as any).type === 'RETURN' ||
+           (Array.isArray((o as any).returnRequests) && (o as any).returnRequests.some((r: any) => r.status === 'PENDING' || r.status === 'APPROVED' || r.status === 'INSPECTED')) ||
+           ((o as any).returnRequest && ((o as any).returnRequest.status === 'PENDING' || (o as any).returnRequest.status === 'APPROVED')) ||
            (o.notes && /đổi|trả|refund|return/i.test(o.notes)),
     );
     if (returnOrders.length) {
@@ -2274,7 +2470,7 @@ export class OrdersService {
         count: returnOrders.length,
         level: 'warning',
         time: returnOrders[0]?.createdAt || (returnOrders[0] as any)?.dateAdded || new Date(),
-        targetUrl: '/admin/orders?status=RETURNED',
+        targetUrl: '/admin/orders?status=RETURN_PENDING',
       });
     }
 
@@ -2891,8 +3087,18 @@ export class OrdersService {
           { status: 'CANCELLED' },
           { status: 'CANCELED' },
         ];
-      } else if (statusUpper === 'RETURNED') {
-        filter.$or = [{ status: OrderStatus.RETURNED }, { type: 'RETURN' }];
+      } else if (statusUpper === 'RETURN_PENDING') {
+        filter.$or = [
+          { 'returnRequests.status': ReturnRequestStatus.PENDING },
+          { 'returnRequest.status': 'PENDING' },
+        ];
+      } else if (statusUpper === 'RETURNED' || statusUpper === 'RETURN_REQUESTS' || statusUpper === 'RETURN') {
+        filter.$or = [
+          { status: OrderStatus.RETURNED },
+          { type: 'RETURN' },
+          { 'returnRequests.0': { $exists: true } },
+          { 'returnRequest.status': { $exists: true } },
+        ];
       } else {
         filter.status = statusUpper;
       }
@@ -2935,7 +3141,16 @@ export class OrdersService {
       }
     }
 
-    const total = await this.orderModel.countDocuments(filter);
+    const [total, pendingReturnCount] = await Promise.all([
+      this.orderModel.countDocuments(filter),
+      this.orderModel.countDocuments({
+        $or: [
+          { 'returnRequests.status': ReturnRequestStatus.PENDING },
+          { 'returnRequest.status': 'PENDING' },
+        ],
+      }),
+    ]);
+
     const orders = await this.orderModel
       .find(filter)
       .sort({ createdAt: -1, dateAdded: -1 })
@@ -2979,6 +3194,13 @@ export class OrdersService {
         o.type ||
         'COD';
 
+      const returnRequests = Array.isArray(o.returnRequests) && o.returnRequests.length > 0
+        ? o.returnRequests
+        : (o.returnRequest ? [o.returnRequest] : []);
+      const pendingReq = returnRequests.find((r: any) => r.status === ReturnRequestStatus.PENDING || r.status === 'PENDING');
+      const activeReq = pendingReq || (returnRequests.length > 0 ? returnRequests[returnRequests.length - 1] : null);
+      const hasPendingReturn = Boolean(pendingReq);
+
       return {
         ...o,
         id: o._id?.toString() || o.id,
@@ -2991,6 +3213,11 @@ export class OrdersService {
         status: o.status,
         statusText: statusMeta.label,
         statusVariant: statusMeta.variant,
+        returnRequestsCount: returnRequests.length,
+        hasPendingReturn,
+        latestReturnStatus: activeReq ? activeReq.status : null,
+        latestReturnRequestId: activeReq ? activeReq.requestId : null,
+        latestReturnRequestedAmount: activeReq ? (activeReq.refund?.requestedAmount || 0) : 0,
         createdAt: o.createdAt || o.dateAdded,
       };
     });
@@ -2998,6 +3225,7 @@ export class OrdersService {
     return {
       success: true,
       data: formatted,
+      pendingReturnCount,
       pagination: {
         page,
         pageSize: limit,

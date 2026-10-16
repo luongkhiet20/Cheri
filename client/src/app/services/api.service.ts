@@ -1131,6 +1131,14 @@ export class ApiService {
     );
   }
 
+  cancelReturnRequest(orderId: string, reqId: string, payload?: any): Observable<any> {
+    const url = `${this.apiUrl}/api/orders/${encodeURIComponent(orderId)}/return-requests/${encodeURIComponent(reqId)}/cancel`;
+    return this.http.patch(url, payload || {}).pipe(
+      map((res: any) => res),
+      catchError((err: any) => of({ error: err?.error || err })),
+    );
+  }
+
 
   private initAuthTracking() {
     const selectors = inject(SignalStoreSelectors);

@@ -657,7 +657,50 @@ export class OrderDetailComponent implements OnInit {
     }
   }
 
+  getItemVariantText(item: any): string {
+    const v = item?.productSnapshot?.variant || item?.variant;
+    if (!v) return '';
+    if (typeof v === 'string') return v;
+    const parts: string[] = [];
+    if (v.color) parts.push(`Màu: ${v.color}`);
+    if (v.size) parts.push(`Size: ${v.size}`);
+    if (v.classification) parts.push(v.classification);
+    return parts.join(' | ');
+  }
+
+  canProcessRefund(): boolean {
+    if (!this.order) return false;
+    if (this.isCodMethod()) {
+      return Boolean(this.order.payment?.codCollected);
+    }
+    const paymentStatus = (this.order.paymentStatus || this.order.payment?.status || '').toUpperCase();
+    return paymentStatus === 'PAID' || paymentStatus === 'PARTIALLY_REFUNDED';
+  }
+
+  getRefundBlockReason(): string | null {
+    if (!this.order) return null;
+    if (this.isCodMethod()) {
+      if (!this.order.payment?.codCollected) {
+        return 'Đơn hàng COD chưa có xác nhận đã thu tiền hoặc chưa đối soát COD. Vui lòng đối soát COD trước khi hoàn tiền.';
+      }
+    } else {
+      const paymentStatus = (this.order.paymentStatus || this.order.payment?.status || '').toUpperCase();
+      if (paymentStatus !== 'PAID' && paymentStatus !== 'PARTIALLY_REFUNDED') {
+        return 'Đơn hàng trực tuyến chưa thanh toán thành công (Trạng thái: ' + (paymentStatus || 'CHƯA THANH TOÁN') + '). Không thể thực hiện hoàn tiền.';
+      }
+    }
+    return null;
+  }
+
   openActionModal(action: 'APPROVE' | 'REJECT' | 'CUSTOMER_SHIPPED' | 'RECEIVE_GOODS' | 'INSPECT_GOODS' | 'PROCESS_REFUND' | 'REFUND_FAILED' | 'COD_RECONCILE', req: any): void {
+    if (action === 'PROCESS_REFUND') {
+      const blockReason = this.getRefundBlockReason();
+      if (blockReason) {
+        this.notificationService.error(blockReason);
+        return;
+      }
+    }
+
     this.activeModalAction = action;
     this.modalTargetReq = req;
     this.modalErrorMessage = '';

@@ -1,28 +1,17 @@
-<div
-  class="dialog-backdrop"
-  (click)="onBackdropClick($event)"
-  role="dialog"
-  aria-modal="true"
-  aria-labelledby="return-dialog-title"
->
+<div class="dialog-backdrop" (click)="onBackdropClick($event)" role="dialog" aria-modal="true"
+  aria-labelledby="return-dialog-title">
   <div class="dialog-card">
 
     <!-- Card Header -->
     <div class="dialog-header">
       <div class="dialog-title-group">
-        <h3 class="dialog-title" id="return-dialog-title">YÊU CẦU TRẢ HÀNG / HOÀN TIỀN</h3>
+        <h3 class="dialog-title" id="return-dialog-title">Yêu cầu trả hàng hoàn tiền</h3>
         <span class="dialog-order-badge" *ngIf="order?.orderId">
           Mã đơn: #{{ order.orderId }}
         </span>
       </div>
-      <button
-        type="button"
-        class="dialog-close-btn"
-        (click)="onClose()"
-        [disabled]="isSubmitting"
-        title="Đóng"
-        aria-label="Đóng popup"
-      >
+      <button type="button" class="dialog-close-btn" (click)="onClose()" [disabled]="isSubmitting" title="Đóng"
+        aria-label="Đóng popup">
         <span aria-hidden="true">&times;</span>
       </button>
     </div>
@@ -60,27 +49,16 @@
         </label>
 
         <div class="items-list">
-          <div
-            class="item-row"
-            *ngFor="let item of orderItems; let idx = index"
-            [class.selected]="isItemSelected(item, idx)"
-          >
+          <div class="item-row" *ngFor="let item of orderItems; let idx = index"
+            [class.selected]="isItemSelected(item, idx)">
             <label class="item-checkbox-wrap">
-              <input
-                type="checkbox"
-                class="item-checkbox"
-                [checked]="isItemSelected(item, idx)"
-                (change)="toggleItemSelection(item, idx)"
-                [disabled]="isSubmitting"
-              />
+              <input type="checkbox" class="item-checkbox" [checked]="isItemSelected(item, idx)"
+                (change)="toggleItemSelection(item, idx)" [disabled]="isSubmitting" />
             </label>
 
             <div class="item-thumb-wrap">
-              <img
-                [src]="getItemImage(item)"
-                [alt]="item.productSnapshot?.title || 'Sản phẩm'"
-                class="item-thumb-img"
-              />
+              <img [src]="getItemImage(item)" [alt]="item.productSnapshot?.title || 'Sản phẩm'"
+                class="item-thumb-img" />
             </div>
 
             <div class="item-info">
@@ -98,23 +76,13 @@
             <div class="item-qty-stepper-wrap" *ngIf="isItemSelected(item, idx)">
               <span class="stepper-label">Số lượng trả:</span>
               <div class="qty-stepper">
-                <button
-                  type="button"
-                  class="stepper-btn"
-                  (click)="changeItemReturnQty(item, idx, -1)"
-                  [disabled]="isSubmitting || getItemReturnQty(item, idx) <= 1"
-                  aria-label="Giảm"
-                >
+                <button type="button" class="stepper-btn" (click)="changeItemReturnQty(item, idx, -1)"
+                  [disabled]="isSubmitting || getItemReturnQty(item, idx) <= 1" aria-label="Giảm">
                   -
                 </button>
                 <span class="stepper-value">{{ getItemReturnQty(item, idx) }}</span>
-                <button
-                  type="button"
-                  class="stepper-btn"
-                  (click)="changeItemReturnQty(item, idx, 1)"
-                  [disabled]="isSubmitting || getItemReturnQty(item, idx) >= (item.quantity || 1)"
-                  aria-label="Tăng"
-                >
+                <button type="button" class="stepper-btn" (click)="changeItemReturnQty(item, idx, 1)"
+                  [disabled]="isSubmitting || getItemReturnQty(item, idx) >= (item.quantity || 1)" aria-label="Tăng">
                   +
                 </button>
               </div>
@@ -130,35 +98,18 @@
         </label>
 
         <div class="reasons-radio-group">
-          <label
-            class="reason-radio-item"
-            *ngFor="let reason of returnReasons"
-            [class.active]="selectedReason === reason"
-          >
-            <input
-              type="radio"
-              name="returnReason"
-              [value]="reason"
-              [checked]="selectedReason === reason"
-              (change)="onSelectReason(reason)"
-              [disabled]="isSubmitting"
-              class="reason-radio-input"
-            />
+          <label class="reason-radio-item" *ngFor="let reason of returnReasons"
+            [class.active]="selectedReason === reason">
+            <input type="radio" name="returnReason" [value]="reason" [checked]="selectedReason === reason"
+              (change)="onSelectReason(reason)" [disabled]="isSubmitting" class="reason-radio-input" />
             <span class="reason-radio-text">{{ reason }}</span>
           </label>
         </div>
 
         <!-- Detail if 'Lý do khác' -->
         <div class="other-reason-input-wrap" *ngIf="isOtherReason()">
-          <input
-            type="text"
-            class="input-other-reason"
-            [(ngModel)]="otherReason"
-            (ngModelChange)="validationError = ''"
-            placeholder="Vui lòng nêu rõ lý do cụ thể..."
-            maxlength="200"
-            [disabled]="isSubmitting"
-          />
+          <input type="text" class="input-other-reason" [(ngModel)]="otherReason" (ngModelChange)="validationError = ''"
+            placeholder="Vui lòng nêu rõ lý do cụ thể..." maxlength="200" [disabled]="isSubmitting" />
         </div>
       </div>
 
@@ -173,16 +124,9 @@
           </span>
         </div>
 
-        <textarea
-          id="return-desc-textarea"
-          class="return-textarea"
-          [(ngModel)]="description"
-          (ngModelChange)="validationError = ''"
-          [disabled]="isSubmitting"
-          rows="3"
-          [maxlength]="maxDescLength"
-          placeholder="Vui lòng mô tả tình trạng sản phẩm và lý do bạn muốn trả hàng hoặc yêu cầu hoàn tiền."
-        ></textarea>
+        <textarea id="return-desc-textarea" class="return-textarea" [(ngModel)]="description"
+          (ngModelChange)="validationError = ''" [disabled]="isSubmitting" rows="3" [maxlength]="maxDescLength"
+          placeholder="Vui lòng mô tả tình trạng sản phẩm và lý do bạn muốn trả hàng hoặc yêu cầu hoàn tiền."></textarea>
       </div>
 
       <!-- Proof Images Attachment Section -->
@@ -195,29 +139,17 @@
         <div class="photos-grid">
           <div class="photo-preview-box" *ngFor="let img of selectedImages; let i = index">
             <img [src]="img.preview" [alt]="img.name" class="photo-preview-img" />
-            <button
-              type="button"
-              class="photo-remove-btn"
-              (click)="removeImage(i)"
-              [disabled]="isSubmitting"
-              title="Xóa ảnh"
-              aria-label="Xóa ảnh"
-            >
+            <button type="button" class="photo-remove-btn" (click)="removeImage(i)" [disabled]="isSubmitting"
+              title="Xóa ảnh" aria-label="Xóa ảnh">
               &times;
             </button>
           </div>
 
           <label class="photo-upload-btn" *ngIf="selectedImages.length < 5" [class.disabled]="isSubmitting">
-            <input
-              type="file"
-              accept="image/png, image/jpeg, image/jpg, image/webp"
-              multiple
-              (change)="onFilesSelected($event)"
-              [disabled]="isSubmitting"
-              class="photo-file-input"
-            />
+            <input type="file" accept="image/png, image/jpeg, image/jpg, image/webp" multiple
+              (change)="onFilesSelected($event)" [disabled]="isSubmitting" class="photo-file-input" />
             <svg viewBox="0 0 24 24" class="upload-icon" fill="currentColor">
-              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
             </svg>
             <span class="upload-text">Thêm hình ảnh</span>
           </label>
@@ -229,16 +161,12 @@
         <label class="section-label">Phương thức xử lý</label>
         <div class="refund-method-card">
           <label class="refund-method-option active">
-            <input
-              type="radio"
-              name="refundMethod"
-              value="ORIGINAL_PAYMENT"
-              [(ngModel)]="refundMethod"
-              [disabled]="isSubmitting"
-            />
+            <input type="radio" name="refundMethod" value="ORIGINAL_PAYMENT" [(ngModel)]="refundMethod"
+              [disabled]="isSubmitting" />
             <div class="refund-method-text">
               <span class="refund-method-title">Hoàn về phương thức thanh toán ban đầu</span>
-              <span class="refund-method-desc">Tiền sẽ được hoàn trả theo phương thức thanh toán đơn hàng sau khi Chéri tiếp nhận và xử lý hàng trả về.</span>
+              <span class="refund-method-desc">Tiền sẽ được hoàn trả theo phương thức thanh toán đơn hàng sau khi Chéri
+                tiếp nhận và xử lý hàng trả về.</span>
             </div>
           </label>
         </div>
@@ -266,21 +194,11 @@
 
     <!-- Card Footer -->
     <div class="dialog-footer">
-      <button
-        type="button"
-        class="btn-dialog-back"
-        (click)="onClose()"
-        [disabled]="isSubmitting"
-      >
+      <button type="button" class="btn-dialog-back" (click)="onClose()" [disabled]="isSubmitting">
         Hủy
       </button>
 
-      <button
-        type="button"
-        class="btn-dialog-confirm"
-        (click)="onSubmit()"
-        [disabled]="isSubmitting"
-      >
+      <button type="button" class="btn-dialog-confirm" (click)="onSubmit()" [disabled]="isSubmitting">
         <span class="btn-spinner" *ngIf="isSubmitting"></span>
         <span>{{ isSubmitting ? 'Đang gửi yêu cầu...' : 'Gửi yêu cầu' }}</span>
       </button>

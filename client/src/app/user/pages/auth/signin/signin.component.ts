@@ -261,7 +261,7 @@ export class SignInComponent implements OnInit {
   private showPasswordResetError(error: unknown, fallback: string): void {
     const message =
       error instanceof HttpErrorResponse &&
-      typeof error.error?.message === 'string'
+        typeof error.error?.message === 'string'
         ? error.error.message
         : fallback;
     this.notify.error(`✨${message}✨`);
@@ -344,7 +344,7 @@ export class SignInComponent implements OnInit {
         if (user && !user.error && (user.accessToken || user.email)) {
           this.signInForm.reset();
           this.store.mergeGuestCartIfAny(lang || 'vi');
-          this.notify.success('Đăng nhập thành công. Chào mừng bạn đến với Chéri!');
+          this.notify.success('Chào mừng bạn đến với Chéri!');
 
           if (isRequestingAdmin) {
             const target = returnUrl || '/admin';

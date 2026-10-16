@@ -1172,4 +1172,103 @@ button {
   color: #059669;
 }
 
+.refund-txid {
+  font-size: 12px;
+  color: #6B7280;
+  font-weight: normal;
+}
+
+/* ── Return Stepper (Tiến trình đổi trả 6 bước trực quan) ── */
+.return-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 8px;
+  background: #ffffff;
+  border-radius: 6px;
+  border: 1px solid #fee2e2;
+  overflow-x: auto;
+  margin: 4px 0 8px 0;
+}
+
+.stepper-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 54px;
+  text-align: center;
+}
+
+.step-circle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #cbd5e1;
+  transition: all 0.2s ease;
+}
+
+.step-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.stepper-step.active .step-circle {
+  background: #74070e;
+  border-color: #74070e;
+  color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(116, 7, 14, 0.15);
+}
+
+.stepper-step.active .step-label {
+  color: #74070e;
+  font-weight: 700;
+}
+
+.stepper-step.done .step-circle {
+  background: #15803d;
+  border-color: #15803d;
+  color: #ffffff;
+}
+
+.stepper-step.done .step-label {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.stepper-line {
+  flex: 1;
+  height: 2px;
+  background: #e2e8f0;
+  margin: 0 4px;
+  margin-bottom: 16px;
+  transition: background 0.2s ease;
+}
+
+.stepper-line.done {
+  background: #15803d;
+}
+
+.return-shipping-box {
+  background: #F0FDF4;
+  border: 1px solid #DCFCE7;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: #166534;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+
 

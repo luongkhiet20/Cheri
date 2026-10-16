@@ -130,6 +130,18 @@ export class OrdersController {
     return this.ordersService.createReturnRequest(id, body, user);
   }
 
+  // ─── Khách hàng: Hủy yêu cầu Trả hàng / Hoàn tiền (khi còn PENDING) ────────
+  @UseGuards(AuthGuard('jwt'))
+  @Patch('/:id/return-requests/:reqId/cancel')
+  cancelReturnRequest(
+    @Param('id') id: string,
+    @Param('reqId') reqId: string,
+    @Body() body: { reason?: string },
+    @GetUser() user: User,
+  ) {
+    return this.ordersService.cancelReturnRequest(id, reqId, body, user);
+  }
+
   // ─── Public: Tra cứu vận đơn (khách vãng lai) ─────────────────────────────
   // Guest verification stays in the POST body; no contact details are accepted from the URL.
   // Không trả toàn bộ document — chỉ trả dữ liệu tracking cần thiết.

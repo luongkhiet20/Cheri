@@ -603,6 +603,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .btn-action-primary {
@@ -615,10 +616,46 @@
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
+  white-space: nowrap;
 }
 
 .btn-action-primary:hover {
   background: #56050a;
+}
+
+/* Nút Hủy yêu cầu đổi trả (Khi đang ở PENDING) */
+.btn-action-cancel-return {
+  background: var(--cheri-primary, #74070E);
+  color: #ffffff;
+  border: 1px solid var(--cheri-primary, #74070E);
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.btn-action-cancel-return:hover:not(:disabled) {
+  background: #56050a;
+  border-color: #56050a;
+  box-shadow: 0 2px 6px rgba(116, 7, 14, 0.25);
+}
+
+.btn-action-cancel-return:focus-visible {
+  outline: 2px solid #74070E;
+  outline-offset: 2px;
+}
+
+.btn-action-cancel-return:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
 .btn-action-outline {
@@ -631,12 +668,14 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .btn-action-outline:hover {
   background: #fbf9f6;
   border-color: #b5aba0;
 }
+
 
 .btn-action-cancel {
   background: #ffffff;
@@ -1066,5 +1105,84 @@
 .return-detail-item .item-label {
   font-weight: 600;
   white-space: nowrap;
+}
+
+/* ── Return Stepper (Tiến trình đổi trả 6 bước trực quan) ── */
+.return-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 4px;
+  background: #ffffff;
+  border-radius: 6px;
+  border: 1px solid #fee2e2;
+  overflow-x: auto;
+}
+
+.stepper-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 54px;
+  text-align: center;
+}
+
+.step-circle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #cbd5e1;
+  transition: all 0.2s ease;
+}
+
+.step-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.stepper-step.active .step-circle {
+  background: #74070e;
+  border-color: #74070e;
+  color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(116, 7, 14, 0.15);
+}
+
+.stepper-step.active .step-label {
+  color: #74070e;
+  font-weight: 700;
+}
+
+.stepper-step.done .step-circle {
+  background: #15803d;
+  border-color: #15803d;
+  color: #ffffff;
+}
+
+.stepper-step.done .step-label {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.stepper-line {
+  flex: 1;
+  height: 2px;
+  background: #e2e8f0;
+  margin: 0 4px;
+  margin-bottom: 16px;
+  transition: background 0.2s ease;
+}
+
+.stepper-line.done {
+  background: #15803d;
 }
 

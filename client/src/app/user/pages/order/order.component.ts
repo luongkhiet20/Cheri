@@ -462,4 +462,19 @@ export class OrderComponent implements OnInit, OnDestroy {
       default: return status || '—';
     }
   }
+
+  getReturnStepIndex(req: any): number {
+    if (!req) return 1;
+    const s = (req.status || '').toUpperCase();
+    if (s === 'REJECTED') return -1;
+    if (s === 'PENDING') return 1;
+    if (s === 'APPROVED' || s === 'WAITING_FOR_RETURN_SHIPMENT') return 2;
+    if (s === 'RETURN_SHIPPED' || s === 'RETURN_RECEIVED') return 3;
+    if (s === 'INSPECTED') {
+      const refSt = (req.refund?.status || '').toUpperCase();
+      return (refSt === 'PROCESSING' || refSt === 'COMPLETED') ? 5 : 4;
+    }
+    if (s === 'COMPLETED') return 6;
+    return 1;
+  }
 }

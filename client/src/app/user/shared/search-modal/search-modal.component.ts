@@ -1,4 +1,17 @@
-import { Component, EventEmitter, Input, Output, OnInit, OnDestroy, inject } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  Output,
+  OnInit,
+  OnDestroy,
+  OnChanges,
+  SimpleChanges,
+  ViewChild,
+  ElementRef,
+  HostListener,
+  inject
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -12,9 +25,11 @@ import { Subscription } from 'rxjs';
   styleUrls: ['./search-modal.component.css'],
   imports: [CommonModule, FormsModule]
 })
-export class SearchModalComponent implements OnInit, OnDestroy {
+export class SearchModalComponent implements OnInit, OnDestroy, OnChanges {
   @Input() isOpen = false;
   @Output() close = new EventEmitter<void>();
+
+  @ViewChild('searchInput') searchInputRef?: ElementRef<HTMLInputElement>;
 
   keyword: string = '';
   selectedFile: File | null = null;
@@ -45,8 +60,28 @@ export class SearchModalComponent implements OnInit, OnDestroy {
     }
   }
 
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['isOpen'] && this.isOpen) {
+      setTimeout(() => {
+        this.searchInputRef?.nativeElement?.focus();
+      }, 60);
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    if (this.isOpen) {
+      this.closeModal();
+    }
+  }
+
   onBackdropClick(event: MouseEvent): void {
-    if (event.target === event.currentTarget) {
+    const target = event.target as HTMLElement;
+    if (
+      event.target === event.currentTarget ||
+      target.classList.contains('cheri-search-backdrop') ||
+      target.classList.contains('cheri-search-wrapper')
+    ) {
       this.closeModal();
     }
   }

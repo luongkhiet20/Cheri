@@ -208,10 +208,10 @@
         type="button"
         class="btn-dialog-confirm"
         (click)="onSubmit()"
-        [disabled]="isSubmitting"
+        [disabled]="isSubmitting || alreadyReviewed || isCheckingEligibility || !isOrderDelivered()"
       >
-        <span class="btn-spinner" *ngIf="isSubmitting"></span>
-        <span>{{ isSubmitting ? 'Đang gửi đánh giá...' : 'Gửi đánh giá' }}</span>
+        <span class="btn-spinner" *ngIf="isSubmitting || isCheckingEligibility"></span>
+        <span>{{ alreadyReviewed ? 'Đã đánh giá' : (isSubmitting ? 'Đang gửi đánh giá...' : (isCheckingEligibility ? 'Đang kiểm tra...' : 'Gửi đánh giá')) }}</span>
       </button>
     </div>
 

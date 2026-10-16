@@ -49,51 +49,88 @@ export class ReviewsService {
   }
 
   /**
+   * Xây dựng bộ lọc tìm đơn hàng đã giao thành công (DELIVERED / COMPLETED)
+   */
+  private buildDeliveredOrderFilter(
+    userObjectId: Types.ObjectId,
+    userEmail: string,
+    productObjectId: Types.ObjectId,
+    orderId?: string,
+  ): any {
+    const normalizedEmail = (userEmail || '').toLowerCase().trim();
+    const userConditions: any[] = [
+      { userId: userObjectId },
+      { userId: String(userObjectId) },
+      { _user: userObjectId },
+      { _user: String(userObjectId) },
+    ];
+    if (normalizedEmail) {
+      const escapedEmail = normalizedEmail.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+      userConditions.push(
+        { customerEmail: normalizedEmail },
+        { customerEmail: { $regex: new RegExp(`^${escapedEmail}$`, 'i') } },
+        { 'customer.email': normalizedEmail },
+        { 'customer.email': { $regex: new RegExp(`^${escapedEmail}$`, 'i') } },
+      );
+    }
+
+    const filter: any = {
+      $or: userConditions,
+      status: {
+        $in: [
+          OrderStatus.DELIVERED,
+          'DELIVERED',
+          'delivered',
+          'Delivered',
+          'COMPLETED',
+          'completed',
+          'Completed',
+          'Đã giao',
+          'đã giao',
+          'ĐÃ GIAO',
+          'Da giao',
+          'da giao',
+        ],
+      },
+      'items.productId': { $in: [productObjectId, String(productObjectId)] },
+    };
+
+    if (orderId) {
+      const cleanOrderId = orderId.trim().replace(/^#/, '').trim();
+      const escapedOrderId = cleanOrderId.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+      const orderIdConditions: any[] = [
+        { orderId: cleanOrderId },
+        { orderId: orderId.trim() },
+        { orderId: { $regex: new RegExp(`^#?${escapedOrderId}$`, 'i') } },
+      ];
+      if (isValidObjectId(cleanOrderId)) {
+        orderIdConditions.push(
+          { _id: new Types.ObjectId(cleanOrderId) },
+          { _id: cleanOrderId },
+        );
+      }
+      filter.$and = [{ $or: orderIdConditions }];
+    }
+
+    return filter;
+  }
+
+  /**
    * Tạo đánh giá sản phẩm mới
    */
   async createReview(userId: string, user: any, dto: CreateReviewDto): Promise<ProductReview> {
     const product = await this.resolveProduct(dto.productId);
     const productObjectId = new Types.ObjectId(product._id);
     const userObjectId = new Types.ObjectId(userId);
+    const userEmail = (user?.email || '').toLowerCase().trim();
 
-    // 1. Chống gửi đánh giá trùng: không cho phép gửi nhiều đánh giá cho cùng một sản phẩm trong cùng một đơn hàng
-    const duplicateFilter: any = {
-      productId: productObjectId,
-      $or: [
-        { userId: userObjectId },
-        { userId: String(userObjectId) },
-      ],
-    };
-    if (dto.orderId) {
-      duplicateFilter.orderId = dto.orderId;
-    }
-    const existing = await this.reviewModel.findOne(duplicateFilter).lean();
-    if (existing) {
-      throw new ConflictException('Bạn đã gửi đánh giá cho sản phẩm này trong đơn hàng rồi');
-    }
-
-    // 2. Xác minh mua hàng: Kiểm tra đơn hàng thuộc về user có chứa sản phẩm và đã giao thành công (DELIVERED / COMPLETED)
-    const userEmail = (user.email || '').toLowerCase();
-    const orderFilter: any = {
-      $or: [
-        { userId: userObjectId },
-        { userId: String(userObjectId) },
-        { _user: userObjectId },
-        ...(userEmail ? [{ customerEmail: userEmail }] : []),
-      ],
-      status: { $in: [OrderStatus.DELIVERED, 'COMPLETED', 'delivered', 'completed'] },
-      'items.productId': { $in: [productObjectId, String(productObjectId)] },
-    };
-
-    if (dto.orderId) {
-      if (isValidObjectId(dto.orderId)) {
-        orderFilter.$and = [
-          { $or: [{ orderId: dto.orderId }, { _id: new Types.ObjectId(dto.orderId) }] }
-        ];
-      } else {
-        orderFilter.orderId = dto.orderId;
-      }
-    }
+    // 1. Xác minh mua hàng: Kiểm tra đơn hàng thuộc về user có chứa sản phẩm và đã giao thành công (DELIVERED / COMPLETED)
+    const orderFilter = this.buildDeliveredOrderFilter(
+      userObjectId,
+      userEmail,
+      productObjectId,
+      dto.orderId,
+    );
 
     const matchedOrder = await this.orderModel.findOne(orderFilter).lean();
     if (!matchedOrder) {
@@ -102,15 +139,34 @@ export class ReviewsService {
       );
     }
 
+    const canonicalOrderId = (matchedOrder as any)?.orderId || (dto.orderId ? dto.orderId.trim().replace(/^#/, '').trim() : null);
+
+    // 2. Chống gửi đánh giá trùng: không cho phép gửi nhiều đánh giá cho cùng một sản phẩm trong cùng một đơn hàng
+    const duplicateFilter: any = {
+      productId: productObjectId,
+      $or: [
+        { userId: userObjectId },
+        { userId: String(userObjectId) },
+      ],
+    };
+    if (canonicalOrderId) {
+      duplicateFilter.orderId = canonicalOrderId;
+    }
+
+    const existing = await this.reviewModel.findOne(duplicateFilter).lean();
+    if (existing) {
+      throw new ConflictException('Bạn đã gửi đánh giá cho sản phẩm này rồi');
+    }
+
     // 3. Tạo review mới
     const review = new this.reviewModel({
       productId: productObjectId,
       userId: userObjectId,
-      orderId: (matchedOrder as any)?.orderId || dto.orderId || null,
+      orderId: canonicalOrderId,
       rating: Math.round(Number(dto.rating)),
       comment: dto.comment.trim(),
-      userName: user.fullName || user.name || 'Khách hàng Chéri',
-      userAvatar: user.avatar || '',
+      userName: user?.fullName || user?.name || 'Khách hàng Chéri',
+      userAvatar: user?.avatar || '',
       isVerifiedPurchase: true,
       status: ReviewStatus.APPROVED, // Mặc định duyệt cho khách hàng đã xác thực nhận hàng
     });
@@ -246,10 +302,14 @@ export class ReviewsService {
   /**
    * Kiểm tra điều kiện đánh giá của người dùng hiện tại đối với sản phẩm
    */
+  /**
+   * Kiểm tra điều kiện đánh giá của người dùng hiện tại đối với sản phẩm (và đơn hàng cụ thể nếu có)
+   */
   async checkEligibility(
     userId: string,
     userEmail: string,
     productIdOrSlug: string,
+    orderId?: string,
   ): Promise<{
     canReview: boolean;
     hasReviewed: boolean;
@@ -259,11 +319,21 @@ export class ReviewsService {
     const product = await this.resolveProduct(productIdOrSlug);
     const productObjectId = new Types.ObjectId(product._id);
     const userObjectId = new Types.ObjectId(userId);
+    const cleanOrderId = orderId ? orderId.trim().replace(/^#/, '').trim() : undefined;
 
     // 1. Kiểm tra đã có review chưa
-    const existingReview = await this.reviewModel
-      .findOne({ productId: productObjectId, userId: userObjectId })
-      .lean();
+    const reviewFilter: any = {
+      productId: productObjectId,
+      $or: [
+        { userId: userObjectId },
+        { userId: String(userObjectId) },
+      ],
+    };
+    if (cleanOrderId) {
+      reviewFilter.orderId = cleanOrderId;
+    }
+
+    const existingReview = await this.reviewModel.findOne(reviewFilter).lean();
 
     if (existingReview) {
       return {
@@ -275,15 +345,12 @@ export class ReviewsService {
     }
 
     // 2. Kiểm tra xem có đơn hàng DELIVERED nào không
-    const orderFilter: any = {
-      $or: [
-        { userId: userObjectId },
-        { _user: userObjectId },
-        ...(userEmail ? [{ customerEmail: userEmail.toLowerCase() }] : []),
-      ],
-      status: { $in: [OrderStatus.DELIVERED, 'COMPLETED', 'delivered', 'completed'] },
-      'items.productId': productObjectId,
-    };
+    const orderFilter = this.buildDeliveredOrderFilter(
+      userObjectId,
+      userEmail,
+      productObjectId,
+      cleanOrderId,
+    );
 
     const hasDeliveredOrder = await this.orderModel.exists(orderFilter);
 

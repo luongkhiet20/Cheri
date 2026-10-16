@@ -1,4 +1,5 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+/* eslint-disable @angular-eslint/prefer-standalone */
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
@@ -55,12 +56,10 @@ export class OrderFormComponent implements OnInit {
   errorMessage = '';
   private nextClientId = 1;
 
-  constructor(
-    private adminService: AdminService,
-    private router: Router,
-    private route: ActivatedRoute,
-    private cdr: ChangeDetectorRef
-  ) {}
+  private adminService = inject(AdminService);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private cdr = inject(ChangeDetectorRef);
 
   ngOnInit(): void {
     this.orderId = this.route.snapshot.paramMap.get('id');

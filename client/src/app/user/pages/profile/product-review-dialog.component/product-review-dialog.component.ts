@@ -43,6 +43,9 @@ export class ProductReviewDialogComponent implements OnInit, OnChanges {
   selectedImages: Array<{ file: File; preview: string; name: string }> = [];
 
   isSubmitting: boolean = false;
+  isCheckingEligibility: boolean = false;
+  alreadyReviewed: boolean = false;
+  isEligible: boolean = true;
   validationError: string = '';
   errorMessage: string = '';
   successMessage: string = '';
@@ -78,16 +81,46 @@ export class ProductReviewDialogComponent implements OnInit, OnChanges {
     return this.orderItems[this.selectedProductIndex] || this.orderItems[0];
   }
 
+  getProductId(item: any): string | null {
+    if (!item) return null;
+    const raw = item?.productId?._id || item?.productId?.id || item?.productId || item?.product?._id || item?.product?.id || item?.id || item?._id || item?.productSnapshot?.id || item?.productSnapshot?._id;
+    return raw ? String(raw) : null;
+  }
+
+  getCleanOrderId(): string | undefined {
+    const raw = this.order?.orderId || this.order?._id || this.order?.id;
+    if (!raw) return undefined;
+    return String(raw).replace(/^#/, '').trim();
+  }
+
+  isOrderDelivered(): boolean {
+    if (!this.order) return false;
+    const s = (this.order?.status || '').toUpperCase().trim();
+    return ['DELIVERED', 'COMPLETED', 'ĐÃ GIAO', 'DA GIAO'].includes(s);
+  }
+
   private initSelectedProduct(): void {
+    this.alreadyReviewed = false;
+    this.isEligible = true;
+
     if (this.selectedProductId && this.orderItems.length > 0) {
       const idx = this.orderItems.findIndex(item => {
-        const pId = item?.productId?._id || item?.productId || item?.productSnapshot?.id || item?.productSnapshot?._id || item?.id;
+        const pId = this.getProductId(item);
         return String(pId) === String(this.selectedProductId);
       });
       this.selectedProductIndex = idx >= 0 ? idx : 0;
     } else {
       this.selectedProductIndex = 0;
     }
+
+    if (!this.isOrderDelivered()) {
+      this.isEligible = false;
+      this.errorMessage = 'Bạn chỉ có thể đánh giá sản phẩm sau khi đã mua và nhận hàng thành công.';
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.checkEligibilityForCurrentProduct();
   }
 
   selectProduct(index: number): void {
@@ -96,16 +129,60 @@ export class ProductReviewDialogComponent implements OnInit, OnChanges {
     this.validationError = '';
     this.errorMessage = '';
     this.successMessage = '';
+    this.alreadyReviewed = false;
+    this.isEligible = true;
+
+    if (!this.isOrderDelivered()) {
+      this.isEligible = false;
+      this.errorMessage = 'Bạn chỉ có thể đánh giá sản phẩm sau khi đã mua và nhận hàng thành công.';
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.checkEligibilityForCurrentProduct();
+  }
+
+  private checkEligibilityForCurrentProduct(): void {
+    const pId = this.getProductId(this.activeItem);
+    const ordId = this.getCleanOrderId();
+    if (!pId) return;
+
+    this.isCheckingEligibility = true;
+    this.cdr.markForCheck();
+
+    this.apiService.checkReviewEligibility(pId, ordId).subscribe({
+      next: (res: any) => {
+        this.isCheckingEligibility = false;
+        if (res?.hasReviewed) {
+          this.alreadyReviewed = true;
+          this.errorMessage = res.reason || 'Bạn đã gửi đánh giá cho sản phẩm này trong đơn hàng rồi.';
+        } else if (res?.canReview === false) {
+          this.isEligible = false;
+          this.errorMessage = res.reason || 'Bạn chỉ có thể đánh giá sản phẩm sau khi đã mua và nhận hàng thành công.';
+        } else {
+          this.alreadyReviewed = false;
+          this.isEligible = true;
+          if (this.errorMessage.includes('đánh giá') || this.errorMessage.includes('nhận hàng')) {
+            this.errorMessage = '';
+          }
+        }
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.isCheckingEligibility = false;
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   onRate(star: number): void {
-    if (this.isSubmitting) return;
+    if (this.isSubmitting || this.alreadyReviewed) return;
     this.rating = star;
     this.validationError = '';
   }
 
   onStarHover(star: number): void {
-    if (!this.isSubmitting) {
+    if (!this.isSubmitting && !this.alreadyReviewed) {
       this.hoverRating = star;
     }
   }
@@ -141,7 +218,7 @@ export class ProductReviewDialogComponent implements OnInit, OnChanges {
   }
 
   onFilesSelected(event: Event): void {
-    if (this.isSubmitting) return;
+    if (this.isSubmitting || this.alreadyReviewed) return;
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) return;
 
@@ -180,7 +257,7 @@ export class ProductReviewDialogComponent implements OnInit, OnChanges {
   }
 
   removeImage(index: number): void {
-    if (this.isSubmitting) return;
+    if (this.isSubmitting || this.alreadyReviewed) return;
     this.selectedImages.splice(index, 1);
   }
 
@@ -198,11 +275,16 @@ export class ProductReviewDialogComponent implements OnInit, OnChanges {
   }
 
   onSubmit(): void {
-    if (this.isSubmitting) return;
+    if (this.isSubmitting || this.alreadyReviewed) return;
 
     this.validationError = '';
     this.errorMessage = '';
     this.successMessage = '';
+
+    if (!this.isOrderDelivered()) {
+      this.errorMessage = 'Bạn chỉ có thể đánh giá sản phẩm sau khi đã mua và nhận hàng thành công.';
+      return;
+    }
 
     if (!this.rating || this.rating < 1 || this.rating > 5) {
       this.validationError = 'Vui lòng chọn số sao đánh giá sản phẩm (từ 1 đến 5 sao).';
@@ -226,23 +308,23 @@ export class ProductReviewDialogComponent implements OnInit, OnChanges {
     }
 
     const targetItem = this.activeItem;
-    const rawProductId = targetItem?.productId?._id || targetItem?.productId || targetItem?.productSnapshot?.id || targetItem?.productSnapshot?._id || targetItem?.id;
+    const rawProductId = this.getProductId(targetItem);
 
     if (!rawProductId) {
       this.errorMessage = 'Không xác định được mã sản phẩm cần đánh giá. Vui lòng thử lại sau.';
       return;
     }
 
-    const targetOrderId = this.order?.orderId || this.order?._id;
+    const cleanOrderId = this.getCleanOrderId();
 
     this.isSubmitting = true;
     this.cdr.markForCheck();
 
     const payload = {
-      productId: String(rawProductId),
+      productId: rawProductId,
       rating: Number(this.rating),
       comment: trimmedComment,
-      orderId: targetOrderId ? String(targetOrderId) : undefined
+      orderId: cleanOrderId
     };
 
     this.apiService.createProductReview(payload).subscribe({
@@ -258,6 +340,7 @@ export class ProductReviewDialogComponent implements OnInit, OnChanges {
         }
 
         this.successMessage = 'Gửi đánh giá thành công! Cảm ơn bạn đã đóng góp ý kiến cho Chéri.';
+        this.alreadyReviewed = true;
         this.reviewed.emit({
           productId: payload.productId,
           orderId: payload.orderId || '',

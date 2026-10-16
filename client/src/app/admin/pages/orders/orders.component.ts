@@ -1,4 +1,5 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+/* eslint-disable @angular-eslint/prefer-standalone */
+import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
@@ -74,13 +75,11 @@ export class OrdersComponent implements OnInit {
   get isIndeterminate(): boolean { return this.selectedCount > 0 && !this.allSelected; }
   get displayTotal(): number { return this.pagination?.total ?? this.data.length; }
 
-  constructor(
-    private apiService: AdminService,
-    private router: Router,
-    private route: ActivatedRoute,
-    private cdr: ChangeDetectorRef,
-    private notificationService: NotificationService
-  ) { }
+  private apiService = inject(AdminService);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private cdr = inject(ChangeDetectorRef);
+  private notificationService = inject(NotificationService);
 
   ngOnInit(): void {
     this.loadPaymentMethods();

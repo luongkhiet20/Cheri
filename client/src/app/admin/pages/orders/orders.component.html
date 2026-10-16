@@ -41,7 +41,7 @@
   <app-update-order-status
     [isOpen]="isStatusModalOpen"
     [order]="selectedOrderForStatus"
-    (close)="onCloseStatusModal()"
+    (modalClose)="onCloseStatusModal()"
     (statusUpdated)="onOrderStatusUpdated($event)">
   </app-update-order-status>
 </div>

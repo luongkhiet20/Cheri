@@ -63,9 +63,10 @@ export class ReviewsController {
   async checkEligibility(
     @Req() req: any,
     @Param('productId') productId: string,
+    @Query('orderId') orderId?: string,
   ) {
     const userId = req.user._id ? req.user._id.toString() : req.user.id;
-    return this.reviewsService.checkEligibility(userId, req.user.email, productId);
+    return this.reviewsService.checkEligibility(userId, req.user.email, productId, orderId);
   }
 
   /**

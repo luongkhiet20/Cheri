@@ -9,7 +9,6 @@ import { SignalStore } from '../../../store/signal.store';
 import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
 import { Product } from '../../shared/models';
 import { WishlistService } from '../../../services/wishlist.service';
-import { CartToastService } from '../../../services/cart-toast.service';
 import { WishlistButtonComponent } from '../../shared/wishlist-button/wishlist-button.component';
 
 @Component({
@@ -37,7 +36,6 @@ export class Wishlist implements OnInit, OnDestroy {
     private selectors: SignalStoreSelectors,
     private router: Router,
     private snackBar: MatSnackBar,
-    private cartToast: CartToastService,
     private cdr: ChangeDetectorRef,
     private wishlistService: WishlistService
   ) {
@@ -191,7 +189,6 @@ export class Wishlist implements OnInit, OnDestroy {
       return;
     }
     this.store.addToCart('?id=' + id);
-    this.cartToast.show();
   }
 
   showToast(message: string, type: 'info' | 'success' | 'error' = 'info'): void {

@@ -1,4 +1,5 @@
-import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, ChangeDetectorRef } from '@angular/core';
+/* eslint-disable @angular-eslint/prefer-standalone */
+import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, ChangeDetectorRef, inject } from '@angular/core';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
 
@@ -14,10 +15,14 @@ interface StatusOption {
   styleUrls: ['./update-order-status.component.css']
 })
 export class UpdateOrderStatusComponent implements OnChanges {
+  private apiService = inject(AdminService);
+  private notificationService = inject(NotificationService);
+  private cdr = inject(ChangeDetectorRef);
+
   @Input() isOpen = false;
   @Input() order: any = null;
 
-  @Output() close = new EventEmitter<void>();
+  @Output() modalClose = new EventEmitter<void>();
   @Output() statusUpdated = new EventEmitter<{ orderId: string; newStatus: string }>();
 
   readonly statusOptions: StatusOption[] = [
@@ -43,12 +48,6 @@ export class UpdateOrderStatusComponent implements OnChanges {
   availableOptions: StatusOption[] = [];
   isSaving = false;
   errorMessage = '';
-
-  constructor(
-    private apiService: AdminService,
-    private notificationService: NotificationService,
-    private cdr: ChangeDetectorRef
-  ) {}
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['isOpen'] && this.isOpen) {
@@ -127,7 +126,7 @@ export class UpdateOrderStatusComponent implements OnChanges {
   onCancel(): void {
     if (this.isSaving) return;
     this.errorMessage = '';
-    this.close.emit();
+    this.modalClose.emit();
   }
 
   onOverlayClick(e: MouseEvent): void {
@@ -178,7 +177,7 @@ export class UpdateOrderStatusComponent implements OnChanges {
           const msg = res.message || `Đã cập nhật trạng thái đơn hàng thành "${newLabel}"`;
           this.notificationService.success(msg);
           this.statusUpdated.emit({ orderId: targetDocId, newStatus: this.selectedStatus });
-          this.close.emit();
+          this.modalClose.emit();
         } else {
           const msg = res?.message || 'Không thể cập nhật trạng thái đơn hàng.';
           this.errorMessage = msg;

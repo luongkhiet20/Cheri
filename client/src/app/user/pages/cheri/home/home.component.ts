@@ -22,7 +22,6 @@ import { TranslatePipe } from '../../../../pipes/translate.pipe';
 import { SignalStore } from '../../../../store/signal.store';
 import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
 import { ThemeService } from '../../../../services/theme.service';
-import { CartToastService } from '../../../../services/cart-toast.service';
 import { WishlistButtonComponent } from '../../../shared/wishlist-button/wishlist-button.component';
 import {
   HomeSection,
@@ -100,7 +99,6 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     private title: Title,
     private translate: TranslateService,
     private snackBar: MatSnackBar,
-    private cartToast: CartToastService,
     private store: SignalStore,
     private selectors: SignalStoreSelectors,
     private themeService: ThemeService,
@@ -164,7 +162,6 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
       return;
     }
     this.store.addToCart('?id=' + id);
-    this.cartToast.show();
   }
 
   removeFromCart(id: string): void {

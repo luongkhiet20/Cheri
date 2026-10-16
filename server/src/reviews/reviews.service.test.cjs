@@ -104,13 +104,23 @@ function createMockModels() {
         // Kiểm tra user
         const matchUser =
           (filter.$or &&
-            filter.$or.some(
-              (clause) =>
-                (clause.userId && o.userId.toString() === clause.userId.toString()) ||
-                (clause._user && o._user.toString() === clause._user.toString()) ||
-                (clause.customerEmail &&
-                  o.customerEmail.toLowerCase() === clause.customerEmail.toLowerCase()),
-            )) ||
+            filter.$or.some((clause) => {
+              if (clause.userId && o.userId && o.userId.toString() === clause.userId.toString()) return true;
+              if (clause._user && o._user && o._user.toString() === clause._user.toString()) return true;
+              if (clause.customerEmail && o.customerEmail) {
+                if (clause.customerEmail.$regex) {
+                  return clause.customerEmail.$regex.test(o.customerEmail);
+                }
+                return o.customerEmail.toLowerCase() === clause.customerEmail.toLowerCase();
+              }
+              if (clause['customer.email'] && o.customerEmail) {
+                if (clause['customer.email'].$regex) {
+                  return clause['customer.email'].$regex.test(o.customerEmail);
+                }
+                return o.customerEmail.toLowerCase() === clause['customer.email'].toLowerCase();
+              }
+              return false;
+            })) ||
           false;
 
         // Kiểm tra status
@@ -120,13 +130,39 @@ function createMockModels() {
           filter.status.$in.includes(o.status);
 
         // Kiểm tra items.productId
-        const matchProduct =
-          filter['items.productId'] &&
-          o.items.some(
-            (it) => it.productId.toString() === filter['items.productId'].toString(),
-          );
+        let matchProduct = false;
+        const prodTarget = filter['items.productId'];
+        if (prodTarget) {
+          if (prodTarget.$in && Array.isArray(prodTarget.$in)) {
+            matchProduct = o.items.some((it) =>
+              prodTarget.$in.some((val) => val.toString() === it.productId.toString()),
+            );
+          } else {
+            matchProduct = o.items.some(
+              (it) => it.productId.toString() === prodTarget.toString(),
+            );
+          }
+        }
 
-        return matchUser && matchStatus && matchProduct;
+        // Kiểm tra orderId nếu có
+        let matchOrderId = true;
+        if (filter.orderId) {
+          matchOrderId = o.orderId === filter.orderId;
+        } else if (filter.$and && Array.isArray(filter.$and)) {
+          const ordClause = filter.$and.find((c) => c.$or && c.$or.some((sc) => sc.orderId || sc._id));
+          if (ordClause) {
+            matchOrderId = ordClause.$or.some((sc) => {
+              const scOrderId = sc.orderId?.toString();
+              const scId = sc._id?.toString();
+              return (
+                (scOrderId && (scOrderId === o.orderId || (sc.orderId && sc.orderId.$regex && sc.orderId.$regex.test(o.orderId)))) ||
+                (scId && scId === o._id?.toString())
+              );
+            });
+          }
+        }
+
+        return matchUser && matchStatus && matchProduct && matchOrderId;
       });
 
       return {
@@ -162,11 +198,15 @@ function createMockModels() {
 
   mockReviewModel.findOne = (filter) => {
     let r = null;
-    if (filter.productId && filter.userId) {
+    const targetUserId =
+      filter.userId ||
+      (filter.$or && filter.$or.find((c) => c.userId)?.userId);
+    if (filter.productId && targetUserId) {
       r = reviews.find(
         (x) =>
           x.productId.toString() === filter.productId.toString() &&
-          x.userId.toString() === filter.userId.toString(),
+          x.userId.toString() === targetUserId.toString() &&
+          (!filter.orderId || !x.orderId || x.orderId === filter.orderId),
       );
     }
     const val = r ? JSON.parse(JSON.stringify(r)) : null;

@@ -20,7 +20,6 @@ import { Subscription } from 'rxjs';
 import { Product } from '../../../../shared/models';
 import { ApiService } from '../../../../../services/api.service';
 import { SignalStore } from '../../../../../store/signal.store';
-import { CartToastService } from '../../../../../services/cart-toast.service';
 import { WishlistButtonComponent } from '../../../../shared/wishlist-button/wishlist-button.component';
 
 @Component({
@@ -67,7 +66,6 @@ export class ProductRecommendationsComponent implements OnInit, OnChanges, After
     private apiService: ApiService,
     private router: Router,
     private store: SignalStore,
-    private cartToast: CartToastService,
     private cdr: ChangeDetectorRef,
     @Inject(PLATFORM_ID) platformId: Object
   ) {
@@ -292,7 +290,6 @@ export class ProductRecommendationsComponent implements OnInit, OnChanges, After
     const id = product?._id || product?.id;
     if (!id || this.isOutOfStock(product)) return;
     this.store.addToCart('?id=' + id);
-    this.cartToast.show();
   }
 
   onOpenQuickView(product: any): void {

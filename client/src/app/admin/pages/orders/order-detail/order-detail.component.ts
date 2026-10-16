@@ -1,4 +1,5 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+/* eslint-disable @angular-eslint/prefer-standalone */
+import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
@@ -61,13 +62,11 @@ export class OrderDetailComponent implements OnInit {
     { code: 'RETURNED', label: 'Đã hoàn trả', variant: 'warning' }
   ];
 
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private apiService: AdminService,
-    private cdr: ChangeDetectorRef,
-    private notificationService: NotificationService
-  ) { }
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private apiService = inject(AdminService);
+  private cdr = inject(ChangeDetectorRef);
+  private notificationService = inject(NotificationService);
 
   ngOnInit(): void {
     this.orderId = this.route.snapshot.paramMap.get('id');

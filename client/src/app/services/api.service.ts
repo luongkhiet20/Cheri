@@ -1078,8 +1078,11 @@ export class ApiService {
     return this.http.get(url, { params });
   }
 
-  checkReviewEligibility(productId: string): Observable<any> {
-    const url = `${this.apiUrl}/api/reviews/check-eligible/${encodeURIComponent(productId)}`;
+  checkReviewEligibility(productId: string, orderId?: string): Observable<any> {
+    let url = `${this.apiUrl}/api/reviews/check-eligible/${encodeURIComponent(productId)}`;
+    if (orderId) {
+      url += `?orderId=${encodeURIComponent(orderId)}`;
+    }
     return this.http.get(url);
   }
 

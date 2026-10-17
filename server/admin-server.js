@@ -7,16 +7,26 @@ const jwt = require('jsonwebtoken');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
+const os = require('os');
 const { trackingNumberUpdateFields } = require('./src/orders/tracking-update.cjs');
 
 const app = express();
 const PORT = process.env.ADMIN_PORT || process.env.PORT_ADMIN || 5000;
 const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://tinhvttk24411_db_user:gZ7aJJyCWgYffiXa@cluster0.cbvni8r.mongodb.net/cheri?retryWrites=true&w=majority";
 
-// Uploads directory setup for static serving
-const uploadsDir = path.join(__dirname, 'uploads', 'payment-proofs');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+// Uploads directory setup for static serving (Serverless / read-only filesystem safe)
+let uploadsDir = path.join(__dirname, 'uploads', 'payment-proofs');
+try {
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+} catch (err) {
+  uploadsDir = path.join(os.tmpdir(), 'cheri-uploads', 'payment-proofs');
+  try {
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+  } catch (_) {}
 }
 
 const paymentImageStorage = multer.diskStorage({
@@ -8266,6 +8276,13 @@ app.get('/api/translations', async (req, res) => {
   } catch (err) {
     res.json({ lang: 'vi', keys: {} });
   }
+});
+
+// Register Customer Storefront Cart Routes (Full Serverless / Express support)
+require('./cart-routes')(app, {
+  getDb: () => db,
+  formatProduct,
+  connectToMongo,
 });
 
 function checkPasswordSecurity(password, email) {

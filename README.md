@@ -167,9 +167,27 @@ npm run lint:css:fix
 
 ---
 
-## 🐳 Triển Khai Với Docker (Tùy Chọn)
+## 🐳 Triển Khai Với Docker & Docker Compose
 
+Xem hướng dẫn chi tiết toàn diện tại [Tài Liệu Hướng Dẫn Docker (docs/DOCKER.md)](docs/DOCKER.md).
 
+### Khởi động nhanh bằng Docker Compose:
 
-# Chạy Docker kèm file .env
-docker run --env-file .env 
+```bash
+# 1. Sao chép và cấu hình biến môi trường
+cp .env.example .env
+
+# 2. Build và khởi chạy container
+docker compose up -d --build
+
+# 3. Xem logs ứng dụng
+docker compose logs -f app
+```
+
+- **Storefront & API:** `http://localhost:4000`
+- **Admin Server:** `http://localhost:5000`
+
+### Dừng ứng dụng:
+```bash
+docker compose down
+``` 

@@ -5,7 +5,7 @@ const http = require('node:http');
 const jwt = require('jsonwebtoken');
 
 describe('Cloudinary Return Proof Image Upload & Normalization', () => {
-  const { app } = require('../admin-server');
+  const { app } = require('../../admin-server');
   const {
     getCloudinaryConfig,
     generateReturnUploadSignature,

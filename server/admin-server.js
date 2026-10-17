@@ -18,7 +18,7 @@ const {
   syncGoogleUserWithDb,
   createTokensAndExchangeCode,
   verifyExchangeCode
-} = require('./services/google-oauth-service');
+} = require('./src/services/google-oauth-service');
 const {
   generateUploadSignature,
   generateReturnUploadSignature,
@@ -26,7 +26,7 @@ const {
   normalizeReturnProofImages,
   normalizeProductImages,
   normalizeSettingsImages
-} = require('./services/cloudinary-service');
+} = require('./src/services/cloudinary-service');
 
 const app = express();
 const PORT = process.env.ADMIN_PORT || process.env.PORT_ADMIN || 5000;
@@ -8754,7 +8754,7 @@ app.get('/api/translations', async (req, res) => {
 });
 
 // Register Customer Storefront Cart Routes (Full Serverless / Express support)
-require('./routes/cart-routes')(app, {
+require('./src/routes/cart-routes')(app, {
   getDb: () => db,
   formatProduct,
   connectToMongo,

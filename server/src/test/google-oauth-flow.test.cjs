@@ -5,7 +5,7 @@ const http = require('node:http');
 const jwt = require('jsonwebtoken');
 
 describe('Google OAuth & Exchange Token Flows', () => {
-  const { app } = require('../admin-server');
+  const { app } = require('../../admin-server');
   const { createTokensAndExchangeCode } = require('../services/google-oauth-service');
 
   let server;

@@ -54,7 +54,7 @@ export class AdminController {
 
   @Get('/cloudinary-signature')
   getCloudinarySignature(@Query('folder') folder: string) {
-    const { generateUploadSignature } = require('../../services/cloudinary-service');
+    const { generateUploadSignature } = require('../services/cloudinary-service');
     return {
       success: true,
       data: generateUploadSignature(folder || 'cheri/products')

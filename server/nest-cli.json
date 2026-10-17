@@ -3,7 +3,7 @@
   "sourceRoot": "./server/src",
   "compilerOptions": {
     "tsConfigPath": "./server/tsconfig.json",
-    "assets": ["**/*.cjs"],
+    "assets": ["**/*.cjs", "**/*.js"],
     "watchAssets": true
   }
 }

@@ -444,7 +444,7 @@ export class OrdersService {
   }
 
   getReturnUploadSignature(subfolder?: string) {
-    const { generateReturnUploadSignature } = require('../../services/cloudinary-service');
+    const { generateReturnUploadSignature } = require('../services/cloudinary-service');
     return generateReturnUploadSignature(subfolder);
   }
 
@@ -599,7 +599,7 @@ export class OrdersService {
 
     // 6. Xử lý ảnh minh chứng (Đồng bộ Cloudinary cheri/return-proofs, tối đa 5 ảnh)
     const rawImages = Array.isArray(payload?.images) ? payload.images.slice(0, 5) : [];
-    const { normalizeReturnProofImages } = require('../../services/cloudinary-service');
+    const { normalizeReturnProofImages } = require('../services/cloudinary-service');
     let savedImages: string[] = [];
     try {
       savedImages = await normalizeReturnProofImages(rawImages);

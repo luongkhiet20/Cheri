@@ -56,7 +56,7 @@ export class OrderReturnRefundDialogComponent implements OnInit, OnChanges {
   constructor(
     private apiService: ApiService,
     private cdr: ChangeDetectorRef
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.initItemSelection();
@@ -256,13 +256,13 @@ export class OrderReturnRefundDialogComponent implements OnInit, OnChanges {
     });
 
     if (selectedItems.length === 0) {
-      this.validationError = 'Vui lòng chọn ít nhất một sản phẩm cần trả hàng / hoàn tiền.';
+      this.validationError = 'Vui lòng chọn ít nhất một sản phẩm cần trả hàng hoàn tiền.';
       return;
     }
 
     // 2. Kiểm tra lý do
     if (!this.selectedReason) {
-      this.validationError = 'Vui lòng chọn lý do yêu cầu trả hàng / hoàn tiền.';
+      this.validationError = 'Vui lòng chọn lý do yêu cầu trả hàng hoàn tiền.';
       return;
     }
 

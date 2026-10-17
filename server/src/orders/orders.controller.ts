@@ -119,6 +119,13 @@ export class OrdersController {
     return this.ordersService.cancelOrder(id, body, user);
   }
 
+  // ─── Khách hàng: Lấy chữ ký upload ảnh minh chứng lên Cloudinary ────────
+  @UseGuards(AuthGuard('jwt'))
+  @Get('/return-upload-signature')
+  getReturnUploadSignature() {
+    return this.ordersService.getReturnUploadSignature();
+  }
+
   // ─── Khách hàng: Yêu cầu Trả hàng / Hoàn tiền (đơn đã DELIVERED) ─────────
   @UseGuards(AuthGuard('jwt'))
   @Post('/:id/return-request')

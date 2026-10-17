@@ -82,6 +82,31 @@ export class AdminService {
     return this.http.post(`${this.baseUrl}/products/bulk-delete`, { ids });
   }
 
+  // ── Cloudinary & Images ──────────────────────
+  getCloudinarySignature(folder: string = 'cheri/products'): Observable<any> {
+    return this.http.get(`${this.baseUrl}/admin/cloudinary-signature`, {
+      params: { folder }
+    });
+  }
+
+  uploadDirectToCloudinary(file: File, sigData: any): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('api_key', sigData.apiKey);
+    formData.append('timestamp', String(sigData.timestamp));
+    formData.append('signature', sigData.signature);
+    formData.append('folder', sigData.folder);
+
+    const cloudUploadUrl = `https://api.cloudinary.com/v1_1/${sigData.cloudName}/image/upload`;
+    return this.http.post(cloudUploadUrl, formData);
+  }
+
+  uploadImage(file: File, folder: string = 'cheri/products'): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post(`${this.baseUrl}/admin/images/upload?folder=${encodeURIComponent(folder)}`, formData);
+  }
+
   // ── CSV Import ─────────────────────────────
   downloadProductCsvTemplate(): Observable<Blob> {
     return this.http.get(`${this.baseUrl}/products/csv-template`, {

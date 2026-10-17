@@ -1,0 +1,142 @@
+/* ── RIGHT: Profile Sidebar Card ── */
+.profile-sidebar-card {
+  background: #ffffff;
+  border: 1px solid #ebe5dc;
+  border-radius: 16px;
+  padding: 24px 22px 26px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.02);
+}
+
+.profile-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.heading-bar {
+  width: 3px;
+  height: 16px;
+  background: var(--cheri-primary, #74070E);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* Heading is strictly 18px */
+.heading-text {
+  font-size: 18px;
+  font-weight: 700;
+  color: #221f1d;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.profile-form-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 15px;
+}
+
+.field-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #786e65;
+}
+
+.field-label-sub {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #786e65;
+}
+
+.field-input {
+  width: 100%;
+  border: 1px solid #ded8cf;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #2d2621;
+  background: #ffffff;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+  font-family: inherit;
+}
+
+.field-input::placeholder {
+  color: #b5aba1;
+}
+
+.field-input:focus {
+  border-color: var(--cheri-primary, #74070E);
+  box-shadow: 0 0 0 3px rgba(116, 7, 14, 0.08);
+}
+
+.readonly-input {
+  background-color: #f7f5f2 !important;
+  color: #786e65 !important;
+  cursor: not-allowed;
+  border-color: #e5e0d8 !important;
+}
+
+.field-textarea {
+  resize: vertical;
+  min-height: 64px;
+  line-height: 1.45;
+}
+
+.password-sub-heading {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #5d534b;
+  margin: 16px 0 12px;
+}
+
+.profile-feedback-box {
+  font-size: 12.5px;
+  padding: 9px 12px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.profile-feedback-box.success {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.profile-feedback-box.error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.profile-submit-btn {
+  width: 100%;
+  background: var(--cheri-primary, #74070E);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 11px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, opacity 0.2s ease;
+  margin-top: 4px;
+}
+
+.profile-submit-btn:hover {
+  background: #56050a;
+}
+
+.profile-submit-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}

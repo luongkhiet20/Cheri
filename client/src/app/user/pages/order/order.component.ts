@@ -233,8 +233,8 @@ export class OrderComponent implements OnInit, OnDestroy {
     return items.reduce((sum: number, it: any) => sum + (Number(it.quantity || it.qty) || 1), 0);
   }
 
-  getOrderStatusText(status: string): string {
-    switch ((status || '').toUpperCase()) {
+  getOrderStatusText(status: any): string {
+    switch (this.normalizeStatus(status)) {
       case 'PENDING':
         return 'Chờ xử lý';
       case 'CONFIRMED':
@@ -252,21 +252,24 @@ export class OrderComponent implements OnInit, OnDestroy {
       case 'RETURNED':
         return 'Đã trả hàng';
       default:
-        return status || 'Chờ xử lý';
+        return (status && typeof status === 'object' ? (status.status || status.statusCode) : status) || 'Chờ xử lý';
     }
   }
 
   // ─── Chuẩn hóa trạng thái đơn hàng (Đồng bộ chuẩn hệ thống Chéri) ───────────────
-  normalizeStatus(status: string | undefined): string {
-    const s = (status || '').toUpperCase().trim();
-    if (s === 'PENDING') return 'PENDING';
-    if (s === 'CONFIRMED') return 'CONFIRMED';
-    if (s === 'PROCESSING') return 'PROCESSING';
-    if (s === 'SHIPPING' || s === 'SHIPPED') return 'SHIPPING';
-    if (s === 'DELIVERY_FAILED') return 'DELIVERY_FAILED';
-    if (s === 'DELIVERED' || s === 'COMPLETED') return 'DELIVERED';
-    if (s === 'CANCELLED' || s === 'CANCELED') return 'CANCELLED';
-    if (s === 'RETURNED' || s === 'REFUNDED') return 'RETURNED';
+  normalizeStatus(status: any): string {
+    if (status && typeof status === 'object') {
+      return this.normalizeStatus(status.statusCode || status.rawStatus || status.status);
+    }
+    const s = String(status || '').toUpperCase().trim();
+    if (['PENDING', 'CHỜ XÁC NHẬN', 'NEW', 'CHỜ XỬ LÝ'].includes(s)) return 'PENDING';
+    if (['CONFIRMED', 'ĐÃ XÁC NHẬN'].includes(s)) return 'CONFIRMED';
+    if (['PROCESSING', 'ĐANG XỬ LÝ'].includes(s)) return 'PROCESSING';
+    if (['SHIPPING', 'SHIPPED', 'ĐANG GIAO', 'ĐANG GIAO HÀNG'].includes(s)) return 'SHIPPING';
+    if (['DELIVERY_FAILED', 'GIAO THẤT BẠI', 'GIAO HÀNG KHÔNG THÀNH CÔNG'].includes(s)) return 'DELIVERY_FAILED';
+    if (['DELIVERED', 'COMPLETED', 'ĐÃ GIAO', 'ĐÃ GIAO HÀNG'].includes(s)) return 'DELIVERED';
+    if (['CANCELLED', 'CANCELED', 'ĐÃ HỦY'].includes(s)) return 'CANCELLED';
+    if (['RETURNED', 'REFUNDED', 'TRẢ HÀNG', 'ĐÃ HOÀN TRẢ', 'HOÀN TRẢ', 'ĐÃ TRẢ HÀNG'].includes(s)) return 'RETURNED';
     return s;
   }
 
@@ -281,7 +284,7 @@ export class OrderComponent implements OnInit, OnDestroy {
    */
   get isDeliveredOrder(): boolean {
     if (!this.currentOrder) return false;
-    const rawStatus = this.normalizeStatus(this.currentOrder.status);
+    const rawStatus = this.normalizeStatus(this.currentOrder.statusCode || this.currentOrder.rawStatus || this.currentOrder.status);
     if (rawStatus !== 'DELIVERED') {
       return false;
     }

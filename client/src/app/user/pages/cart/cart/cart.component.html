@@ -323,9 +323,9 @@
               <div class="guest-banner-title">Mua hàng nhanh không cần tài khoản</div>
               <div class="guest-banner-text">
                 Bạn đang mua hàng với tư cách <strong>Khách vãng lai</strong>. Nếu đã có tài khoản, hãy
-                <a [routerLink]="['/' + (lang$ | async) + '/auth/signin']" class="guest-link">Đăng nhập</a>
+                <a [routerLink]="['/' + ((lang$ | async) || 'vi') + '/auth/signin']" class="guest-link">Đăng nhập</a>
                 hoặc
-                <a [routerLink]="['/' + (lang$ | async) + '/auth/signup']" class="guest-link">Đăng ký</a>
+                <a [routerLink]="['/' + ((lang$ | async) || 'vi') + '/auth/signup']" class="guest-link">Đăng ký</a>
                 để lưu lịch sử đơn hàng. Hoặc chỉ cần điền thông tin bên dưới để hoàn tất đặt hàng ngay!
               </div>
             </div>

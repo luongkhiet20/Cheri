@@ -125,8 +125,13 @@
 
           <div class="form-group">
             <label class="form-label">Hoặc tải file từ máy tính</label>
-            <input type="file" class="form-control file-input" accept="image/*"
+            <input type="file" class="form-control file-input" accept="image/*" multiple
+              [disabled]="isUploadingImage"
               (change)="onImageFileSelected($event)" />
+            <div *ngIf="isUploadingImage" class="text-muted mt-1 small" style="display: flex; align-items: center; gap: 6px;">
+              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+              <span>Đang tải ảnh lên Cloudinary (cheri/products)...</span>
+            </div>
           </div>
         </div>
 

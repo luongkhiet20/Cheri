@@ -1,0 +1,78 @@
+<!-- RIGHT: Profile Form Card -->
+<aside class="profile-sidebar-card">
+
+  <!-- Title with red bar -->
+  <div class="profile-card-heading">
+    <span class="heading-bar"></span>
+    <h3 class="heading-text">Hồ sơ</h3>
+  </div>
+
+  <!-- Basic info form -->
+  <div class="profile-form-body">
+
+    <div class="form-field-group">
+      <label class="field-label">Họ và tên</label>
+      <input type="text" class="field-input" [(ngModel)]="formName" placeholder="Nhập họ và tên" />
+    </div>
+
+    <div class="form-field-group">
+      <label class="field-label">Email liên lạc</label>
+      <input type="email" class="field-input readonly-input" [(ngModel)]="formEmail" [readonly]="true"
+        title="Email định danh tài khoản" />
+    </div>
+
+    <div class="form-field-group">
+      <label class="field-label">Điện thoại liên hệ</label>
+      <input type="tel" class="field-input" [(ngModel)]="formPhone" placeholder="Nhập số điện thoại" />
+    </div>
+
+    <div class="form-field-group">
+      <label class="field-label">Giới tính</label>
+      <select class="field-input" [(ngModel)]="formGender">
+        <option value="">Chọn giới tính</option>
+        <option value="Nam">Nam</option>
+        <option value="Nữ">Nữ</option>
+        <option value="Khác">Khác</option>
+      </select>
+    </div>
+
+    <div class="form-field-group">
+      <label class="field-label">Ngày sinh</label>
+      <input type="date" class="field-input" [(ngModel)]="formDateOfBirth" [min]="minBirthDate"
+        [max]="maxBirthDate" />
+    </div>
+
+    <div class="form-field-group">
+      <label class="field-label">Địa chỉ giao hàng mặc định</label>
+      <textarea class="field-input field-textarea" [(ngModel)]="formAddress" rows="2"
+        placeholder="Nhập địa chỉ giao hàng"></textarea>
+    </div>
+
+    <!-- Password change section -->
+    <div class="password-sub-heading">Đổi mật khẩu</div>
+
+    <div class="form-field-group">
+      <label class="field-label-sub" for="profile-new-password">Mật khẩu mới</label>
+      <input id="profile-new-password" type="password" class="field-input" name="profileNewPassword"
+        [(ngModel)]="formNewPassword" placeholder="Để trống nếu không muốn đổi" autocomplete="new-password" />
+    </div>
+
+    <div class="form-field-group">
+      <label class="field-label-sub" for="profile-confirm-password">Nhập lại mật khẩu mới</label>
+      <input id="profile-confirm-password" type="password" class="field-input" name="profileConfirmPassword"
+        [(ngModel)]="formConfirmPassword" placeholder="Để trống nếu không muốn đổi" autocomplete="new-password" />
+    </div>
+
+    <!-- Feedback messages -->
+    <div class="profile-feedback-box success" *ngIf="saveSuccess">✓ Đã lưu thông tin thành công.</div>
+    <div class="profile-feedback-box error" *ngIf="saveError">✗ {{ saveError }}</div>
+
+    <!-- Submit button -->
+    <button type="button" class="profile-submit-btn" (click)="onSave()" [disabled]="isSaving">
+      <span *ngIf="!isSaving">Lưu</span>
+      <span *ngIf="isSaving">Đang lưu...</span>
+    </button>
+
+  </div>
+
+</aside>

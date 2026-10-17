@@ -15,7 +15,7 @@ module.exports = function registerCartRoutes(app, { getDb, db: staticDb, formatP
     if (typeof connectToMongo === 'function') {
       return await connectToMongo();
     }
-    const adminServer = require('./admin-server');
+    const adminServer = require('../admin-server');
     return await adminServer.connectToMongo();
   }
 

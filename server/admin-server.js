@@ -9,6 +9,24 @@ const fs = require('fs');
 const multer = require('multer');
 const os = require('os');
 const { trackingNumberUpdateFields } = require('./src/orders/tracking-update.cjs');
+const {
+  getGoogleCallbackUrl,
+  getFrontendOrigin,
+  getGoogleAuthUrl,
+  exchangeCodeForTokens,
+  fetchGoogleUserProfile,
+  syncGoogleUserWithDb,
+  createTokensAndExchangeCode,
+  verifyExchangeCode
+} = require('./services/google-oauth-service');
+const {
+  generateUploadSignature,
+  generateReturnUploadSignature,
+  uploadToCloudinary,
+  normalizeReturnProofImages,
+  normalizeProductImages,
+  normalizeSettingsImages
+} = require('./services/cloudinary-service');
 
 const app = express();
 const PORT = process.env.ADMIN_PORT || process.env.PORT_ADMIN || 5000;
@@ -93,6 +111,56 @@ app.post('/api/upload/image', (req, res) => {
       size: req.file.size
     });
   });
+});
+
+const uploadMemoryImage = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Chỉ chấp nhận tệp hình ảnh (PNG, JPG, JPEG, WEBP, SVG, GIF)'));
+    }
+    cb(null, true);
+  }
+});
+
+// Endpoint signed Cloudinary upload signature
+app.get('/api/admin/cloudinary-signature', (req, res) => {
+  try {
+    const folder = req.query.folder || 'cheri/products';
+    const sigData = generateUploadSignature(folder);
+    res.json({ success: true, data: sigData });
+  } catch (err) {
+    console.error('Error generating Cloudinary signature:', err);
+    res.status(500).json({ success: false, message: err.message || 'Lỗi khi tạo chữ ký Cloudinary' });
+  }
+});
+
+// Endpoint upload image for CMS & Admin products
+app.post('/api/admin/images/upload', uploadMemoryImage.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Vui lòng chọn tệp hình ảnh' });
+    }
+    const targetFolder = req.query.folder || (req.query.titleUrl ? 'cheri/products' : 'cheri/cms');
+    const result = await uploadToCloudinary(req.file.buffer, {
+      folder: targetFolder,
+      tags: ['cheri-admin-upload']
+    });
+
+    res.json({
+      success: true,
+      url: result.secure_url,
+      secure_url: result.secure_url,
+      all: [result.secure_url],
+      public_id: result.public_id,
+      format: result.format,
+      bytes: result.bytes
+    });
+  } catch (err) {
+    console.error('Admin image upload error:', err);
+    res.status(500).json({ success: false, message: err.message || 'Tải ảnh lên máy chủ thất bại' });
+  }
 });
 
 let db = null;
@@ -1852,8 +1920,9 @@ app.post('/api/products', async (req, res) => {
       ? generateSlug(body.titleUrl)
       : generateSlug(vi.title);
 
-    const mainImageUrl = body.mainImage?.url || body.image || '';
-    const mainImageName = body.mainImage?.name || vi.title || 'product-image';
+    const normalizedImgs = await normalizeProductImages(body.images, body.mainImage || { url: body.image || '', name: vi.title });
+    const mainImageUrl = normalizedImgs.mainImage?.url || '';
+    const mainImageName = normalizedImgs.mainImage?.name || vi.title || 'product-image';
 
     const newProduct = {
       titleUrl: generatedSlug,
@@ -1861,7 +1930,7 @@ app.post('/api/products', async (req, res) => {
         url: mainImageUrl,
         name: mainImageName
       },
-      images: Array.isArray(body.images) ? body.images : (mainImageUrl ? [mainImageUrl] : []),
+      images: normalizedImgs.images.length > 0 ? normalizedImgs.images : (mainImageUrl ? [mainImageUrl] : []),
       tags: Array.isArray(body.tags) ? body.tags.map(t => String(t).trim()).filter(Boolean) : [],
       dateAdded: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -2014,14 +2083,18 @@ app.put('/api/products/:id', async (req, res) => {
       ? generateSlug(body.titleUrl)
       : (existing.titleUrl || generateSlug(vi.title));
 
-    const mainImageUrl = body.mainImage?.url !== undefined ? body.mainImage.url : (existing.mainImage?.url || '');
-    const mainImageName = body.mainImage?.name !== undefined ? body.mainImage.name : (existing.mainImage?.name || vi.title || '');
+    const normalizedImgs = await normalizeProductImages(
+      body.images !== undefined ? body.images : existing.images,
+      body.mainImage !== undefined ? body.mainImage : existing.mainImage
+    );
+    const mainImageUrl = normalizedImgs.mainImage?.url !== undefined ? normalizedImgs.mainImage.url : (existing.mainImage?.url || '');
+    const mainImageName = normalizedImgs.mainImage?.name !== undefined ? normalizedImgs.mainImage.name : (existing.mainImage?.name || vi.title || '');
 
     const updateFields = {
       titleUrl: generatedSlug,
       'mainImage.url': mainImageUrl,
       'mainImage.name': mainImageName,
-      images: Array.isArray(body.images) ? body.images : (existing.images || []),
+      images: normalizedImgs.images,
       tags: Array.isArray(body.tags) ? body.tags.map(t => String(t).trim()).filter(Boolean) : (existing.tags || []),
       visibility: visibility,
       variants: normalizedVariants,
@@ -2839,11 +2912,11 @@ function formatOrder(o) {
     taxAmount: getFiniteNumber(o.taxAmount),
     couponCode: o.couponCode || null,
     couponDiscount: getFiniteNumber(o.couponDiscount),
-    totalAmount: totalPrice,
     statusCode,
     rawStatus: statusCode || null,
-    status: statusText,
+    status: statusCode || statusText,
     statusText,
+    statusLabel: statusText,
     statusVariant: statusMeta?.variant || 'neutral',
     returnRequests,
     returnRequest: o.returnRequest || activeReturnReq,
@@ -3559,10 +3632,29 @@ app.post('/api/admin/orders', async (req, res) => {
   }
 });
 
-// 4.1 GET /api/orders (List with composed search, filters and pagination)
+// 4.1 GET /api/orders (List with composed search, filters and pagination, with Storefront user support)
 app.get('/api/orders', async (req, res) => {
   try {
     const ordersFilter = {};
+
+    let userFromToken = null;
+    const authHeader = req.headers.authorization || '';
+    if (authHeader.startsWith('Bearer ')) {
+      const token = authHeader.slice(7).trim();
+      try {
+        userFromToken = jwt.verify(token, process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789');
+      } catch (_) {
+        try {
+          userFromToken = jwt.decode(token);
+        } catch (_) {}
+      }
+    }
+
+    const userRoles = userFromToken?.roles || userFromToken?.role || [];
+    const roles = Array.isArray(userRoles) ? userRoles : [userRoles];
+    const isAdmin = roles.some(r => typeof r === 'string' && r.toLowerCase().includes('admin'));
+    const isStorefrontUserCall = Boolean(userFromToken && !isAdmin && !req.query.page && !req.query.status && !req.query.search);
+
     if (req.query.userId) {
       const uId = String(req.query.userId).trim();
       if (ObjectId.isValid(uId)) {
@@ -3578,9 +3670,39 @@ app.get('/api/orders', async (req, res) => {
           { _user: uId }
         ];
       }
+    } else if (isStorefrontUserCall) {
+      const uId = (userFromToken.id || userFromToken._id || userFromToken.sub)?.toString();
+      const userConditions = [];
+      if (uId) {
+        userConditions.push({ userId: uId }, { _user: uId });
+        if (ObjectId.isValid(uId)) {
+          userConditions.push({ userId: new ObjectId(uId) }, { _user: new ObjectId(uId) });
+        }
+      }
+      if (userFromToken.email) {
+        userConditions.push({ customerEmail: userFromToken.email.toLowerCase().trim() });
+      }
+      if (userConditions.length > 0) {
+        ordersFilter.$or = userConditions;
+      }
     }
-    const ordersRaw = await db.collection('orders').find(ordersFilter).sort({ _id: -1 }).toArray();
+
+    const ordersRaw = await db.collection('orders').find(ordersFilter).sort({ createdAt: -1, dateAdded: -1, _id: -1 }).toArray();
     const formattedOrders = ordersRaw.map(formatOrder);
+
+    if (isStorefrontUserCall) {
+      return res.json({
+        success: true,
+        data: formattedOrders,
+        pagination: {
+          page: 1,
+          pageSize: formattedOrders.length,
+          total: formattedOrders.length,
+          totalPages: 1
+        }
+      });
+    }
+
     const paymentMethodCodeById = new Map();
 
     if (normalizeOrderQueryValue(req.query.paymentMethod)) {
@@ -4024,6 +4146,344 @@ app.get('/api/orders/store-contact', async (req, res) => {
       address: '',
       data: { email: '', phone: '', address: '' }
     });
+  }
+});
+
+// 4.1c PAYMENT METHODS & SHIPPING METHODS & COUPONS & ADDRESS FOR STOREFRONT & ORDERS
+app.get('/api/orders/payment-methods', async (req, res) => {
+  try {
+    const list = await db.collection('payment_methods')
+      .find({
+        $or: [
+          { status: 'ACTIVE' },
+          { isActive: true }
+        ]
+      })
+      .sort({ name: 1 })
+      .toArray();
+
+    const formatted = list.map(pm => {
+      const isAct = pm.isActive !== false && pm.status !== 'INACTIVE';
+      return {
+        _id: pm._id.toString(),
+        id: pm._id.toString(),
+        name: pm.name || '',
+        code: (pm.code || '').toUpperCase(),
+        type: pm.type || pm.paymentType || 'Online',
+        paymentType: pm.paymentType || pm.type || 'Online',
+        description: pm.description || '',
+        paymentInfo: pm.paymentInfo || '',
+        paymentProofImage: pm.paymentProofImage || pm.proofImage || '',
+        logo: pm.logo || '',
+        status: isAct ? 'ACTIVE' : 'INACTIVE',
+        isActive: isAct,
+        statusText: isAct ? 'Đang hoạt động' : 'Tạm khóa'
+      };
+    }).filter(m => m.status === 'ACTIVE');
+
+    res.json(formatted);
+  } catch (error) {
+    console.error('Error in GET /api/orders/payment-methods:', error);
+    res.json([]);
+  }
+});
+
+app.get('/api/orders/payment-methods/all', async (req, res) => {
+  try {
+    const list = await db.collection('payment_methods')
+      .find({})
+      .sort({ name: 1 })
+      .toArray();
+
+    const formatted = list.map(pm => {
+      const isAct = pm.isActive !== false && pm.status !== 'INACTIVE';
+      return {
+        _id: pm._id.toString(),
+        id: pm._id.toString(),
+        name: pm.name || '',
+        code: (pm.code || '').toUpperCase(),
+        type: pm.type || pm.paymentType || 'Online',
+        paymentType: pm.paymentType || pm.type || 'Online',
+        description: pm.description || '',
+        paymentInfo: pm.paymentInfo || '',
+        paymentProofImage: pm.paymentProofImage || pm.proofImage || '',
+        logo: pm.logo || '',
+        status: isAct ? 'ACTIVE' : 'INACTIVE',
+        isActive: isAct,
+        statusText: isAct ? 'Đang hoạt động' : 'Tạm khóa'
+      };
+    });
+
+    res.json(formatted);
+  } catch (error) {
+    console.error('Error in GET /api/orders/payment-methods/all:', error);
+    res.json([]);
+  }
+});
+
+app.post('/api/orders/payment-methods', async (req, res) => {
+  try {
+    const data = req.body || {};
+    if (data._id && ObjectId.isValid(data._id)) {
+      const { _id, ...fields } = data;
+      fields.updatedAt = new Date();
+      await db.collection('payment_methods').updateOne({ _id: new ObjectId(_id) }, { $set: fields });
+      const updated = await db.collection('payment_methods').findOne({ _id: new ObjectId(_id) });
+      return res.json(updated);
+    }
+    data.createdAt = new Date();
+    data.updatedAt = new Date();
+    const result = await db.collection('payment_methods').insertOne(data);
+    res.json({ ...data, _id: result.insertedId });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.delete('/api/orders/payment-methods/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const query = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { code: id };
+    await db.collection('payment_methods').deleteOne(query);
+    res.json({ success: true, message: 'Xóa phương thức thanh toán thành công' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.get('/api/orders/shipping-methods', async (req, res) => {
+  try {
+    const list = await db.collection('shippingmethods')
+      .find({
+        $or: [
+          { status: 'ACTIVE' },
+          { isActive: true }
+        ]
+      })
+      .sort({ baseFee: 1, baseCost: 1 })
+      .toArray();
+
+    const formatted = list.map(m => {
+      const isAct = m.status === 'ACTIVE' || (m.isActive !== false && m.status !== 'INACTIVE');
+      const baseFee = m.baseFee !== undefined ? m.baseFee : (m.baseCost !== undefined ? m.baseCost : 25000);
+      const freeThreshold = m.freeShippingThreshold || m.freeShippingCondition?.minimumOrderValue || 0;
+      return {
+        _id: m._id ? m._id.toString() : m.id,
+        id: m._id ? m._id.toString() : (m.id || m.code),
+        name: m.name,
+        code: m.code,
+        fee: baseFee,
+        baseFee: baseFee,
+        baseCost: baseFee,
+        estimatedDeliveryTime: m.estimatedDeliveryTime || m.estimatedDays || '1–3 ngày làm việc',
+        estimatedDays: m.estimatedDays || m.estimatedDeliveryTime || '1–3 ngày làm việc',
+        freeShippingCondition: m.freeShippingCondition || {
+          enabled: freeThreshold > 0,
+          minimumOrderValue: freeThreshold,
+          description: freeThreshold > 0 ? `Miễn phí vận chuyển cho đơn hàng từ ${freeThreshold.toLocaleString('vi-VN')} đ` : ''
+        },
+        status: isAct ? 'ACTIVE' : 'INACTIVE',
+        isActive: isAct,
+        description: m.description || ''
+      };
+    }).filter(m => m.status === 'ACTIVE');
+
+    res.json(formatted);
+  } catch (error) {
+    console.error('Error in GET /api/orders/shipping-methods:', error);
+    res.json([]);
+  }
+});
+
+app.get('/api/orders/shipping-methods/all', async (req, res) => {
+  try {
+    const list = await db.collection('shippingmethods')
+      .find({})
+      .sort({ name: 1 })
+      .toArray();
+
+    const formatted = list.map(m => {
+      const isAct = m.status === 'ACTIVE' || (m.isActive !== false && m.status !== 'INACTIVE');
+      const baseFee = m.baseFee !== undefined ? m.baseFee : (m.baseCost !== undefined ? m.baseCost : 25000);
+      return {
+        _id: m._id ? m._id.toString() : m.id,
+        id: m._id ? m._id.toString() : (m.id || m.code),
+        name: m.name,
+        code: m.code,
+        fee: baseFee,
+        baseFee: baseFee,
+        baseCost: baseFee,
+        estimatedDeliveryTime: m.estimatedDeliveryTime || m.estimatedDays || '1–3 ngày làm việc',
+        estimatedDays: m.estimatedDays || m.estimatedDeliveryTime || '1–3 ngày làm việc',
+        status: isAct ? 'ACTIVE' : 'INACTIVE',
+        isActive: isAct,
+        description: m.description || ''
+      };
+    });
+
+    res.json(formatted);
+  } catch (error) {
+    console.error('Error in GET /api/orders/shipping-methods/all:', error);
+    res.json([]);
+  }
+});
+
+app.post('/api/orders/shipping-methods', async (req, res) => {
+  try {
+    const data = req.body || {};
+    if (data._id && ObjectId.isValid(data._id)) {
+      const { _id, ...fields } = data;
+      fields.updatedAt = new Date();
+      await db.collection('shippingmethods').updateOne({ _id: new ObjectId(_id) }, { $set: fields });
+      const updated = await db.collection('shippingmethods').findOne({ _id: new ObjectId(_id) });
+      return res.json(updated);
+    }
+    data.createdAt = new Date();
+    data.updatedAt = new Date();
+    const result = await db.collection('shippingmethods').insertOne(data);
+    res.json({ ...data, _id: result.insertedId });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.delete('/api/orders/shipping-methods/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const query = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { code: id };
+    await db.collection('shippingmethods').deleteOne(query);
+    res.json({ success: true, message: 'Xóa phương thức vận chuyển thành công' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.post('/api/orders/coupon/validate', async (req, res) => {
+  try {
+    const { code, subtotal } = req.body || {};
+    if (!code || !code.trim()) {
+      return res.json({ valid: false, message: 'Vui lòng nhập mã giảm giá' });
+    }
+
+    const cleanCode = code.trim().toUpperCase();
+    const coupon = await db.collection('coupons').findOne({ code: cleanCode });
+
+    if (!coupon) {
+      return res.json({ valid: false, message: 'Mã giảm giá không tồn tại hoặc không hợp lệ' });
+    }
+
+    if (!coupon.isActive) {
+      return res.json({ valid: false, message: 'Mã giảm giá hiện đang tạm ngừng hoạt động' });
+    }
+
+    const now = new Date();
+    if (coupon.startDate && new Date(coupon.startDate) > now) {
+      const startFormatted = new Date(coupon.startDate).toLocaleDateString('vi-VN');
+      return res.json({ valid: false, message: `Chương trình ưu đãi chỉ bắt đầu từ ${startFormatted}` });
+    }
+
+    if (coupon.endDate && new Date(coupon.endDate) < now) {
+      const endFormatted = new Date(coupon.endDate).toLocaleDateString('vi-VN');
+      return res.json({ valid: false, message: `Mã giảm giá đã hết hạn sử dụng (hết hạn ngày ${endFormatted})` });
+    }
+
+    if (coupon.usageLimit > 0 && (coupon.usedCount || 0) >= coupon.usageLimit) {
+      return res.json({ valid: false, message: 'Mã giảm giá đã hết lượt sử dụng' });
+    }
+
+    const sub = Number(subtotal) || 0;
+    if (coupon.minOrderValue > 0 && sub < coupon.minOrderValue) {
+      const minFormatted = coupon.minOrderValue.toLocaleString('vi-VN');
+      const diffFormatted = (coupon.minOrderValue - sub).toLocaleString('vi-VN');
+      return res.json({
+        valid: false,
+        message: `Mã ${cleanCode} chỉ áp dụng cho đơn hàng từ ${minFormatted} ₫ trở lên (cần thêm ${diffFormatted} ₫)`
+      });
+    }
+
+    let discountAmount = 0;
+    const discountVal = Number(coupon.discountValue) || 0;
+
+    if (coupon.discountType === 'PERCENTAGE') {
+      discountAmount = Math.round((sub * discountVal) / 100);
+      const maxCap = Number(coupon.maxDiscount) || 0;
+      if (maxCap > 0 && discountAmount > maxCap) {
+        discountAmount = maxCap;
+      }
+    } else {
+      discountAmount = discountVal;
+    }
+
+    if (discountAmount > sub) {
+      discountAmount = sub;
+    }
+    if (discountAmount < 0) {
+      discountAmount = 0;
+    }
+
+    return res.json({
+      valid: true,
+      code: coupon.code,
+      description: coupon.description || '',
+      discountType: coupon.discountType,
+      discountValue: coupon.discountValue,
+      discountAmount,
+      maxDiscount: coupon.maxDiscount || 0,
+      minOrderValue: coupon.minOrderValue || 0,
+      startDate: coupon.startDate,
+      endDate: coupon.endDate,
+      usageLimit: coupon.usageLimit || 0,
+      usedCount: coupon.usedCount || 0,
+      message: 'Áp dụng mã giảm giá thành công!'
+    });
+  } catch (err) {
+    console.error('Error validating coupon:', err);
+    return res.status(500).json({ valid: false, message: 'Lỗi máy chủ khi kiểm tra mã giảm giá' });
+  }
+});
+
+app.get('/api/orders/address/provinces', async (req, res) => {
+  try {
+    const response = await fetch('https://provinces.open-api.vn/api/v1/p/');
+    const data = await response.json();
+    res.json(data);
+  } catch (err) {
+    res.json([]);
+  }
+});
+
+app.get('/api/orders/address/districts/:code', async (req, res) => {
+  try {
+    const response = await fetch(`https://provinces.open-api.vn/api/v1/p/${req.params.code}?depth=2`);
+    const data = await response.json();
+    res.json(data?.districts || []);
+  } catch (err) {
+    res.json([]);
+  }
+});
+
+app.get('/api/orders/address/wards/:code', async (req, res) => {
+  try {
+    const response = await fetch(`https://provinces.open-api.vn/api/v1/d/${req.params.code}?depth=2`);
+    const data = await response.json();
+    res.json(data?.wards || []);
+  } catch (err) {
+    res.json([]);
+  }
+});
+
+// 4.1.9 GET /api/orders/return-upload-signature (Lấy chữ ký upload ảnh minh chứng lên Cloudinary)
+app.get('/api/orders/return-upload-signature', (req, res) => {
+  try {
+    const authHeader = req.headers.authorization || '';
+    if (!authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Unauthorized: Vui lòng đăng nhập' });
+    }
+    const signatureData = generateReturnUploadSignature();
+    return res.json({ success: true, ...signatureData });
+  } catch (err) {
+    console.error('Error generating Cloudinary signature:', err);
+    return res.status(500).json({ success: false, message: err.message || 'Lỗi tạo chữ ký upload Cloudinary' });
   }
 });
 
@@ -5022,12 +5482,24 @@ async function handleCreateReturnRequest(req, res) {
     const orderCode = order.orderId || String(order._id).slice(-6).toUpperCase();
     const requestId = `RET-${orderCode}-${Date.now().toString().slice(-4)}`;
 
+    // Xử lý ảnh minh chứng (Đồng bộ Cloudinary cheri/return-proofs, tối đa 5 ảnh)
+    const rawImages = Array.isArray(body.images) ? body.images.slice(0, 5) : [];
+    let savedImages = [];
+    try {
+      savedImages = await normalizeReturnProofImages(rawImages);
+    } catch (cldErr) {
+      return res.status(400).json({
+        success: false,
+        message: 'Lỗi tải ảnh minh chứng lên Cloudinary: ' + (cldErr.message || 'Không thể xử lý ảnh')
+      });
+    }
+
     const newReturnRequest = {
       requestId,
       requestedAt,
       reason,
       description: String(body.description || '').trim(),
-      images: Array.isArray(body.images) ? body.images : [],
+      images: savedImages,
       refundMethod: String(body.refundMethod || 'ORIGINAL_PAYMENT'),
       status: 'PENDING',
       rejectionReason: '',
@@ -5680,8 +6152,9 @@ function formatPaymentMethod(pm) {
     name: pm.name || '',
     code: (pm.code || '').toUpperCase(),
     type: pm.type || pm.paymentType || 'Online',
+    paymentType: pm.paymentType || pm.type || 'Online',
     isActive: isActive,
-    status: isActive ? 'Đang hoạt động' : 'Tạm khóa',
+    status: pm.status || (isActive ? 'ACTIVE' : 'INACTIVE'),
     statusText: isActive ? 'Đang hoạt động' : 'Tạm khóa',
     statusVariant: isActive ? 'success' : 'neutral',
     description: pm.description || '',
@@ -6040,7 +6513,7 @@ function formatShippingMethod(sm) {
     freeShippingThreshold: freeShippingThreshold,
     freeShippingThresholdText: freeShippingThresholdText,
     isActive: isActive,
-    status: isActive ? 'Đang bật' : 'Đang tắt',
+    status: sm.status || (isActive ? 'ACTIVE' : 'INACTIVE'),
     statusText: isActive ? 'Đang bật' : 'Đang tắt',
     statusVariant: isActive ? 'success' : 'neutral',
     description: sm.description || '',
@@ -8188,10 +8661,12 @@ app.patch('/api/settings', async (req, res) => {
 
     // Site settings
     if (body.site && typeof body.site === 'object') {
-      if (body.site.name !== undefined) updateFields['site.name'] = String(body.site.name).trim();
-      if (body.site.logo !== undefined) updateFields['site.logo'] = String(body.site.logo).trim();
-      if (body.site.favicon !== undefined) updateFields['site.favicon'] = String(body.site.favicon).trim();
-      if (body.site.description !== undefined) updateFields['site.description'] = String(body.site.description).trim();
+      const normalizedSite = await normalizeSettingsImages({ site: body.site });
+      const siteData = normalizedSite.site;
+      if (siteData.name !== undefined) updateFields['site.name'] = String(siteData.name).trim();
+      if (siteData.logo !== undefined) updateFields['site.logo'] = String(siteData.logo).trim();
+      if (siteData.favicon !== undefined) updateFields['site.favicon'] = String(siteData.favicon).trim();
+      if (siteData.description !== undefined) updateFields['site.description'] = String(siteData.description).trim();
     }
 
     // Contact settings
@@ -8279,7 +8754,7 @@ app.get('/api/translations', async (req, res) => {
 });
 
 // Register Customer Storefront Cart Routes (Full Serverless / Express support)
-require('./cart-routes')(app, {
+require('./routes/cart-routes')(app, {
   getDb: () => db,
   formatProduct,
   connectToMongo,
@@ -8487,6 +8962,90 @@ app.get('/api/auth', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────
+// GOOGLE OAUTH ROUTES (STATELESS & SERVERLESS-READY FOR VERCEL)
+// ─────────────────────────────────────────────────────────────
+
+// 1. Khởi tạo luồng đăng nhập Google OAuth
+app.get('/api/auth/google', (req, res) => {
+  try {
+    const origin = getFrontendOrigin(req);
+    if (!process.env.GOOGLE_CLIENT_ID) {
+      console.error('[Google OAuth] GOOGLE_CLIENT_ID chưa được cấu hình');
+      return res.redirect(`${origin}/vi/authorize/signin?error=oauth_config_missing`);
+    }
+    const googleAuthUrl = getGoogleAuthUrl(req);
+    return res.redirect(googleAuthUrl);
+  } catch (err) {
+    console.error('[Google OAuth Init Error]:', err.message);
+    const origin = getFrontendOrigin(req);
+    return res.redirect(`${origin}/vi/authorize/signin?error=oauth_init_failed`);
+  }
+});
+
+// 2. Google OAuth Callback (Nhận mã authorization code từ Google)
+app.get('/api/auth/google/callback', async (req, res) => {
+  const origin = getFrontendOrigin(req);
+  try {
+    const { code, error: googleError } = req.query || {};
+
+    if (googleError || !code) {
+      console.warn('[Google OAuth Callback] Lỗi từ Google hoặc từ chối truy cập:', googleError);
+      return res.redirect(`${origin}/vi/authorize/signin?error=oauth_denied`);
+    }
+
+    const callbackUrl = getGoogleCallbackUrl(req);
+
+    // Bước 1: Trao đổi authorization code lấy access_token từ Google
+    const tokenData = await exchangeCodeForTokens(code, callbackUrl);
+    if (!tokenData || !tokenData.access_token) {
+      console.error('[Google OAuth] Không lấy được access_token từ Google');
+      return res.redirect(`${origin}/vi/authorize/signin?error=oauth_token_exchange_failed`);
+    }
+
+    // Bước 2: Lấy thông tin tài khoản người dùng từ Google
+    const profile = await fetchGoogleUserProfile(tokenData.access_token);
+    if (!profile || !profile.email) {
+      console.error('[Google OAuth] Không lấy được email người dùng từ Google Profile');
+      return res.redirect(`${origin}/vi/authorize/signin?error=oauth_identity_failed`);
+    }
+
+    // Bước 3: Tìm hoặc tạo tài khoản người dùng trong MongoDB
+    const { user, isNewUser } = await syncGoogleUserWithDb(db, profile);
+
+    // Bước 4: Tạo access token và mã trao đổi ngắn hạn (5 phút) an toàn
+    const { exchangeCode } = createTokensAndExchangeCode(jwt, user, isNewUser);
+
+    // Bước 5: Điều hướng về Frontend /jwtToken để client hoàn tất đăng nhập
+    const redirectUrl = `${origin}/jwtToken?code=${encodeURIComponent(exchangeCode)}`;
+    return res.redirect(redirectUrl);
+  } catch (err) {
+    console.error('[Google OAuth Callback Error]:', err.message);
+    const msg = String(err?.message || '').toLowerCase();
+    if (err?.code === 'ACCOUNT_LOCKED' || msg.includes('bị khóa') || msg.includes('ngừng hoạt động')) {
+      return res.redirect(`${origin}/vi/authorize/signin?error=account_locked`);
+    }
+    if (msg.includes('mismatch') || msg.includes('redirect_uri')) {
+      return res.redirect(`${origin}/vi/authorize/signin?error=redirect_uri_mismatch`);
+    }
+    return res.redirect(`${origin}/vi/authorize/signin?error=oauth_failed`);
+  }
+});
+
+// 3. Trao đổi mã code lấy JWT Access Token và thông tin User
+app.post('/api/auth/exchange-token', async (req, res) => {
+  try {
+    const { code } = req.body || {};
+    if (!code || typeof code !== 'string') {
+      return res.status(400).json({ error: 'Mã trao đổi xác thực không hợp lệ' });
+    }
+    const result = verifyExchangeCode(jwt, code);
+    return res.json(result);
+  } catch (err) {
+    return res.status(401).json({ error: 'Mã xác thực đã hết hạn hoặc không hợp lệ' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
 // CHÉRI CMS HOME PAGE CONFIGURATION (COLLECTION: pages_home)
 // Cấu hình duy nhất, không draft, không versioning
 // ─────────────────────────────────────────────────────────────
@@ -8594,6 +9153,85 @@ app.post('/api/cheri/home/publish', requireHomeAdminAuth, async (req, res) => {
     });
   } catch (err) {
     console.error('Error publishing home configuration:', err);
+    return res.status(500).json({ success: false, message: err.message || 'Lỗi server khi xuất bản' });
+  }
+});
+
+// 4. Public API: Lấy cấu hình trang giới thiệu (About) đã xuất bản duy nhất (Collection: pages_about)
+app.get('/api/cheri/about', async (req, res) => {
+  try {
+    const aboutDoc = await db.collection('pages_about').findOne({ key: 'about_page', status: 'published' });
+    if (!aboutDoc || !Array.isArray(aboutDoc.sections)) {
+      return res.json({ success: true, data: null, sections: [] });
+    }
+    const activeSections = aboutDoc.sections
+      .filter(sec => sec && typeof sec === 'object' && sec.enabled !== false)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+    return res.json({
+      success: true,
+      data: { ...aboutDoc, sections: activeSections },
+      sections: activeSections
+    });
+  } catch (err) {
+    console.error('Error fetching published about configuration:', err);
+    return res.json({ success: true, data: null, sections: [] });
+  }
+});
+
+// 5. Admin API: Lấy cấu hình trang giới thiệu cho Admin CMS
+app.get('/api/cheri/about/admin', requireHomeAdminAuth, async (req, res) => {
+  try {
+    const aboutDoc = await db.collection('pages_about').findOne({ key: 'about_page', status: 'published' });
+    if (!aboutDoc || !Array.isArray(aboutDoc.sections)) {
+      return res.json({ success: true, data: null, sections: [] });
+    }
+    const sortedSections = [...aboutDoc.sections].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    return res.json({
+      success: true,
+      data: { ...aboutDoc, sections: sortedSections },
+      sections: sortedSections
+    });
+  } catch (err) {
+    console.error('Error fetching admin about configuration:', err);
+    return res.status(500).json({ success: false, message: 'Lỗi server khi tải cấu hình About' });
+  }
+});
+
+// 6. Admin API: Xuất bản cấu hình trang giới thiệu (About) lên collection pages_about
+app.post('/api/cheri/about/publish', requireHomeAdminAuth, async (req, res) => {
+  try {
+    const sectionsToPublish = req.body?.sections;
+    if (!sectionsToPublish || !Array.isArray(sectionsToPublish) || sectionsToPublish.length === 0) {
+      return res.status(400).json({ success: false, message: 'Dữ liệu phân đoạn (sections) không hợp lệ hoặc rỗng' });
+    }
+
+    const editorEmail = req.adminUser?.email || req.body?.updatedBy || 'admin';
+    const now = new Date();
+
+    const publishedResult = await db.collection('pages_about').findOneAndUpdate(
+      { key: 'about_page', status: 'published' },
+      {
+        $set: {
+          key: 'about_page',
+          status: 'published',
+          sections: sectionsToPublish,
+          publishedAt: now,
+          updatedBy: editorEmail,
+          updatedAt: now
+        },
+        $setOnInsert: { createdAt: now }
+      },
+      { upsert: true, returnDocument: 'after' }
+    );
+
+    return res.json({
+      success: true,
+      message: 'Xuất bản cấu hình trang giới thiệu thành công',
+      data: publishedResult?.value || publishedResult
+    });
+  } catch (err) {
+    console.error('Error publishing about configuration:', err);
     return res.status(500).json({ success: false, message: err.message || 'Lỗi server khi xuất bản' });
   }
 });

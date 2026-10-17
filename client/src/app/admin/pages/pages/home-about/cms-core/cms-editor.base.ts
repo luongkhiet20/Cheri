@@ -321,7 +321,7 @@ export abstract class CmsEditorBase<S extends CmsSection> implements OnInit, OnD
   protected upload(file: File): Observable<string> {
     const err = this.validateImage(file);
     if (err) return throwError(() => new Error(err));
-    return this.api.uploadImage({ fileToUpload: file, titleUrl: '' }).pipe(
+    return this.api.uploadImage({ fileToUpload: file, titleUrl: '', folder: 'cheri/cms' }).pipe(
       map((res: any) => {
         const url = this.extractUploadedUrl(res);
         if (!url) throw new Error(res?.error?.message || res?.error || 'Máy chủ không trả về URL ảnh hợp lệ');

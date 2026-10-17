@@ -848,9 +848,13 @@ export class ApiService {
     );
   }
 
-  uploadImage({ fileToUpload, titleUrl }: { fileToUpload: any; titleUrl?: string }) {
+  uploadImage({ fileToUpload, titleUrl, folder }: { fileToUpload: any; titleUrl?: string; folder?: string }) {
     if (isPlatformBrowser(this.platformId)) {
-      const titleUrlQuery = titleUrl ? '?titleUrl=' + titleUrl : '';
+      const params = new URLSearchParams();
+      if (titleUrl) params.set('titleUrl', titleUrl);
+      if (folder) params.set('folder', folder);
+      const queryString = params.toString() ? '?' + params.toString() : '';
+
       const accessToken = localStorage.getItem(accessTokenKey);
       const formData: FormData = new FormData();
       formData.append('file', fileToUpload);
@@ -860,7 +864,7 @@ export class ApiService {
         headers = headers.set('Authorization', 'Bearer ' + accessToken);
       }
       const sendHeaders = { headers, withCredentials: true };
-      const uploadUrl = this.apiUrl + '/api/admin/images/upload' + titleUrlQuery;
+      const uploadUrl = this.apiUrl + '/api/admin/images/upload' + queryString;
 
       return this.http
         .post(uploadUrl, formData, {
@@ -873,6 +877,31 @@ export class ApiService {
           catchError((error: Error) => of({ error })),
         );
     }
+    return of(null);
+  }
+
+  getCloudinarySignature(folder: string = 'cheri/products'): Observable<any> {
+    const accessToken = localStorage.getItem(accessTokenKey);
+    let headers = new HttpHeaders();
+    if (accessToken && accessToken !== 'null' && accessToken !== 'undefined') {
+      headers = headers.set('Authorization', 'Bearer ' + accessToken);
+    }
+    return this.http.get(`${this.apiUrl}/api/admin/cloudinary-signature?folder=${encodeURIComponent(folder)}`, {
+      headers,
+      withCredentials: true
+    });
+  }
+
+  uploadDirectToCloudinary(file: File, sigData: any): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('api_key', sigData.apiKey);
+    formData.append('timestamp', String(sigData.timestamp));
+    formData.append('signature', sigData.signature);
+    formData.append('folder', sigData.folder);
+
+    const cloudUploadUrl = `https://api.cloudinary.com/v1_1/${sigData.cloudName}/image/upload`;
+    return this.http.post(cloudUploadUrl, formData);
   }
 
   sendContact(req) {
@@ -1126,6 +1155,29 @@ export class ApiService {
   createReturnRequest(orderId: string, payload: any): Observable<any> {
     const url = `${this.apiUrl}/api/orders/${encodeURIComponent(orderId)}/return-request`;
     return this.http.post(url, payload).pipe(
+      map((res: any) => res),
+      catchError((err: any) => of({ error: err?.error || err })),
+    );
+  }
+
+  getReturnUploadSignature(): Observable<any> {
+    const url = `${this.apiUrl}/api/orders/return-upload-signature`;
+    return this.http.get(url, this.getRequestOptions()).pipe(
+      map((res: any) => res),
+      catchError((err: any) => of({ error: err?.error || err })),
+    );
+  }
+
+  uploadToCloudinaryDirect(file: File, signData: any): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('api_key', signData.apiKey);
+    formData.append('timestamp', signData.timestamp.toString());
+    formData.append('signature', signData.signature);
+    formData.append('folder', signData.folder);
+
+    const uploadUrl = `https://api.cloudinary.com/v1_1/${signData.cloudName}/image/upload`;
+    return this.http.post(uploadUrl, formData).pipe(
       map((res: any) => res),
       catchError((err: any) => of({ error: err?.error || err })),
     );

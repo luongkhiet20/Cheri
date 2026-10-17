@@ -309,14 +309,15 @@
       </div>
 
       <!-- Upload from computer -->
-      <label class="btn-file-upload">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <label class="btn-file-upload" [class.disabled]="isUploadingLogo">
+        <svg *ngIf="!isUploadingLogo" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
           <polyline points="17 8 12 3 7 8"></polyline>
           <line x1="12" y1="3" x2="12" y2="15"></line>
         </svg>
-        <span>Tải ảnh logo từ máy tính</span>
-        <input type="file" accept="image/*" (change)="onLogoFileSelected($event)" class="hidden-file-input" />
+        <span *ngIf="isUploadingLogo" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+        <span>{{ isUploadingLogo ? 'Đang tải lên Cloudinary...' : 'Tải ảnh logo từ máy tính' }}</span>
+        <input type="file" accept="image/*" [disabled]="isUploadingLogo" (change)="onLogoFileSelected($event)" class="hidden-file-input" />
       </label>
 
       <div class="modal-divider"><span>Hoặc</span></div>
@@ -334,7 +335,7 @@
     </div>
     <div class="modal-footer">
       <button type="button" class="btn btn-secondary" (click)="closeLogoModal()">Hủy</button>
-      <button type="button" class="btn btn-primary" (click)="saveLogo()" id="btn-confirm-logo">Xác nhận Logo</button>
+      <button type="button" class="btn btn-primary" [disabled]="isUploadingLogo" (click)="saveLogo()" id="btn-confirm-logo">Xác nhận Logo</button>
     </div>
   </div>
 </div>
@@ -362,14 +363,15 @@
       </div>
 
       <!-- Upload from computer -->
-      <label class="btn-file-upload">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <label class="btn-file-upload" [class.disabled]="isUploadingFavicon">
+        <svg *ngIf="!isUploadingFavicon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
           <polyline points="17 8 12 3 7 8"></polyline>
           <line x1="12" y1="3" x2="12" y2="15"></line>
         </svg>
-        <span>Tải biểu tượng từ máy tính</span>
-        <input type="file" accept="image/*,.ico" (change)="onFaviconFileSelected($event)" class="hidden-file-input" />
+        <span *ngIf="isUploadingFavicon" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+        <span>{{ isUploadingFavicon ? 'Đang tải lên Cloudinary...' : 'Tải biểu tượng từ máy tính' }}</span>
+        <input type="file" accept="image/*,.ico" [disabled]="isUploadingFavicon" (change)="onFaviconFileSelected($event)" class="hidden-file-input" />
       </label>
 
       <div class="modal-divider"><span>Hoặc</span></div>

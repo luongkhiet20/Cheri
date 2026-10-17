@@ -174,6 +174,8 @@ function createMockModels() {
       const data = await res.lean();
       return !!data;
     },
+    _orders: orders,
+    _addOrder: (o) => orders.push(o),
   };
 
   function MockReviewDocument(data) {
@@ -616,3 +618,89 @@ test('9. Admin duyệt và từ chối review với updateReviewStatusByAdmin', 
   const publicList = await service.getReviewsByProduct(p1Id.toString(), {});
   assert.equal(publicList.reviews.length, 0);
 });
+
+test('10. Kiểm tra điều kiện đánh giá theo trạng thái yêu cầu trả hàng / hoàn tiền', async () => {
+  const { reviewModel, productModel, orderModel, p1Id, p2Id, u1Id } = createMockModels();
+  const service = new ReviewsService(reviewModel, productModel, orderModel);
+
+  // 1. Đơn hàng DELIVERED, không có yêu cầu trả hàng -> được đánh giá
+  const eligNoReturn = await service.checkEligibility(u1Id.toString(), 'user1@cheri.vn', p1Id.toString());
+  assert.equal(eligNoReturn.canReview, true);
+
+  // 2. Đơn hàng DELIVERED, có yêu cầu trả hàng đang PENDING -> bị chặn
+  const orderPendingReturn = {
+    _id: new ObjectId(),
+    orderId: 'order-ret-pending',
+    userId: u1Id,
+    _user: u1Id,
+    customerEmail: 'user1@cheri.vn',
+    status: 'DELIVERED',
+    items: [{ productId: p2Id, productSnapshot: { title: 'Áo Corset Cổ Yếm' } }],
+    returnRequests: [{ requestId: 'ret-1', status: 'PENDING' }],
+  };
+  orderModel._addOrder(orderPendingReturn);
+
+  const eligPending = await service.checkEligibility(u1Id.toString(), 'user1@cheri.vn', p2Id.toString(), 'order-ret-pending');
+  assert.equal(eligPending.canReview, false);
+  assert.match(eligPending.reason, /yêu cầu trả hàng \/ hoàn tiền/);
+
+  // Thử gọi createReview trực tiếp cũng phải bị chặn bằng BadRequestException
+  await assert.rejects(
+    async () => {
+      await service.createReview(
+        u1Id.toString(),
+        { name: 'User 1', email: 'user1@cheri.vn' },
+        { productId: p2Id.toString(), orderId: 'order-ret-pending', rating: 5, comment: 'Thử review' },
+      );
+    },
+    (err) => {
+      assert.match(err.message, /yêu cầu trả hàng \/ hoàn tiền/);
+      return true;
+    },
+  );
+
+  // 3. Đơn hàng DELIVERED, yêu cầu trả hàng đã hủy 'CANC' -> được đánh giá
+  orderPendingReturn.returnRequests = [{ requestId: 'ret-1', status: 'CANC' }];
+  const eligCancelledCANC = await service.checkEligibility(u1Id.toString(), 'user1@cheri.vn', p2Id.toString(), 'order-ret-pending');
+  assert.equal(eligCancelledCANC.canReview, true);
+
+  // 4. Đơn hàng DELIVERED, yêu cầu trả hàng đã hủy 'CANCELLED' -> được đánh giá
+  orderPendingReturn.returnRequests = [{ requestId: 'ret-1', status: 'CANCELLED' }];
+  const eligCancelledFull = await service.checkEligibility(u1Id.toString(), 'user1@cheri.vn', p2Id.toString(), 'order-ret-pending');
+  assert.equal(eligCancelledFull.canReview, true);
+
+  // 5. Đơn hàng DELIVERED, yêu cầu trả hàng bị từ chối 'REJECTED' -> được đánh giá
+  orderPendingReturn.returnRequests = [{ requestId: 'ret-1', status: 'REJECTED' }];
+  const eligRejected = await service.checkEligibility(u1Id.toString(), 'user1@cheri.vn', p2Id.toString(), 'order-ret-pending');
+  assert.equal(eligRejected.canReview, true);
+
+  // 6. Đơn hàng có nhiều yêu cầu, tất cả đã hủy -> được đánh giá
+  orderPendingReturn.returnRequests = [
+    { requestId: 'ret-1', status: 'CANC' },
+    { requestId: 'ret-2', status: 'CANCELLED' },
+    { requestId: 'ret-3', status: 'REJECTED' },
+  ];
+  const eligAllInactive = await service.checkEligibility(u1Id.toString(), 'user1@cheri.vn', p2Id.toString(), 'order-ret-pending');
+  assert.equal(eligAllInactive.canReview, true);
+
+  // 7. Đơn hàng có nhiều yêu cầu, nhưng còn 1 yêu cầu PENDING -> bị chặn
+  orderPendingReturn.returnRequests.push({ requestId: 'ret-4', status: 'PENDING' });
+  const eligOneStillActive = await service.checkEligibility(u1Id.toString(), 'user1@cheri.vn', p2Id.toString(), 'order-ret-pending');
+  assert.equal(eligOneStillActive.canReview, false);
+
+  // 8. Khi đưa về đã hủy, createReview thành công
+  orderPendingReturn.returnRequests = [{ requestId: 'ret-1', status: 'CANC' }];
+  const created = await service.createReview(
+    u1Id.toString(),
+    { name: 'User 1', email: 'user1@cheri.vn' },
+    { productId: p2Id.toString(), orderId: 'order-ret-pending', rating: 5, comment: 'Sản phẩm rất đẹp sau khi hủy trả hàng' },
+  );
+  assert.ok(created);
+  assert.equal(created.rating, 5);
+
+  // 9. Không thể gửi đánh giá trùng
+  const eligAfterReview = await service.checkEligibility(u1Id.toString(), 'user1@cheri.vn', p2Id.toString(), 'order-ret-pending');
+  assert.equal(eligAfterReview.canReview, false);
+  assert.equal(eligAfterReview.hasReviewed, true);
+});
+

@@ -146,9 +146,10 @@ export class ReviewsService {
     const returnReqs = Array.isArray((matchedOrder as any).returnRequests)
       ? (matchedOrder as any).returnRequests
       : ((matchedOrder as any).returnRequest ? [(matchedOrder as any).returnRequest] : []);
+    const inactiveReturnStatuses = ['CANCELLED', 'CANC', 'CANCELLED_BY_CUSTOMER', 'REJECTED', 'REJ'];
     const hasActiveReturn = returnReqs.some((r: any) => {
-      const st = (r.status || '').toUpperCase();
-      return st && st !== 'CANCELLED';
+      const st = (r?.status || '').toUpperCase().trim();
+      return st && !inactiveReturnStatuses.includes(st);
     });
     if (hasActiveReturn) {
       throw new BadRequestException('Đơn hàng đã có yêu cầu trả hàng / hoàn tiền, không thể gửi đánh giá.');
@@ -403,9 +404,10 @@ export class ReviewsService {
     const returnReqs = Array.isArray((matchedOrder as any).returnRequests)
       ? (matchedOrder as any).returnRequests
       : ((matchedOrder as any).returnRequest ? [(matchedOrder as any).returnRequest] : []);
+    const inactiveReturnStatuses = ['CANCELLED', 'CANC', 'CANCELLED_BY_CUSTOMER', 'REJECTED', 'REJ'];
     const hasActiveReturn = returnReqs.some((r: any) => {
-      const st = (r.status || '').toUpperCase();
-      return st && st !== 'CANCELLED';
+      const st = (r?.status || '').toUpperCase().trim();
+      return st && !inactiveReturnStatuses.includes(st);
     });
     if (hasActiveReturn) {
       return {

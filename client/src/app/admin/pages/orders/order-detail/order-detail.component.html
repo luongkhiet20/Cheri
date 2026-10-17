@@ -495,8 +495,8 @@
             <div class="req-proof-images" *ngIf="req.images && req.images.length > 0">
               <span class="info-block-label">Hình ảnh / video minh chứng ({{ req.images.length }} ảnh):</span>
               <div class="proof-thumbnails-grid">
-                <div *ngFor="let img of req.images" class="proof-thumb-box" (click)="openImagePreview(img)">
-                  <img [src]="img" alt="Minh chứng trả hàng" class="proof-thumb-img" />
+                <div *ngFor="let img of req.images" class="proof-thumb-box" (click)="openImagePreview(getProofImageUrl(img))">
+                  <img [src]="getProofImageUrl(img)" alt="Minh chứng trả hàng" class="proof-thumb-img" />
                   <div class="thumb-hover-overlay">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
                       <circle cx="11" cy="11" r="8"></circle>

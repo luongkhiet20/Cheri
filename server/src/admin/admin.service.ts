@@ -49,9 +49,12 @@ export class AdminService {
     images: Images,
     file,
     addImageDto: AddProductImageDto,
-  ): Promise<Images | Product> {
+    targetFolder?: string,
+  ): Promise<Images | Product | any> {
     const { titleUrl } = addImageDto;
     const existImages = await new Images(images || { all: [] });
+
+    const folder = targetFolder || (titleUrl ? 'cheri/products' : 'cheri/cms');
 
     let image: string;
     try {
@@ -63,7 +66,7 @@ export class AdminService {
         !process.env.CLOUDINARY_KEY.includes('placeholder');
 
       if (isCloudinaryConfigured) {
-        const uploadedImage = await this.uploadToCloudinary(file);
+        const uploadedImage = await this.uploadToCloudinary(file, folder);
         image = uploadedImage.secure_url;
       } else {
         const b64 = file.buffer.toString('base64');
@@ -87,7 +90,13 @@ export class AdminService {
       existImages.add(image);
     }
 
-    return product || existImages;
+    const resObj = (product || existImages) as any;
+    if (resObj) {
+      resObj.secure_url = image;
+      resObj.url = image;
+    }
+
+    return resObj;
   }
 
   async removeImage(
@@ -111,10 +120,11 @@ export class AdminService {
     return product || existImages;
   }
 
-  private async uploadToCloudinary(file): Promise<any> {
+  private async uploadToCloudinary(file, folder = 'cheri/cms'): Promise<any> {
     return new Promise((resolve, reject) => {
       const cld_upload_stream = cloudinary.v2.uploader.upload_stream(
         {
+          folder,
           resource_type: 'auto',
           use_filename: true,
         },

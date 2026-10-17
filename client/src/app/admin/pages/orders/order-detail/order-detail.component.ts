@@ -870,6 +870,13 @@ export class OrderDetailComponent implements OnInit {
     });
   }
 
+  getProofImageUrl(img: any): string {
+    if (!img) return '';
+    if (typeof img === 'string') return img;
+    if (typeof img === 'object' && img.url) return img.url;
+    return '';
+  }
+
   openImagePreview(url: string): void {
     this.previewImageModalUrl = url;
     this.cdr.markForCheck();

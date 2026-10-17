@@ -829,7 +829,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
     this.cdr.markForCheck();
 
-    this.apiService.uploadImage({ fileToUpload: file, titleUrl: '' }).subscribe({
+    this.apiService.uploadImage({ fileToUpload: file, titleUrl: '', folder: 'cheri/cms' }).subscribe({
       next: (res: any) => {
         if (target === 'desktop') {
           this.isUploadingDesktop = false;
@@ -1080,7 +1080,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       }
 
       const file = validFiles[index];
-      this.apiService.uploadImage({ fileToUpload: file, titleUrl: '' }).subscribe({
+      this.apiService.uploadImage({ fileToUpload: file, titleUrl: '', folder: 'cheri/cms' }).subscribe({
         next: (res: any) => {
           const uploadedUrl = this.extractUploadedImageUrl(res);
           if (uploadedUrl && this.selectedSection) {
@@ -1191,7 +1191,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.apiService.uploadImage({ fileToUpload: file, titleUrl: '' }).subscribe({
+    this.apiService.uploadImage({ fileToUpload: file, titleUrl: '', folder: 'cheri/cms' }).subscribe({
       next: (res: any) => {
         const uploadedUrl = this.extractUploadedImageUrl(res);
         if (!uploadedUrl) {

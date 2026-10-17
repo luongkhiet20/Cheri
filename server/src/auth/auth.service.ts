@@ -322,6 +322,20 @@ export class AuthService {
     if (!code || typeof code !== 'string') {
       throw new BadRequestException('Mã trao đổi xác thực không hợp lệ');
     }
+
+    // 1. Hỗ trợ giải mã JWT Exchange Code (Stateless / Serverless trên Vercel)
+    try {
+      const decoded: any = this.jwtService.verify(code);
+      if (decoded && decoded.type === 'oauth_exchange' && decoded.accessToken) {
+        return {
+          accessToken: decoded.accessToken,
+          user: decoded.user,
+          isNewUser: decoded.isNewUser || false,
+        };
+      }
+    } catch (_) {}
+
+    // 2. Fallback sang In-Memory Store (Local development)
     const record = this.exchangeCodeStore.get(code);
     if (!record) {
       throw new UnauthorizedException('Mã xác thực không tồn tại hoặc đã được sử dụng');

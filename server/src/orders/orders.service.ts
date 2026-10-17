@@ -443,6 +443,11 @@ export class OrdersService {
     }
   }
 
+  getReturnUploadSignature(subfolder?: string) {
+    const { generateReturnUploadSignature } = require('../../services/cloudinary-service');
+    return generateReturnUploadSignature(subfolder);
+  }
+
   // ─── Yêu cầu Trả hàng / Hoàn tiền (Khách hàng sở hữu đơn hàng đã giao) ────
   async createReturnRequest(
     id: string,
@@ -592,12 +597,15 @@ export class OrdersService {
       });
     }
 
-    // 6. Xử lý ảnh minh chứng (tối đa 5 ảnh, lưu vào disk)
-    const rawImages = Array.isArray(payload?.images) ? payload.images : [];
-    const savedImages: string[] = [];
-    for (const img of rawImages.slice(0, 5)) {
-      const saved = this.saveBase64Image(img);
-      if (saved) savedImages.push(saved);
+    // 6. Xử lý ảnh minh chứng (Đồng bộ Cloudinary cheri/return-proofs, tối đa 5 ảnh)
+    const rawImages = Array.isArray(payload?.images) ? payload.images.slice(0, 5) : [];
+    const { normalizeReturnProofImages } = require('../../services/cloudinary-service');
+    let savedImages: string[] = [];
+    try {
+      savedImages = await normalizeReturnProofImages(rawImages);
+    } catch (cldErr: any) {
+      this.logger.error('Lỗi khi xử lý ảnh minh chứng Cloudinary: ' + cldErr?.message);
+      throw new BadRequestException('Không thể tải ảnh minh chứng lên hệ thống lưu trữ: ' + (cldErr?.message || 'Lỗi không xác định'));
     }
 
     const requestedAt = new Date();

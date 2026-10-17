@@ -40,6 +40,7 @@ export class SidebarComponent implements OnInit, OnChanges {
 
   @Output() changeMinPrice = new EventEmitter<number>();
   @Output() changeMaxPrice = new EventEmitter<number>();
+  @Output() changePrice = new EventEmitter<number>();
   @Output() changeSort = new EventEmitter<string>();
   @Output() changeCategory = new EventEmitter<string>();
   @Output() changeCategories = new EventEmitter<string[]>();
@@ -49,16 +50,28 @@ export class SidebarComponent implements OnInit, OnChanges {
   @Output() clearFilters = new EventEmitter<void>();
   @Output() applyFilters = new EventEmitter<void>();
 
+  // State: whether user has actively applied a price range
+  isPriceFilterActive: boolean = false;
+
   // Local slider state
   localMin: number = 0;
   localMax: number = 10000000;
 
-  // Input display text state
-  inputMinStr: string = '0';
-  inputMaxStr: string = '0';
+  // Input display text state: empty when no price filter is active
+  inputMinStr: string = '';
+  inputMaxStr: string = '';
   isMinInputFocused: boolean = false;
   isMaxInputFocused: boolean = false;
   private _debounceTimer: any = null;
+
+  // Placeholder reference limits (prices of available products)
+  get minPlaceholder(): string {
+    return this.minPrice > 0 ? this._formatPrice(this.minPrice) : '0';
+  }
+
+  get maxPlaceholder(): string {
+    return this.maxPrice > 0 ? this._formatPrice(this.maxPrice) : '0';
+  }
 
   // Local multi-select lists
   selectedCategoryList: string[] = [];
@@ -80,17 +93,34 @@ export class SidebarComponent implements OnInit, OnChanges {
   }
 
   private _syncState(): void {
-    const rawMin = (this.filterMinPrice !== undefined && this.filterMinPrice !== null) ? this.filterMinPrice : (this.minPrice || 0);
-    const rawMax = (this.filterMaxPrice !== undefined && this.filterMaxPrice !== null) ? this.filterMaxPrice : (this.price || this.maxPrice || 10000000);
+    const hasMinFilter = Boolean(this.filterMinPrice && this.filterMinPrice > 0);
+    const hasMaxFilter = Boolean(this.filterMaxPrice && this.filterMaxPrice > 0 && this.filterMaxPrice < (this.maxPrice || Infinity));
+    const hasPriceFilter = Boolean(this.price && this.price > 0 && this.price < (this.maxPrice || Infinity));
 
-    this.localMin = Math.max(this.minPrice || 0, Math.min(rawMin, rawMax));
-    this.localMax = Math.min(this.maxPrice || 10000000, Math.max(rawMax, this.localMin));
+    if (hasMinFilter || hasMaxFilter || hasPriceFilter) {
+      this.isPriceFilterActive = true;
+      this.localMin = hasMinFilter ? Math.max(this.minPrice || 0, this.filterMinPrice) : (this.minPrice || 0);
+      const maxCandidate = hasMaxFilter ? this.filterMaxPrice : (hasPriceFilter ? this.price : (this.maxPrice || 10000000));
+      this.localMax = Math.min(this.maxPrice || 10000000, Math.max(maxCandidate, this.localMin));
 
-    if (!this.isMinInputFocused) {
-      this.inputMinStr = this._formatPrice(this.localMin);
-    }
-    if (!this.isMaxInputFocused) {
-      this.inputMaxStr = this._formatPrice(this.localMax);
+      if (!this.isMinInputFocused) {
+        this.inputMinStr = hasMinFilter ? this._formatPrice(this.localMin) : '';
+      }
+      if (!this.isMaxInputFocused) {
+        this.inputMaxStr = (hasMaxFilter || hasPriceFilter) ? this._formatPrice(this.localMax) : '';
+      }
+    } else {
+      // Khi chưa chọn khoảng giá hoặc sau khi xóa bộ lọc giá:
+      this.isPriceFilterActive = false;
+      this.localMin = this.minPrice || 0;
+      this.localMax = this.maxPrice || 10000000;
+
+      if (!this.isMinInputFocused) {
+        this.inputMinStr = '';
+      }
+      if (!this.isMaxInputFocused) {
+        this.inputMaxStr = '';
+      }
     }
 
     // Sync categories
@@ -131,23 +161,31 @@ export class SidebarComponent implements OnInit, OnChanges {
   // ── Range Slider Handlers ──
   onMinSliderChange(value: number): void {
     if (value === null || value === undefined || isNaN(value)) return;
-    const clamped = Math.max(this.minPrice, Math.min(value, this.localMax));
+    this.isPriceFilterActive = true;
+    const clamped = Math.max(this.minPrice || 0, Math.min(value, this.localMax));
     this.localMin = clamped;
     if (!this.isMinInputFocused) {
       this.inputMinStr = this._formatPrice(this.localMin);
     }
-    this._scheduleFilterChange(true, this.localMin);
+    if (!this.isMaxInputFocused && !this.inputMaxStr) {
+      this.inputMaxStr = this._formatPrice(this.localMax);
+    }
+    this._scheduleFilterChange(true, this.localMin, this.localMax);
     this.cdr.markForCheck();
   }
 
   onMaxSliderChange(value: number): void {
     if (value === null || value === undefined || isNaN(value)) return;
-    const clamped = Math.min(this.maxPrice, Math.max(value, this.localMin));
+    this.isPriceFilterActive = true;
+    const clamped = Math.min(this.maxPrice || 10000000, Math.max(value, this.localMin));
     this.localMax = clamped;
     if (!this.isMaxInputFocused) {
       this.inputMaxStr = this._formatPrice(this.localMax);
     }
-    this._scheduleFilterChange(false, this.localMax);
+    if (!this.isMinInputFocused && !this.inputMinStr) {
+      this.inputMinStr = this._formatPrice(this.localMin);
+    }
+    this._scheduleFilterChange(false, this.localMin, this.localMax);
     this.cdr.markForCheck();
   }
 
@@ -163,29 +201,43 @@ export class SidebarComponent implements OnInit, OnChanges {
   // ── Input Box Handlers ──
   onMinInputFocus(): void {
     this.isMinInputFocused = true;
-    // Show clean number without formatting so user can backspace/type easily
-    this.inputMinStr = this.localMin > 0 ? this.localMin.toString() : '';
+    if (this.inputMinStr) {
+      const parsed = this._parsePrice(this.inputMinStr);
+      this.inputMinStr = parsed !== null && parsed > 0 ? String(parsed) : '';
+    } else {
+      this.inputMinStr = '';
+    }
   }
 
   onMinTextInput(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.inputMinStr = input.value;
-
     const trimmed = input.value.trim();
+
     if (!trimmed) {
-      // Don't force 0 while typing
+      if (!this.inputMaxStr.trim()) {
+        this.isPriceFilterActive = false;
+        this.localMin = this.minPrice || 0;
+        this._scheduleClearPriceFilter();
+      } else {
+        this.localMin = this.minPrice || 0;
+        this._scheduleFilterChange(true, 0, this.localMax);
+      }
+      this.cdr.markForCheck();
       return;
     }
 
     const parsed = this._parsePrice(trimmed);
     if (parsed !== null) {
-      // Enforce localMin <= localMax
+      this.isPriceFilterActive = true;
       if (parsed > this.localMax) {
         this.localMin = this.localMax;
-      } else if (parsed >= this.minPrice) {
+      } else if (parsed >= (this.minPrice || 0)) {
         this.localMin = parsed;
+      } else {
+        this.localMin = this.minPrice || 0;
       }
-      this._scheduleFilterChange(true, this.localMin);
+      this._scheduleFilterChange(true, this.localMin, this.localMax);
       this.cdr.markForCheck();
     }
   }
@@ -200,43 +252,79 @@ export class SidebarComponent implements OnInit, OnChanges {
       clearTimeout(this._debounceTimer);
       this._debounceTimer = null;
     }
-    const parsed = this._parsePrice(this.inputMinStr);
-    let finalVal = parsed !== null ? parsed : this.minPrice;
-    if (finalVal < this.minPrice) finalVal = this.minPrice;
-    if (finalVal > this.localMax) finalVal = this.localMax;
-    if (finalVal > this.maxPrice) finalVal = this.maxPrice;
+    const trimmed = this.inputMinStr.trim();
+    if (!trimmed) {
+      this.inputMinStr = '';
+      this.localMin = this.minPrice || 0;
+      if (!this.inputMaxStr.trim()) {
+        this.isPriceFilterActive = false;
+        this.localMax = this.maxPrice || 10000000;
+        this.changeMinPrice.emit(0);
+        this.changeMaxPrice.emit(0);
+        this.changePrice.emit(0);
+      } else {
+        this.changeMinPrice.emit(0);
+      }
+    } else {
+      this.isPriceFilterActive = true;
+      const parsed = this._parsePrice(trimmed);
+      let finalVal = parsed !== null ? parsed : (this.minPrice || 0);
+      if (finalVal < (this.minPrice || 0)) finalVal = this.minPrice || 0;
+      if (finalVal > this.localMax) finalVal = this.localMax;
+      if (finalVal > (this.maxPrice || 10000000)) finalVal = this.maxPrice || 10000000;
 
-    this.localMin = finalVal;
-    this.inputMinStr = this._formatPrice(this.localMin);
-    this.changeMinPrice.emit(this.localMin);
+      this.localMin = finalVal;
+      this.inputMinStr = this._formatPrice(this.localMin);
+      this.changeMinPrice.emit(this.localMin);
+
+      if (!this.inputMaxStr.trim()) {
+        this.inputMaxStr = this._formatPrice(this.localMax);
+        this.changeMaxPrice.emit(this.localMax);
+        this.changePrice.emit(this.localMax);
+      }
+    }
     this.cdr.markForCheck();
   }
 
   onMaxInputFocus(): void {
     this.isMaxInputFocused = true;
-    this.inputMaxStr = this.localMax > 0 ? this.localMax.toString() : '';
+    if (this.inputMaxStr) {
+      const parsed = this._parsePrice(this.inputMaxStr);
+      this.inputMaxStr = parsed !== null && parsed > 0 ? String(parsed) : '';
+    } else {
+      this.inputMaxStr = '';
+    }
   }
 
   onMaxTextInput(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.inputMaxStr = input.value;
-
     const trimmed = input.value.trim();
+
     if (!trimmed) {
+      if (!this.inputMinStr.trim()) {
+        this.isPriceFilterActive = false;
+        this.localMax = this.maxPrice || 10000000;
+        this._scheduleClearPriceFilter();
+      } else {
+        this.localMax = this.maxPrice || 10000000;
+        this._scheduleFilterChange(false, this.localMin, 0);
+      }
+      this.cdr.markForCheck();
       return;
     }
 
     const parsed = this._parsePrice(trimmed);
     if (parsed !== null) {
-      // Enforce localMax >= localMin and localMax <= maxPrice
+      this.isPriceFilterActive = true;
       if (parsed < this.localMin) {
         this.localMax = this.localMin;
-      } else if (parsed > this.maxPrice) {
-        this.localMax = this.maxPrice;
+      } else if (parsed > (this.maxPrice || 10000000)) {
+        this.localMax = this.maxPrice || 10000000;
       } else {
         this.localMax = parsed;
       }
-      this._scheduleFilterChange(false, this.localMax);
+      this._scheduleFilterChange(false, this.localMin, this.localMax);
       this.cdr.markForCheck();
     }
   }
@@ -251,15 +339,38 @@ export class SidebarComponent implements OnInit, OnChanges {
       clearTimeout(this._debounceTimer);
       this._debounceTimer = null;
     }
-    const parsed = this._parsePrice(this.inputMaxStr);
-    let finalVal = parsed !== null ? parsed : this.maxPrice;
-    if (finalVal > this.maxPrice) finalVal = this.maxPrice;
-    if (finalVal < this.localMin) finalVal = this.localMin;
-    if (finalVal < this.minPrice) finalVal = this.minPrice;
+    const trimmed = this.inputMaxStr.trim();
+    if (!trimmed) {
+      this.inputMaxStr = '';
+      this.localMax = this.maxPrice || 10000000;
+      if (!this.inputMinStr.trim()) {
+        this.isPriceFilterActive = false;
+        this.localMin = this.minPrice || 0;
+        this.changeMinPrice.emit(0);
+        this.changeMaxPrice.emit(0);
+        this.changePrice.emit(0);
+      } else {
+        this.changeMaxPrice.emit(0);
+        this.changePrice.emit(0);
+      }
+    } else {
+      this.isPriceFilterActive = true;
+      const parsed = this._parsePrice(trimmed);
+      let finalVal = parsed !== null ? parsed : (this.maxPrice || 10000000);
+      if (finalVal > (this.maxPrice || 10000000)) finalVal = this.maxPrice || 10000000;
+      if (finalVal < this.localMin) finalVal = this.localMin;
+      if (finalVal < (this.minPrice || 0)) finalVal = this.minPrice || 0;
 
-    this.localMax = finalVal;
-    this.inputMaxStr = this._formatPrice(this.localMax);
-    this.changeMaxPrice.emit(this.localMax);
+      this.localMax = finalVal;
+      this.inputMaxStr = this._formatPrice(this.localMax);
+      this.changeMaxPrice.emit(this.localMax);
+      this.changePrice.emit(this.localMax);
+
+      if (!this.inputMinStr.trim()) {
+        this.inputMinStr = this._formatPrice(this.localMin);
+        this.changeMinPrice.emit(this.localMin);
+      }
+    }
     this.cdr.markForCheck();
   }
 
@@ -267,15 +378,27 @@ export class SidebarComponent implements OnInit, OnChanges {
     (event.target as HTMLInputElement).blur();
   }
 
-  private _scheduleFilterChange(isMin: boolean, value: number): void {
+  private _scheduleClearPriceFilter(): void {
     if (this._debounceTimer) {
       clearTimeout(this._debounceTimer);
     }
     this._debounceTimer = setTimeout(() => {
-      if (isMin) {
-        this.changeMinPrice.emit(value);
-      } else {
-        this.changeMaxPrice.emit(value);
+      this.changeMinPrice.emit(0);
+      this.changeMaxPrice.emit(0);
+      this.changePrice.emit(0);
+      this._debounceTimer = null;
+    }, 350);
+  }
+
+  private _scheduleFilterChange(isMin: boolean, minVal: number, maxVal?: number): void {
+    if (this._debounceTimer) {
+      clearTimeout(this._debounceTimer);
+    }
+    this._debounceTimer = setTimeout(() => {
+      this.changeMinPrice.emit(minVal);
+      if (maxVal !== undefined) {
+        this.changeMaxPrice.emit(maxVal);
+        this.changePrice.emit(maxVal);
       }
       this._debounceTimer = null;
     }, 350);
@@ -298,10 +421,17 @@ export class SidebarComponent implements OnInit, OnChanges {
   }
 
   onApplyFilters(): void {
-    this._finalizeMinInput();
-    this._finalizeMaxInput();
-    this.changeMinPrice.emit(this.localMin);
-    this.changeMaxPrice.emit(this.localMax);
+    if (this.isPriceFilterActive) {
+      this._finalizeMinInput();
+      this._finalizeMaxInput();
+      this.changeMinPrice.emit(this.localMin);
+      this.changeMaxPrice.emit(this.localMax);
+      this.changePrice.emit(this.localMax);
+    } else {
+      this.changeMinPrice.emit(0);
+      this.changeMaxPrice.emit(0);
+      this.changePrice.emit(0);
+    }
     this.applyFilters.emit();
   }
 
@@ -355,12 +485,16 @@ export class SidebarComponent implements OnInit, OnChanges {
       clearTimeout(this._debounceTimer);
       this._debounceTimer = null;
     }
+    this.isPriceFilterActive = false;
     this.selectedCategoryList = [];
     this.selectedRatingList = [];
     this.localMin = this.minPrice || 0;
     this.localMax = this.maxPrice || 10000000;
-    this.inputMinStr = this._formatPrice(this.localMin);
-    this.inputMaxStr = this._formatPrice(this.localMax);
+    this.inputMinStr = '';
+    this.inputMaxStr = '';
+    this.changeMinPrice.emit(0);
+    this.changeMaxPrice.emit(0);
+    this.changePrice.emit(0);
     this.clearFilters.emit();
     this.cdr.markForCheck();
   }

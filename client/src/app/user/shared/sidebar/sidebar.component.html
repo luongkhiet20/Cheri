@@ -144,7 +144,7 @@
               (input)="onMinTextInput($event)"
               (blur)="onMinInputBlur()"
               (keydown.enter)="onInputEnter($event)"
-              placeholder="0"
+              [placeholder]="minPlaceholder"
               aria-label="Giá tối thiểu" />
             <span class="sf-box-currency">{{ currency }}</span>
           </div>
@@ -160,7 +160,7 @@
               (input)="onMaxTextInput($event)"
               (blur)="onMaxInputBlur()"
               (keydown.enter)="onInputEnter($event)"
-              placeholder="0"
+              [placeholder]="maxPlaceholder"
               aria-label="Giá tối đa" />
             <span class="sf-box-currency">{{ currency }}</span>
           </div>

@@ -1,5 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
 import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
@@ -106,6 +107,7 @@ export class ProductFormComponent implements OnInit {
 
   // Helpers for image input
   imageUrlInput = '';
+  isUploadingImage = false;
 
   // Helpers for classifications
   classificationInput = '';
@@ -339,21 +341,108 @@ export class ProductFormComponent implements OnInit {
   }
 
   onImageFileSelected(event: any): void {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const files: FileList = event.target.files;
+    if (!files || files.length === 0) return;
 
-    const reader = new FileReader();
-    reader.onload = (e: any) => {
-      const base64 = e.target.result;
-      if (!this.product.images) this.product.images = [];
-      this.product.images.push(base64);
-      if (!this.product.mainImage?.url) {
-        this.product.mainImage = { url: base64, name: file.name };
-      }
-      this.markDirty('images');
-    };
-    reader.readAsDataURL(file);
+    const fileList = Array.from(files);
     event.target.value = '';
+
+    this.isUploadingImage = true;
+    this.cdr.markForCheck();
+
+    this.apiService.getCloudinarySignature('cheri/products').subscribe({
+      next: (res) => {
+        const sigData = res?.data || res;
+        if (sigData && sigData.signature && sigData.apiKey && sigData.cloudName) {
+          const uploadPromises = fileList.map((file) =>
+            firstValueFrom(this.apiService.uploadDirectToCloudinary(file, sigData))
+              .then((uploadRes: any) => ({
+                url: uploadRes.secure_url || uploadRes.url,
+                name: file.name
+              }))
+              .catch((err) => {
+                console.warn('Lỗi direct upload Cloudinary, fallback qua API server:', err);
+                return firstValueFrom(this.apiService.uploadImage(file, 'cheri/products'))
+                  .then((apiRes: any) => ({
+                    url: apiRes.secure_url || apiRes.url,
+                    name: file.name
+                  }));
+              })
+          );
+
+          Promise.allSettled(uploadPromises).then((results) => {
+            this.isUploadingImage = false;
+            let successCount = 0;
+
+            if (!this.product.images) this.product.images = [];
+
+            results.forEach((r) => {
+              if (r.status === 'fulfilled' && r.value?.url) {
+                const imgUrl = r.value.url;
+                if (!this.product.images.includes(imgUrl)) {
+                  this.product.images.push(imgUrl);
+                }
+                if (!this.product.mainImage?.url) {
+                  this.product.mainImage = { url: imgUrl, name: r.value.name || 'Ảnh sản phẩm' };
+                }
+                successCount++;
+              }
+            });
+
+            if (successCount > 0) {
+              this.markDirty('images');
+              this.notificationService.success(`Đã tải lên thành công ${successCount} ảnh vào sản phẩm`);
+            } else {
+              this.notificationService.error('Tải ảnh lên thất bại. Vui lòng kiểm tra định dạng hoặc kích thước ảnh.');
+            }
+            this.cdr.markForCheck();
+          });
+        } else {
+          this.uploadFilesViaBackend(fileList);
+        }
+      },
+      error: (err) => {
+        console.warn('Không thể lấy chữ ký Cloudinary, fallback qua API backend:', err);
+        this.uploadFilesViaBackend(fileList);
+      }
+    });
+  }
+
+  private uploadFilesViaBackend(fileList: File[]): void {
+    const uploadPromises = fileList.map((file) =>
+      firstValueFrom(this.apiService.uploadImage(file, 'cheri/products'))
+        .then((apiRes: any) => ({
+          url: apiRes.secure_url || apiRes.url,
+          name: file.name
+        }))
+    );
+
+    Promise.allSettled(uploadPromises).then((results) => {
+      this.isUploadingImage = false;
+      let successCount = 0;
+      if (!this.product.images) this.product.images = [];
+
+      results.forEach((r) => {
+        if (r.status === 'fulfilled' && r.value?.url) {
+          const imgUrl = r.value.url;
+          if (!this.product.images.includes(imgUrl)) {
+            this.product.images.push(imgUrl);
+          }
+          if (!this.product.mainImage?.url) {
+            this.product.mainImage = { url: imgUrl, name: r.value.name || 'Ảnh sản phẩm' };
+          }
+          successCount++;
+        }
+      });
+
+      if (successCount > 0) {
+        this.markDirty('images');
+        this.notificationService.success(`Đã tải lên thành công ${successCount} ảnh vào sản phẩm`);
+      } else {
+        this.notificationService.error('Tải ảnh lên thất bại. Vui lòng thử lại.');
+      }
+      this.cdr.markForCheck();
+    });
   }
 
   setAsMainImage(imgUrl: string): void {

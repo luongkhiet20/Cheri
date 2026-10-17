@@ -10,7 +10,6 @@ CHANGELOG.md
 README.md
 builds
 coverage
-e2e
 node_modules
 proxy.conf.js
 raml

@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, Output, OnInit, OnChanges, SimpleChanges, HostListener, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../../../services/api.service';
 import { formatVND } from '../../../../pipes/price.pipe';
 
@@ -299,18 +300,57 @@ export class OrderReturnRefundDialogComponent implements OnInit, OnChanges {
       ? `Lý do khác: ${this.otherReason.trim()}`
       : this.selectedReason;
 
-    const payload = {
+    const basePayload = {
       reason: finalReason,
       description: trimmedDesc,
       items: selectedItems,
-      refundMethod: this.refundMethod,
-      images: this.selectedImages.map(img => img.preview)
+      refundMethod: this.refundMethod
     };
 
     this.isSubmitting = true;
     this.cdr.markForCheck();
 
-    this.apiService.createReturnRequest(String(targetOrderId), payload).subscribe({
+    this.uploadImagesAndSubmit(String(targetOrderId), basePayload);
+  }
+
+  private async uploadImagesAndSubmit(targetOrderId: string, basePayload: any): Promise<void> {
+    let finalImageUrls: string[] = [];
+
+    // Nếu có ảnh được chọn, thử upload trực tiếp lên Cloudinary bằng chữ ký bảo mật
+    if (this.selectedImages.length > 0) {
+      try {
+        const signRes: any = await firstValueFrom(this.apiService.getReturnUploadSignature());
+
+        if (signRes && !signRes.error && signRes.signature) {
+          const uploadPromises = this.selectedImages.map(img =>
+            firstValueFrom(this.apiService.uploadToCloudinaryDirect(img.file, signRes))
+          );
+
+          const uploadResults: any[] = await Promise.all(uploadPromises);
+          const failed = uploadResults.find(r => !r || r.error || !r.secure_url);
+
+          if (failed) {
+            throw new Error(failed?.error?.message || failed?.error || 'Không thể tải ảnh lên Cloudinary');
+          }
+
+          finalImageUrls = uploadResults.map(r => r.secure_url);
+        } else {
+          // Nếu không lấy được chữ ký, fallback sang mảng Base64 để backend upload
+          finalImageUrls = this.selectedImages.map(img => img.preview);
+        }
+      } catch (uploadErr: any) {
+        console.warn('[Direct Cloudinary Upload Warning] Fallback to backend processing:', uploadErr);
+        // Fallback: Gửi mảng preview Data URI để backend xử lý tiếp
+        finalImageUrls = this.selectedImages.map(img => img.preview);
+      }
+    }
+
+    const payload = {
+      ...basePayload,
+      images: finalImageUrls
+    };
+
+    this.apiService.createReturnRequest(targetOrderId, payload).subscribe({
       next: (res: any) => {
         this.isSubmitting = false;
 
@@ -324,7 +364,7 @@ export class OrderReturnRefundDialogComponent implements OnInit, OnChanges {
 
         this.successMessage = res?.message || 'Yêu cầu trả hàng / hoàn tiền đã được tiếp nhận thành công!';
         this.submitted.emit({
-          orderId: String(targetOrderId),
+          orderId: targetOrderId,
           returnRequest: res?.data || payload,
           order: res?.order || this.order
         });

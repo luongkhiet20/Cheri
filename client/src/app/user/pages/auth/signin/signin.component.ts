@@ -63,9 +63,24 @@ export class SignInComponent implements OnInit {
     }
 
     this.route.queryParams.pipe(take(1)).subscribe((params) => {
-      if (params['error']) {
-        this.snackBar.open('Đăng nhập bằng Google không thành công hoặc đã bị hủy. Vui lòng thử lại!', 'Đóng', {
-          duration: 4000,
+      const errorParam = params['error'];
+      if (errorParam) {
+        let errorMsg = 'Đăng nhập bằng tài khoản mạng xã hội không thành công hoặc đã bị hủy. Vui lòng thử lại!';
+        if (errorParam === 'account_disabled') {
+          errorMsg = 'Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động. Vui lòng liên hệ quản trị viên.';
+        } else if (errorParam === 'email_conflict') {
+          errorMsg = 'Email này đã được đăng ký bằng mật khẩu. Vui lòng đăng nhập bằng email và mật khẩu của bạn!';
+        } else if (errorParam === 'facebook_email_required') {
+          errorMsg = 'Tài khoản Facebook chưa cung cấp email. Vui lòng cấp quyền truy cập email hoặc đăng ký bằng tài khoản email!';
+        } else if (errorParam === 'facebook_auth_failed') {
+          errorMsg = 'Đăng nhập bằng Facebook không thành công hoặc đã bị hủy. Vui lòng thử lại!';
+        } else if (errorParam === 'facebook_login_error') {
+          errorMsg = 'Có lỗi xảy ra khi xác thực với Facebook. Vui lòng thử lại sau!';
+        } else if (errorParam === 'google_auth_failed') {
+          errorMsg = 'Đăng nhập bằng Google không thành công hoặc đã bị hủy. Vui lòng thử lại!';
+        }
+        this.snackBar.open(errorMsg, 'Đóng', {
+          duration: 5000,
           horizontalPosition: 'center',
           verticalPosition: 'bottom'
         });
@@ -159,6 +174,11 @@ export class SignInComponent implements OnInit {
       horizontalPosition: 'center',
       verticalPosition: 'bottom'
     });
+    // Gọi endpoint Facebook OAuth của Backend
+    const apiUrl = this.apiService.apiUrl || '';
+    const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+    const originParam = currentOrigin ? `?origin=${encodeURIComponent(currentOrigin)}` : '';
+    window.location.href = `${apiUrl}/api/auth/facebook${originParam}`;
   }
 }
 

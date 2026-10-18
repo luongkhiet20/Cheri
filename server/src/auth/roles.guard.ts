@@ -63,7 +63,10 @@ export class GoogleAuthGuard extends AuthGuard('google') {
       origin = queryOrigin;
     } else if (req.headers?.referer) {
       try {
-        origin = new URL(req.headers.referer).origin;
+        const refUrl = new URL(req.headers.referer);
+        if (!refUrl.hostname.includes('google.com')) {
+          origin = refUrl.origin;
+        }
       } catch {}
     }
 
@@ -71,7 +74,8 @@ export class GoogleAuthGuard extends AuthGuard('google') {
       origin = process.env.ORIGIN || 'http://localhost:3000';
     }
 
-    if (req.session) {
+    // Chỉ lưu returnOrigin vào session khi bắt đầu chuyển hướng (chưa có code callback)
+    if (req.session && !req.query?.code) {
       req.session.returnOrigin = origin;
     }
 
@@ -86,12 +90,71 @@ export class GoogleAuthGuard extends AuthGuard('google') {
       const req = context.switchToHttp().getRequest();
       let feOrigin = process.env.ORIGIN || 'http://localhost:3000';
       const state = req.query?.state as string;
-      if (state && (state.startsWith('http://') || state.startsWith('https://'))) {
+      if (state && (state.startsWith('http://') || state.startsWith('https://')) && !state.includes('google.com')) {
         feOrigin = state.replace(/\/+$/, '');
-      } else if (req.session?.returnOrigin) {
+      } else if (req.session?.returnOrigin && !req.session.returnOrigin.includes('google.com')) {
         feOrigin = req.session.returnOrigin.replace(/\/+$/, '');
       }
       return res.redirect(`${feOrigin}/vi/authorize/signin?error=google_auth_failed`);
+    }
+    return user;
+  }
+}
+
+@Injectable()
+export class FacebookAuthGuard extends AuthGuard('facebook') {
+  getAuthenticateOptions(context: ExecutionContext) {
+    const req = context.switchToHttp().getRequest();
+    const queryOrigin = req.query?.origin;
+    let origin: string | undefined;
+
+    if (queryOrigin && typeof queryOrigin === 'string') {
+      origin = queryOrigin;
+    } else if (req.headers?.referer) {
+      try {
+        const refUrl = new URL(req.headers.referer);
+        if (!refUrl.hostname.includes('facebook.com') && !refUrl.hostname.includes('fb.com')) {
+          origin = refUrl.origin;
+        }
+      } catch {}
+    }
+
+    if (!origin) {
+      origin = process.env.ORIGIN || 'http://localhost:3000';
+    }
+
+    // Chỉ lưu returnOrigin vào session khi bắt đầu chuyển hướng (chưa có code callback)
+    if (req.session && !req.query?.code) {
+      req.session.returnOrigin = origin;
+    }
+
+    return {
+      state: origin,
+      scope: ['email', 'public_profile'],
+    };
+  }
+
+  handleRequest(err: any, user: any, info: any, context: ExecutionContext) {
+    if (err || !user) {
+      const res = context.switchToHttp().getResponse();
+      const req = context.switchToHttp().getRequest();
+      let feOrigin = process.env.ORIGIN || 'http://localhost:3000';
+      const state = req.query?.state as string;
+      if (
+        state &&
+        (state.startsWith('http://') || state.startsWith('https://')) &&
+        !state.includes('facebook.com') &&
+        !state.includes('fb.com')
+      ) {
+        feOrigin = state.replace(/\/+$/, '');
+      } else if (
+        req.session?.returnOrigin &&
+        !req.session.returnOrigin.includes('facebook.com') &&
+        !req.session.returnOrigin.includes('fb.com')
+      ) {
+        feOrigin = req.session.returnOrigin.replace(/\/+$/, '');
+      }
+      return res.redirect(`${feOrigin}/vi/authorize/signin?error=facebook_auth_failed`);
     }
     return user;
   }

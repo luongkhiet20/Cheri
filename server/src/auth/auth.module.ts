@@ -8,12 +8,13 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategy/jwt.strategy';
 import { GoogleStrategy } from './strategy/google.strategy';
+import { FacebookStrategy } from './strategy/facebook.strategy';
 import UserSchema from './schemas/user.schema';
 import { SessionSerializer } from './utils/session.serializer';
 
 @Module({
   imports: [
-    ConfigModule.forRoot(),
+    ConfigModule,
     MongooseModule.forFeature([{ name: 'User', schema: UserSchema }]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({
@@ -24,7 +25,7 @@ import { SessionSerializer } from './utils/session.serializer';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, GoogleStrategy, SessionSerializer],
+  providers: [AuthService, JwtStrategy, GoogleStrategy, FacebookStrategy, SessionSerializer],
   exports: [JwtStrategy, PassportModule],
 })
 export class AuthModule {}

@@ -29,8 +29,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload): Promise<User> {
-    const { email } = payload;
-    const user = await this.userModel.findOne({ email });
+    const { email, id } = payload;
+    let user: User | null = null;
+    if (id) {
+      user = await this.userModel.findById(id);
+    }
+    if (!user && email) {
+      user = await this.userModel.findOne({ email: email.trim().toLowerCase() });
+    }
 
     if (!user) {
       throw new UnauthorizedException('Người dùng không tồn tại');

@@ -227,15 +227,22 @@ export class SignUpComponent {
       horizontalPosition: 'center',
       verticalPosition: 'bottom'
     });
-    window.location.href = '/api/auth/google';
+    const apiUrl = this.apiService.apiUrl || '';
+    const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+    const originParam = currentOrigin ? `?origin=${encodeURIComponent(currentOrigin)}` : '';
+    window.location.href = `${apiUrl}/api/auth/google${originParam}`;
   }
 
   signUpWithFacebook(): void {
-    this.snackBar.open('Tính năng đăng ký bằng Facebook đang được kết nối...', 'Đóng', {
+    this.snackBar.open('Đang chuyển hướng tới cổng xác thực Facebook...', 'Đóng', {
       duration: 3500,
       horizontalPosition: 'center',
       verticalPosition: 'bottom'
     });
+    const apiUrl = this.apiService.apiUrl || '';
+    const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+    const originParam = currentOrigin ? `?origin=${encodeURIComponent(currentOrigin)}` : '';
+    window.location.href = `${apiUrl}/api/auth/facebook${originParam}`;
   }
 }
 

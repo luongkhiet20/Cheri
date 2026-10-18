@@ -29,17 +29,19 @@ export const setAppDB = (app: NestExpressApplication): void => {
       credentials: true,
       origin: (requestOrigin, callback) => {
         // Allow request from configured origin, or localhost 3000 / 4200
-        if (
+        const isAllowed =
           !requestOrigin ||
           requestOrigin === process.env.ORIGIN ||
           requestOrigin === 'http://localhost:3000' ||
           requestOrigin === 'http://localhost:4200' ||
           requestOrigin === 'http://127.0.0.1:3000' ||
-          requestOrigin === 'http://127.0.0.1:4200'
-        ) {
+          requestOrigin === 'http://127.0.0.1:4200' ||
+          (typeof requestOrigin === 'string' && requestOrigin.endsWith('.vercel.app'));
+
+        if (isAllowed || process.env.NODE_ENV !== 'production') {
           callback(null, true);
         } else {
-          callback(null, true);
+          callback(new Error('Not allowed by CORS'));
         }
       },
     }),

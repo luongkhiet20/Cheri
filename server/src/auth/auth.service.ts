@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 
 import { GoogleUserDto } from './dto/google-user.dto';
+import { FacebookUserDto } from './dto/facebook-user.dto';
 import { GoogleRegisterDto } from './dto/google-register.dto';
 import { User } from './models/user.model';
 import { JwtPayload } from './models/jwt-payload.interface';
@@ -145,53 +146,115 @@ export class AuthService {
       throw new UnauthorizedException('Không tìm thấy thông tin email từ tài khoản Google');
     }
 
-    let user = await this.userModel.findOne({ email: cleanEmail });
+    const googleId = profile?.id || profile?.sub;
+
+    // 1. Tìm user theo googleId nếu có
+    let user: User | null = null;
+    if (googleId) {
+      user = await this.userModel.findOne({ googleId });
+    }
 
     if (user) {
+      // Đã có tài khoản liên kết Google
       if (user.status === false) {
         throw new UnauthorizedException('Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động');
       }
+
+      // Cập nhật thông tin bổ sung nếu còn thiếu mà không ghi đè dữ liệu người dùng
       let updated = false;
-      if (!user.googleId && profile?.id) {
-        user.googleId = profile.id;
-        updated = true;
-      }
-      const photo = profile?.photos?.[0]?.value;
+      const photo = profile?.photos?.[0]?.value || profile?._json?.picture;
       if (!user.avatar && photo) {
         user.avatar = photo;
+        if (!user.images || user.images.length === 0) {
+          user.images = [photo];
+        }
+        updated = true;
+      }
+      if (!user.provider) {
+        user.provider = 'google';
         updated = true;
       }
       if (updated) {
         await user.save();
       }
     } else {
-      const displayName =
-        profile?.displayName ||
-        (profile?.name?.givenName
-          ? `${profile.name.givenName} ${profile.name?.familyName || ''}`.trim()
-          : '') ||
-        cleanEmail.split('@')[0];
+      // 2. Chưa tìm thấy theo googleId -> Kiểm tra xem email đã tồn tại trong hệ thống chưa
+      const existingUser = await this.userModel.findOne({ email: cleanEmail });
 
-      const photo = profile?.photos?.[0]?.value || '';
-      const salt = await bcrypt.genSalt();
-      const randomPassword = crypto.randomBytes(16).toString('hex');
-      const hashedPassword = await this.hashPassword(randomPassword, salt);
+      if (existingUser) {
+        // Tài khoản đã tồn tại bằng email
+        if (existingUser.status === false) {
+          throw new UnauthorizedException('Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động');
+        }
 
-      user = new this.userModel({
-        email: cleanEmail,
-        googleId: profile?.id,
-        name: displayName,
-        fullName: displayName,
-        avatar: photo,
-        images: photo ? [photo] : [],
-        salt,
-        password: hashedPassword,
-        roles: ['user'],
-        status: true,
-        cart: { items: [] },
-      });
+        // Nếu tài khoản đã tồn tại bằng email/mật khẩu nhưng chưa liên kết Google
+        // Không tự động gộp/chiếm tài khoản
+        if (!existingUser.googleId && existingUser.password) {
+          throw new ConflictException(
+            'Email này đã được đăng ký bằng mật khẩu. Vui lòng đăng nhập bằng email và mật khẩu của bạn.'
+          );
+        }
 
-      await user.save();
+        // Nếu tài khoản trước đó là google nhưng chưa lưu googleId
+        if (existingUser.provider === 'google' && !existingUser.googleId && googleId) {
+          existingUser.googleId = googleId;
+          await existingUser.save();
+          user = existingUser;
+        } else {
+          // Xung đột tài khoản
+          throw new ConflictException(
+            'Tài khoản email này đã tồn tại trong hệ thống. Vui lòng đăng nhập bằng phương thức tương ứng.'
+          );
+        }
+      } else {
+        // 3. Tạo tài khoản người dùng mới từ thông tin Google
+        const displayName =
+          profile?.displayName ||
+          (profile?.name?.givenName
+            ? `${profile.name.givenName} ${profile.name?.familyName || ''}`.trim()
+            : '') ||
+          profile?._json?.name ||
+          cleanEmail.split('@')[0];
+
+        const photo = profile?.photos?.[0]?.value || profile?._json?.picture || '';
+
+        user = new this.userModel({
+          email: cleanEmail,
+          googleId: googleId || undefined,
+          provider: 'google',
+          name: displayName,
+          fullName: displayName,
+          avatar: photo,
+          images: photo ? [photo] : [],
+          roles: ['user'],
+          status: true,
+          cart: { items: [] },
+          dateAdded: new Date(),
+        });
+
+        try {
+          await user.save();
+        } catch (err: any) {
+          // Xử lý duplicate key trong trường hợp nhiều request đồng thời
+          if (err.code === 11000) {
+            user = await this.userModel.findOne({
+              $or: [
+                ...(googleId ? [{ googleId }] : []),
+                { email: cleanEmail },
+              ],
+            });
+            if (!user) {
+              throw err;
+            }
+          } else {
+            throw err;
+          }
+        }
+      }
+    }
+
+    if (!user) {
+      throw new InternalServerErrorException('Không thể xác thực hoặc tạo tài khoản người dùng');
     }
 
     const payload: JwtPayload = {
@@ -206,6 +269,158 @@ export class AuthService {
 
   async getGoogleUser(email: string, profile: any) {
     const cleanEmail = (email || '').trim().toLowerCase();
+    const googleId = profile?.id || profile?.sub;
+    if (googleId) {
+      const byGoogle = await this.userModel.findOne({ googleId });
+      if (byGoogle) return byGoogle;
+    }
+    const user = await this.userModel.findOne({ email: cleanEmail });
+    return user;
+  }
+
+  async signInFacebook(facebookUserDto: FacebookUserDto): Promise<string> {
+    const { email, profile } = facebookUserDto;
+    const cleanEmail = (email || '').trim().toLowerCase();
+
+    if (!cleanEmail) {
+      throw new BadRequestException(
+        'Không tìm thấy thông tin email từ tài khoản Facebook. Vui lòng cấp quyền truy cập email hoặc đăng ký bằng tài khoản email.',
+      );
+    }
+
+    const facebookId = profile?.id;
+
+    // 1. Tìm user theo facebookId nếu có
+    let user: User | null = null;
+    if (facebookId) {
+      user = await this.userModel.findOne({ facebookId });
+    }
+
+    if (user) {
+      // Đã có tài khoản liên kết Facebook
+      if (user.status === false) {
+        throw new UnauthorizedException('Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động');
+      }
+
+      // Cập nhật thông tin bổ sung nếu còn thiếu mà không ghi đè dữ liệu người dùng
+      let updated = false;
+      const photo =
+        profile?.photos?.[0]?.value ||
+        (profile as any)?._json?.picture?.data?.url ||
+        '';
+      if (!user.avatar && photo) {
+        user.avatar = photo;
+        if (!user.images || user.images.length === 0) {
+          user.images = [photo];
+        }
+        updated = true;
+      }
+      if (!user.provider) {
+        user.provider = 'facebook';
+        updated = true;
+      }
+      if (updated) {
+        await user.save();
+      }
+    } else {
+      // 2. Chưa tìm thấy theo facebookId -> Kiểm tra xem email đã tồn tại trong hệ thống chưa
+      const existingUser = await this.userModel.findOne({ email: cleanEmail });
+
+      if (existingUser) {
+        // Tài khoản đã tồn tại bằng email
+        if (existingUser.status === false) {
+          throw new UnauthorizedException('Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động');
+        }
+
+        // Nếu tài khoản đã tồn tại bằng email/mật khẩu nhưng chưa liên kết Facebook
+        // Không tự động gộp/chiếm tài khoản
+        if (!existingUser.facebookId && existingUser.password) {
+          throw new ConflictException(
+            'Email này đã được đăng ký bằng mật khẩu. Vui lòng đăng nhập bằng email và mật khẩu của bạn.',
+          );
+        }
+
+        // Nếu tài khoản trước đó là facebook nhưng chưa lưu facebookId
+        if (existingUser.provider === 'facebook' && !existingUser.facebookId && facebookId) {
+          existingUser.facebookId = facebookId;
+          await existingUser.save();
+          user = existingUser;
+        } else {
+          // Xung đột tài khoản hoặc đã liên kết với provider khác (vd: google)
+          throw new ConflictException(
+            'Tài khoản email này đã tồn tại trong hệ thống. Vui lòng đăng nhập bằng phương thức tương ứng.',
+          );
+        }
+      } else {
+        // 3. Tạo tài khoản người dùng mới từ thông tin Facebook
+        const displayName =
+          profile?.displayName ||
+          (profile?.name?.givenName
+            ? `${profile.name.givenName} ${profile.name?.familyName || ''}`.trim()
+            : '') ||
+          cleanEmail.split('@')[0];
+
+        const photo =
+          profile?.photos?.[0]?.value ||
+          (profile as any)?._json?.picture?.data?.url ||
+          '';
+
+        user = new this.userModel({
+          email: cleanEmail,
+          facebookId: facebookId || undefined,
+          provider: 'facebook',
+          name: displayName,
+          fullName: displayName,
+          avatar: photo,
+          images: photo ? [photo] : [],
+          roles: ['user'],
+          status: true,
+          cart: { items: [] },
+          dateAdded: new Date(),
+        });
+
+        try {
+          await user.save();
+        } catch (err: any) {
+          // Xử lý duplicate key trong trường hợp nhiều request đồng thời
+          if (err.code === 11000) {
+            user = await this.userModel.findOne({
+              $or: [
+                ...(facebookId ? [{ facebookId }] : []),
+                { email: cleanEmail },
+              ],
+            });
+            if (!user) {
+              throw err;
+            }
+          } else {
+            throw err;
+          }
+        }
+      }
+    }
+
+    if (!user) {
+      throw new InternalServerErrorException('Không thể xác thực hoặc tạo tài khoản người dùng');
+    }
+
+    const payload: JwtPayload = {
+      email: user.email,
+      id: user._id.toString(),
+      roles: user.roles,
+    };
+    const accessToken: string = await this.jwtService.sign(payload);
+
+    return accessToken;
+  }
+
+  async getFacebookUser(email: string, profile: any) {
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const facebookId = profile?.id;
+    if (facebookId) {
+      const byFacebook = await this.userModel.findOne({ facebookId });
+      if (byFacebook) return byFacebook;
+    }
     const user = await this.userModel.findOne({ email: cleanEmail });
     return user;
   }
@@ -218,6 +433,9 @@ export class AuthService {
     password: string,
     user: User,
   ): Promise<boolean> {
+    if (!user.password || !user.salt) {
+      return false;
+    }
     const hash = await bcrypt.hash(password, user.salt);
     return hash === user.password;
   }

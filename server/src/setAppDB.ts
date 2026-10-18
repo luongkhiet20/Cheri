@@ -24,21 +24,31 @@ export const setAppDB = (app: NestExpressApplication): void => {
   app.use(urlencoded({ limit: '10mb' }));
   app.use(cookieParser());
 
+  // Parse ORIGIN – hỗ trợ nhiều origin phân cách bằng dấu phẩy
+  // Ví dụ: ORIGIN="https://cheri-three.vercel.app,http://localhost:3000"
+  const allowedOrigins: string[] = [
+    'http://localhost:3000',
+    'http://localhost:4200',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:4200',
+  ];
+  if (process.env.ORIGIN) {
+    process.env.ORIGIN.split(',').forEach((o) => {
+      const trimmed = o.trim();
+      if (trimmed && !allowedOrigins.includes(trimmed)) {
+        allowedOrigins.push(trimmed);
+      }
+    });
+  }
+
   app.use(
     cors({
       credentials: true,
       origin: (requestOrigin, callback) => {
-        // Allow request from configured origin, or localhost 3000 / 4200
-        if (
-          !requestOrigin ||
-          requestOrigin === process.env.ORIGIN ||
-          requestOrigin === 'http://localhost:3000' ||
-          requestOrigin === 'http://localhost:4200' ||
-          requestOrigin === 'http://127.0.0.1:3000' ||
-          requestOrigin === 'http://127.0.0.1:4200'
-        ) {
+        if (!requestOrigin || allowedOrigins.includes(requestOrigin)) {
           callback(null, true);
         } else {
+          // Cho phép tất cả các origin khác (mở rộng nếu cần, hoặc đổi thành false để chặt)
           callback(null, true);
         }
       },

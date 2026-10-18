@@ -99,7 +99,9 @@ function getGoogleCallbackUrl(req) {
  */
 function getFrontendOrigin(req) {
   if (process.env.ORIGIN && process.env.ORIGIN.trim()) {
-    return process.env.ORIGIN.trim().replace(/\/+$/, '');
+    // Hỗ trợ ORIGIN comma-separated, lấy origin đầu tiên làm redirect target
+    const firstOrigin = process.env.ORIGIN.split(',')[0].trim();
+    return firstOrigin.replace(/\/+$/, '');
   }
   const host = req.get('x-forwarded-host') || req.get('host') || 'cheri-three.vercel.app';
   let proto = req.get('x-forwarded-proto') || (req.secure ? 'https' : 'http');

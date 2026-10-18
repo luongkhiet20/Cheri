@@ -6,10 +6,13 @@ import { GoogleUserDto } from '../dto/google-user.dto';
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   constructor() {
+    // Khi dev local: dùng LOCAL_SERVER_URL hoặc http://localhost:4000
+    // Khi production (Render): SERVER_URL đã có sẵn trong biến môi trường
+    const serverUrl = process.env.LOCAL_SERVER_URL || process.env.SERVER_URL || 'http://localhost:4000';
     super({
       clientID: process.env.GOOGLE_CLIENT_ID || 'not_configured',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || 'not_configured',
-      callbackURL: (process.env.SERVER_URL || 'http://localhost:4000') + '/api/auth/google/callback',
+      callbackURL: serverUrl.replace(/\/+$/, '') + '/api/auth/google/callback',
       passReqToCallback: true,
       scope: ['profile', 'email'],
     });

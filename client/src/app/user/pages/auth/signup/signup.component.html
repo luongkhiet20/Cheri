@@ -18,7 +18,7 @@
           <h3 class="auth-title">Đăng ký</h3>
         </div>
 
-        <form class="sign-form auth-inner-form" [formGroup]="signUpForm" (ngSubmit)="submit()">
+        <form class="sign-form auth-inner-form" [formGroup]="signUpForm" (ngSubmit)="submit()" novalidate>
 
           <!-- Name -->
           <div class="form-group sign-field">
@@ -29,14 +29,17 @@
           <!-- Email -->
           <div class="form-group sign-field">
             <label class="form-label">Địa chỉ Email <span class="required-star">*</span></label>
-            <input type="email" required placeholder="nguyenvana@gmail.com" formControlName="email" name="email"
+            <input type="email" placeholder="example@gmail.com" formControlName="email" name="email"
               class="form-input"
               [class.input-error]="signUpForm.get('email')?.touched && signUpForm.get('email')?.invalid" />
             <div class="field-error-msg" *ngIf="signUpForm.get('email')?.touched && signUpForm.get('email')?.invalid">
               <span *ngIf="signUpForm.get('email')?.errors?.['required']">Vui lòng nhập địa chỉ email</span>
               <span
-                *ngIf="signUpForm.get('email')?.errors?.['gmailInvalid'] || signUpForm.get('email')?.errors?.['email']">
-                Email phải đúng định dạng Gmail (ví dụ: nguyenvana@gmail.com)
+                *ngIf="!signUpForm.get('email')?.errors?.['required'] && !signUpForm.get('email')?.errors?.['emailTaken'] && (signUpForm.get('email')?.errors?.['emailFormatInvalid'] || signUpForm.get('email')?.errors?.['email'])">
+                Email không đúng định dạng (ví dụ: example@gmail.com, student@university.edu.vn)
+              </span>
+              <span *ngIf="signUpForm.get('email')?.errors?.['emailTaken']">
+                Email này đã được đăng ký. Vui lòng sử dụng email khác hoặc đăng nhập.
               </span>
             </div>
           </div>
@@ -45,18 +48,24 @@
           <div class="form-row-2col">
             <div class="form-group sign-field">
               <label class="form-label">Mật khẩu <span class="required-star">*</span></label>
-              <input [type]="showRegPassword ? 'text' : 'password'" required minlength="6" placeholder="••••••••"
+              <input [type]="showRegPassword ? 'text' : 'password'" required minlength="8" placeholder="••••••••"
                 formControlName="password" name="password" class="form-input"
                 [class.input-error]="signUpForm.get('password')?.touched && signUpForm.get('password')?.invalid" />
               <div class="field-error-msg"
                 *ngIf="signUpForm.get('password')?.touched && signUpForm.get('password')?.invalid">
                 <span *ngIf="signUpForm.get('password')?.errors?.['required']">Vui lòng nhập mật khẩu</span>
-                <span *ngIf="signUpForm.get('password')?.errors?.['minlength']">Mật khẩu tối thiểu 6 ký tự</span>
+                <span *ngIf="signUpForm.get('password')?.errors?.['minlength']">Mật khẩu phải có tối thiểu 8 ký
+                  tự</span>
+                <span
+                  *ngIf="!signUpForm.get('password')?.errors?.['minlength'] && signUpForm.get('password')?.errors?.['weakPassword']">
+                  {{ signUpForm.get('password')?.errors?.['weakPasswordMsg'] || 'Mật khẩu quá đơn giản hoặc phổ biến.
+                  Vui lòng chọn mật khẩu khó đoán hơn.' }}
+                </span>
               </div>
             </div>
             <div class="form-group sign-field">
               <label class="form-label">Nhập lại mật khẩu</label>
-              <input [type]="showRegPassword ? 'text' : 'password'" minlength="6" placeholder="••••••••"
+              <input [type]="showRegPassword ? 'text' : 'password'" minlength="8" placeholder="••••••••"
                 formControlName="confirmPassword" class="form-input" name="confirmPassword"
                 [class.input-error]="signUpForm.errors?.['passwordMismatch'] && signUpForm.get('confirmPassword')?.touched" />
             </div>
@@ -79,27 +88,20 @@
               <input type="checkbox" formControlName="agreeTerms" class="form-checkbox" />
               <span>
                 Tôi đồng ý với
-                <a
-                  class="terms-link"
-                  [routerLink]="['/' + lang + '/terms-of-service']"
-                  (click)="$event.stopPropagation()"
-                >Điều khoản sử dụng</a>
+                <a class="terms-link" [routerLink]="['/' + lang + '/terms-of-service']"
+                  (click)="$event.stopPropagation()">Điều khoản sử dụng</a>
                 và
-                <a
-                  class="terms-link"
-                  [routerLink]="['/' + lang + '/privacy-policy']"
-                  (click)="$event.stopPropagation()"
-                >Chính sách bảo mật</a>
+                <a class="terms-link" [routerLink]="['/' + lang + '/privacy-policy']"
+                  (click)="$event.stopPropagation()">Chính sách bảo mật</a>
                 <span class="required-star">*</span>
               </span>
             </label>
 
           </div>
 
-          <!-- Submit -->
-          <button type="submit" class="submit-sign-button auth-submit-btn" [disabled]="signUpForm.invalid"
+          <button type="submit" class="submit-sign-button auth-submit-btn" [disabled]="isSubmitting"
             [title]="getSubmitButtonTitle()">
-            <span>ĐĂNG KÝ</span>
+            <span>{{ isSubmitting ? 'ĐANG ĐĂNG KÝ...' : 'ĐĂNG KÝ' }}</span>
             <svg class="btn-sparkle" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
               fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path

@@ -1,21 +1,20 @@
 import { Component, OnInit, OnDestroy, PLATFORM_ID, Inject, ChangeDetectorRef, effect, Signal } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { take } from 'rxjs/operators';
+import { NotificationService } from '../../shared/notification/notification.service';
 import { ApiService } from '../../../services/api.service';
 import { TranslateService } from '../../../services/translate.service';
 import { SignalStore } from '../../../store/signal.store';
 import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
 import { Product } from '../../shared/models';
 import { WishlistService } from '../../../services/wishlist.service';
-import { CartToastService } from '../../../services/cart-toast.service';
 import { WishlistButtonComponent } from '../../shared/wishlist-button/wishlist-button.component';
+import { formatVND } from '../../../pipes/price.pipe';
 
 @Component({
   selector: 'app-wishlist',
   standalone: true,
-  imports: [CommonModule, RouterModule, MatSnackBarModule, WishlistButtonComponent],
+  imports: [CommonModule, RouterModule, WishlistButtonComponent],
   templateUrl: './wishlist.html',
   styleUrl: './wishlist.css'
 })
@@ -36,8 +35,7 @@ export class Wishlist implements OnInit, OnDestroy {
     private store: SignalStore,
     private selectors: SignalStoreSelectors,
     private router: Router,
-    private snackBar: MatSnackBar,
-    private cartToast: CartToastService,
+    private notify: NotificationService,
     private cdr: ChangeDetectorRef,
     private wishlistService: WishlistService
   ) {
@@ -174,7 +172,7 @@ export class Wishlist implements OnInit, OnDestroy {
   onRemoveClick(event: MouseEvent, productId: string): void {
     event.stopPropagation();
     this.onRemoveFromWishlist(productId);
-    this.showToast('Đã bỏ thích sản phẩm', 'info');
+    this.notify.info('✨Đã xóa khỏi danh sách yêu thích✨');
   }
 
   onRemoveFromWishlist(productId: string): void {
@@ -187,20 +185,11 @@ export class Wishlist implements OnInit, OnDestroy {
     const id = product._id || product.id;
     if (!id) return;
     if (this.isOutOfStock(product) || product.visibility === false || product.vi?.visibility === false) {
-      this.showToast('Sản phẩm hiện đã hết hàng hoặc tạm ngưng bán', 'error');
+      this.notify.warning('✨Sản phẩm hiện đã hết hàng hoặc tạm ngưng bán✨');
       return;
     }
     this.store.addToCart('?id=' + id);
-    this.cartToast.show();
-  }
-
-  showToast(message: string, type: 'info' | 'success' | 'error' = 'info'): void {
-    this.snackBar.open(message, 'Đóng', {
-      duration: 3000,
-      horizontalPosition: 'center',
-      verticalPosition: 'bottom',
-      panelClass: type === 'error' ? ['toast-error'] : ['toast-info']
-    });
+    this.notify.success('✨Đã thêm sản phẩm vào giỏ hàng✨');
   }
 
   onOpenQuickView(product: any): void {
@@ -218,8 +207,7 @@ export class Wishlist implements OnInit, OnDestroy {
     }
   }
 
-  formatVND(price: number): string {
-    if (price === undefined || price === null) return '0 ₫';
-    return new Intl.NumberFormat('vi-VN').format(price) + ' ₫';
+  formatVND(price: any): string {
+    return formatVND(price);
   }
 }

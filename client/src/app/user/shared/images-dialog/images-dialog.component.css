@@ -1,11 +1,323 @@
 :host {
   display: block;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
 }
-:host .next-btn {
-  float: right;
-  margin: 10px;
+
+.cheri-lightbox-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: transparent;
+  color: #FFFFFF;
+  user-select: none;
+  overflow: hidden;
 }
-:host .prev-btn {
-  float: left;
-  margin: 10px;
+
+/* ==========================================================================
+   1. Header / Top Controls
+   ========================================================================== */
+.cheri-lightbox-header {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.65) 0%, rgba(0, 0, 0, 0) 100%);
+}
+
+.cheri-lightbox-counter .counter-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  color: #F3F4F6;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.cheri-lightbox-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cheri-lightbox-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 20px;
+  color: #FFFFFF;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cheri-lightbox-action-btn i.material-icons {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.cheri-lightbox-action-btn:hover {
+  background: rgba(255, 255, 255, 0.24);
+  border-color: rgba(255, 255, 255, 0.35);
+  transform: translateY(-1px);
+}
+
+.cheri-lightbox-action-btn.close-btn:hover {
+  background: #74070E;
+  border-color: #74070E;
+  box-shadow: 0 4px 14px rgba(116, 7, 14, 0.35);
+}
+
+/* ==========================================================================
+   2. Main Stage & Image Viewport
+   ========================================================================== */
+.cheri-lightbox-stage {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20px;
+  min-height: 0;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.cheri-lightbox-viewport {
+  position: relative;
+  max-width: 90vw;
+  max-height: calc(88vh - 140px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: default;
+}
+
+.cheri-lightbox-image-box {
+  position: relative;
+  max-width: 100%;
+  max-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-in;
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.cheri-lightbox-image-box.is-zoomed {
+  transform: scale(1.4);
+  cursor: zoom-out;
+}
+
+.cheri-lightbox-img {
+  max-width: 86vw;
+  max-height: calc(86vh - 140px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  border-radius: 6px;
+  box-shadow: 0 10px 45px rgba(0, 0, 0, 0.55);
+  pointer-events: auto;
+}
+
+.cheri-lightbox-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #9CA3AF;
+  gap: 12px;
+}
+
+.cheri-lightbox-empty i.material-icons {
+  font-size: 56px;
+  opacity: 0.6;
+}
+
+/* ==========================================================================
+   3. Previous & Next Nav Buttons
+   ========================================================================== */
+.cheri-lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 18px;
+  background: rgba(20, 20, 22, 0.65);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 28px;
+  color: #FFFFFF;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+.cheri-lightbox-nav.prev {
+  left: 24px;
+}
+
+.cheri-lightbox-nav.next {
+  right: 24px;
+}
+
+.cheri-lightbox-nav i.material-icons {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.cheri-lightbox-nav:hover:not(.is-disabled) {
+  background: #74070E;
+  border-color: #74070E;
+  box-shadow: 0 6px 20px rgba(116, 7, 14, 0.4);
+  transform: translateY(-50%) scale(1.04);
+}
+
+.cheri-lightbox-nav.is-disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   4. Footer Thumbnails
+   ========================================================================== */
+.cheri-lightbox-footer {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 14px 20px 20px;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0) 100%);
+}
+
+.cheri-lightbox-thumbs-track {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 90vw;
+  overflow-x: auto;
+  padding: 4px 6px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+
+.cheri-lightbox-thumb-item {
+  flex-shrink: 0;
+  width: 58px;
+  height: 58px;
+  padding: 0;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  background: #1A1A1A;
+  overflow: hidden;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: all 0.2s ease;
+}
+
+.cheri-lightbox-thumb-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cheri-lightbox-thumb-item:hover {
+  opacity: 0.9;
+  border-color: rgba(255, 255, 255, 0.6);
+  transform: translateY(-2px);
+}
+
+.cheri-lightbox-thumb-item.is-active {
+  opacity: 1;
+  border-color: #FFFFFF;
+  box-shadow: 0 0 0 2px #74070E;
+  transform: translateY(-2px);
+}
+
+/* ==========================================================================
+   5. Responsive Mobile & Tablet
+   ========================================================================== */
+@media (max-width: 768px) {
+  .cheri-lightbox-header {
+    padding: 12px 16px;
+  }
+
+  .cheri-lightbox-nav.prev {
+    left: 12px;
+  }
+
+  .cheri-lightbox-nav.next {
+    right: 12px;
+  }
+
+  .cheri-lightbox-nav .nav-label {
+    display: none;
+  }
+
+  .cheri-lightbox-nav {
+    padding: 10px;
+    border-radius: 50%;
+  }
+
+  .cheri-lightbox-thumb-item {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+@media (max-width: 480px) {
+  .cheri-lightbox-action-btn .btn-text {
+    display: none;
+  }
+
+  .cheri-lightbox-action-btn {
+    padding: 8px;
+    border-radius: 50%;
+  }
+
+  .cheri-lightbox-img {
+    max-width: 94vw;
+    max-height: calc(82vh - 120px);
+  }
+
+  .cheri-lightbox-nav {
+    padding: 8px;
+  }
+
+  .cheri-lightbox-nav i.material-icons {
+    font-size: 20px;
+  }
 }

@@ -55,7 +55,7 @@ async function profileHarness(orders, language = 'vi') {
   });
   const navigations = [];
   const component = new Profile('browser', {}, { user: () => null, userOrders: () => orders },
-    { lang: language, getLang$: () => of(language) }, {}, { navigate: (...args) => navigations.push(args) }, { markForCheck() {} });
+    { lang: language, getLang$: () => of(language) }, {}, {}, { navigate: (...args) => navigations.push(args) }, { markForCheck() {} });
   return { component, navigations };
 }
 
@@ -103,13 +103,15 @@ async function productHarness(platform = 'browser', review = 1, routeId = A) {
     '@angular/common': { Location: class {}, isPlatformBrowser: value => value === 'browser' },
     '@angular/router': { ActivatedRoute: class {}, Router: class {} }, '@angular/platform-browser': { Meta: class {}, Title: class {} },
     '@angular/material/dialog': { MatDialog: class {} }, '@angular/material/snack-bar': { MatSnackBar: class {} },
-    '../../../../services/jsonLD.service': { JsonLDService: class {} }, '../../../../services/translate.service': { TranslateService: class {} },
+    '../../../../services/jsonLD.service': { JsonLDService: class {} }, '../../../../services/api.service': { ApiService: class {} },
+    '../../../../services/translate.service': { TranslateService: class {} },
     '../../../../services/cart-toast.service': { CartToastService: class {} }, '../../../../store/signal.store': { SignalStore: class {} },
     '../../../../store/signal.store.selectors': { SignalStoreSelectors: class {} },
     '../../../shared/images-dialog/images-dialog.component': { ImagesDialogComponent: class {} },
   });
   const component = new ProductComponent({ params, queryParams }, { getProduct() {}, getCategories() {} }, selectors, {},
-    { updateTag() {} }, { setTitle() {} }, {}, {}, {}, {}, { getLang$: () => of('vi') }, { insertSchema() {} }, platform);
+    { updateTag() {} }, { setTitle() {} }, {}, {}, {}, { getLang$: () => of('vi') }, { insertSchema() {} }, platform,
+    { recordInteraction: () => of(null) });
   const focuses = [];
   const mount = (id = A) => { component.reviewSection = { productId: id, focusReviews: () => focuses.push(id) }; };
   const load = (id = A, extra = {}) => { loading = false; product.next({ _id: id, titleUrl: 'fixture-slug', title: 'Fixture', tags: [], variants: [], ...extra }); };

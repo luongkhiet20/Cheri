@@ -1,4 +1,17 @@
-import { Component, EventEmitter, Input, Output, OnInit, OnDestroy, inject } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  Output,
+  OnInit,
+  OnDestroy,
+  OnChanges,
+  SimpleChanges,
+  ViewChild,
+  ElementRef,
+  HostListener,
+  inject
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -12,9 +25,11 @@ import { Subscription } from 'rxjs';
   styleUrls: ['./search-modal.component.css'],
   imports: [CommonModule, FormsModule]
 })
-export class SearchModalComponent implements OnInit, OnDestroy {
+export class SearchModalComponent implements OnInit, OnDestroy, OnChanges {
   @Input() isOpen = false;
   @Output() close = new EventEmitter<void>();
+
+  @ViewChild('searchInput') searchInputRef?: ElementRef<HTMLInputElement>;
 
   keyword: string = '';
   selectedFile: File | null = null;
@@ -22,8 +37,6 @@ export class SearchModalComponent implements OnInit, OnDestroy {
   isLoading: boolean = false;
   errorMessage: string = '';
 
-  // 14. Suggestion chips
-  suggestions: string[] = ['lụa', 'chân váy', 'đầm', 'satin'];
 
   private langSub: Subscription;
   currentLang: string = 'vi';
@@ -45,8 +58,28 @@ export class SearchModalComponent implements OnInit, OnDestroy {
     }
   }
 
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['isOpen'] && this.isOpen) {
+      setTimeout(() => {
+        this.searchInputRef?.nativeElement?.focus();
+      }, 60);
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    if (this.isOpen) {
+      this.closeModal();
+    }
+  }
+
   onBackdropClick(event: MouseEvent): void {
-    if (event.target === event.currentTarget) {
+    const target = event.target as HTMLElement;
+    if (
+      event.target === event.currentTarget ||
+      target.classList.contains('cheri-search-backdrop') ||
+      target.classList.contains('cheri-search-wrapper')
+    ) {
       this.closeModal();
     }
   }
@@ -56,11 +89,6 @@ export class SearchModalComponent implements OnInit, OnDestroy {
     this.close.emit();
   }
 
-  selectSuggestion(chip: string): void {
-    this.keyword = chip;
-    this.errorMessage = '';
-    this.submitSearch();
-  }
 
   onFileSelected(event: any): void {
     this.errorMessage = '';
@@ -112,6 +140,7 @@ export class SearchModalComponent implements OnInit, OnDestroy {
     // CASE 1: Chỉ tìm bằng từ khóa
     if (trimmedKeyword && !this.selectedFile) {
       this.closeModal();
+      this.resetScrollToTop();
       this.router.navigate(['/' + this.currentLang + '/product/all'], {
         queryParams: { search: trimmedKeyword, page: 1 },
       });
@@ -131,6 +160,7 @@ export class SearchModalComponent implements OnInit, OnDestroy {
           }
 
           this.closeModal();
+          this.resetScrollToTop();
           const queryParams: any = {
             imageSearch: '1',
             page: 1,
@@ -150,6 +180,7 @@ export class SearchModalComponent implements OnInit, OnDestroy {
           this.isLoading = false;
           // Fallback grace: navigate to products page with keyword or error context
           this.closeModal();
+          this.resetScrollToTop();
           const queryParams: any = {
             imageSearch: '1',
             page: 1,
@@ -162,6 +193,18 @@ export class SearchModalComponent implements OnInit, OnDestroy {
           });
         },
       });
+    }
+  }
+
+  private resetScrollToTop(): void {
+    if (typeof document !== 'undefined') {
+      const scrollWrap = document.querySelector('.main-scroll-wrap') as HTMLElement | null;
+      if (scrollWrap) {
+        scrollWrap.scrollTop = 0;
+      }
+    }
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     }
   }
 }

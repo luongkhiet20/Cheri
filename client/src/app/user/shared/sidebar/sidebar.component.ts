@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, OnInit, OnChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, OnInit, OnChanges, inject, ChangeDetectorRef } from '@angular/core';
 import { of } from 'rxjs';
 import { take, delay } from 'rxjs/operators';
 import { MatSliderModule } from '@angular/material/slider';
@@ -19,6 +19,8 @@ import { Category } from '../models';
   standalone: true
 })
 export class SidebarComponent implements OnInit, OnChanges {
+  private cdr = inject(ChangeDetectorRef);
+
   @Input() categories: Category[] = [];
   @Input() activeCategory?: string;
   @Input() activeCategories: string[] = [];
@@ -38,6 +40,7 @@ export class SidebarComponent implements OnInit, OnChanges {
 
   @Output() changeMinPrice = new EventEmitter<number>();
   @Output() changeMaxPrice = new EventEmitter<number>();
+  @Output() changePrice = new EventEmitter<number>();
   @Output() changeSort = new EventEmitter<string>();
   @Output() changeCategory = new EventEmitter<string>();
   @Output() changeCategories = new EventEmitter<string[]>();
@@ -47,13 +50,28 @@ export class SidebarComponent implements OnInit, OnChanges {
   @Output() clearFilters = new EventEmitter<void>();
   @Output() applyFilters = new EventEmitter<void>();
 
-  onApplyFilters(): void {
-    this.applyFilters.emit();
-  }
+  // State: whether user has actively applied a price range
+  isPriceFilterActive: boolean = false;
 
   // Local slider state
   localMin: number = 0;
   localMax: number = 10000000;
+
+  // Input display text state: empty when no price filter is active
+  inputMinStr: string = '';
+  inputMaxStr: string = '';
+  isMinInputFocused: boolean = false;
+  isMaxInputFocused: boolean = false;
+  private _debounceTimer: any = null;
+
+  // Placeholder reference limits (prices of available products)
+  get minPlaceholder(): string {
+    return this.minPrice > 0 ? this._formatPrice(this.minPrice) : '0';
+  }
+
+  get maxPlaceholder(): string {
+    return this.maxPrice > 0 ? this._formatPrice(this.maxPrice) : '0';
+  }
 
   // Local multi-select lists
   selectedCategoryList: string[] = [];
@@ -75,8 +93,35 @@ export class SidebarComponent implements OnInit, OnChanges {
   }
 
   private _syncState(): void {
-    this.localMin = this.filterMinPrice || this.minPrice || 0;
-    this.localMax = this.filterMaxPrice || this.maxPrice || 10000000;
+    const hasMinFilter = Boolean(this.filterMinPrice && this.filterMinPrice > 0);
+    const hasMaxFilter = Boolean(this.filterMaxPrice && this.filterMaxPrice > 0 && this.filterMaxPrice < (this.maxPrice || Infinity));
+    const hasPriceFilter = Boolean(this.price && this.price > 0 && this.price < (this.maxPrice || Infinity));
+
+    if (hasMinFilter || hasMaxFilter || hasPriceFilter) {
+      this.isPriceFilterActive = true;
+      this.localMin = hasMinFilter ? Math.max(this.minPrice || 0, this.filterMinPrice) : (this.minPrice || 0);
+      const maxCandidate = hasMaxFilter ? this.filterMaxPrice : (hasPriceFilter ? this.price : (this.maxPrice || 10000000));
+      this.localMax = Math.min(this.maxPrice || 10000000, Math.max(maxCandidate, this.localMin));
+
+      if (!this.isMinInputFocused) {
+        this.inputMinStr = hasMinFilter ? this._formatPrice(this.localMin) : '';
+      }
+      if (!this.isMaxInputFocused) {
+        this.inputMaxStr = (hasMaxFilter || hasPriceFilter) ? this._formatPrice(this.localMax) : '';
+      }
+    } else {
+      // Khi chưa chọn khoảng giá hoặc sau khi xóa bộ lọc giá:
+      this.isPriceFilterActive = false;
+      this.localMin = this.minPrice || 0;
+      this.localMax = this.maxPrice || 10000000;
+
+      if (!this.isMinInputFocused) {
+        this.inputMinStr = '';
+      }
+      if (!this.isMaxInputFocused) {
+        this.inputMaxStr = '';
+      }
+    }
 
     // Sync categories
     if (this.activeCategories && this.activeCategories.length > 0) {
@@ -105,24 +150,289 @@ export class SidebarComponent implements OnInit, OnChanges {
     } else {
       this.selectedRatingList = [];
     }
+
+    this.cdr.markForCheck();
   }
 
   onInputChange(sort: string): void {
     this.changeSort.emit(sort);
   }
 
+  // ── Range Slider Handlers ──
+  onMinSliderChange(value: number): void {
+    if (value === null || value === undefined || isNaN(value)) return;
+    this.isPriceFilterActive = true;
+    const clamped = Math.max(this.minPrice || 0, Math.min(value, this.localMax));
+    this.localMin = clamped;
+    if (!this.isMinInputFocused) {
+      this.inputMinStr = this._formatPrice(this.localMin);
+    }
+    if (!this.isMaxInputFocused && !this.inputMaxStr) {
+      this.inputMaxStr = this._formatPrice(this.localMax);
+    }
+    this._scheduleFilterChange(true, this.localMin, this.localMax);
+    this.cdr.markForCheck();
+  }
+
+  onMaxSliderChange(value: number): void {
+    if (value === null || value === undefined || isNaN(value)) return;
+    this.isPriceFilterActive = true;
+    const clamped = Math.min(this.maxPrice || 10000000, Math.max(value, this.localMin));
+    this.localMax = clamped;
+    if (!this.isMaxInputFocused) {
+      this.inputMaxStr = this._formatPrice(this.localMax);
+    }
+    if (!this.isMinInputFocused && !this.inputMinStr) {
+      this.inputMinStr = this._formatPrice(this.localMin);
+    }
+    this._scheduleFilterChange(false, this.localMin, this.localMax);
+    this.cdr.markForCheck();
+  }
+
+  // Backward compatibility aliases
   onMinPriceChange(value: number): void {
-    this.localMin = value;
-    of('change').pipe(take(1), delay(300)).subscribe(() => {
-      this.changeMinPrice.emit(value);
-    });
+    this.onMinSliderChange(value);
   }
 
   onMaxPriceChange(value: number): void {
-    this.localMax = value;
-    of('change').pipe(take(1), delay(300)).subscribe(() => {
-      this.changeMaxPrice.emit(value);
-    });
+    this.onMaxSliderChange(value);
+  }
+
+  // ── Input Box Handlers ──
+  onMinInputFocus(): void {
+    this.isMinInputFocused = true;
+    if (this.inputMinStr) {
+      const parsed = this._parsePrice(this.inputMinStr);
+      this.inputMinStr = parsed !== null && parsed > 0 ? String(parsed) : '';
+    } else {
+      this.inputMinStr = '';
+    }
+  }
+
+  onMinTextInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.inputMinStr = input.value;
+    const trimmed = input.value.trim();
+
+    if (!trimmed) {
+      if (!this.inputMaxStr.trim()) {
+        this.isPriceFilterActive = false;
+        this.localMin = this.minPrice || 0;
+        this._scheduleClearPriceFilter();
+      } else {
+        this.localMin = this.minPrice || 0;
+        this._scheduleFilterChange(true, 0, this.localMax);
+      }
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const parsed = this._parsePrice(trimmed);
+    if (parsed !== null) {
+      this.isPriceFilterActive = true;
+      if (parsed > this.localMax) {
+        this.localMin = this.localMax;
+      } else if (parsed >= (this.minPrice || 0)) {
+        this.localMin = parsed;
+      } else {
+        this.localMin = this.minPrice || 0;
+      }
+      this._scheduleFilterChange(true, this.localMin, this.localMax);
+      this.cdr.markForCheck();
+    }
+  }
+
+  onMinInputBlur(): void {
+    this.isMinInputFocused = false;
+    this._finalizeMinInput();
+  }
+
+  private _finalizeMinInput(): void {
+    if (this._debounceTimer) {
+      clearTimeout(this._debounceTimer);
+      this._debounceTimer = null;
+    }
+    const trimmed = this.inputMinStr.trim();
+    if (!trimmed) {
+      this.inputMinStr = '';
+      this.localMin = this.minPrice || 0;
+      if (!this.inputMaxStr.trim()) {
+        this.isPriceFilterActive = false;
+        this.localMax = this.maxPrice || 10000000;
+        this.changeMinPrice.emit(0);
+        this.changeMaxPrice.emit(0);
+        this.changePrice.emit(0);
+      } else {
+        this.changeMinPrice.emit(0);
+      }
+    } else {
+      this.isPriceFilterActive = true;
+      const parsed = this._parsePrice(trimmed);
+      let finalVal = parsed !== null ? parsed : (this.minPrice || 0);
+      if (finalVal < (this.minPrice || 0)) finalVal = this.minPrice || 0;
+      if (finalVal > this.localMax) finalVal = this.localMax;
+      if (finalVal > (this.maxPrice || 10000000)) finalVal = this.maxPrice || 10000000;
+
+      this.localMin = finalVal;
+      this.inputMinStr = this._formatPrice(this.localMin);
+      this.changeMinPrice.emit(this.localMin);
+
+      if (!this.inputMaxStr.trim()) {
+        this.inputMaxStr = this._formatPrice(this.localMax);
+        this.changeMaxPrice.emit(this.localMax);
+        this.changePrice.emit(this.localMax);
+      }
+    }
+    this.cdr.markForCheck();
+  }
+
+  onMaxInputFocus(): void {
+    this.isMaxInputFocused = true;
+    if (this.inputMaxStr) {
+      const parsed = this._parsePrice(this.inputMaxStr);
+      this.inputMaxStr = parsed !== null && parsed > 0 ? String(parsed) : '';
+    } else {
+      this.inputMaxStr = '';
+    }
+  }
+
+  onMaxTextInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.inputMaxStr = input.value;
+    const trimmed = input.value.trim();
+
+    if (!trimmed) {
+      if (!this.inputMinStr.trim()) {
+        this.isPriceFilterActive = false;
+        this.localMax = this.maxPrice || 10000000;
+        this._scheduleClearPriceFilter();
+      } else {
+        this.localMax = this.maxPrice || 10000000;
+        this._scheduleFilterChange(false, this.localMin, 0);
+      }
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const parsed = this._parsePrice(trimmed);
+    if (parsed !== null) {
+      this.isPriceFilterActive = true;
+      if (parsed < this.localMin) {
+        this.localMax = this.localMin;
+      } else if (parsed > (this.maxPrice || 10000000)) {
+        this.localMax = this.maxPrice || 10000000;
+      } else {
+        this.localMax = parsed;
+      }
+      this._scheduleFilterChange(false, this.localMin, this.localMax);
+      this.cdr.markForCheck();
+    }
+  }
+
+  onMaxInputBlur(): void {
+    this.isMaxInputFocused = false;
+    this._finalizeMaxInput();
+  }
+
+  private _finalizeMaxInput(): void {
+    if (this._debounceTimer) {
+      clearTimeout(this._debounceTimer);
+      this._debounceTimer = null;
+    }
+    const trimmed = this.inputMaxStr.trim();
+    if (!trimmed) {
+      this.inputMaxStr = '';
+      this.localMax = this.maxPrice || 10000000;
+      if (!this.inputMinStr.trim()) {
+        this.isPriceFilterActive = false;
+        this.localMin = this.minPrice || 0;
+        this.changeMinPrice.emit(0);
+        this.changeMaxPrice.emit(0);
+        this.changePrice.emit(0);
+      } else {
+        this.changeMaxPrice.emit(0);
+        this.changePrice.emit(0);
+      }
+    } else {
+      this.isPriceFilterActive = true;
+      const parsed = this._parsePrice(trimmed);
+      let finalVal = parsed !== null ? parsed : (this.maxPrice || 10000000);
+      if (finalVal > (this.maxPrice || 10000000)) finalVal = this.maxPrice || 10000000;
+      if (finalVal < this.localMin) finalVal = this.localMin;
+      if (finalVal < (this.minPrice || 0)) finalVal = this.minPrice || 0;
+
+      this.localMax = finalVal;
+      this.inputMaxStr = this._formatPrice(this.localMax);
+      this.changeMaxPrice.emit(this.localMax);
+      this.changePrice.emit(this.localMax);
+
+      if (!this.inputMinStr.trim()) {
+        this.inputMinStr = this._formatPrice(this.localMin);
+        this.changeMinPrice.emit(this.localMin);
+      }
+    }
+    this.cdr.markForCheck();
+  }
+
+  onInputEnter(event: Event): void {
+    (event.target as HTMLInputElement).blur();
+  }
+
+  private _scheduleClearPriceFilter(): void {
+    if (this._debounceTimer) {
+      clearTimeout(this._debounceTimer);
+    }
+    this._debounceTimer = setTimeout(() => {
+      this.changeMinPrice.emit(0);
+      this.changeMaxPrice.emit(0);
+      this.changePrice.emit(0);
+      this._debounceTimer = null;
+    }, 350);
+  }
+
+  private _scheduleFilterChange(isMin: boolean, minVal: number, maxVal?: number): void {
+    if (this._debounceTimer) {
+      clearTimeout(this._debounceTimer);
+    }
+    this._debounceTimer = setTimeout(() => {
+      this.changeMinPrice.emit(minVal);
+      if (maxVal !== undefined) {
+        this.changeMaxPrice.emit(maxVal);
+        this.changePrice.emit(maxVal);
+      }
+      this._debounceTimer = null;
+    }, 350);
+  }
+
+  private _parsePrice(raw: string | number): number | null {
+    if (raw === null || raw === undefined) return null;
+    const str = String(raw).trim();
+    if (str.startsWith('-')) return 0;
+    const digitsOnly = str.replace(/[^\d]/g, '');
+    if (!digitsOnly) return null;
+    const num = parseInt(digitsOnly, 10);
+    return isNaN(num) ? null : num;
+  }
+
+  private _formatPrice(val: number): string {
+    if (val === null || val === undefined || isNaN(val)) return '0';
+    const rounded = Math.round(val);
+    return rounded.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+
+  onApplyFilters(): void {
+    if (this.isPriceFilterActive) {
+      this._finalizeMinInput();
+      this._finalizeMaxInput();
+      this.changeMinPrice.emit(this.localMin);
+      this.changeMaxPrice.emit(this.localMax);
+      this.changePrice.emit(this.localMax);
+    } else {
+      this.changeMinPrice.emit(0);
+      this.changeMaxPrice.emit(0);
+      this.changePrice.emit(0);
+    }
+    this.applyFilters.emit();
   }
 
   onStockChange(val: string): void {
@@ -171,9 +481,22 @@ export class SidebarComponent implements OnInit, OnChanges {
   }
 
   onClearFilters(): void {
+    if (this._debounceTimer) {
+      clearTimeout(this._debounceTimer);
+      this._debounceTimer = null;
+    }
+    this.isPriceFilterActive = false;
     this.selectedCategoryList = [];
     this.selectedRatingList = [];
+    this.localMin = this.minPrice || 0;
+    this.localMax = this.maxPrice || 10000000;
+    this.inputMinStr = '';
+    this.inputMaxStr = '';
+    this.changeMinPrice.emit(0);
+    this.changeMaxPrice.emit(0);
+    this.changePrice.emit(0);
     this.clearFilters.emit();
+    this.cdr.markForCheck();
   }
 
   trackById(_index: number, item: any) {

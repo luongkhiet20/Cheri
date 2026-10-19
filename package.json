@@ -14,6 +14,8 @@
     "test:product-reviews:server": "node --test server/test/product-reviews-eligibility.test.cjs server/test/product-reviews-persistence.test.cjs server/test/product-reviews-api.test.cjs",
     "test:product-reviews:client": "node --test client/test/product-reviews-ui.test.cjs client/test/product-reviews-rating.test.cjs client/test/product-reviews-profile.test.cjs",
     "test:orders-csv": "node --test client/src/app/admin/pages/orders/orders-report-csv.test.cjs",
+    "test:server": "node --test server/src/test/cloudinary-all-features.test.cjs server/src/test/cloudinary-return-proof.test.cjs server/src/test/google-oauth-flow.test.cjs",
+    "test:storefront-search": "node --test client/src/app/user/pages/product/products/products-search-flow.test.cjs",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node server/dist/main",
     "format": "prettier --write \"server/**/*.ts\"",
@@ -32,7 +34,11 @@
     "lint:css": "stylelint **/**.css --formatter verbose",
     "lint:css:fix": "npm run lint:css -- --fix",
     "release": "standard-version",
-    "start": "npm run serve:ssr"
+    "start": "npm run serve:ssr",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f app"
   },
   "dependencies": {
     "@angular/animations": "20.2.2",
@@ -46,7 +52,6 @@
     "@angular/platform-browser-dynamic": "20.2.2",
     "@angular/platform-server": "20.2.2",
     "@angular/router": "20.2.2",
-    "@angular/service-worker": "20.2.2",
     "@angular/ssr": "20.2.2",
     "@nestjs/axios": "4.0.1",
     "@nestjs/common": "^11.1.6",
@@ -96,6 +101,8 @@
     "@types/express": "^5.0.3",
     "@types/express-session": "^1.18.0",
     "@types/node": "^24.2.0",
+    "@types/passport": "^1.0.17",
+    "@types/passport-jwt": "^4.0.1",
     "@typescript-eslint/eslint-plugin": "8.39.0",
     "@typescript-eslint/parser": "8.39.0",
     "compression": "^1.8.1",

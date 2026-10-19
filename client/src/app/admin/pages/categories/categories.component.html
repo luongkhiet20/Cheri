@@ -44,3 +44,7 @@
 <app-confirm-dialog [isOpen]="confirmOpen" title="Xác nhận xóa" [message]="confirmMessage"
   confirmLabel="Xóa" variant="danger" (confirmed)="onConfirmDelete()" (cancelled)="onCancelDelete()">
 </app-confirm-dialog>
+
+<app-confirm-dialog [isOpen]="toggleConfirmOpen" [title]="toggleConfirmTitle" [message]="toggleConfirmMessage"
+  [confirmLabel]="toggleConfirmLabel" [variant]="toggleConfirmVariant" (confirmed)="onConfirmToggle()" (cancelled)="onCancelToggle()">
+</app-confirm-dialog>

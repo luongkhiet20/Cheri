@@ -43,248 +43,52 @@
     <!-- ── MAIN GRID: Orders (left) + Profile Sidebar (right) ── -->
     <div class="profile-main-grid">
 
-      <!-- LEFT: Orders Section -->
-      <section class="profile-orders-section">
+      <!-- LEFT: Orders Component -->
+      <app-profile-orders
+        [orders]="userOrders$()"
+        [user]="user$()"
+        [lang]="lang$ | async"
+        [lastSyncTime]="lastSyncTime"
+        (cancelOrder)="openCancelDialog($event)"
+        (reviewOrder)="onReviewOrder($event)"
+        (returnRefundOrder)="openReturnRefundDialog($event)"
+        (cancelReturnOrder)="openReturnCancelDialog($event)">
+      </app-profile-orders>
 
-        <!-- Header -->
-        <div class="orders-head">
-          <h2 class="orders-title">Đơn hàng của bạn</h2>
-          <span class="orders-sync-time" *ngIf="lastSyncTime">
-            Dữ liệu đồng bộ lúc: {{ lastSyncTime }}
-          </span>
-        </div>
-
-        <!-- Filter tabs -->
-        <div class="orders-tabs">
-          <button type="button" *ngFor="let tab of orderTabs" class="order-tab-btn"
-            [class.active]="activeTab === tab.key" (click)="setTab(tab.key)">
-            <span class="tab-label">{{ tab.label }}</span>
-            <span class="tab-badge">{{ getTabCount(tab.key) }}</span>
-          </button>
-        </div>
-
-        <!-- Loading indicator -->
-        <div class="orders-loading" *ngIf="userOrders$() === null">
-          <div class="orders-loading-bar"></div>
-        </div>
-
-        <!-- Empty state (No icons) -->
-        <div class="orders-empty-box" *ngIf="userOrders$() !== null && getFilteredOrders().length === 0">
-          <p class="empty-text">Bạn chưa có đơn hàng nào.</p>
-          <a class="empty-shop-btn" [routerLink]="['/' + (lang$ | async) + '/product/all']">
-            Khám phá cửa hàng
-          </a>
-        </div>
-
-        <!-- Orders list with Detailed Design Cards -->
-        <div class="orders-list-box" *ngIf="userOrders$() !== null && getFilteredOrders().length > 0">
-          <article class="order-card" *ngFor="let order of getFilteredOrders()">
-
-            <!-- 1. Card Header: ID, Created Date & Status Pill (No icons) -->
-            <header class="order-card-header">
-              <div class="order-header-left">
-                <div class="order-code-title">Mã số đơn hàng: {{ order.orderId }}</div>
-                <div class="order-created-date">Ngày khởi tạo: {{ formatOrderDate(order) }}</div>
-              </div>
-              <div class="order-header-right">
-                <span class="status-pill" [ngClass]="getStatusClass(order.status)">
-                  <span>{{ getStatusLabel(order.status) }}</span>
-                </span>
-              </div>
-            </header>
-
-            <div class="order-card-divider"></div>
-
-            <!-- 2. Products List (Items) -->
-            <div class="order-items-wrap" *ngIf="order.items && order.items.length > 0; else fallbackOrderItem">
-              <div class="order-product-row" *ngFor="let item of order.items">
-                <div class="product-thumb-box">
-                  <img [src]="getItemImage(item)" [alt]="item.productSnapshot?.title || 'Sản phẩm'"
-                    class="product-thumb-img" />
-                </div>
-                <div class="product-details-box">
-                  <h4 class="product-name">{{ item.productSnapshot?.title || 'Sản phẩm Cheri' }}</h4>
-                  <div class="product-variants-row">
-                    <span *ngIf="item.productSnapshot?.variant?.size">
-                      Kích thước: <strong>{{ item.productSnapshot.variant.size }}</strong>
-                    </span>
-                    <span class="variant-separator"
-                      *ngIf="item.productSnapshot?.variant?.size && (item.productSnapshot?.variant?.color || item.productSnapshot?.variant?.classification)">|</span>
-                    <span *ngIf="item.productSnapshot?.variant?.color">
-                      Màu: <strong>{{ item.productSnapshot.variant.color }}</strong>
-                    </span>
-                    <span class="variant-separator"
-                      *ngIf="item.productSnapshot?.variant?.color || item.productSnapshot?.variant?.size">|</span>
-                    <span>
-                      Số lượng: <strong>x{{ item.quantity || 1 }}</strong>
-                    </span>
-                  </div>
-                </div>
-                <div class="product-price-box">
-                  <span class="product-price">{{ formatItemPrice(item) }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Fallback if order has no items array -->
-            <ng-template #fallbackOrderItem>
-              <div class="order-product-row">
-                <div class="product-details-box">
-                  <h4 class="product-name">{{ order.description || ('Đơn hàng #' + order.orderId) }}</h4>
-                  <div class="product-variants-row">
-                    <span>Số lượng: <strong>x1</strong></span>
-                  </div>
-                </div>
-                <div class="product-price-box">
-                  <span class="product-price">{{ formatAmount(order) }}</span>
-                </div>
-              </div>
-            </ng-template>
-
-            <div class="order-card-divider"></div>
-
-            <!-- 3. Summary & Action Buttons Row (No icons) -->
-            <div class="order-action-summary-row">
-              <div class="summary-left-info">
-                <div class="total-vat-line">
-                  <span class="vat-label">Thành tiền (đã gồm VAT):</span>
-                  <span class="vat-amount">{{ formatAmount(order) }}</span>
-                </div>
-              </div>
-              <div class="action-buttons-group">
-                <button type="button" class="btn-action-primary"
-                  *ngIf="canShowOrderReviewAction(order) && getOrderReviewProducts(order).length > 0"
-                  (click)="onReviewOrder(order)" [attr.aria-expanded]="getOrderReviewProducts(order).length > 1 ? isReviewChooserOpen(order) : null">
-                  Đánh giá
-                </button>
-                <button type="button" class="btn-action-outline" *ngIf="normalizeStatus(order.status) === 'DELIVERED'">
-                  Trả hàng / Hoàn tiền
-                </button>
-                <button type="button" class="btn-action-outline" (click)="onViewOrderDetail(order)">
-                  Chi tiết đơn hàng
-                </button>
-              </div>
-            </div>
-
-            <p class="order-review-note" *ngIf="canShowOrderReviewAction(order) && getOrderReviewProducts(order).length === 0">
-              Không xác định được sản phẩm trong đơn hàng này để mở đánh giá.
-            </p>
-            <div class="order-review-chooser" *ngIf="isReviewChooserOpen(order)">
-              <p class="order-review-note">Chọn sản phẩm bạn muốn đánh giá:</p>
-              @for (product of getOrderReviewProducts(order); track product.productId) {
-              <div class="order-review-choice">
-                <span>{{ product.title }}</span>
-                <button type="button" class="btn-action-primary" (click)="openProductReview(product.productId)"
-                  [attr.aria-label]="'Đánh giá ' + product.title">Đánh giá</button>
-              </div>
-              }
-            </div>
-
-            <!-- 4. Shipping Address Strip (No icons) -->
-            <div class="order-shipping-strip">
-              <div class="shipping-strip-text">
-                Giao đến: Sđt <strong>{{ getOrderPhone(order) }}</strong> | Địa chỉ: {{ getOrderAddress(order) }}
-              </div>
-            </div>
-
-            <!-- 5. Bottom Tracking & Final Total Bar (No icons) -->
-            <div class="order-card-footer">
-              <a class="btn-track-route" [routerLink]="['/' + (lang$ | async) + '/tracking']"
-                [queryParams]="{ orderId: order.orderId }">
-                <span>Theo dõi vận trình</span>
-              </a>
-
-              <div class="footer-final-total">
-                <span class="final-total-label">Thành tiền:</span>
-                <span class="final-total-val">{{ formatAmount(order) }}</span>
-              </div>
-            </div>
-
-          </article>
-        </div>
-
-      </section>
-
-      <!-- RIGHT: Profile Form Card -->
-      <aside class="profile-sidebar-card">
-
-        <!-- Title with red bar -->
-        <div class="profile-card-heading">
-          <span class="heading-bar"></span>
-          <h3 class="heading-text">Hồ sơ</h3>
-        </div>
-
-        <!-- Basic info form -->
-        <div class="profile-form-body">
-
-          <div class="form-field-group">
-            <label class="field-label">Họ và tên</label>
-            <input type="text" class="field-input" [(ngModel)]="formName" placeholder="Nhập họ và tên" />
-          </div>
-
-          <div class="form-field-group">
-            <label class="field-label">Email liên lạc</label>
-            <input type="email" class="field-input readonly-input" [(ngModel)]="formEmail" [readonly]="true"
-              title="Email định danh tài khoản" />
-          </div>
-
-          <div class="form-field-group">
-            <label class="field-label">Điện thoại liên hệ</label>
-            <input type="tel" class="field-input" [(ngModel)]="formPhone" placeholder="Nhập số điện thoại" />
-          </div>
-
-          <div class="form-field-group">
-            <label class="field-label">Giới tính</label>
-            <select class="field-input" [(ngModel)]="formGender">
-              <option value="">Chọn giới tính</option>
-              <option value="Nam">Nam</option>
-              <option value="Nữ">Nữ</option>
-              <option value="Khác">Khác</option>
-            </select>
-          </div>
-
-          <div class="form-field-group">
-            <label class="field-label">Ngày sinh</label>
-            <input type="date" class="field-input" [(ngModel)]="formDateOfBirth" [min]="minBirthDate"
-              [max]="maxBirthDate" />
-          </div>
-
-          <div class="form-field-group">
-            <label class="field-label">Địa chỉ giao hàng mặc định</label>
-            <textarea class="field-input field-textarea" [(ngModel)]="formAddress" rows="2"
-              placeholder="Nhập địa chỉ giao hàng"></textarea>
-          </div>
-
-          <!-- Password change section -->
-          <div class="password-sub-heading">Đổi mật khẩu</div>
-
-          <div class="form-field-group">
-            <label class="field-label-sub" for="profile-new-password">Mật khẩu mới</label>
-            <input id="profile-new-password" type="password" class="field-input" name="profileNewPassword"
-              [(ngModel)]="formNewPassword" placeholder="Để trống nếu không muốn đổi" autocomplete="new-password" />
-          </div>
-
-          <div class="form-field-group">
-            <label class="field-label-sub" for="profile-confirm-password">Nhập lại mật khẩu mới</label>
-            <input id="profile-confirm-password" type="password" class="field-input" name="profileConfirmPassword"
-              [(ngModel)]="formConfirmPassword" placeholder="Để trống nếu không muốn đổi" autocomplete="new-password" />
-          </div>
-
-          <!-- Feedback messages -->
-          <div class="profile-feedback-box success" *ngIf="saveSuccess">✓ Đã lưu thông tin thành công.</div>
-          <div class="profile-feedback-box error" *ngIf="saveError">✗ {{ saveError }}</div>
-
-          <!-- Submit button -->
-          <button type="button" class="profile-submit-btn" (click)="onSave()" [disabled]="isSaving">
-            <span *ngIf="!isSaving">Lưu</span>
-            <span *ngIf="isSaving">Đang lưu...</span>
-          </button>
-
-        </div>
-
-      </aside>
+      <!-- RIGHT: Profile Info Component -->
+      <app-profile-info
+        [user]="user$()"
+        (profileUpdated)="onProfileUpdated($event)">
+      </app-profile-info>
 
     </div><!-- /profile-main-grid -->
 
+    <section class="profile-review-chooser" *ngIf="reviewOrder as order" aria-label="Chọn sản phẩm để đánh giá">
+      <div class="profile-review-chooser-card" (click)="$event.stopPropagation()">
+        <h3>Chọn sản phẩm bạn muốn đánh giá</h3>
+        <button type="button" class="profile-review-product" *ngFor="let product of getOrderReviewProducts(order)"
+          (click)="openProductReview(product.productId)">
+          {{ product.title }}
+        </button>
+        <button type="button" class="profile-review-close" (click)="reviewOrder = null">Đóng</button>
+      </div>
+    </section>
+
   </div>
+
+  <!-- ── ORDER CANCEL POPUP DIALOG ── -->
+  <app-order-cancel-dialog *ngIf="isCancelDialogOpen" [order]="selectedOrderToCancel" (close)="closeCancelDialog()"
+    (cancelled)="onOrderCancelled($event)">
+  </app-order-cancel-dialog>
+
+  <!-- ── ORDER RETURN / REFUND POPUP DIALOG ── -->
+  <app-order-return-refund-dialog *ngIf="isReturnRefundDialogOpen" [order]="selectedOrderToReturn"
+    (close)="closeReturnRefundDialog()" (submitted)="onReturnRefundSubmitted($event)">
+  </app-order-return-refund-dialog>
+
+  <!-- ── ORDER RETURN / REFUND CANCEL POPUP DIALOG ── -->
+  <app-order-return-cancel-dialog *ngIf="isReturnCancelDialogOpen" [order]="selectedOrderToCancelReturn"
+    [returnRequest]="selectedReturnRequestToCancel" (close)="closeReturnCancelDialog()"
+    (cancelled)="onReturnRequestCancelled($event)">
+  </app-order-return-cancel-dialog>
 </div>

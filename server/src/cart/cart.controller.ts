@@ -236,6 +236,46 @@ export class CartController {
     return langCart;
   }
 
+  @Get('/clear')
+  async clearCart(
+    @Req() req,
+    @Session() session,
+    @Headers('lang') lang: string,
+    @Headers('x-guest-cart-id') guestCartId: string,
+  ): Promise<CartModel> {
+    const user = req.user || null;
+    const { newCart, langCart } = await this.cartService.clearCart(
+      user,
+      session,
+      lang,
+      guestCartId,
+    );
+    if (!user) {
+      await this.persistSession(session, newCart, guestCartId);
+    }
+    return langCart;
+  }
+
+  @Post('/clear')
+  async clearCartPost(
+    @Req() req,
+    @Session() session,
+    @Headers('lang') lang: string,
+    @Headers('x-guest-cart-id') guestCartId: string,
+  ): Promise<CartModel> {
+    const user = req.user || null;
+    const { newCart, langCart } = await this.cartService.clearCart(
+      user,
+      session,
+      lang,
+      guestCartId,
+    );
+    if (!user) {
+      await this.persistSession(session, newCart, guestCartId);
+    }
+    return langCart;
+  }
+
   @Post('/merge')
   async mergeCart(
     @Req() req,

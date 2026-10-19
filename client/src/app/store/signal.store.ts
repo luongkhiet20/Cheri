@@ -16,7 +16,58 @@ export class SignalStore {
 
   constructor(private apiService: ApiService,
     private selectors: SignalStoreSelectors
-  ) { }
+  ) {
+    if (this.apiService?.reviewCreated$) {
+      this.apiService.reviewCreated$.subscribe(({ productId }) => {
+        if (productId) {
+          this.refreshProductRating(productId);
+        }
+      });
+    }
+  }
+
+  refreshProductRating = (productId: string) => {
+    if (!productId) return;
+    this.apiService.getProductReviewStats(productId).subscribe({
+      next: (stats: any) => {
+        if (stats && !stats.error && stats.averageRating !== undefined) {
+          const avgRating = stats.averageRating;
+          const reviewCount = stats.reviewCount;
+          this.selectors.productState.update((state) => {
+            let updatedProduct = state.product;
+            if (updatedProduct && (updatedProduct._id === productId || (updatedProduct as any).id === productId)) {
+              updatedProduct = {
+                ...updatedProduct,
+                rating: avgRating,
+                reviewCount,
+                reviewsCount: reviewCount,
+              };
+            }
+            let updatedProducts = state.products;
+            if (Array.isArray(updatedProducts)) {
+              updatedProducts = updatedProducts.map((p) => {
+                if (p._id === productId || (p as any).id === productId) {
+                  return {
+                    ...p,
+                    rating: avgRating,
+                    reviewCount,
+                    reviewsCount: reviewCount,
+                  };
+                }
+                return p;
+              });
+            }
+            return {
+              ...state,
+              product: updatedProduct,
+              products: updatedProducts,
+            };
+          });
+        }
+      },
+      error: () => {}
+    });
+  };
 
   updateProductReviewSummary(productId: string, summary: ReviewSummary): void {
     const publicSummary = { average: summary.average, count: summary.count };
@@ -109,7 +160,7 @@ export class SignalStore {
     }
   };
 
-  signOut = (callback?: () => void) => {
+  signOut = (callback?: (res: { success: boolean; networkError?: boolean; serverError?: boolean }) => void) => {
     console.log('[Cart] signOut triggered: Clearing user and cart state');
     if (typeof window !== 'undefined') {
       try {
@@ -121,17 +172,19 @@ export class SignalStore {
     // Reset ngay lập tức cart trong state bộ nhớ của client để không bị lộ cho user khác hay guest
     this.selectors.productState.update((state) => ({ ...state, cart: null, userOrders: null, order: null }));
     this.selectors.dashboardState.update((state) => ({ ...state, orders: null, order: null, allProducts: [], allCategories: [] }));
-    this.apiService.clearGuestCartLocal();
+    this.apiService.clearGuestCartLocal(true);
 
     this.apiService.signOut().subscribe({
       next: () => {
         // Tải lại giỏ hàng cho Guest mới (giỏ rỗng)
         this.getCart('vi');
-        if (callback) callback();
+        if (callback) callback({ success: true });
       },
-      error: () => {
+      error: (err: any) => {
         this.getCart('vi');
-        if (callback) callback();
+        const status = err?.status || 0;
+        const isNetwork = status === 0 || (typeof navigator !== 'undefined' && !navigator.onLine);
+        if (callback) callback({ success: false, networkError: isNetwork, serverError: !isNetwork });
       }
     });
   };
@@ -372,13 +425,17 @@ export class SignalStore {
         if (callback) callback(response);
         return;
       }
+      const updatedCart = response.cart || { items: [], totalQty: 0, totalPrice: 0 };
       this.selectors.productState.update((state) => ({
         ...state,
         order: response.result,
-        cart: response.cart,
+        cart: updatedCart,
         error: '',
         loading: false,
       }));
+      if (!this.selectors.user()) {
+        this.apiService.saveGuestCartLocal(updatedCart);
+      }
       if (callback) callback(response);
     });
   };
@@ -397,15 +454,31 @@ export class SignalStore {
         if (callback) callback(response);
         return;
       }
+      const updatedCart = response.cart || { items: [], totalQty: 0, totalPrice: 0 };
       this.selectors.productState.update((state) => ({
         ...state,
         order: response.result,
-        cart: response.cart,
+        cart: updatedCart,
         error: '',
         loading: false,
       }));
+      if (!this.selectors.user()) {
+        this.apiService.saveGuestCartLocal(updatedCart);
+      }
       if (callback) callback(response);
     });
+  };
+
+  clearCart = (lang = 'vi') => {
+    return this.apiService.clearCart(lang).pipe(
+      map((response: any) => {
+        if (response && !response.error) {
+          this.selectors.productState.update((state) => ({ ...state, cart: response }));
+          this.apiService.clearGuestCartLocal(false);
+        }
+        return response;
+      }),
+    );
   };
 
   getStripeSession = (payload) => {
@@ -516,9 +589,8 @@ export class SignalStore {
   }
 
   removeOrder = (orderId: string) => {
-    this.apiService.deleteOrder(orderId).subscribe(() => {
-      this.getOrders();
-    });
+    // Đã vô hiệu hóa: Đơn hàng là dữ liệu nghiệp vụ cần lưu trữ để tra cứu và đối soát
+    console.warn('Thao tác xóa đơn hàng đã bị vô hiệu hóa để bảo vệ dữ liệu nghiệp vụ.');
   }
 
   addProduct = (payload, callback?: (result: any) => void) => {

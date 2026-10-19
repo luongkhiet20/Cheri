@@ -9,6 +9,9 @@ import {
   Param,
   UseGuards,
   Query,
+  Session,
+  Headers,
+  MethodNotAllowedException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard, AdminJwtAuthGuard, OptionalJwtAuthGuard } from '../auth/roles.guard';
@@ -32,6 +35,12 @@ export class OrdersController {
   @Get('/payment-methods')
   getPaymentMethods() {
     return this.ordersService.getActivePaymentMethods();
+  }
+
+  // ─── Public: lấy thông tin địa chỉ gửi của cửa hàng từ settings (hóa đơn) ──
+  @Get('/store-contact')
+  getStoreContact() {
+    return this.ordersService.getStoreContact();
   }
 
   // ─── Admin: lấy tất cả shipping methods ──────────────────────────────────
@@ -89,6 +98,57 @@ export class OrdersController {
     return this.ordersService.getOrders(user);
   }
 
+  // ─── Khách hàng: Hủy đơn hàng (chỉ khi đơn ở trạng thái PENDING) ───────────
+  @UseGuards(AuthGuard('jwt'))
+  @Post('/:id/cancel')
+  cancelOrder(
+    @Param('id') id: string,
+    @Body() body: { reason?: string; reasonDetail?: string },
+    @GetUser() user: User,
+  ) {
+    return this.ordersService.cancelOrder(id, body, user);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Patch('/:id/cancel')
+  cancelOrderPatch(
+    @Param('id') id: string,
+    @Body() body: { reason?: string; reasonDetail?: string },
+    @GetUser() user: User,
+  ) {
+    return this.ordersService.cancelOrder(id, body, user);
+  }
+
+  // ─── Khách hàng: Lấy chữ ký upload ảnh minh chứng lên Cloudinary ────────
+  @UseGuards(AuthGuard('jwt'))
+  @Get('/return-upload-signature')
+  getReturnUploadSignature() {
+    return this.ordersService.getReturnUploadSignature();
+  }
+
+  // ─── Khách hàng: Yêu cầu Trả hàng / Hoàn tiền (đơn đã DELIVERED) ─────────
+  @UseGuards(AuthGuard('jwt'))
+  @Post('/:id/return-request')
+  createReturnRequest(
+    @Param('id') id: string,
+    @Body() body: any,
+    @GetUser() user: User,
+  ) {
+    return this.ordersService.createReturnRequest(id, body, user);
+  }
+
+  // ─── Khách hàng: Hủy yêu cầu Trả hàng / Hoàn tiền (khi còn PENDING) ────────
+  @UseGuards(AuthGuard('jwt'))
+  @Patch('/:id/return-requests/:reqId/cancel')
+  cancelReturnRequest(
+    @Param('id') id: string,
+    @Param('reqId') reqId: string,
+    @Body() body: { reason?: string },
+    @GetUser() user: User,
+  ) {
+    return this.ordersService.cancelReturnRequest(id, reqId, body, user);
+  }
+
   // ─── Public: Tra cứu vận đơn (khách vãng lai) ─────────────────────────────
   // Guest verification stays in the POST body; no contact details are accepted from the URL.
   // Không trả toàn bộ document — chỉ trả dữ liệu tracking cần thiết.
@@ -132,8 +192,10 @@ export class OrdersController {
   async addOrder(
     @Body() orderDto: OrderDto,
     @GetUser() user: User,
-  ): Promise<{ error: string; result: Order }> {
-    return this.ordersService.addOrder(orderDto, user);
+    @Session() session: any,
+    @Headers('x-guest-cart-id') guestCartId?: string,
+  ): Promise<{ error: string; result: Order; cart?: any }> {
+    return this.ordersService.addOrder(orderDto, user, 'vi', session, guestCartId);
   }
 
   // ─── Đặt hàng Stripe — hỗ trợ cả user đăng nhập và khách vãng lai ────────
@@ -142,8 +204,10 @@ export class OrdersController {
   async orderWithStripe(
     @Body() body,
     @GetUser() user: User,
-  ): Promise<{ error: string; result: Order }> {
-    return this.ordersService.orderWithStripe(body, user);
+    @Session() session: any,
+    @Headers('x-guest-cart-id') guestCartId?: string,
+  ): Promise<{ error: string; result: Order; cart?: any }> {
+    return this.ordersService.orderWithStripe(body, user, 'vi', session, guestCartId);
   }
 
   // ─── Admin: thông báo ──────────────────────────────────────────────────
@@ -204,6 +268,27 @@ export class OrdersController {
     return this.ordersService.getOrderById(id);
   }
 
+  // ─── Admin: cập nhật riêng trạng thái order (status) ─────────────────────
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @Patch('/:id/status')
+  updateOrderStatus(
+    @Param('id') id: string,
+    @Body() body: { status: string; note?: string },
+    @GetUser() user: User,
+  ) {
+    return this.ordersService.updateOrderStatus(id, body?.status, body?.note, user);
+  }
+
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @Put('/:id/status')
+  updateOrderStatusPut(
+    @Param('id') id: string,
+    @Body() body: { status: string; note?: string },
+    @GetUser() user: User,
+  ) {
+    return this.ordersService.updateOrderStatus(id, body?.status, body?.note, user);
+  }
+
   // ─── Admin: cập nhật order (status, tracking...) ─────────────────────────
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
   @Patch()
@@ -217,10 +302,35 @@ export class OrdersController {
     return this.ordersService.updateOrder({ ...order, updatedBy: user?._id || null });
   }
 
-  // ─── Admin: xóa order ────────────────────────────────────────────────────
+  // ─── Admin: Xử lý quy trình trả hàng & hoàn tiền ────────────────────────
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @Patch('/:id/return-requests/:reqId/status')
+  updateReturnRequestWorkflow(
+    @Param('id') id: string,
+    @Param('reqId') reqId: string,
+    @Body() body: { action: string; [key: string]: any },
+    @GetUser() user: User,
+  ) {
+    return this.ordersService.updateReturnRequestWorkflow(id, reqId, body?.action, body, user);
+  }
+
+  // ─── Admin: Cập nhật đối soát COD ───────────────────────────────────────
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @Patch('/:id/cod-reconciliation')
+  updateCodReconciliation(
+    @Param('id') id: string,
+    @Body() body: any,
+    @GetUser() user: User,
+  ) {
+    return this.ordersService.updateCodReconciliation(id, body, user);
+  }
+
+  // ─── Admin: xóa order (Vô hiệu hóa để bảo vệ dữ liệu nghiệp vụ) ───────────
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
   @Delete('/:id')
   deleteOrder(@Param('id') id: string) {
-    return this.ordersService.removeOrder(id);
+    throw new MethodNotAllowedException(
+      'Không hỗ trợ thao tác xóa đơn hàng. Đơn hàng là dữ liệu nghiệp vụ cần được lưu trữ để tra cứu, đối soát và quản lý lịch sử giao dịch.',
+    );
   }
 }

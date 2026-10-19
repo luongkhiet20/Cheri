@@ -13,7 +13,7 @@ import {
 import { toObservable } from '@angular/core/rxjs-interop';
 import { filter, take, delay, map, skip } from 'rxjs/operators';
 import { of } from 'rxjs';
-import { NavigationStart, NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { NavigationStart, NavigationEnd, Router, RouterOutlet, Scroll } from '@angular/router';
 
 import { TranslateService } from './services/translate.service';
 import { JsonLDService } from './services/jsonLD.service';
@@ -25,19 +25,21 @@ import { SettingsService } from './admin/pages/settings/settings.service';
 import { isRouteAllowedDuringMaintenance } from './services/maintenance.guard';
 import { FooterComponent } from './user/layout/footer/footer.component';
 import { HeaderComponent } from './user/layout/header/header.component';
+import { ChatWidgetComponent } from './user/shared/chat-widget/chat-widget.component';
+import { NotificationComponent } from './user/shared/notification/notification.component';
 
 @Component({
   selector: 'cheri-app',
-  imports: [CommonModule, RouterOutlet, FooterComponent, HeaderComponent],
+  imports: [CommonModule, RouterOutlet, FooterComponent, HeaderComponent, ChatWidgetComponent, NotificationComponent],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
 export class AppComponent {
 
-  rememberScroll: { [component: string]: number } = {};
   position = 0;
   isDashboard = false;
   isMaintenancePage = false;
+  private lastNavigatedPath = '';
 
   constructor(
     private elRef: ElementRef,
@@ -77,9 +79,8 @@ export class AppComponent {
 
     toObservable(this.selectors.position)
       .pipe(filter(Boolean))
-      .subscribe((componentPosition: { [component: string]: number }) => {
-        this.rememberScroll = { ...this.rememberScroll, ...componentPosition };
-        this.renderer.setProperty(this.elRef.nativeElement.querySelector('.main-scroll-wrap'), 'scrollTop', 0);
+      .subscribe(() => {
+        this.resetScrollToTop();
       });
 
     this.signalStore.getUser();
@@ -130,12 +131,31 @@ export class AppComponent {
       this.isDashboard = checkIsAdmin(currentUrl);
       this.isMaintenancePage = checkIsMaintenance(currentUrl);
 
+      // Tự động cuộn lên đầu trang khi điều hướng sang trang khác (khác pathname)
+      const currentPath = currentUrl.split('?')[0].split('#')[0];
+      if (!this.lastNavigatedPath || this.lastNavigatedPath !== currentPath) {
+        this.lastNavigatedPath = currentPath;
+        this.resetScrollToTop();
+      }
+
       // Nếu hệ thống đang bật bảo trì và khách truy cập đang ở trang mua sắm thông thường
       if (isPlatformBrowser(this.platformId)) {
         const curSettings = this.settingsService.currentSettings;
         if (curSettings?.maintenance?.enabled === true && !isRouteAllowedDuringMaintenance(currentUrl) && !this.isAdmin()) {
           this.router.navigate(['/system-maintenance']);
         }
+      }
+    });
+
+    this.router.events.pipe(
+      filter(event => event instanceof Scroll)
+    ).subscribe((event: Scroll) => {
+      if (event.position) {
+        this.scrollToPosition(event.position[0], event.position[1]);
+      } else if (event.anchor) {
+        this.scrollToAnchor(event.anchor);
+      } else {
+        this.resetScrollToTop();
       }
     });
 
@@ -168,21 +188,51 @@ export class AppComponent {
     this.position = event['target']['scrollTop'];
   }
 
-  onActivate(component: string): void {
-    const currentComponent = component['component'];
-    const position = (currentComponent && this.rememberScroll[currentComponent])
-      ? this.rememberScroll[currentComponent]
-      : 0;
-
-    of('activate_event').pipe(delay(5), take(1)).subscribe(() => {
-      this.renderer.setProperty(this.elRef.nativeElement.querySelector('.main-scroll-wrap'), 'scrollTop', position)
-    })
+  onActivate(component: any): void {
+    this.resetScrollToTop();
   }
 
-  onDeactivate(component: string): void {
-    if (Object.keys(component).includes('component')) {
-      const currentComponent = component['component'];
-      this.rememberScroll = { ...this.rememberScroll, [currentComponent]: this.position };
+  onDeactivate(component: any): void {
+    // Không lưu lại vị trí cuộn cũ để đảm bảo trang đích luôn mở ở vị trí đầu trang
+  }
+
+  scrollToPosition(x: number, y: number): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+
+    const scrollWrap = (this.elRef?.nativeElement?.querySelector('.main-scroll-wrap') ||
+      document.querySelector('.main-scroll-wrap')) as HTMLElement | null;
+
+    if (scrollWrap) {
+      const prevBehavior = scrollWrap.style.scrollBehavior;
+      scrollWrap.style.scrollBehavior = 'auto';
+      scrollWrap.scrollTop = y;
+      scrollWrap.scrollTo({ top: y, left: x, behavior: 'auto' });
+      requestAnimationFrame(() => {
+        if (scrollWrap) {
+          scrollWrap.scrollTop = y;
+          scrollWrap.style.scrollBehavior = prevBehavior;
+        }
+      });
     }
+
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: y, left: x, behavior: 'auto' });
+    }
+    if (typeof document !== 'undefined') {
+      if (document.documentElement) document.documentElement.scrollTop = y;
+      if (document.body) document.body.scrollTop = y;
+    }
+  }
+
+  scrollToAnchor(anchor: string): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    const element = document.getElementById(anchor) || document.querySelector(`[name="${anchor}"]`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+
+  resetScrollToTop(): void {
+    this.scrollToPosition(0, 0);
   }
 }

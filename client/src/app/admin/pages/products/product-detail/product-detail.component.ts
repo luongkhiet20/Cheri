@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
+import { formatVND } from '../../../../pipes/price.pipe';
 
 export interface ProductVariant {
   key?: string;
@@ -103,8 +104,7 @@ export class ProductDetailComponent implements OnInit {
   }
 
   formatPrice(val: any): string {
-    if (val === undefined || val === null || val === '') return '0 ₫';
-    return Number(val).toLocaleString('vi-VN') + ' ₫';
+    return formatVND(val);
   }
 
   // =========================================================================

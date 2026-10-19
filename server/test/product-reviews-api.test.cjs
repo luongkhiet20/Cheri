@@ -11,6 +11,7 @@ const { NestFactory } = require('@nestjs/core');
 const { PassportModule } = require('@nestjs/passport');
 const { JwtService } = require('@nestjs/jwt');
 const { getModelToken } = require('@nestjs/mongoose');
+const { ConfigService } = require('@nestjs/config');
 const { Types } = require('mongoose');
 const { loadTypeScript } = require('./helpers/load-typescript.cjs');
 
@@ -89,6 +90,7 @@ before(async () => {
       { provide: getModelToken('Product'), useValue: ProductModel },
       { provide: getModelToken('Order'), useValue: orderModel },
       { provide: getModelToken('User'), useValue: { findOne: async ({ email }) => [buyer, nonBuyer].find((user) => user.email === email) } },
+      { provide: ConfigService, useValue: { get: (key) => key === 'JWT_SECRET' ? secret : undefined } },
       { provide: getModelToken('Category'), useValue: { findOne: async () => null } },
       { provide: getModelToken('ProductVariant'), useValue: { find: () => query(() => []) } },
     ],
@@ -269,6 +271,7 @@ function adminHandlers(collection) {
   const source = ts.createSourceFile(file, fs.readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
   const wanted = new Set(['post /api/products', 'put /api/products/:id', 'post /api/products/import-csv', 'get /api/products', 'get /api/products/:id']);
   const context = vm.createContext({ db: { collection: () => collection }, ObjectId: Types.ObjectId, console,
+    normalizeProductImages: async (images, mainImage) => ({ images: images || [], mainImage: mainImage || null }),
     sanitizeProductWrite: fs.existsSync(path.join(__dirname, '../shared/product-write-fields.cjs')) ? require('../shared/product-write-fields.cjs').sanitizeProductWrite : undefined });
   const routes = {};
   for (const node of source.statements) {

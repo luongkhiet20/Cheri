@@ -93,6 +93,10 @@ export class OrderDto {
   @IsString()
   userId?: string;
 
+  @IsOptional()
+  @IsArray()
+  items?: any[];
+
   // Stripe
   @IsOptional()
   @IsString()
@@ -101,4 +105,14 @@ export class OrderDto {
   @IsOptional()
   @IsString()
   currency?: string;
+}
+
+export class CancelOrderDto {
+  @IsString()
+  @IsNotEmpty()
+  reason: string;
+
+  @IsOptional()
+  @IsString()
+  reasonDetail?: string;
 }

@@ -10,7 +10,7 @@ import { ProductReviewsService } from './reviews/product-reviews.service';
 import { ProductReviewsController } from './reviews/product-reviews.controller';
 import { AuthModule } from '../auth/auth.module';
 
-import { ImageSearchService } from './image-search.service';
+import { SmartSearchService } from './smart-search/smart-search.service';
 
 @Module({
   imports: [
@@ -27,7 +27,7 @@ import { ImageSearchService } from './image-search.service';
     ]),
   ],
   controllers: [ProductsController, ProductReviewsController],
-  providers: [ProductsService, ImageSearchService, ProductReviewsService],
-  exports: [MongooseModule, ProductsService, ImageSearchService],
+  providers: [ProductsService, SmartSearchService, ProductReviewsService],
+  exports: [MongooseModule, ProductsService, SmartSearchService],
 })
 export class ProductsModule {}

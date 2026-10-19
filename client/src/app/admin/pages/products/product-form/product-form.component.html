@@ -11,17 +11,7 @@
       <button type="button" class="btn btn-outline" (click)="onCancel()" [disabled]="isSubmitting">
         Hủy
       </button>
-      <button *ngIf="isEditMode" type="button" class="btn btn-danger-outline" (click)="openConfirmDelete()"
-        [disabled]="isSubmitting">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <polyline points="3 6 5 6 21 6"></polyline>
-          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
-          <path d="M10 11v6M14 11v6"></path>
-          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
-        </svg>
-        Xóa sản phẩm
-      </button>
+
       <button type="button" class="btn btn-primary" (click)="onSubmit()" [disabled]="isSubmitting || isLoading">
         <span *ngIf="isSubmitting" class="spinner-inline"></span>
         {{ isSubmitting ? 'Đang lưu...' : (isEditMode ? 'Lưu thay đổi' : 'Lưu sản phẩm') }}
@@ -135,8 +125,13 @@
 
           <div class="form-group">
             <label class="form-label">Hoặc tải file từ máy tính</label>
-            <input type="file" class="form-control file-input" accept="image/*"
+            <input type="file" class="form-control file-input" accept="image/*" multiple
+              [disabled]="isUploadingImage"
               (change)="onImageFileSelected($event)" />
+            <div *ngIf="isUploadingImage" class="text-muted mt-1 small" style="display: flex; align-items: center; gap: 6px;">
+              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+              <span>Đang tải ảnh lên Cloudinary (cheri/products)...</span>
+            </div>
           </div>
         </div>
 

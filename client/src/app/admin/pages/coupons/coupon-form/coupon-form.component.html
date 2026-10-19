@@ -65,7 +65,8 @@
               <span class="slider round"></span>
             </label>
             <span class="toggle-status-text" [class.active-text]="formData.isActive">
-              {{ formData.isActive ? 'Đang kích hoạt (Khách hàng có thể áp dụng)' : 'Đang tạm dừng (Khách hàng không thể áp dụng)' }}
+              {{ formData.isActive ? 'Đang kích hoạt (Khách hàng có thể áp dụng)' : 'Đang tạm dừng (Khách hàng không thể
+              áp dụng)' }}
             </span>
           </div>
         </div>
@@ -73,8 +74,8 @@
         <!-- Mô tả -->
         <div class="form-group full-width" id="field-description">
           <label class="form-label" for="coupon-desc">Mô tả mã giảm giá</label>
-          <textarea id="coupon-desc" class="form-control" [(ngModel)]="formData.description" name="description"
-            rows="2" placeholder="Ví dụ: Giảm 10% tối đa 50.000₫ cho đơn hàng từ 200.000₫ mùa hè này"></textarea>
+          <textarea id="coupon-desc" class="form-control" [(ngModel)]="formData.description" name="description" rows="2"
+            placeholder="Ví dụ: Giảm 10% tối đa 50.000₫ cho đơn hàng từ 200.000₫ mùa hè này"></textarea>
           <span class="form-hint">Mô tả ngắn gọn điều kiện áp dụng để quản trị viên và khách hàng dễ theo dõi.</span>
         </div>
       </div>
@@ -96,7 +97,8 @@
             <option value="FIXED">Số tiền cố định (₫)</option>
           </select>
           <span class="form-hint">
-            {{ formData.discountType === 'PERCENTAGE' ? 'Giảm theo tỷ lệ % tổng giá trị giỏ hàng.' : 'Giảm trực tiếp một số tiền cố định vào đơn hàng.' }}
+            {{ formData.discountType === 'PERCENTAGE' ? 'Giảm theo tỷ lệ % tổng giá trị giỏ hàng.' : 'Giảm trực tiếp một
+            số tiền cố định vào đơn hàng.' }}
           </span>
         </div>
 
@@ -107,7 +109,8 @@
           </label>
           <input type="number" id="coupon-value" class="form-control" [class.is-invalid]="errors['discountValue']"
             [(ngModel)]="formData.discountValue" (ngModelChange)="clearFieldError('discountValue')" name="discountValue"
-            [placeholder]="formData.discountType === 'PERCENTAGE' ? '10' : '50000'" min="1" [max]="formData.discountType === 'PERCENTAGE' ? 100 : 1000000000" required />
+            [placeholder]="formData.discountType === 'PERCENTAGE' ? '10' : '50000'" min="1"
+            [max]="formData.discountType === 'PERCENTAGE' ? 100 : 1000000000" required />
           <div *ngIf="errors['discountValue']" class="error-feedback">{{ errors['discountValue'] }}</div>
           <span class="form-hint">
             {{ formData.discountType === 'PERCENTAGE' ? 'Nhập giá trị từ 1 đến 100.' : 'Nhập số tiền VNĐ cần giảm.' }}
@@ -179,7 +182,8 @@
           <div class="read-only-box">
             <span class="read-only-number">{{ usedCount }}</span> lượt
             <span class="read-only-sub">
-              (Còn lại: {{ (formData.usageLimit || 0) > usedCount ? ((formData.usageLimit || 0) - usedCount) : 0 }} lượt)
+              (Còn lại: {{ (formData.usageLimit || 0) > usedCount ? ((formData.usageLimit || 0) - usedCount) : 0 }}
+              lượt)
             </span>
           </div>
           <span class="form-hint">Chỉ số này do hệ thống tự động cập nhật khi khách đặt hàng thành công.</span>
@@ -187,15 +191,5 @@
       </div>
     </div>
 
-    <!-- Bottom Actions -->
-    <div class="form-footer">
-      <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="isSubmitting">
-        Hủy
-      </button>
-      <button type="submit" class="btn btn-primary" [disabled]="isSubmitting">
-        <span *ngIf="isSubmitting" class="spinner"></span>
-        {{ isEditMode ? 'Lưu thay đổi' : 'Lưu mã giảm giá' }}
-      </button>
-    </div>
   </form>
 </div>

@@ -91,6 +91,68 @@
   flex-wrap: wrap;
 }
 
+/* ── 0. Store Info / Sender Section (Chỉ hiển thị khi In hóa đơn) ───────── */
+.bill-store-info-section,
+.print-only {
+  display: none !important;
+}
+
+.bill-store-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed #E5E7EB;
+}
+
+.bill-store-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  color: #74070E;
+}
+
+.bill-store-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #74070E;
+}
+
+.bill-store-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px 20px;
+}
+
+.store-grid-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.store-grid-item.store-grid-address {
+  grid-column: 1 / -1;
+}
+
+.store-item-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.store-item-value {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #1F1F1F;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
 /* ── 1. Header / Success ────────────────────────────────────────────────── */
 .bill-header {
   text-align: center;
@@ -775,9 +837,61 @@ button {
   .bill-meta-grid,
   .order-notes-box,
   .bill-section,
+  .bill-store-info-section,
   .timeline-step {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
+  }
+
+  .bill-store-info-section,
+  .print-only {
+    display: block !important;
+    visibility: visible !important;
+    background-color: #FAFAFA !important;
+    border: 1px solid #D1D5DB !important;
+    border-left: 4px solid #74070E !important;
+    border-radius: 4px !important;
+    padding: 12px 14px !important;
+    margin-bottom: 16px !important;
+    box-sizing: border-box !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .bill-store-badge {
+    display: flex !important;
+    align-items: center !important;
+    border-bottom: 1px dashed #D1D5DB !important;
+    margin-bottom: 8px !important;
+    padding-bottom: 6px !important;
+  }
+
+  .bill-store-title {
+    color: #74070E !important;
+    font-size: 11pt !important;
+    font-weight: 700 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .bill-store-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px 14px !important;
+  }
+
+  .store-grid-item.store-grid-address {
+    grid-column: 1 / -1 !important;
+  }
+
+  .store-item-label {
+    font-size: 9pt !important;
+    color: #4B5563 !important;
+  }
+
+  .store-item-value {
+    font-size: 10pt !important;
+    color: #111827 !important;
   }
 
   .bill-items-list {
@@ -805,5 +919,405 @@ button {
     height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
+  }
+}
+
+/* ── Guest Order Prompt ─────────────────────────────────────────── */
+.guest-order-prompt {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: #FFFBF2;
+  border: 1px solid #F6E0B5;
+  border-radius: 8px;
+  padding: 18px 20px;
+  margin-top: 24px;
+}
+
+.guest-prompt-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #FDF0D5;
+  color: #B27300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.guest-prompt-icon mat-icon {
+  font-size: 22px;
+  width: 22px;
+  height: 22px;
+}
+
+.guest-prompt-content {
+  flex: 1;
+}
+
+.guest-prompt-title {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #4A3508;
+}
+
+.guest-prompt-desc {
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #6B5120;
+}
+
+.guest-prompt-invite {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: #6B5120;
+}
+
+.btn-guest-signup {
+  display: inline-block;
+  background-color: #9C5120;
+  color: #FFFFFF !important;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.btn-guest-signup:hover {
+  background-color: #7D4018;
+}
+
+.guest-optional-hint {
+  font-size: 11.5px;
+  color: #8C7355;
+  font-style: italic;
+}
+
+/* ── Return & Refund Tracking in Order Bill ── */
+.bill-return-section {
+  margin-top: 24px;
+  padding: 20px;
+  background-color: #FDF2F3;
+  border: 1px solid #FCE7E9;
+  border-radius: 12px;
+}
+
+.badge-requests-count {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 12px;
+  background: #74070E;
+  color: #ffffff;
+  margin-left: 8px;
+}
+
+.return-requests-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.user-return-req-card {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.user-return-req-card + .user-return-req-card {
+  border-top: 1px dashed rgba(116, 7, 14, 0.2);
+  padding-top: 14px;
+  margin-top: 6px;
+}
+
+.return-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(116, 7, 14, 0.12);
+}
+
+.return-card-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.return-id {
+  font-size: 13.5px;
+  color: #1F1F1F;
+}
+
+.return-date {
+  font-size: 12px;
+  color: #6B7280;
+}
+
+.return-card-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.user-pill {
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.user-pill-status {
+  background-color: #74070E;
+  color: #ffffff;
+}
+
+.user-pill-refund {
+  background-color: #ffffff;
+  color: #74070E;
+  border: 1px solid #FECDD3;
+}
+
+/* ── Return Stepper (Timeline đường mảnh trực tiếp) ── */
+.return-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 4px 6px 4px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  overflow-x: auto;
+  margin: 2px 0 6px 0;
+}
+
+.stepper-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 52px;
+  text-align: center;
+}
+
+.step-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 10.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #cbd5e1;
+  transition: all 0.2s ease;
+}
+
+.step-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.stepper-step.active .step-circle {
+  background: #74070e;
+  border-color: #74070e;
+  color: #ffffff;
+  box-shadow: 0 0 0 2px rgba(116, 7, 14, 0.15);
+}
+
+.stepper-step.active .step-label {
+  color: #74070e;
+  font-weight: 700;
+}
+
+.stepper-step.done .step-circle {
+  background: #15803d;
+  border-color: #15803d;
+  color: #ffffff;
+}
+
+.stepper-step.done .step-label {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.stepper-line {
+  flex: 1;
+  height: 1px;
+  background: #e2e8f0;
+  margin: 0 4px;
+  margin-bottom: 16px;
+  transition: background 0.2s ease;
+}
+
+.stepper-line.done {
+  background: #15803d;
+}
+
+/* ── Thông tin trực tiếp: Lý do, Từ chối ── */
+.return-reason-box {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.5;
+}
+
+.return-reason-box p {
+  margin: 0 0 4px 0;
+}
+
+.rejection-alert {
+  color: #991B1B !important;
+  background: rgba(254, 226, 226, 0.75);
+  border: none;
+  border-left: 3px solid #DC2626;
+  border-radius: 0 4px 4px 0;
+  padding: 6px 10px;
+  margin-top: 6px !important;
+  font-size: 12.5px;
+}
+
+/* ── Thông tin trực tiếp: Sản phẩm yêu cầu trả ── */
+.return-items-summary {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  font-size: 12.5px;
+  color: #4B5563;
+  line-height: 1.5;
+}
+
+.items-summary-label {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 4px;
+  color: #374151;
+}
+
+.return-items-ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.return-items-ul li {
+  margin-bottom: 2px;
+}
+
+.price-val {
+  font-weight: 600;
+  color: #74070E;
+}
+
+/* ── Hướng dẫn gửi hàng hoàn: Nền màu nhạt, không tạo card viền nổi bật ── */
+.return-guide-box {
+  background-color: rgba(255, 251, 235, 0.75);
+  border: none;
+  border-left: 3px solid #D97706;
+  border-radius: 0 4px 4px 0;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #92400E;
+  line-height: 1.5;
+}
+
+.return-guide-box p {
+  margin: 4px 0 0 0;
+}
+
+/* ── Thông tin trực tiếp: Vận chuyển hoàn ── */
+.return-shipping-box {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  font-size: 12.5px;
+  color: #166534;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  line-height: 1.5;
+}
+
+/* ── Thông tin trực tiếp: Kết quả kiểm tra ── */
+.return-inspect-box {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  font-size: 12.5px;
+  color: #374151;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  line-height: 1.5;
+}
+
+.inspect-notes {
+  margin: 2px 0 0 0;
+  color: #6B7280;
+  font-style: italic;
+}
+
+/* ── Thông tin trực tiếp: Số tiền duyệt hoàn ── */
+.return-refund-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  border-top: 1px dashed rgba(116, 7, 14, 0.15);
+  padding-top: 8px;
+  margin-top: 2px;
+  flex-wrap: wrap;
+}
+
+.approved-val {
+  font-size: 14px;
+  color: #059669;
+}
+
+.refund-txid {
+  font-size: 12px;
+  color: #6B7280;
+  font-weight: normal;
+}
+
+/* ── Responsive adjustments ── */
+@media (max-width: 768px) {
+  .bill-return-section {
+    padding: 12px;
+  }
+
+  .return-card-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .return-stepper {
+    overflow-x: auto;
+    padding-bottom: 6px;
   }
 }

@@ -52,17 +52,28 @@ export class AdminController {
     return result;
   }
 
+  @Get('/cloudinary-signature')
+  getCloudinarySignature(@Query('folder') folder: string) {
+    const { generateUploadSignature } = require('../services/cloudinary-service');
+    return {
+      success: true,
+      data: generateUploadSignature(folder || 'cheri/products')
+    };
+  }
+
   @Post('/images/upload')
   @UseInterceptors(FileInterceptor('file', upload.single('file')))
   async uploadImage(
     @Session() session,
     @UploadedFile() file,
     @Query(ValidationPipe) addImageDto: AddProductImageDto,
-  ): Promise<Images | Product> {
+    @Query('folder') folder?: string,
+  ): Promise<Images | Product | any> {
     const result = await this.adminService.uploadImage(
       session.images,
       file,
       addImageDto,
+      folder,
     );
     if (!(result as Product).titleUrl) {
       session.images = result;

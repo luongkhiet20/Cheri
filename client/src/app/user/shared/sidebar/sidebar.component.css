@@ -334,6 +334,9 @@
 }
 
 .sf-box-value {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
   font-size: 12px;
   font-weight: 600;
   color: #1f2937;
@@ -341,6 +344,29 @@
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.25;
+}
+
+.sf-price-input {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  outline: none;
+  font: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  line-height: inherit;
+  width: 100%;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.sf-box-currency {
+  flex-shrink: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
 }
 
 .sf-box-dash {
@@ -363,6 +389,16 @@
   width: 100% !important;
   max-width: 100% !important;
   display: block;
+  --mat-slider-active-track-height: 3px;
+  --mat-slider-inactive-track-height: 3px;
+  --mat-slider-handle-width: 14px;
+  --mat-slider-handle-height: 14px;
+  --mat-slider-active-track-color: var(--cheri-primary);
+  --mat-slider-inactive-track-color: #e5e7eb;
+  --mat-slider-handle-color: var(--cheri-primary);
+  --mat-slider-focus-handle-color: var(--cheri-primary);
+  --mat-slider-hover-handle-color: var(--cheri-primary);
+  --mat-slider-ripple-color: transparent;
 }
 
 .sf-slider-labels {
@@ -385,20 +421,44 @@
   text-overflow: ellipsis;
 }
 
-/* Slider theme */
-:host ::ng-deep .sf-mat-slider .mdc-slider__track--active_fill {
-  background-color: var(--cheri-primary) !important;
-  border-color: var(--cheri-primary) !important;
+/* ── Slider theme: thanh mảnh, hiện đại ── */
+:host ::ng-deep .sf-mat-slider .mdc-slider__track {
+  height: 2px !important;
 }
 
-:host ::ng-deep .sf-mat-slider .mdc-slider__thumb-knob {
+:host ::ng-deep .sf-mat-slider .mdc-slider__track--active_fill {
   background-color: var(--cheri-primary) !important;
-  border-color: var(--cheri-primary) !important;
+  border: none !important;
+  height: 2px !important;
 }
 
 :host ::ng-deep .sf-mat-slider .mdc-slider__track--inactive {
   background-color: #e5e7eb !important;
-  opacity: 1;
+  opacity: 1 !important;
+  height: 3px !important;
+  border-radius: 9999px;
+}
+
+:host ::ng-deep .sf-mat-slider .mdc-slider__thumb-knob {
+  width: 14px !important;
+  height: 14px !important;
+  box-sizing: border-box !important;
+  background-color: var(--cheri-primary) !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(116, 7, 14, 0.15) !important;
+  cursor: grab !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+:host ::ng-deep .sf-mat-slider .mdc-slider__thumb:hover .mdc-slider__thumb-knob,
+:host ::ng-deep .sf-mat-slider .mdc-slider__thumb:focus .mdc-slider__thumb-knob {
+  transform: scale(1.15);
+  box-shadow: 0 2px 6px rgba(116, 7, 14, 0.35), 0 0 0 1px var(--cheri-primary) !important;
+}
+
+:host ::ng-deep .sf-mat-slider .mdc-slider__thumb:active .mdc-slider__thumb-knob {
+  cursor: grabbing !important;
+  transform: scale(1.15);
 }
 
 /* ── 4. Radio Group (Stock) ── */

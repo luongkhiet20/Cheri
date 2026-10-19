@@ -12,8 +12,8 @@ import { ProductVariantSchema } from '../products/schemas/product-variant.schema
 import ProductSchema from '../products/schemas/product.schema';
 import UserSchema from '../auth/schemas/user.schema';
 import CouponSchema from './schemas/coupon.schema';
-
 import CategorySchema from '../products/schemas/category.schema';
+import { InteractionSchema } from '../interactions/schemas/interaction.schema';
 import { DashboardController } from './dashboard.controller';
 
 @Module({
@@ -29,6 +29,7 @@ import { DashboardController } from './dashboard.controller';
       { name: 'Category', schema: CategorySchema },
       { name: 'User', schema: UserSchema },
       { name: 'Coupon', schema: CouponSchema },
+      { name: 'Interaction', schema: InteractionSchema },
     ]),
     AuthModule,
   ],

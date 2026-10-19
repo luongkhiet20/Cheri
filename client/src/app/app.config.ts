@@ -1,5 +1,5 @@
 import { APP_INITIALIZER, ApplicationConfig, provideZonelessChangeDetection } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withInMemoryScrolling } from '@angular/router';
 import { CookieService } from 'ngx-cookie-service';
 import { routes } from './app.routes';
 import { provideClientHydration, withHttpTransferCacheOptions, } from '@angular/platform-browser';
@@ -16,7 +16,13 @@ export function WindowFactory() {
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideRouter(routes),
+    provideRouter(
+      routes,
+      withInMemoryScrolling({
+        scrollPositionRestoration: 'top',
+        anchorScrolling: 'enabled',
+      })
+    ),
     provideZonelessChangeDetection(),
     provideHttpClient(withFetch(), withInterceptorsFromDi()),
     provideClientHydration(withHttpTransferCacheOptions({

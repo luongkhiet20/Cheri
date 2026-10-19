@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRe
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { NotificationService } from '../../../../shared/notification/notification.service';
 import { ApiService } from '../../../../../services/api.service';
+import { formatVND } from '../../../../../pipes/price.pipe';
 import {
   HomeSection,
   HomeSectionType,
@@ -226,7 +227,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     const name = p.title || p.name || 'Sản phẩm';
     const category = typeof p.category === 'string' ? p.category : (p.category?.name || p.tags?.[0] || 'Thời trang');
     const priceVal = p.salePrice || p.regularPrice || p.price || 0;
-    const price = typeof priceVal === 'number' ? priceVal.toLocaleString('vi-VN') + ' đ' : String(priceVal);
+    const price = formatVND(priceVal);
     const badge = p.onSale ? 'SALE' : (p.isNew ? 'NEW' : '');
     const imageUrl = p.mainImage?.url || (Array.isArray(p.images) && p.images[0]) || '';
     return {
@@ -828,7 +829,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
     this.cdr.markForCheck();
 
-    this.apiService.uploadImage({ fileToUpload: file, titleUrl: '' }).subscribe({
+    this.apiService.uploadImage({ fileToUpload: file, titleUrl: '', folder: 'cheri/cms' }).subscribe({
       next: (res: any) => {
         if (target === 'desktop') {
           this.isUploadingDesktop = false;
@@ -1079,7 +1080,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       }
 
       const file = validFiles[index];
-      this.apiService.uploadImage({ fileToUpload: file, titleUrl: '' }).subscribe({
+      this.apiService.uploadImage({ fileToUpload: file, titleUrl: '', folder: 'cheri/cms' }).subscribe({
         next: (res: any) => {
           const uploadedUrl = this.extractUploadedImageUrl(res);
           if (uploadedUrl && this.selectedSection) {
@@ -1190,7 +1191,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.apiService.uploadImage({ fileToUpload: file, titleUrl: '' }).subscribe({
+    this.apiService.uploadImage({ fileToUpload: file, titleUrl: '', folder: 'cheri/cms' }).subscribe({
       next: (res: any) => {
         const uploadedUrl = this.extractUploadedImageUrl(res);
         if (!uploadedUrl) {

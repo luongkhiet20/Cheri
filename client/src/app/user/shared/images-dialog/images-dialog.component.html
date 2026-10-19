@@ -1,18 +1,83 @@
-@for (imageSrc of data.images; track imageSrc; let i = $index; let f = $first; let l = $last) {
-  @if (openImages[i]) {
-<div class="product-modal">
-  @if (!f && openImages[i]) {
-  <button class="prev-btn" mat-raised-button color="primary" (click)="prevImg($event, i)">
-    <i class="material-icons left">arrow_back</i>
-    {{ 'Prev' | translate | async }}
-  </button>
-  } @if (!l && openImages[i]) {
-  <button class="next-btn" mat-raised-button color="primary" (click)="nextImg($event, i)">
-    <i class="material-icons right">arrow_forward</i>
-    {{ 'Next' | translate | async }}
-  </button>
+<div class="cheri-lightbox-wrapper" role="dialog" aria-modal="true" aria-label="Bộ sưu tập hình ảnh sản phẩm">
+  <!-- Top Bar: Bộ đếm & Nút điều khiển -->
+  <header class="cheri-lightbox-header">
+    <div class="cheri-lightbox-counter">
+      <span class="counter-badge">
+        @if (images.length > 0) {
+        Ảnh {{ currentIndex + 1 }}/{{ images.length }}
+        } @else {
+        Không có ảnh
+        }
+      </span>
+    </div>
+
+    <div class="cheri-lightbox-actions">
+      <!-- Nút Phóng to / Thu nhỏ -->
+      @if (images.length > 0) {
+      <button type="button" class="cheri-lightbox-action-btn zoom-btn" (click)="toggleZoom($event)"
+        [title]="isZoomed ? 'Thu nhỏ' : 'Phóng to'" [attr.aria-label]="isZoomed ? 'Thu nhỏ' : 'Phóng to'">
+        <i class="material-icons">{{ isZoomed ? 'zoom_out' : 'zoom_in' }}</i>
+        <span class="btn-text">{{ isZoomed ? 'Thu nhỏ' : 'Phóng to' }}</span>
+      </button>
+      }
+
+      <!-- Nút Đóng -->
+      <button type="button" class="cheri-lightbox-action-btn close-btn" (click)="onClose()" title="Đóng (ESC)"
+        aria-label="Đóng">
+        <i class="material-icons">close</i>
+        <span class="btn-text">Đóng</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Stage: Vùng hiển thị ảnh chính & 2 nút Previous / Next -->
+  <main class="cheri-lightbox-stage" (click)="onStageClick($event)">
+    <!-- Nút Trước đó (Previous) -->
+    @if (images.length > 1) {
+    <button type="button" class="cheri-lightbox-nav prev" [class.is-disabled]="currentIndex <= 0"
+      (click)="prevImg($event)" title="Trước đó (Phím mũi tên trái)" aria-label="Trước đó">
+      <i class="material-icons">chevron_left</i>
+      <span class="nav-label">Trước đó</span>
+    </button>
+    }
+
+    <!-- Khung ảnh chính -->
+    <div class="cheri-lightbox-viewport" (click)="onStageClick($event)">
+      @if (images.length > 0 && images[currentIndex]) {
+      <div class="cheri-lightbox-image-box" [class.is-zoomed]="isZoomed" (click)="toggleZoom($event)"
+        title="Nhấp để phóng to / thu nhỏ">
+        <img [src]="images[currentIndex]" [alt]="'Hình ảnh ' + (currentIndex + 1)" class="cheri-lightbox-img"
+          loading="eager" draggable="false" />
+      </div>
+      } @else {
+      <div class="cheri-lightbox-empty">
+        <i class="material-icons">image_not_supported</i>
+        <p>Chưa có hình ảnh sản phẩm</p>
+      </div>
+      }
+    </div>
+
+    <!-- Nút Tiếp theo (Next) -->
+    @if (images.length > 1) {
+    <button type="button" class="cheri-lightbox-nav next" [class.is-disabled]="currentIndex >= images.length - 1"
+      (click)="nextImg($event)" title="Tiếp theo (Phím mũi tên phải)" aria-label="Tiếp theo">
+      <span class="nav-label">Tiếp theo</span>
+      <i class="material-icons">chevron_right</i>
+    </button>
+    }
+  </main>
+
+  <!-- Bottom Bar: Dải Thumbnail xem nhanh ảnh -->
+  @if (images.length > 1) {
+  <footer class="cheri-lightbox-footer">
+    <div class="cheri-lightbox-thumbs-track">
+      @for (img of images; track $index) {
+      <button type="button" class="cheri-lightbox-thumb-item" [class.is-active]="$index === currentIndex"
+        (click)="goToImage($index, $event)" [attr.aria-label]="'Xem ảnh ' + ($index + 1)">
+        <img [src]="img" [alt]="'Thumbnail ' + ($index + 1)" loading="lazy" />
+      </button>
+      }
+    </div>
+  </footer>
   }
-  <img (click)="onCloseImage()" [src]="imageSrc" />
 </div>
- }
-}

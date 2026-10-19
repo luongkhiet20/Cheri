@@ -1,6 +1,6 @@
 import { toObservable } from '@angular/core/rxjs-interop';
 import { JsonLDService } from '../../../../services/jsonLD.service';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { NotificationService } from '../../../shared/notification/notification.service';
 import { filter, map, take, distinctUntilChanged, skip, withLatestFrom } from 'rxjs/operators';
 import { AfterViewChecked, Component, Inject, OnDestroy, PLATFORM_ID, Signal, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -12,7 +12,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { Cart, Product, Category, ProductVariant } from '../../../shared/models';
 import { ImagesDialogComponent } from '../../../shared/images-dialog/images-dialog.component';
 import { TranslateService } from '../../../../services/translate.service';
-import { CartToastService } from '../../../../services/cart-toast.service';
+import { ApiService } from '../../../../services/api.service';
 import { SignalStore } from '../../../../store/signal.store';
 import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
 import { filterProductDescriptionBullets } from './product-description';
@@ -41,6 +41,7 @@ export class ProductComponent implements OnDestroy, AfterViewChecked {
   productSub: Subscription;
   product$: Signal<Product>;
   cartIds$: Observable<{ [productId: string]: number }>;
+  private lastTrackedProductId: string | null = null;
 
   // State cho Popup/Modal
   selectedImage: string = '';
@@ -80,6 +81,8 @@ export class ProductComponent implements OnDestroy, AfterViewChecked {
   productTags: string[] = [];
   isUnavailable: boolean = false;
 
+  currentProductId: string | null = null;
+
   constructor(
     private route: ActivatedRoute,
     private store: SignalStore,
@@ -88,18 +91,24 @@ export class ProductComponent implements OnDestroy, AfterViewChecked {
     private meta: Meta,
     private title: Title,
     public dialog: MatDialog,
-    private snackBar: MatSnackBar,
-    private cartToast: CartToastService,
+    private notify: NotificationService,
     private router: Router,
     private translate: TranslateService,
     private jsonLDService: JsonLDService,
     @Inject(PLATFORM_ID) private platformId: Object,
+    private apiService: ApiService,
   ) {
     this.lang$ = this.translate.getLang$();
     this.categories$ = toObservable(this.selectors.categories);
 
+    let lastLoadedRouteId: string | null = null;
     this.routeSub = combineLatest([this.lang$, this.route.params.pipe(map((params) => params['id']))]).subscribe(([lang, id]) => {
       this.currentLang = lang || 'vi';
+      const idStr = id ? String(id).trim() : '';
+      if (idStr && lastLoadedRouteId !== idStr) {
+        lastLoadedRouteId = idStr;
+        this.resetScrollToTop();
+      }
       this.store.getProduct(id + '?lang=' + lang);
     });
 
@@ -148,6 +157,10 @@ export class ProductComponent implements OnDestroy, AfterViewChecked {
     this.reviewSection.focusReviews();
   }
 
+  focusProductReviews(): void {
+    this.reviewSection?.focusReviews();
+  }
+
   private initProductState(product: Product): void {
     if (!product) {
       this.isUnavailable = false;
@@ -160,6 +173,20 @@ export class ProductComponent implements OnDestroy, AfterViewChecked {
       return;
     }
     this.isUnavailable = false;
+
+    // Ghi nhận lượt xem sản phẩm thật vào MongoDB (Chỉ gửi 1 lần khi tải sản phẩm thành công, tránh gửi lặp khi đổi màu/size/render)
+    const validPid = product._id ? String(product._id) : null;
+    if (validPid && this.lastTrackedProductId !== validPid) {
+      this.lastTrackedProductId = validPid;
+      this.apiService.recordInteraction({ productId: validPid }).subscribe();
+    }
+
+    const currentPid = product._id ? String(product._id) : (product.id ? String(product.id) : product.titleUrl);
+    if (currentPid && this.currentProductId !== currentPid) {
+      this.currentProductId = currentPid;
+      this.resetScrollToTop();
+    }
+
 
     // Dữ liệu ưu tiên từ vi
     const viData = product.vi || product;
@@ -436,13 +463,13 @@ export class ProductComponent implements OnDestroy, AfterViewChecked {
     if (!product || this.isOutOfStock) return;
 
     if (!this.isSelectionComplete()) {
-      this.snackBar.open('Vui lòng chọn đầy đủ thông tin sản phẩm.', 'Đóng', { duration: 3000 });
+      this.notify.warning('✨Vui lòng chọn đầy đủ thông tin sản phẩm✨');
       return;
     }
 
     const params = this.buildAddToCartParams(product);
     this.store.addToCart(params);
-    this.cartToast.show();
+    this.notify.success('✨Đã thêm sản phẩm vào giỏ hàng✨');
   }
 
   handleBuyNow(): void {
@@ -450,7 +477,7 @@ export class ProductComponent implements OnDestroy, AfterViewChecked {
     if (!product || this.isOutOfStock) return;
 
     if (!this.isSelectionComplete()) {
-      this.snackBar.open('Vui lòng chọn đầy đủ thông tin sản phẩm.', 'Đóng', { duration: 3000 });
+      this.notify.warning('✨Vui lòng chọn đầy đủ thông tin sản phẩm✨');
       return;
     }
 
@@ -477,18 +504,27 @@ export class ProductComponent implements OnDestroy, AfterViewChecked {
   openDialog(index: number, images: string[]): void {
     const dialogRef = this.dialog.open(ImagesDialogComponent, {
       width: '100vw',
+      height: '100vh',
+      maxWidth: '100vw',
       maxHeight: '100vh',
+      panelClass: 'cheri-gallery-dialog-panel',
+      backdropClass: 'cheri-gallery-dialog-backdrop',
+      hasBackdrop: true,
+      autoFocus: false,
       data: { index, images },
     });
 
-    dialogRef.afterClosed().subscribe((result) => {
-      console.log('The dialog was closed');
+    dialogRef.afterClosed().subscribe((selectedIndex) => {
+      if (typeof selectedIndex === 'number' && this.galleryImages && this.galleryImages[selectedIndex]) {
+        this.selectedImage = this.galleryImages[selectedIndex];
+      }
     });
   }
 
   ngOnDestroy(): void {
     this.reviewFocusPending = false;
     if (this.reviewQuerySub) this.reviewQuerySub.unsubscribe();
+    this.lastTrackedProductId = null;
     if (this.routeSub) this.routeSub.unsubscribe();
     if (this.categoriesSub) this.categoriesSub.unsubscribe();
     if (this.productSub) this.productSub.unsubscribe();
@@ -533,6 +569,35 @@ export class ProductComponent implements OnDestroy, AfterViewChecked {
         };
         this.jsonLDService.insertSchema(productSchema, 'structured-data-product');
       });
+  }
+
+  resetScrollToTop(): void {
+    if (typeof document !== 'undefined' && typeof document.querySelector === 'function') {
+      const scrollWrap = document.querySelector('.main-scroll-wrap') as HTMLElement | null;
+      if (scrollWrap) {
+        const prevBehavior = scrollWrap.style.scrollBehavior;
+        scrollWrap.style.scrollBehavior = 'auto';
+        scrollWrap.scrollTop = 0;
+        scrollWrap.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+        if (typeof requestAnimationFrame === 'function') {
+          requestAnimationFrame(() => {
+            if (scrollWrap) {
+              scrollWrap.scrollTop = 0;
+              scrollWrap.style.scrollBehavior = prevBehavior;
+            }
+          });
+        }
+      }
+      const adminMain = document.querySelector('.admin-main') as HTMLElement | null;
+      if (adminMain) {
+        adminMain.scrollTop = 0;
+      }
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    }
+    if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }
   }
 }
 

@@ -1,8 +1,9 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+/* eslint-disable @angular-eslint/prefer-standalone */
+import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
-import { paymentStatusLabel } from '../orders-report-csv.cjs';
+import { paymentStatusLabel } from '../../../../utils/orders-report-csv.cjs';
 import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 interface StatusOption {
@@ -39,6 +40,23 @@ export class OrderDetailComponent implements OnInit {
   confirmDialogTitle = '';
   confirmDialogMessage = '';
 
+  // ─── Return & Refund Management State ─────────────────────────────────
+  selectedReturnReqId: string | null = null;
+  actionModalOpen: boolean = false;
+  activeModalAction: 'APPROVE' | 'REJECT' | 'CUSTOMER_SHIPPED' | 'RECEIVE_GOODS' | 'INSPECT_GOODS' | 'PROCESS_REFUND' | 'REFUND_FAILED' | 'COD_RECONCILE' | null = null;
+  modalTargetReq: any = null;
+  modalLoading: boolean = false;
+  modalErrorMessage: string = '';
+
+  previewImageModalUrl: string | null = null;
+
+  rejectForm = { reason: '' };
+  approveForm = { approvedAmount: 0, instructions: '', note: '' };
+  shippingForm = { carrier: '', trackingCode: '', shippedAt: '' };
+  inspectForm = { isEligible: true, approvedAmount: 0, conditionNotes: '', restock: true };
+  refundForm = { refundAmount: 0, transactionId: '', bankName: '', accountNumber: '', accountHolder: '', notes: '' };
+  codForm = { codCollected: true, actualCollectedAmount: 0, codReconciliationStatus: 'RECONCILED', notes: '' };
+
   // Business state transitions rule
   readonly VALID_TRANSITIONS: Record<string, string[]> = {
     PENDING: ['PROCESSING', 'CANCELLED'],
@@ -58,16 +76,14 @@ export class OrderDetailComponent implements OnInit {
 
     { code: 'DELIVERED', label: 'Đã giao', variant: 'success' },
     { code: 'CANCELLED', label: 'Đã hủy', variant: 'danger' },
-    { code: 'RETURNED', label: 'Đã hoàn trả', variant: 'warning' }
+    { code: 'RETURNED', label: 'Trả hàng', variant: 'warning' }
   ];
 
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private apiService: AdminService,
-    private cdr: ChangeDetectorRef,
-    private notificationService: NotificationService
-  ) { }
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private apiService = inject(AdminService);
+  private cdr = inject(ChangeDetectorRef);
+  private notificationService = inject(NotificationService);
 
   ngOnInit(): void {
     this.orderId = this.route.snapshot.paramMap.get('id');
@@ -92,6 +108,9 @@ export class OrderDetailComponent implements OnInit {
         this.isLoading = false;
         if (res.success && res.data) {
           this.order = res.data;
+          if (!this.order.statusCode) {
+            this.order.statusCode = this.getOrderStatusCode();
+          }
           this.selectedNextStatus = '';
           this.statusNote = '';
           this.statusValidationMessage = '';
@@ -123,7 +142,7 @@ export class OrderDetailComponent implements OnInit {
   }
 
   onEdit(): void {
-    if (this.orderId) this.router.navigate(['/admin/orders', this.orderId, 'edit']);
+    if (this.orderId) this.router.navigate(['/admin/orders', this.orderId, 'status']);
   }
 
   getStatusMeta(code: string): StatusOption | undefined {
@@ -140,15 +159,17 @@ export class OrderDetailComponent implements OnInit {
   }
 
   isTransitionAllowed(targetStatus: string): boolean {
-    if (!this.order || !this.order.statusCode) return false;
-    const current = this.order.statusCode.toUpperCase();
+    if (!this.order) return false;
+    const current = this.getOrderStatusCode();
+    if (!current) return false;
     const allowed = this.VALID_TRANSITIONS[current] || [];
     return allowed.includes(targetStatus.toUpperCase());
   }
 
   getAllowedStatuses(): StatusOption[] {
-    if (!this.order || !this.order.statusCode) return [];
-    const current = this.order.statusCode.toUpperCase();
+    if (!this.order) return [];
+    const current = this.getOrderStatusCode();
+    if (!current) return [];
     const allowed = this.VALID_TRANSITIONS[current] || [];
     return this.ALL_STATUSES.filter(s => allowed.includes(s.code));
   }
@@ -157,8 +178,9 @@ export class OrderDetailComponent implements OnInit {
     this.statusValidationMessage = '';
     this.errorMessage = '';
 
-    if (!this.order || !this.order.statusCode) return;
-    const current = this.order.statusCode.toUpperCase();
+    if (!this.order) return;
+    const current = this.getOrderStatusCode();
+    if (!current) return;
     const target = targetStatus.toUpperCase();
 
     if (current === target) {
@@ -185,7 +207,7 @@ export class OrderDetailComponent implements OnInit {
       return;
     }
 
-    const current = this.order?.statusCode?.toUpperCase();
+    const current = this.getOrderStatusCode();
     if (!this.isTransitionAllowed(this.selectedNextStatus)) {
       this.statusValidationMessage = 'Trạng thái mới không hợp lệ với trạng thái hiện tại.';
       return;
@@ -215,6 +237,9 @@ export class OrderDetailComponent implements OnInit {
         this.confirmOpen = false;
         if (res.success && res.data) {
           this.order = res.data;
+          if (!this.order.statusCode) {
+            this.order.statusCode = this.getOrderStatusCode();
+          }
           this.selectedNextStatus = '';
           this.statusNote = '';
           const msg = res.message || 'Cập nhật trạng thái đơn hàng thành công';
@@ -408,5 +433,457 @@ export class OrderDetailComponent implements OnInit {
       return values.length > 0 ? values.join(', ') : null;
     }
     return this.getDisplayString(value);
+  }
+
+  // ─── Return & Refund Management Methods ──────────────────────────────
+
+  /**
+   * Chuẩn hóa mã trạng thái đơn hàng về dạng enum chữ hoa (PENDING, CONFIRMED, PROCESSING, SHIPPING, DELIVERED, CANCELLED, RETURNED, v.v.)
+   */
+  getOrderStatusCode(): string {
+    const raw = (this.order?.statusCode || this.order?.rawStatus || this.order?.status || '')
+      .toString()
+      .trim()
+      .toUpperCase();
+
+    if (['PENDING', 'CHỜ XÁC NHẬN', 'NEW'].includes(raw)) return 'PENDING';
+    if (['CONFIRMED', 'ĐÃ XÁC NHẬN'].includes(raw)) return 'CONFIRMED';
+    if (['PROCESSING', 'ĐANG XỬ LÝ'].includes(raw)) return 'PROCESSING';
+    if (['SHIPPING', 'ĐANG GIAO'].includes(raw)) return 'SHIPPING';
+    if (['DELIVERED', 'ĐÃ GIAO', 'COMPLETED'].includes(raw)) return 'DELIVERED';
+    if (['CANCELLED', 'CANCELED', 'ĐÃ HỦY'].includes(raw)) return 'CANCELLED';
+    if (['RETURNED', 'TRẢ HÀNG', 'ĐÃ TRẢ HÀNG', 'ĐÃ HOÀN TRẢ'].includes(raw)) return 'RETURNED';
+    if (['DELIVERY_FAILED', 'GIAO THẤT BẠI'].includes(raw)) return 'DELIVERY_FAILED';
+
+    return raw;
+  }
+
+  /**
+   * Kiểm tra đơn hàng có khoản thanh toán thực tế cần hoàn hoặc đang/đã theo dõi hoàn tiền
+   */
+  hasPaymentNeedingRefund(): boolean {
+    if (!this.order) return false;
+
+    const collected = this.getActualCollectedAmount();
+    const refunded = this.getTotalRefundedAmount();
+    const remaining = this.getRemainingRefundableAmount();
+
+    const paymentStatus = (this.order.paymentStatus || this.order.payment?.status || '')
+      .toString()
+      .trim()
+      .toUpperCase();
+    const isPaidOrRefund = ['PAID', 'PARTIALLY_REFUNDED', 'REFUNDED'].includes(paymentStatus);
+
+    const codCollected = Boolean(this.order.payment?.codCollected);
+    const codReconciled = ['RECONCILED', 'COLLECTED_UNRECONCILED'].includes(
+      this.order.payment?.codReconciliationStatus
+    );
+
+    return collected > 0 || refunded > 0 || remaining > 0 || isPaidOrRefund || codCollected || codReconciled;
+  }
+
+  /**
+   * Logic kiểm soát hiển thị SECTION 2.5: Quản lý trả hàng & hoàn tiền
+   * Quy tắc:
+   * - PENDING – Chờ xác nhận: Không
+   * - CONFIRMED – Đã xác nhận: Không
+   * - PROCESSING – Đang xử lý: Không
+   * - SHIPPING – Đang giao: Không
+   * - DELIVERED – Đã giao: Chỉ hiển thị nếu có yêu cầu trả hàng/hoàn tiền
+   * - CANCELLED – Đã hủy: Không mặc định; chỉ xử lý hoàn tiền nếu có khoản thanh toán cần hoàn
+   * - RETURNED – Đã trả hàng: Có, nếu cần theo dõi xử lý trả hàng/hoàn tiền
+   */
+  shouldShowReturnSection(): boolean {
+    if (!this.order) return false;
+
+    const status = this.getOrderStatusCode();
+    const hasReturnRequests = this.getReturnRequests().length > 0;
+    const hasPaymentToRefund = this.hasPaymentNeedingRefund();
+
+    switch (status) {
+      case 'PENDING':
+      case 'CONFIRMED':
+      case 'PROCESSING':
+      case 'SHIPPING':
+      case 'DELIVERY_FAILED':
+        return false;
+
+      case 'DELIVERED':
+        // DELIVERED – Đã giao: Chỉ hiển thị nếu có yêu cầu trả hàng/hoàn tiền
+        return hasReturnRequests;
+
+      case 'CANCELLED':
+        // CANCELLED – Đã hủy: Không mặc định; chỉ xử lý hoàn tiền nếu có khoản thanh toán cần hoàn
+        return hasPaymentToRefund || hasReturnRequests;
+
+      case 'RETURNED':
+        // RETURNED – Đã trả hàng: Có, nếu cần theo dõi xử lý trả hàng/hoàn tiền
+        return hasReturnRequests || hasPaymentToRefund;
+
+      default:
+        return hasReturnRequests || hasPaymentToRefund;
+    }
+  }
+
+  getReturnRequests(): any[] {
+    if (Array.isArray(this.order?.returnRequests) && this.order.returnRequests.length > 0) {
+      return this.order.returnRequests;
+    }
+    if (Array.isArray(this.order?.raw?.returnRequests) && this.order.raw.returnRequests.length > 0) {
+      return this.order.raw.returnRequests;
+    }
+    if (this.order?.returnRequest) {
+      return [this.order.returnRequest];
+    }
+    if (this.order?.raw?.returnRequest) {
+      return [this.order.raw.returnRequest];
+    }
+    return [];
+  }
+
+  getActiveReturnRequest(): any {
+    const list = this.getReturnRequests();
+    if (list.length === 0) return null;
+    if (this.selectedReturnReqId) {
+      const found = list.find((r: any) => r.requestId === this.selectedReturnReqId || String(r._id) === this.selectedReturnReqId);
+      if (found) return found;
+    }
+    return list[0];
+  }
+
+  selectReturnRequest(reqId: string): void {
+    this.selectedReturnReqId = reqId;
+  }
+
+  getOrderTotal(): number {
+    return Number(this.order?.totalAmount) || Number(this.order?.total) || 0;
+  }
+
+  isPrepaidMethod(): boolean {
+    const m = (this.order?.payment || this.order?.paymentMethodSnapshot?.method || '').toUpperCase();
+    return m !== 'COD';
+  }
+
+  isCodMethod(): boolean {
+    const m = (this.order?.payment || this.order?.paymentMethodSnapshot?.method || '').toUpperCase();
+    return m === 'COD';
+  }
+
+  isActualCollectedConfirmed(): boolean {
+    if (this.isCodMethod()) {
+      return Boolean(this.order?.payment?.codCollected);
+    }
+    const st = (this.order?.paymentStatus || this.order?.payment?.status || '').toUpperCase();
+    return st === 'PAID' || st === 'PARTIALLY_REFUNDED' || st === 'REFUNDED';
+  }
+
+  getActualCollectedAmount(): number {
+    if (this.isCodMethod()) {
+      if (!this.order?.payment?.codCollected) return 0;
+      return Number(this.order?.payment?.actualCollectedAmount) >= 0
+        ? Number(this.order.payment.actualCollectedAmount)
+        : this.getOrderTotal();
+    }
+    if (this.isActualCollectedConfirmed()) {
+      return Number(this.order?.payment?.actualCollectedAmount) >= 0
+        ? Number(this.order.payment.actualCollectedAmount)
+        : this.getOrderTotal();
+    }
+    return 0;
+  }
+
+  getTotalRefundedAmount(): number {
+    return Number(this.order?.payment?.refundedAmount) || Number(this.order?.refundedAmount) || 0;
+  }
+
+  getRemainingRefundableAmount(): number {
+    return Math.max(0, this.getActualCollectedAmount() - this.getTotalRefundedAmount());
+  }
+
+  getCodReconciliationStatusLabel(): string {
+    const st = this.order?.payment?.codReconciliationStatus;
+    if (st === 'RECONCILED') return 'Đã đối soát';
+    if (st === 'COLLECTED_UNRECONCILED') return 'Đã thu tiền (chờ đối soát)';
+    if (this.order?.payment?.codCollected) return 'Đã thu tiền';
+    return 'Chưa thu tiền';
+  }
+
+  getReturnRequestStatusLabel(status: string): string {
+    const s = (status || '').toUpperCase();
+    switch (s) {
+      case 'PENDING': return 'Chờ duyệt';
+      case 'APPROVED': return 'Đã duyệt';
+      case 'REJECTED': return 'Đã từ chối';
+      case 'WAITING_FOR_RETURN_SHIPMENT': return 'Chờ gửi hàng hoàn';
+      case 'RETURN_SHIPPED': return 'Khách đã gửi hàng';
+      case 'RETURN_RECEIVED': return 'Chéri đã nhận hàng';
+      case 'INSPECTED': return 'Đã kiểm tra sản phẩm';
+      case 'COMPLETED': return 'Hoàn tất trả hàng';
+      case 'CANCELLED': return 'Đã hủy';
+      default: return status || '—';
+    }
+  }
+
+  getReturnHistoryActionLabel(action: string): string {
+    if (!action) return '—';
+    const a = String(action).toUpperCase().trim();
+    switch (a) {
+      case 'CREATED':
+        return 'Khách gửi yêu cầu';
+      case 'APPROVED':
+        return 'Đã duyệt yêu cầu';
+      case 'REJECTED':
+        return 'Từ chối yêu cầu';
+      case 'CANCELLED_BY_CUSTOMER':
+      case 'CANCELLED':
+        return 'Khách đã hủy yêu cầu';
+      case 'CUSTOMER_SHIPPED':
+        return 'Khách đã gửi hàng hoàn';
+      case 'RETURN_SHIPPED':
+        return 'Đang gửi hàng hoàn';
+      case 'RECEIVE_GOODS':
+      case 'RETURN_RECEIVED':
+        return 'Đã nhận hàng hoàn';
+      case 'INSPECT_GOODS':
+      case 'INSPECTED':
+        return 'Đã kiểm tra hàng hoàn';
+      case 'PROCESS_REFUND':
+        return 'Xử lý hoàn tiền';
+      case 'REFUND_FAILED':
+        return 'Báo lỗi hoàn tiền';
+      case 'COMPLETED':
+        return 'Hoàn tất yêu cầu';
+      default:
+        return action;
+    }
+  }
+
+  getReturnRefundStatusLabel(status: string): string {
+    const s = (status || '').toUpperCase();
+    switch (s) {
+      case 'NOT_REQUIRED': return 'Không phát sinh hoàn tiền';
+      case 'PENDING': return 'Chờ xử lý';
+      case 'PROCESSING': return 'Đang xử lý';
+      case 'COMPLETED': return 'Đã hoàn tiền thành công';
+      case 'FAILED': return 'Hoàn tiền thất bại';
+      case 'CANCELLED': return 'Đã hủy';
+      default: return status || '—';
+    }
+  }
+
+  getReturnStatusBadgeClass(status: string): string {
+    const s = (status || '').toUpperCase();
+    switch (s) {
+      case 'PENDING': return 'badge-neutral';
+      case 'APPROVED': return 'badge-primary';
+      case 'REJECTED': return 'badge-danger';
+      case 'RETURN_SHIPPED': return 'badge-warning';
+      case 'RETURN_RECEIVED': return 'badge-warning';
+      case 'INSPECTED': return 'badge-primary';
+      case 'COMPLETED': return 'badge-success';
+      default: return 'badge-neutral';
+    }
+  }
+
+  getRefundStatusBadgeClass(status: string): string {
+    const s = (status || '').toUpperCase();
+    switch (s) {
+      case 'COMPLETED': return 'badge-success';
+      case 'PROCESSING': return 'badge-warning';
+      case 'PENDING': return 'badge-neutral';
+      case 'FAILED': return 'badge-danger';
+      case 'NOT_REQUIRED': return 'badge-neutral';
+      default: return 'badge-neutral';
+    }
+  }
+
+  getItemVariantText(item: any): string {
+    const v = item?.productSnapshot?.variant || item?.variant;
+    if (!v) return '';
+    if (typeof v === 'string') return v;
+    const parts: string[] = [];
+    if (v.color) parts.push(`Màu: ${v.color}`);
+    if (v.size) parts.push(`Size: ${v.size}`);
+    if (v.classification) parts.push(v.classification);
+    return parts.join(' | ');
+  }
+
+  canProcessRefund(): boolean {
+    if (!this.order) return false;
+    if (this.isCodMethod()) {
+      return Boolean(this.order.payment?.codCollected);
+    }
+    const paymentStatus = (this.order.paymentStatus || this.order.payment?.status || '').toUpperCase();
+    return paymentStatus === 'PAID' || paymentStatus === 'PARTIALLY_REFUNDED';
+  }
+
+  getRefundBlockReason(): string | null {
+    if (!this.order) return null;
+    if (this.isCodMethod()) {
+      if (!this.order.payment?.codCollected) {
+        return 'Đơn hàng COD chưa có xác nhận đã thu tiền hoặc chưa đối soát COD. Vui lòng đối soát COD trước khi hoàn tiền.';
+      }
+    } else {
+      const paymentStatus = (this.order.paymentStatus || this.order.payment?.status || '').toUpperCase();
+      if (paymentStatus !== 'PAID' && paymentStatus !== 'PARTIALLY_REFUNDED') {
+        return 'Đơn hàng trực tuyến chưa thanh toán thành công (Trạng thái: ' + (paymentStatus || 'CHƯA THANH TOÁN') + '). Không thể thực hiện hoàn tiền.';
+      }
+    }
+    return null;
+  }
+
+  openActionModal(action: 'APPROVE' | 'REJECT' | 'CUSTOMER_SHIPPED' | 'RECEIVE_GOODS' | 'INSPECT_GOODS' | 'PROCESS_REFUND' | 'REFUND_FAILED' | 'COD_RECONCILE', req: any): void {
+    if (action === 'PROCESS_REFUND') {
+      const blockReason = this.getRefundBlockReason();
+      if (blockReason) {
+        this.notificationService.error(blockReason);
+        return;
+      }
+    }
+
+    this.activeModalAction = action;
+    this.modalTargetReq = req;
+    this.modalErrorMessage = '';
+    this.modalLoading = false;
+
+    if (action === 'APPROVE') {
+      const requested = Number(req?.refund?.requestedAmount) || 0;
+      this.approveForm = {
+        approvedAmount: requested,
+        instructions: 'Quý khách vui lòng đóng gói sản phẩm kèm đầy đủ phụ kiện và tem mác, sau đó gửi về địa chỉ: Chéri Fashion, 123 Nguyễn Huệ, Quận 1, TP.HCM.',
+        note: ''
+      };
+    } else if (action === 'REJECT') {
+      this.rejectForm = { reason: '' };
+    } else if (action === 'CUSTOMER_SHIPPED') {
+      this.shippingForm = {
+        carrier: req?.returnShipping?.carrier || 'Giao Hàng Nhanh (GHN)',
+        trackingCode: req?.returnShipping?.trackingCode || '',
+        shippedAt: new Date().toISOString().slice(0, 16)
+      };
+    } else if (action === 'INSPECT_GOODS') {
+      const requested = Number(req?.refund?.approvedAmount) || Number(req?.refund?.requestedAmount) || 0;
+      this.inspectForm = {
+        isEligible: true,
+        approvedAmount: requested,
+        conditionNotes: 'Sản phẩm nguyên vẹn, còn nguyên tem mác, không có dấu hiệu đã qua sử dụng hay hư hỏng.',
+        restock: true
+      };
+    } else if (action === 'PROCESS_REFUND') {
+      const approved = Number(req?.refund?.approvedAmount) || Number(req?.refund?.requestedAmount) || 0;
+      const remaining = this.getRemainingRefundableAmount();
+      const defaultRefundAmt = Math.min(approved, remaining > 0 ? remaining : approved);
+      this.refundForm = {
+        refundAmount: defaultRefundAmt,
+        transactionId: `RFD-${this.order?.orderId || 'TX'}-${Date.now().toString().slice(-4)}`,
+        bankName: req?.refund?.bankName || '',
+        accountNumber: req?.refund?.accountNumber || '',
+        accountHolder: req?.refund?.accountHolder || '',
+        notes: 'Chuyển khoản hoàn tiền trả hàng cho khách hàng qua internet banking.'
+      };
+    } else if (action === 'COD_RECONCILE') {
+      this.codForm = {
+        codCollected: true,
+        actualCollectedAmount: this.getOrderTotal(),
+        codReconciliationStatus: 'RECONCILED',
+        notes: 'Đã nhận tiền đối soát thu hộ COD từ đơn vị vận chuyển.'
+      };
+    }
+
+    this.actionModalOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  closeActionModal(): void {
+    this.actionModalOpen = false;
+    this.activeModalAction = null;
+    this.modalTargetReq = null;
+    this.modalErrorMessage = '';
+    this.modalLoading = false;
+    this.cdr.markForCheck();
+  }
+
+  submitActionModal(): void {
+    if (!this.activeModalAction || !this.orderId) return;
+
+    this.modalErrorMessage = '';
+    this.modalLoading = true;
+
+    if (this.activeModalAction === 'COD_RECONCILE') {
+      this.apiService.updateCodReconciliation(this.orderId, this.codForm).subscribe({
+        next: (res) => {
+          this.modalLoading = false;
+          this.closeActionModal();
+          this.notificationService.success('Cập nhật đối soát COD thành công.');
+          this.loadOrderDetail(this.orderId!);
+        },
+        error: (err) => {
+          this.modalLoading = false;
+          this.modalErrorMessage = err?.error?.message || err?.message || 'Không thể cập nhật đối soát COD.';
+          this.cdr.markForCheck();
+        }
+      });
+      return;
+    }
+
+    const reqId = this.modalTargetReq?.requestId || 'latest';
+    let payload: any = { action: this.activeModalAction };
+
+    if (this.activeModalAction === 'APPROVE') {
+      payload = { ...payload, ...this.approveForm };
+    } else if (this.activeModalAction === 'REJECT') {
+      if (!this.rejectForm.reason.trim()) {
+        this.modalLoading = false;
+        this.modalErrorMessage = 'Lý do từ chối yêu cầu là bắt buộc.';
+        return;
+      }
+      payload = { ...payload, reason: this.rejectForm.reason.trim() };
+    } else if (this.activeModalAction === 'CUSTOMER_SHIPPED') {
+      payload = { ...payload, ...this.shippingForm };
+    } else if (this.activeModalAction === 'RECEIVE_GOODS') {
+      payload = { ...payload };
+    } else if (this.activeModalAction === 'INSPECT_GOODS') {
+      payload = { ...payload, ...this.inspectForm };
+    } else if (this.activeModalAction === 'PROCESS_REFUND') {
+      if (this.refundForm.refundAmount <= 0) {
+        this.modalLoading = false;
+        this.modalErrorMessage = 'Số tiền hoàn phải lớn hơn 0.';
+        return;
+      }
+      payload = { ...payload, ...this.refundForm };
+    } else if (this.activeModalAction === 'REFUND_FAILED') {
+      payload = { ...payload, failureReason: this.rejectForm.reason || 'Hoàn tiền thất bại' };
+    }
+
+    this.apiService.updateReturnRequestWorkflow(this.orderId, reqId, this.activeModalAction, payload).subscribe({
+      next: (res) => {
+        this.modalLoading = false;
+        this.closeActionModal();
+        this.notificationService.success(`Cập nhật yêu cầu trả hàng (${this.activeModalAction}) thành công.`);
+        this.loadOrderDetail(this.orderId!);
+      },
+      error: (err) => {
+        this.modalLoading = false;
+        this.modalErrorMessage = err?.error?.message || err?.message || 'Có lỗi xảy ra khi thực hiện thao tác.';
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  getProofImageUrl(img: any): string {
+    if (!img) return '';
+    if (typeof img === 'string') return img;
+    if (typeof img === 'object' && img.url) return img.url;
+    return '';
+  }
+
+  openImagePreview(url: string): void {
+    this.previewImageModalUrl = url;
+    this.cdr.markForCheck();
+  }
+
+  closeImagePreview(): void {
+    this.previewImageModalUrl = null;
+    this.cdr.markForCheck();
   }
 }

@@ -7,7 +7,10 @@ import { OrdersModule } from './orders/orders.module';
 import { TranslationsModule } from './translations/translations.module';
 import { AdminModule } from './admin/admin.module';
 import { CheriModule } from './cheri/cheri.module';
-import { ConfigModule } from '@nestjs/config';
+import { InteractionsModule } from './interactions/interactions.module';
+import { RecommendationsModule } from './recommendations/recommendations.module';
+import { ReviewsModule } from './reviews/reviews.module';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 // import { join } from 'path';
 // import { ServeStaticModule } from '@nestjs/serve-static';
 // import { existsSync } from 'fs';
@@ -16,13 +19,20 @@ import { ConfigModule } from '@nestjs/config';
 //   ? join(process.cwd(), '/dist/cheri/browser')
 //   : join(process.cwd(), 'public');
 
-const defaultMongoUri =
-  'mongodb+srv://tinhvttk24411_db_user:gZ7aJJyCWgYffiXa@cluster0.cbvni8r.mongodb.net/cheri?retryWrites=true&w=majority';
-
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    MongooseModule.forRoot(process.env.MONGO_URI || defaultMongoUri),
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => {
+        const uri = configService.get<string>('MONGO_URI') || process.env.MONGO_URI;
+        if (!uri) {
+          throw new Error('Thiếu cấu hình biến môi trường bắt buộc: MONGO_URI');
+        }
+        return { uri };
+      },
+      inject: [ConfigService],
+    }),
     ProductsModule,
     CartModule,
     OrdersModule,
@@ -30,6 +40,10 @@ const defaultMongoUri =
     AuthModule,
     AdminModule,
     CheriModule,
+    InteractionsModule,
+    RecommendationsModule,
+    ReviewsModule,
+
     // ServeStaticModule.forRoot({
     //   rootPath: staticFile,
     //   exclude: ['/api'],

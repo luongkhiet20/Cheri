@@ -8,7 +8,7 @@ import { Observable, combineLatest, Subscription, of } from 'rxjs';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
 
-import { MatSnackBar, MatSnackBarRef } from '@angular/material/snack-bar';
+import { NotificationService } from '../../../shared/notification/notification.service';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -22,7 +22,7 @@ import { TranslatePipe } from '../../../../pipes/translate.pipe';
 import { SignalStore } from '../../../../store/signal.store';
 import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
 import { ThemeService } from '../../../../services/theme.service';
-import { CartToastService } from '../../../../services/cart-toast.service';
+import { PriceFormatPipe } from '../../../../pipes/price.pipe';
 import { WishlistButtonComponent } from '../../../shared/wishlist-button/wishlist-button.component';
 import { ReviewSummary } from '../../../shared/reviews/review.models';
 import { RatingSummaryComponent } from '../../../shared/reviews/rating-summary.component';
@@ -50,6 +50,7 @@ import {
     MatProgressBarModule,
     MatProgressSpinnerModule,
     TranslatePipe,
+    PriceFormatPipe,
     WishlistButtonComponent,
     RatingSummaryComponent,
   ],
@@ -102,8 +103,7 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     private meta: Meta,
     private title: Title,
     private translate: TranslateService,
-    private snackBar: MatSnackBar,
-    private cartToast: CartToastService,
+    private notify: NotificationService,
     private store: SignalStore,
     private selectors: SignalStoreSelectors,
     private themeService: ThemeService,
@@ -167,11 +167,11 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
   addToCart(id: string): void {
     const p = (this.products() || []).find((item: any) => (item._id || item.id) === id);
     if (p && (this.isOutOfStock(p) || p.visibility === false)) {
-      this.snackBar.open('Sản phẩm hiện đã hết hàng', 'Đóng', { duration: 3000 });
+      this.notify.warning('✨Sản phẩm hiện đã hết hàng✨');
       return;
     }
     this.store.addToCart('?id=' + id);
-    this.cartToast.show();
+    this.notify.success('✨Đã thêm sản phẩm vào giỏ hàng✨');
   }
 
   removeFromCart(id: string): void {

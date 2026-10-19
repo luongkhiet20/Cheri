@@ -1,5 +1,7 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { SettingsService } from './settings.service';
+import { AdminService } from '../../services/admin.service';
 import { AppSettings } from './settings.model';
 import { NotificationService } from '../../shared/notification/notification.service';
 import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
@@ -8,7 +10,7 @@ import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.c
   selector: 'app-settings',
   standalone: false,
   templateUrl: './settings.component.html',
-  styleUrls: ['./settings.component.scss']
+  styleUrls: ['./settings.component.css']
 })
 export class SettingsComponent implements OnInit, OnDestroy {
   isLoading = true;
@@ -62,6 +64,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
   // Modals for Logo & Favicon
   isLogoModalOpen = false;
   isFaviconModalOpen = false;
+  isUploadingLogo = false;
+  isUploadingFavicon = false;
   tempLogoUrl = '';
   tempFaviconUrl = '';
   modalError = '';
@@ -88,6 +92,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   constructor(
     private settingsService: SettingsService,
+    private adminService: AdminService,
     private cdr: ChangeDetectorRef,
     private notificationService: NotificationService
   ) { }
@@ -272,13 +277,44 @@ export class SettingsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      this.tempLogoUrl = reader.result as string;
-      this.modalError = '';
-      this.cdr.markForCheck();
-    };
-    reader.readAsDataURL(file);
+    this.isUploadingLogo = true;
+    this.modalError = '';
+    this.cdr.markForCheck();
+
+    this.adminService.getCloudinarySignature('cheri/settings').subscribe({
+      next: (res) => {
+        const sigData = res?.data || res;
+        if (sigData && sigData.signature) {
+          firstValueFrom(this.adminService.uploadDirectToCloudinary(file, sigData))
+            .then((uploadRes: any) => {
+              this.isUploadingLogo = false;
+              this.tempLogoUrl = uploadRes.secure_url || uploadRes.url;
+              this.cdr.markForCheck();
+            })
+            .catch((err) => {
+              console.warn('Direct upload Cloudinary logo thất bại, fallback qua API server:', err);
+              this.uploadLogoViaServer(file);
+            });
+        } else {
+          this.uploadLogoViaServer(file);
+        }
+      },
+      error: () => this.uploadLogoViaServer(file)
+    });
+  }
+
+  private uploadLogoViaServer(file: File): void {
+    firstValueFrom(this.adminService.uploadImage(file, 'cheri/settings'))
+      .then((res: any) => {
+        this.isUploadingLogo = false;
+        this.tempLogoUrl = res.secure_url || res.url;
+        this.cdr.markForCheck();
+      })
+      .catch((err) => {
+        this.isUploadingLogo = false;
+        this.modalError = 'Tải tệp logo lên máy chủ thất bại: ' + (err?.error?.message || err?.message);
+        this.cdr.markForCheck();
+      });
   }
 
   saveLogo(): void {
@@ -317,13 +353,44 @@ export class SettingsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      this.tempFaviconUrl = reader.result as string;
-      this.modalError = '';
-      this.cdr.markForCheck();
-    };
-    reader.readAsDataURL(file);
+    this.isUploadingFavicon = true;
+    this.modalError = '';
+    this.cdr.markForCheck();
+
+    this.adminService.getCloudinarySignature('cheri/settings').subscribe({
+      next: (res) => {
+        const sigData = res?.data || res;
+        if (sigData && sigData.signature) {
+          firstValueFrom(this.adminService.uploadDirectToCloudinary(file, sigData))
+            .then((uploadRes: any) => {
+              this.isUploadingFavicon = false;
+              this.tempFaviconUrl = uploadRes.secure_url || uploadRes.url;
+              this.cdr.markForCheck();
+            })
+            .catch((err) => {
+              console.warn('Direct upload Cloudinary favicon thất bại, fallback qua API server:', err);
+              this.uploadFaviconViaServer(file);
+            });
+        } else {
+          this.uploadFaviconViaServer(file);
+        }
+      },
+      error: () => this.uploadFaviconViaServer(file)
+    });
+  }
+
+  private uploadFaviconViaServer(file: File): void {
+    firstValueFrom(this.adminService.uploadImage(file, 'cheri/settings'))
+      .then((res: any) => {
+        this.isUploadingFavicon = false;
+        this.tempFaviconUrl = res.secure_url || res.url;
+        this.cdr.markForCheck();
+      })
+      .catch((err) => {
+        this.isUploadingFavicon = false;
+        this.modalError = 'Tải tệp favicon lên máy chủ thất bại: ' + (err?.error?.message || err?.message);
+        this.cdr.markForCheck();
+      });
   }
 
   saveFavicon(): void {

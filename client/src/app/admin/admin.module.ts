@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Routes } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { DragDropModule } from '@angular/cdk/drag-drop';
+import { PriceFormatPipe } from '../pipes/price.pipe';
 
 // Layout
 import { AdminLayout } from './layout/admin-layout/admin-layout';
@@ -35,6 +36,7 @@ import { CategoriesComponent } from './pages/categories/categories.component';
 import { CategoryFormComponent } from './pages/categories/category-form/category-form.component';
 import { OrdersComponent } from './pages/orders/orders.component';
 import { OrderFormComponent } from './pages/orders/order-form/order-form.component';
+import { UpdateOrderStatusComponent } from './pages/orders/update-order-status/update-order-status.component';
 import { OrderDetailComponent } from './pages/orders/order-detail/order-detail.component';
 import { PaymentMethodsComponent } from './pages/payment-methods/payment-methods.component';
 import { PaymentMethodFormComponent } from './pages/payment-methods/payment-method-form/payment-method-form.component';
@@ -76,7 +78,8 @@ const routes: Routes = [
       { path: 'categories/:id/edit', component: CategoryFormComponent },
       { path: 'orders', component: OrdersComponent },
       { path: 'orders/add', component: OrderFormComponent },
-      { path: 'orders/:id/edit', component: OrderFormComponent },
+      { path: 'orders/:id/status', component: UpdateOrderStatusComponent },
+      { path: 'orders/:id/edit', component: UpdateOrderStatusComponent },
       { path: 'orders/:id', component: OrderDetailComponent },
       { path: 'pages/coupons', component: CouponsComponent },
       { path: 'pages/coupons/new', component: CouponFormComponent },
@@ -146,6 +149,7 @@ const routes: Routes = [
     CategoryFormComponent,
     OrdersComponent,
     OrderFormComponent,
+    UpdateOrderStatusComponent,
     OrderDetailComponent,
     CouponsComponent,
     CouponFormComponent,
@@ -175,6 +179,7 @@ const routes: Routes = [
     FormsModule,
     ReactiveFormsModule,
     DragDropModule,
+    PriceFormatPipe,
     RouterModule.forChild(routes),
   ],
   exports: [

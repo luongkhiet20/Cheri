@@ -24,6 +24,12 @@ import { User } from './models/user.model';
 import { GetUser } from './utils/get-user.decorator';
 import { GoogleUserDto } from './dto/google-user.dto';
 
+/** Lấy origin đầu tiên từ ORIGIN (hỗ trợ cả dạng single và comma-separated) */
+function getFirstOrigin(): string {
+  const raw = process.env.ORIGIN || 'http://localhost:3000';
+  return raw.split(',')[0].trim().replace(/\/+$/, '');
+}
+
 @Controller('api/auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
@@ -177,10 +183,33 @@ export class AuthController {
   @Get('/google/callback')
   @UseGuards(AuthGuard('google'))
   async googleLoginCallback(@Req() req, @Res() res) {
-    const googleUserDto: GoogleUserDto = req.user;
-    const accessToken = await this.authService.signInGoogle(googleUserDto);
-    const tokenUrl = process.env.ORIGIN + '/jwtToken/' + accessToken;
-    res.redirect(tokenUrl);
+    try {
+      const googleUserDto: GoogleUserDto = req.user;
+      if (!googleUserDto || !googleUserDto.email) {
+        const origin = getFirstOrigin();
+        return res.redirect(`${origin}/vi/authorize/signin?error=oauth_identity_failed`);
+      }
+      const { accessToken, user, isNewUser } = await this.authService.signInGoogle(googleUserDto);
+      const exchangeCode = this.authService.createExchangeCode(accessToken, user, isNewUser);
+      const origin = getFirstOrigin();
+      const redirectUrl = `${origin}/jwtToken?code=${exchangeCode}`;
+      res.redirect(redirectUrl);
+    } catch (err: any) {
+      const origin = getFirstOrigin();
+      const msg = String(err?.message || '').toLowerCase();
+      if (msg.includes('bị khóa') || msg.includes('ngừng hoạt động') || msg.includes('disabled') || msg.includes('blocked')) {
+        return res.redirect(`${origin}/vi/authorize/signin?error=account_locked`);
+      }
+      if (msg.includes('không hợp lệ') || msg.includes('invalid')) {
+        return res.redirect(`${origin}/vi/authorize/signin?error=oauth_token_invalid`);
+      }
+      res.redirect(`${origin}/vi/authorize/signin?error=oauth_failed`);
+    }
+  }
+
+  @Post('/exchange-token')
+  async exchangeToken(@Body() body: { code: string }) {
+    return this.authService.consumeExchangeCode(body?.code);
   }
 
   @Post('/signout')
@@ -199,4 +228,36 @@ export class AuthController {
   signOutGet(@Req() req, @Res() res) {
     return this.signOut(req, res);
   }
+
+@Post('/forgot-password')
+async forgotPassword(
+  @Body() body: { email?: string },
+): Promise<{ message: string }> {
+  return this.authService.requestPasswordReset(body?.email || '');
+}
+@Post('/verify-reset-otp')
+async verifyResetOtp(
+  @Body() body: { email?: string; otp?: string },
+): Promise<{ message: string; resetToken: string }> {
+  return this.authService.verifyPasswordResetOtp(
+    body?.email || '',
+    body?.otp || '',
+  );
+}
+
+@Post('/reset-password')
+async resetPassword(
+  @Body()
+  body: {
+    email?: string;
+    resetToken?: string;
+    newPassword?: string;
+  },
+): Promise<{ message: string }> {
+  return this.authService.resetPassword(
+    body?.email || '',
+    body?.resetToken || '',
+    body?.newPassword || '',
+  );
+}
 }

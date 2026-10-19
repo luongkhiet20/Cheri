@@ -1,7 +1,6 @@
-import { Component, OnInit, Inject, PLATFORM_ID, Signal, effect, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, Inject, PLATFORM_ID, Signal, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import { TranslateService } from '../../../services/translate.service';
 import { ApiService } from '../../../services/api.service';
@@ -9,12 +8,27 @@ import { SignalStore } from '../../../store/signal.store';
 import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
 import { User, Order } from '../../shared/models';
 import { accessTokenKey } from '../../shared/constants';
+import { NotificationService } from '../../shared/notification/notification.service';
+import { ProfileOrdersComponent } from './profile-orders/profile-orders.component';
+import { ProfileInfoComponent } from './profile-info/profile-info.component';
+import { OrderCancelDialogComponent } from './order-cancel-dialog/order-cancel-dialog.component';
+import { ProductReviewDialogComponent } from './product-review-dialog.component/product-review-dialog.component';
+import { OrderReturnRefundDialogComponent } from './order-return-refund-dialog.component/order-return-refund-dialog.component';
+import { OrderReturnCancelDialogComponent } from './order-return-cancel-dialog/order-return-cancel-dialog.component';
 import { canShowOrderReviewAction, getOrderReviewProducts } from './order-review-links';
 
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule],
+  imports: [
+    CommonModule,
+    ProfileOrdersComponent,
+    ProfileInfoComponent,
+    OrderCancelDialogComponent,
+    ProductReviewDialogComponent,
+    OrderReturnRefundDialogComponent,
+    OrderReturnCancelDialogComponent
+  ],
   templateUrl: './profile.html',
   styleUrl: './profile.css'
 })
@@ -23,49 +37,25 @@ export class Profile implements OnInit {
   userOrders$: Signal<Order[]>;
   lang$: Observable<string>;
 
-  // Tab filter
-  activeTab: string = 'all';
-  private reviewOrder: Order | null = null;
+  // Cancel order dialog state
+  isCancelDialogOpen: boolean = false;
+  selectedOrderToCancel: any = null;
 
+  // Review dialog state
+  isReviewDialogOpen: boolean = false;
+  selectedOrderToReview: any = null;
+
+  // Return / refund dialog state
+  isReturnRefundDialogOpen: boolean = false;
+  selectedOrderToReturn: any = null;
+  reviewOrder: Order | null = null;
   readonly canShowOrderReviewAction = canShowOrderReviewAction;
   readonly getOrderReviewProducts = getOrderReviewProducts;
 
-  readonly orderTabs = [
-    { key: 'all', label: 'Tất cả' },
-    { key: 'PENDING', label: 'Chờ xác nhận' },
-
-    { key: 'PROCESSING', label: 'Đang xử lý' },
-    { key: 'SHIPPING', label: 'Đang giao' },
-
-    { key: 'DELIVERED', label: 'Đã giao' },
-    { key: 'CANCELLED', label: 'Đã hủy' },
-    { key: 'RETURNED', label: 'Đã hoàn trả' },
-  ];
-
-  // Form fields
-  formName: string = '';
-  formEmail: string = '';
-  formPhone: string = '';
-  formGender: string = '';
-  formDateOfBirth: string = '';
-  formAddress: string = '';
-  formNewPassword: string = '';
-  formConfirmPassword: string = '';
-
-  // Giới hạn ngày sinh hợp lệ (không nhỏ hơn 01/01/1900 và không trong tương lai)
-  readonly minBirthDate: string = '1900-01-01';
-  get maxBirthDate(): string {
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-  }
-
-  // Save state
-  isSaving: boolean = false;
-  saveSuccess: boolean = false;
-  saveError: string = '';
+  // Cancel return request dialog state
+  isReturnCancelDialogOpen: boolean = false;
+  selectedOrderToCancelReturn: any = null;
+  selectedReturnRequestToCancel: any = null;
 
   // Avatar upload state
   isUploadingAvatar: boolean = false;
@@ -83,77 +73,23 @@ export class Profile implements OnInit {
     private selectors: SignalStoreSelectors,
     private translate: TranslateService,
     private apiService: ApiService,
+    private notify: NotificationService,
     private router: Router,
     private cdr: ChangeDetectorRef
   ) {
     this.lang$ = this.translate.getLang$();
     this.user$ = this.selectors.user;
     this.userOrders$ = this.selectors.userOrders;
-
-    // Tự động đồng bộ dữ liệu vào Form khi user signal thay đổi từ MongoDB
-    effect(() => {
-      const user = this.selectors.user();
-      if (user) {
-        this.populateForm(user);
-        this.cdr.markForCheck();
-      }
-    });
-  }
-
-  formatDateForInput(dob: any): string {
-    if (!dob) return '';
-    if (typeof dob === 'string') {
-      const trimmed = dob.trim();
-      if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-        return trimmed;
-      }
-      const date = new Date(trimmed);
-      if (!isNaN(date.getTime())) {
-        const yyyy = date.getFullYear();
-        const mm = String(date.getMonth() + 1).padStart(2, '0');
-        const dd = String(date.getDate()).padStart(2, '0');
-        return `${yyyy}-${mm}-${dd}`;
-      }
-      return trimmed;
-    }
-    if (dob instanceof Date && !isNaN(dob.getTime())) {
-      const yyyy = dob.getFullYear();
-      const mm = String(dob.getMonth() + 1).padStart(2, '0');
-      const dd = String(dob.getDate()).padStart(2, '0');
-      return `${yyyy}-${mm}-${dd}`;
-    }
-    return '';
-  }
-
-  populateForm(user: any): void {
-    if (!user) return;
-    this.formName = (user.fullName || user.name || (user.email ? user.email.split('@')[0] : '')).trim();
-    this.formEmail = user.email || '';
-    this.formPhone = user.phoneNumber || user.phone || '';
-    this.formGender = user.gender || '';
-    this.formDateOfBirth = this.formatDateForInput(user.dateOfBirth);
-    this.formAddress = user.address || (user.shippingAddress?.address ? this.getOrderAddress({ shippingAddress: user.shippingAddress } as any) : '');
-    this.avatarImgError = false;
   }
 
   ngOnInit(): void {
-    this.formNewPassword = '';
-    this.formConfirmPassword = '';
-
-    // Nạp ngay dữ liệu người dùng nếu store đã có sẵn
-    const existingUser = this.selectors.user();
-    if (existingUser) {
-      this.populateForm(existingUser);
-    }
-
     if (isPlatformBrowser(this.platformId)) {
-      // Tải dữ liệu người dùng mới nhất từ MongoDB qua API và bind trực tiếp vào form
+      // Tải dữ liệu người dùng mới nhất từ MongoDB qua API
       this.apiService.getUser().subscribe({
         next: (res: any) => {
           if (res && !res.error) {
             const userData = res.data || res;
             this.store.storeUser(userData);
-            this.populateForm(userData);
             this.cdr.markForCheck();
           }
         },
@@ -168,6 +104,32 @@ export class Profile implements OnInit {
     }
   }
 
+  onReviewOrder(order: Order): void {
+    if (!order || !(this.userOrders$() || []).includes(order) || !canShowOrderReviewAction(order)) return;
+    const products = getOrderReviewProducts(order);
+    if (products.length === 1) this.openProductReview(products[0].productId);
+    else if (products.length > 1) {
+      this.reviewOrder = this.reviewOrder === order ? null : order;
+      this.cdr.markForCheck();
+    }
+  }
+
+  isReviewChooserOpen(order: Order): boolean {
+    return this.reviewOrder === order && (this.userOrders$() || []).includes(order)
+      && canShowOrderReviewAction(order);
+  }
+
+  openProductReview(productId: string): void {
+    if (typeof productId !== 'string' || !/^[a-f\d]{24}$/i.test(productId)) return;
+    const ownedProductIds = (this.userOrders$() || [])
+      .filter(order => canShowOrderReviewAction(order))
+      .flatMap(order => getOrderReviewProducts(order).map(product => product.productId));
+    if (!ownedProductIds.includes(productId.toLowerCase())) return;
+    this.reviewOrder = null;
+    const lang = this.translate.lang || 'vi';
+    this.router.navigate(['/' + lang + '/product', productId.toLowerCase()], { queryParams: { review: 1 } });
+  }
+
   updateSyncTime(): void {
     if (isPlatformBrowser(this.platformId)) {
       const now = new Date();
@@ -175,9 +137,16 @@ export class Profile implements OnInit {
       const m = String(now.getMinutes()).padStart(2, '0');
       const lang = (this.translate as any)?.lang || 'VN';
       this.lastSyncTime = `${h}:${m} ${lang.toUpperCase()}`;
+      this.cdr.markForCheck();
     }
   }
 
+  onProfileUpdated(_updatedUser: User): void {
+    this.updateSyncTime();
+    this.cdr.markForCheck();
+  }
+
+  // ── Avatar Upload & Hero Info ──
   openAvatarPicker(): void {
     if (this.isUploadingAvatar) return;
     this.avatarUploadError = '';
@@ -241,11 +210,13 @@ export class Profile implements OnInit {
         // Reset preview vì state đã có ảnh chính thức từ MongoDB
         this.previewAvatar = null;
         this.updateSyncTime();
+        this.notify.success('✨Đã cập nhật ảnh đại diện thành công✨');
       },
       error: (err: any) => {
         this.isUploadingAvatar = false;
         this.previewAvatar = null;
         this.avatarUploadError = err?.error?.message || 'Không thể cập nhật ảnh đại diện. Vui lòng thử lại.';
+        this.notify.error(`✨${this.avatarUploadError}✨`);
       }
     });
   }
@@ -304,253 +275,228 @@ export class Profile implements OnInit {
     return `CHR-${id.slice(-5).toUpperCase()}`;
   }
 
-  // ── Status Normalization ──
-  normalizeStatus(status: string | undefined): string {
-    const s = (status || '').toUpperCase().trim();
-    if (s === 'PENDING') return 'PENDING';
-    if (s === 'CONFIRMED') return 'CONFIRMED';
-    if (s === 'PROCESSING') return 'PROCESSING';
-    if (s === 'SHIPPING' || s === 'SHIPPED') return 'SHIPPING';
-    if (s === 'DELIVERY_FAILED') return 'DELIVERY_FAILED';
-    if (s === 'DELIVERED' || s === 'COMPLETED') return 'DELIVERED';
-    if (s === 'CANCELLED' || s === 'CANCELED') return 'CANCELLED';
-    if (s === 'RETURNED' || s === 'REFUNDED') return 'RETURNED';
-    return s;
-  }
-
-  // ── Tab logic ──
-  setTab(tab: string): void {
-    this.activeTab = tab;
-  }
-
-  private getRawOrders(): Order[] {
-    const raw: any = this.userOrders$();
-    if (!raw) return [];
-    if (Array.isArray(raw)) return raw;
-    if (Array.isArray(raw.data)) return raw.data;
-    if (Array.isArray(raw.orders)) return raw.orders;
-    return [];
-  }
-
-  getTabCount(tab: string): number {
-    const orders = this.getRawOrders();
-    if (!orders || !orders.length) return 0;
-    if (tab === 'all') return orders.length;
-    return orders.filter(o => this.normalizeStatus(o.status) === tab).length;
-  }
-
-  getFilteredOrders(): Order[] {
-    const orders = this.getRawOrders();
-    if (!orders || !orders.length) return [];
-    const sorted = [...orders].sort((a, b) => {
-      const da = new Date(a.createdAt || a.dateAdded || 0).getTime();
-      const db = new Date(b.createdAt || b.dateAdded || 0).getTime();
-      return db - da;
-    });
-    if (this.activeTab === 'all') return sorted;
-    return sorted.filter(o => this.normalizeStatus(o.status) === this.activeTab);
-  }
-
-  // ── Formatting & Display helpers (100% dữ liệu thực từ MongoDB) ──
-  formatOrderDate(order: Order): string {
-    const d = order.createdAt || order.dateAdded;
-    if (!d) return '—';
-    const date = new Date(d);
-    if (isNaN(date.getTime())) return '—';
-    const dd = String(date.getDate()).padStart(2, '0');
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const yyyy = date.getFullYear();
-    return `${yyyy}-${mm}-${dd}`;
-  }
-
-  formatAmount(order: Order): string {
-    const total = order.totalAmount ?? order.amount ?? order.subtotal ?? 0;
-    return total.toLocaleString('vi-VN') + ' đ';
-  }
-
-  formatItemPrice(item: any): string {
-    const val = item?.subtotal ?? (item?.unitPrice ? item.unitPrice * (item.quantity || 1) : 0);
-    return val.toLocaleString('vi-VN') + ' đ';
-  }
-
-  getItemImage(item: any): string {
-    const img = item?.productSnapshot?.image;
-    if (img && typeof img === 'string') {
-      if (img.startsWith('http') || img.startsWith('data:') || img.startsWith('/')) {
-        return img;
-      }
-      return '/' + img;
-    }
-    return 'assets/images/placeholder.jpg';
-  }
-
-  onReviewOrder(order: Order): void {
-    if (!this.getRawOrders().includes(order) || !canShowOrderReviewAction(order)) return;
-    const products = getOrderReviewProducts(order);
-    if (products.length === 1) this.openProductReview(products[0].productId);
-    else if (products.length > 1) this.reviewOrder = this.reviewOrder === order ? null : order;
-  }
-
-  isReviewChooserOpen(order: Order): boolean {
-    return this.reviewOrder === order && this.getRawOrders().includes(order) && canShowOrderReviewAction(order);
-  }
-
-  openProductReview(productId: string): void {
-    if (typeof productId !== 'string' || !/^[a-f\d]{24}$/i.test(productId)) return;
-    this.reviewOrder = null;
-    const lang = (this.translate as any)?.lang || 'vi';
-    this.router.navigate(['/' + lang + '/product', productId.toLowerCase()], { queryParams: { review: 1 } });
-  }
-
-  getOrderPhone(order: Order): string {
-    return order.shippingAddress?.phone || order.customerPhone || this.user$()?.phoneNumber || '—';
-  }
-
-  getOrderAddress(order: Order): string {
-    if (order.shippingAddress?.address) {
-      const parts = [
-        order.shippingAddress.address,
-        order.shippingAddress.ward,
-        order.shippingAddress.district,
-        order.shippingAddress.province
-      ].filter(Boolean);
-      return parts.join(', ');
-    }
-    return this.user$()?.address || '—';
-  }
-
-  getStatusClass(status: string | undefined): string {
-    switch (this.normalizeStatus(status)) {
-      case 'PENDING': return 'status-pending';
-      case 'CONFIRMED': return 'status-confirmed';
-      case 'PROCESSING': return 'status-processing';
-      case 'SHIPPING': return 'status-shipping';
-      case 'DELIVERY_FAILED': return 'status-cancelled';
-      case 'DELIVERED': return 'status-delivered';
-      case 'CANCELLED': return 'status-cancelled';
-      case 'RETURNED': return 'status-returned';
-      default: return 'status-pending';
-    }
-  }
-
-  getStatusLabel(status: string | undefined): string {
-    switch (this.normalizeStatus(status)) {
-      case 'PENDING': return 'Chờ xác nhận';
-
-      case 'PROCESSING': return 'Đang xử lý';
-      case 'SHIPPING': return 'Đang giao hàng';
-
-      case 'DELIVERED': return 'Đã giao hàng thành công';
-      case 'CANCELLED': return 'Đã hủy';
-      case 'RETURNED': return 'Đã hoàn trả';
-      default: return status ? status : 'Chờ xác nhận';
-    }
-  }
-
-  // ── Xem chi tiết đơn hàng (Dẫn tới trang Bill chi tiết) ──
-  onViewOrderDetail(order: Order): void {
+  // ── Xử lý Hủy đơn hàng ──
+  openCancelDialog(order: Order | any): void {
     if (!order) return;
-    const targetId = order._id || order.orderId;
-    if (isPlatformBrowser(this.platformId) && typeof window !== 'undefined' && window.sessionStorage) {
-      try {
-        window.sessionStorage.setItem('cheri_last_order', JSON.stringify(order));
-      } catch (_) {}
-    }
-    try {
-      this.selectors.productState.update((state: any) => ({ ...state, order }));
-    } catch (_) {}
-    const currentLang = (this.translate as any)?.lang || 'vi';
-    this.router.navigate(['/' + currentLang + '/order', targetId], {
-      queryParams: { orderId: order.orderId }
-    });
+    this.selectedOrderToCancel = order;
+    this.isCancelDialogOpen = true;
+    this.cdr.markForCheck();
   }
 
-  // ── Save profile (Gửi API cập nhật MongoDB & đồng bộ state tức thì) ──
-  onSave(): void {
-    this.saveSuccess = false;
-    this.saveError = '';
+  closeCancelDialog(): void {
+    this.isCancelDialogOpen = false;
+    this.selectedOrderToCancel = null;
+    this.cdr.markForCheck();
+  }
 
-    // Validate mật khẩu nếu người dùng muốn đổi
-    if (this.formNewPassword || this.formConfirmPassword) {
-      if (!this.formNewPassword || !this.formConfirmPassword) {
-        this.saveError = 'Vui lòng nhập cả mật khẩu mới và xác nhận mật khẩu.';
-        return;
-      }
-      if (this.formNewPassword !== this.formConfirmPassword) {
-        this.saveError = 'Mật khẩu mới không khớp. Vui lòng kiểm tra lại.';
-        return;
-      }
-      if (this.formNewPassword.length < 6) {
-        this.saveError = 'Mật khẩu mới phải có ít nhất 6 ký tự.';
-        return;
-      }
+  onOrderCancelled(event: any): void {
+    const targetId = event?.orderId || this.selectedOrderToCancel?.orderId || this.selectedOrderToCancel?._id;
+    this.closeCancelDialog();
+
+    // 1. Cập nhật ngay trong local store để UI phản hồi tức thì
+    if (targetId) {
+      try {
+        this.selectors.productState.update((state: any) => {
+          if (!state?.userOrders) return state;
+          const updated = state.userOrders.map((o: any) => {
+            if (o._id === targetId || o.orderId === targetId) {
+              return { ...o, status: 'CANCELLED' };
+            }
+            return o;
+          });
+          return { ...state, userOrders: updated };
+        });
+      } catch (_) { }
     }
 
-    // Validate ngày sinh (không cho phép ngày trong tương lai và không nhỏ hơn 01/01/1900)
-    if (this.formDateOfBirth) {
-      if (this.formDateOfBirth > this.maxBirthDate) {
-        this.saveError = 'Ngày sinh không hợp lệ: Không được chọn ngày trong tương lai.';
-        return;
-      }
-      if (this.formDateOfBirth < this.minBirthDate) {
-        this.saveError = 'Ngày sinh không hợp lệ: Ngày sinh không được nhỏ hơn 01/01/1900.';
-        return;
-      }
+    // 2. Đồng bộ bộ đếm trạng thái và danh sách đơn hàng chính thức từ máy chủ
+    if (isPlatformBrowser(this.platformId)) {
+      this.store.getUserOrders();
+      this.updateSyncTime();
+    }
+    this.notify.success('✨Đã hủy đơn hàng thành công✨');
+    this.cdr.markForCheck();
+  }
+
+  // ── Xử lý Đánh giá sản phẩm ──
+  openReviewDialog(order: Order | any): void {
+    if (!order) return;
+    this.selectedOrderToReview = order;
+    this.isReviewDialogOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  closeReviewDialog(): void {
+    this.isReviewDialogOpen = false;
+    this.selectedOrderToReview = null;
+    this.cdr.markForCheck();
+  }
+
+  onOrderReviewed(event: any): void {
+    const orderId = event?.orderId || this.selectedOrderToReview?.orderId || this.selectedOrderToReview?._id;
+    this.closeReviewDialog();
+
+    // 1. Cập nhật ngay trong local store để đổi nút sang "Đã đánh giá" tức thì
+    if (orderId) {
+      try {
+        this.selectors.productState.update((state: any) => {
+          if (!state?.userOrders) return state;
+          const updated = state.userOrders.map((o: any) => {
+            if (o._id === orderId || o.orderId === orderId || (o.raw && (o.raw._id === orderId || o.raw.orderId === orderId))) {
+              return {
+                ...o,
+                isReviewed: true,
+                reviewedAt: new Date(),
+              };
+            }
+            return o;
+          });
+          return { ...state, userOrders: updated };
+        });
+      } catch (_) { }
     }
 
-    const user = this.user$();
-    if (!user) {
-      this.saveError = 'Không tìm thấy phiên đăng nhập. Vui lòng đăng nhập lại.';
-      return;
+    if (isPlatformBrowser(this.platformId)) {
+      this.store.getUserOrders();
+      this.updateSyncTime();
+    }
+    this.notify.success('✨Đã gửi đánh giá sản phẩm thành công✨');
+    this.cdr.markForCheck();
+  }
+
+  // ── Xử lý Trả hàng / Hoàn tiền ──
+  openReturnRefundDialog(order: Order | any): void {
+    if (!order) return;
+    this.selectedOrderToReturn = order;
+    this.isReturnRefundDialogOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  closeReturnRefundDialog(): void {
+    this.isReturnRefundDialogOpen = false;
+    this.selectedOrderToReturn = null;
+    this.cdr.markForCheck();
+  }
+
+  onReturnRefundSubmitted(event: any): void {
+    const orderId = event?.orderId;
+    const returnRequest = event?.returnRequest;
+    this.closeReturnRefundDialog();
+
+    // 1. Cập nhật ngay trong local store để UI phản hồi tức thì
+    if (orderId && returnRequest) {
+      try {
+        this.selectors.productState.update((state: any) => {
+          if (!state?.userOrders) return state;
+          const updated = state.userOrders.map((o: any) => {
+            if (o._id === orderId || o.orderId === orderId) {
+              const clonedOrder = { ...o };
+              const currentReqs = Array.isArray(clonedOrder.returnRequests) ? [...clonedOrder.returnRequests] : [];
+              currentReqs.push(returnRequest);
+              clonedOrder.returnRequests = currentReqs;
+              clonedOrder.returnRequest = returnRequest;
+              return clonedOrder;
+            }
+            return o;
+          });
+          return { ...state, userOrders: updated };
+        });
+      } catch (_) { }
     }
 
-    const payload: any = {
-      fullName: this.formName?.trim() || undefined,
-      name: this.formName?.trim() || undefined,
-      phoneNumber: this.formPhone?.trim() ?? '',
-      phone: this.formPhone?.trim() ?? '',
-      gender: this.formGender ?? '',
-      dateOfBirth: this.formDateOfBirth ?? '',
-      address: this.formAddress?.trim() ?? '',
-    };
+    // 2. Đồng bộ danh sách đơn hàng chính thức từ máy chủ
+    if (isPlatformBrowser(this.platformId)) {
+      this.store.getUserOrders();
+      this.updateSyncTime();
+    }
+    this.notify.success('✨Đã gửi yêu cầu trả hàng / hoàn tiền✨');
+    this.cdr.markForCheck();
+  }
 
-    if (this.formNewPassword) {
-      payload.password = this.formNewPassword;
+  // ── Xử lý Hủy yêu cầu trả hàng ──
+  getActiveReturnRequest(order: any): any {
+    if (!order) return null;
+    const requests: any[] = Array.isArray(order.returnRequests) && order.returnRequests.length > 0
+      ? order.returnRequests
+      : (order.returnRequest ? [order.returnRequest] : []);
+    if (!requests.length) return null;
+
+    const activeStatuses = ['PENDING', 'APPROVED', 'WAITING_FOR_RETURN_SHIPMENT', 'RETURN_SHIPPED', 'RETURN_RECEIVED', 'INSPECTED', 'COMPLETED'];
+    const activeReq = requests.find((r: any) => activeStatuses.includes((r.status || '').toUpperCase()));
+    if (activeReq) return activeReq;
+
+    return requests[requests.length - 1];
+  }
+
+  openReturnCancelDialog(order: Order | any): void {
+    if (!order) return;
+    const req = this.getActiveReturnRequest(order);
+    if (!req || (req.status || '').toUpperCase() !== 'PENDING') return;
+    this.selectedOrderToCancelReturn = order;
+    this.selectedReturnRequestToCancel = req;
+    this.isReturnCancelDialogOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  closeReturnCancelDialog(): void {
+    this.isReturnCancelDialogOpen = false;
+    this.selectedOrderToCancelReturn = null;
+    this.selectedReturnRequestToCancel = null;
+    this.cdr.markForCheck();
+  }
+
+  onReturnRequestCancelled(event: any): void {
+    const orderId = event?.orderId;
+    const reqId = event?.requestId;
+    const cancelReason = event?.reason || 'Bạn đã yêu cầu hủy quy trình trả hàng hoàn tiền.';
+    this.closeReturnCancelDialog();
+
+    // 1. Cập nhật ngay trong local store để UI phản hồi tức thì
+    if (orderId && reqId) {
+      try {
+        this.selectors.productState.update((state: any) => {
+          if (!state?.userOrders) return state;
+          const updated = state.userOrders.map((o: any) => {
+            if (o._id === orderId || o.orderId === orderId) {
+              const clonedOrder = { ...o };
+              clonedOrder.status = 'DELIVERED';
+              if (Array.isArray(clonedOrder.returnRequests)) {
+                clonedOrder.returnRequests = clonedOrder.returnRequests.map((r: any) => {
+                  if (r.requestId === reqId || r._id === reqId) {
+                    return {
+                      ...r,
+                      status: 'CANC',
+                      rejectionReason: cancelReason,
+                      refund: { ...(r.refund || {}), status: 'CANCELLED' }
+                    };
+                  }
+                  return r;
+                });
+              }
+              if (clonedOrder.returnRequest && (clonedOrder.returnRequest.requestId === reqId || clonedOrder.returnRequest._id === reqId)) {
+                clonedOrder.returnRequest = {
+                  ...clonedOrder.returnRequest,
+                  status: 'CANC',
+                  rejectionReason: cancelReason,
+                  refund: { ...(clonedOrder.returnRequest.refund || {}), status: 'CANCELLED' }
+                };
+              }
+              return clonedOrder;
+            }
+            return o;
+          });
+          return { ...state, userOrders: updated };
+        });
+      } catch (_) { }
     }
 
-    this.isSaving = true;
-    this.apiService.updateProfile(payload).subscribe({
-      next: (res: any) => {
-        this.isSaving = false;
-        if (res?.error) {
-          this.saveError = res.error?.message || (typeof res.error === 'string' ? res.error : 'Có lỗi xảy ra khi lưu thông tin.');
-          this.cdr.markForCheck();
-          return;
-        }
-
-        // Cập nhật store với dữ liệu người dùng thật vừa được lưu vào MongoDB
-        const updatedUser = res.data || res;
-        const currentUser = this.user$() || ({} as User);
-        const mergedUser = { ...currentUser, ...updatedUser };
-        this.store.storeUser(mergedUser);
-        this.populateForm(mergedUser);
-
-        this.formNewPassword = '';
-        this.formConfirmPassword = '';
-        this.saveSuccess = true;
-        this.updateSyncTime();
-        this.cdr.markForCheck();
-        setTimeout(() => {
-          this.saveSuccess = false;
-          this.cdr.markForCheck();
-        }, 4000);
-      },
-      error: (err: any) => {
-        this.isSaving = false;
-        this.saveError = err?.error?.message || 'Có lỗi kết nối máy chủ. Vui lòng thử lại.';
-        this.cdr.markForCheck();
-      }
-    });
+    // 2. Đồng bộ danh sách đơn hàng chính thức từ máy chủ
+    if (isPlatformBrowser(this.platformId)) {
+      this.store.getUserOrders();
+      this.updateSyncTime();
+    }
+    this.notify.success('✨Đã hủy yêu cầu trả hàng / hoàn tiền thành công✨');
+    this.cdr.markForCheck();
   }
 
   // ── Logout ──
@@ -558,16 +504,43 @@ export class Profile implements OnInit {
     const currentLang = (this.translate as any)?.lang || 'vi';
     const targetUrl = `/${currentLang}`;
 
+    let hadToken = false;
+    let localCleanFailed = false;
+
     if (isPlatformBrowser(this.platformId)) {
+      hadToken = Boolean(localStorage.getItem(accessTokenKey) || sessionStorage.getItem(accessTokenKey));
       try {
         localStorage.removeItem(accessTokenKey);
         sessionStorage.removeItem(accessTokenKey);
       } catch (e) {
-        // ignore
+        localCleanFailed = true;
       }
     }
 
-    this.store.signOut(() => {
+    if (!hadToken) {
+      this.notify.info('Phiên đăng nhập đã hết hạn.');
+      this.store.signOut(() => {
+        this.router.navigateByUrl(targetUrl);
+      });
+      return;
+    }
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      this.notify.error('Không thể kết nối đến máy chủ để hoàn tất đăng xuất.');
+      return;
+    }
+
+    this.store.signOut((res) => {
+      if (res?.networkError) {
+        this.notify.error('Không thể kết nối đến máy chủ để hoàn tất đăng xuất.');
+      } else if (res?.serverError) {
+        this.notify.error('Chưa thể hoàn tất đăng xuất. Vui lòng thử lại.');
+      } else if (localCleanFailed) {
+        this.notify.warning('Đã đăng xuất khỏi tài khoản, nhưng không thể xóa toàn bộ dữ liệu phiên trên thiết bị. Vui lòng tải lại trang.');
+      } else {
+        this.notify.success('Hẹn gặp lại tại Chéri!');
+      }
+
       this.router.navigateByUrl(targetUrl);
     });
   }

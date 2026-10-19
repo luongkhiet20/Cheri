@@ -1,0 +1,41 @@
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+env/
+venv/
+ENV/
+.venv/
+env.bak/
+venv.bak/
+
+# Environment files and credentials
+.env
+.env.local
+.env.*.local
+
+# ML Datasets (protect actual exported customer and interaction data)
+data/*.csv
+data/*.parquet
+data/*.json
+!data/.gitkeep
+
+# ML Models and Weights (binary artifacts)
+models/*.joblib
+models/*.pkl
+models/*.json
+!models/.gitkeep
+
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editor and IDE
+.vscode/
+.idea/

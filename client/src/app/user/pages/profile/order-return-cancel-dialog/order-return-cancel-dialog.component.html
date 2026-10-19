@@ -1,0 +1,124 @@
+<div
+  class="dialog-backdrop"
+  (click)="onBackdropClick($event)"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="cancel-return-dialog-title"
+>
+  <div class="dialog-card">
+
+    <!-- Card Header -->
+    <div class="dialog-header">
+      <div class="dialog-title-group">
+        <h3 class="dialog-title" id="cancel-return-dialog-title">Hủy yêu cầu trả hàng</h3>
+        <span class="dialog-req-badge" *ngIf="returnRequest?.requestId">
+          {{ returnRequest.requestId }}
+        </span>
+        <span class="dialog-order-badge" *ngIf="order?.orderId">
+          Đơn: #{{ order.orderId }}
+        </span>
+      </div>
+      <button
+        type="button"
+        class="dialog-close-btn"
+        (click)="onClose()"
+        [disabled]="isSubmitting"
+        title="Đóng"
+        aria-label="Đóng popup"
+      >
+        <svg class="dialog-close-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Card Body -->
+    <div class="dialog-body">
+      <div class="dialog-alert-box">
+        <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <p class="dialog-subtitle">
+          Quý khách có chắc chắn muốn hủy yêu cầu trả hàng và hoàn tiền này? Sau khi hủy, yêu cầu sẽ được đóng lại và bạn có thể giữ lại sản phẩm để tiếp tục sử dụng.
+        </p>
+      </div>
+
+      <div class="reasons-heading">Vui lòng chọn lý do hủy yêu cầu:</div>
+
+      <!-- Reason Radio Group -->
+      <div class="reasons-list" role="radiogroup" aria-label="Danh sách lý do hủy yêu cầu">
+        <label
+          *ngFor="let reason of cancelReasons; let idx = index"
+          class="reason-item"
+          [class.selected]="selectedReason === reason"
+          [class.disabled]="isSubmitting"
+        >
+          <input
+            type="radio"
+            name="cancelReturnReasonOption"
+            [value]="reason"
+            [checked]="selectedReason === reason"
+            (change)="onSelectReason(reason)"
+            [disabled]="isSubmitting"
+            class="reason-input"
+          />
+          <span class="radio-indicator"></span>
+          <span class="reason-text">{{ reason }}</span>
+        </label>
+      </div>
+
+      <!-- Other reason input -->
+      <div class="other-reason-wrap" *ngIf="isOtherSelected()">
+        <textarea
+          class="other-reason-textarea"
+          [(ngModel)]="otherReason"
+          rows="3"
+          placeholder="Nhập lý do chi tiết của quý khách (tối thiểu 3 ký tự)..."
+          [disabled]="isSubmitting"
+        ></textarea>
+      </div>
+
+      <!-- Validation Error -->
+      <div class="dialog-feedback-box error" *ngIf="validationError">
+        {{ validationError }}
+      </div>
+
+      <!-- Error from server -->
+      <div class="dialog-feedback-box error" *ngIf="errorMessage">
+        {{ errorMessage }}
+      </div>
+    </div>
+
+    <!-- Card Footer -->
+    <div class="dialog-footer">
+      <button
+        type="button"
+        class="dialog-btn-dismiss"
+        (click)="onClose()"
+        [disabled]="isSubmitting"
+      >
+        Giữ lại yêu cầu
+      </button>
+
+      <button
+        type="button"
+        class="dialog-btn-confirm"
+        (click)="onConfirmCancel()"
+        [disabled]="isSubmitting"
+      >
+        <span *ngIf="!isSubmitting">Xác nhận hủy yêu cầu</span>
+        <span *ngIf="isSubmitting" class="submitting-state">
+          <svg class="spinner-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
+            <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path>
+          </svg>
+          Đang xử lý...
+        </span>
+      </button>
+    </div>
+
+  </div>
+</div>

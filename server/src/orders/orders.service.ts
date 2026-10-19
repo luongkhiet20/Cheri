@@ -1,14 +1,18 @@
-import { Logger, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Logger, Injectable, NotFoundException, BadRequestException, ForbiddenException, ConflictException, MethodNotAllowedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types, isValidObjectId } from 'mongoose';
 import Stripe from 'stripe';
 import { buildPublicTrackingResponse } from './tracking-response.cjs';
 
-import { Order, OrderStatus, PaymentStatus } from './models/order.model';
+import { Order, OrderStatus, PaymentStatus, ReturnRequestStatus, RefundStatus } from './models/order.model';
+import * as fs from 'fs';
+import { join } from 'path';
 import { User } from '../auth/models/user.model';
 import { OrderDto } from './dto/order.dto';
 import { sendMsg } from '../shared/utils/email/mailer';
 import { Translation } from '../translations/translation.model';
+import { prepareCart } from '../shared/utils/prepareUtils';
+import { Cart } from '../cart/utils/cart';
 
 const secret = process.env.STRIPE_SECRETKEY;
 export const stripe = new Stripe(secret, { apiVersion: '2020-08-27' });
@@ -33,7 +37,58 @@ export class OrdersService {
     @InjectModel('User') private userModel: Model<any>,
     @InjectModel('Coupon') private couponModel: Model<any>,
     @InjectModel('Category') private categoryModel: Model<any>,
+    @InjectModel('Interaction') private interactionModel?: Model<any>,
   ) {}
+
+  /**
+   * Tự động ghi nhận sự kiện PURCHASE vào user_interactions phục vụ huấn luyện Machine Learning.
+   * Sử dụng cơ chế idempotent upsert để tránh ghi trùng khi cập nhật đơn hàng.
+   */
+  private async recordPurchaseInteractions(order: any): Promise<void> {
+    if (!this.interactionModel || !order || !Array.isArray(order.items)) return;
+    try {
+      const orderCode = order.orderId || String(order._id);
+      const userId = order.userId
+        ? (isValidObjectId(order.userId) ? new Types.ObjectId(String(order.userId)) : null)
+        : null;
+
+      for (const it of order.items) {
+        const rawPid = it.productId || it.id || it.item?._id;
+        if (rawPid && isValidObjectId(rawPid)) {
+          const productObjectId = new Types.ObjectId(String(rawPid));
+          await this.interactionModel.updateOne(
+            {
+              orderId: orderCode,
+              productId: productObjectId,
+              eventType: 'PURCHASE',
+            },
+            {
+              $setOnInsert: {
+                userId,
+                sessionId: order.sessionId || null,
+                productId: productObjectId,
+                variantId: it.variantId || null,
+                orderId: orderCode,
+                eventType: 'PURCHASE',
+                timestamp: new Date(),
+                isSynthetic: false,
+                datasetType: 'real',
+                metadata: {
+                  isSynthetic: false,
+                  source: 'order_checkout',
+                  price: it.price || it.unitPrice || 0,
+                  quantity: it.quantity || 1,
+                },
+              },
+            },
+            { upsert: true },
+          );
+        }
+      }
+    } catch (err: any) {
+      this.logger.warn(`Failed to record purchase interaction for order ${order.orderId}: ${err.message}`);
+    }
+  }
 
   async validateCoupon(code: string, subtotal: number): Promise<{
     valid: boolean;
@@ -236,11 +291,1029 @@ export class OrdersService {
       userConditions.push({ _user: objId }, { userId: objId });
     }
 
-    const orders = await this.orderModel
+    const orders: any[] = await this.orderModel
       .find({ $or: userConditions })
-      .sort({ dateAdded: -1, createdAt: -1 });
+      .sort({ dateAdded: -1, createdAt: -1 })
+      .lean();
+
+    try {
+      const reviewsCol = this.orderModel.db.collection('product_reviews');
+      const unreviewedDeliveredCodes = orders
+        .filter((o: any) => !o.isReviewed && (o.status || '').toUpperCase() === 'DELIVERED')
+        .map((o: any) => o.orderId || String(o._id));
+
+      if (unreviewedDeliveredCodes.length > 0) {
+        const reviewedOrders = await reviewsCol.distinct('orderId', { orderId: { $in: unreviewedDeliveredCodes } });
+        if (reviewedOrders && reviewedOrders.length > 0) {
+          const reviewedSet = new Set(reviewedOrders.map((id: any) => String(id)));
+          for (const ord of orders) {
+            const code = ord.orderId || String(ord._id);
+            if (reviewedSet.has(code)) {
+              ord.isReviewed = true;
+              this.orderModel.updateOne({ _id: ord._id }, { $set: { isReviewed: true } }).exec().catch(() => {});
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
     return orders;
   }
+
+  // ─── Hủy đơn hàng (User / Khách hàng sở hữu đơn hàng) ──────────────────────
+  async cancelOrder(
+    id: string,
+    payload: { reason?: string; reasonDetail?: string } | string,
+    user: User,
+  ): Promise<any> {
+    const rawReason = typeof payload === 'string' ? payload : (payload?.reason || '');
+    const rawDetail = typeof payload === 'object' ? (payload?.reasonDetail || '') : '';
+
+    const parsedReason = rawReason.trim();
+    const parsedDetail = rawDetail.trim();
+
+    // 1. Kiểm tra lý do hủy
+    if (!parsedReason) {
+      throw new BadRequestException('Vui lòng chọn lý do hủy đơn hàng.');
+    }
+
+    if (parsedReason.startsWith('Lý do khác')) {
+      if (!parsedDetail) {
+        throw new BadRequestException('Vui lòng nhập nội dung lý do hủy cụ thể.');
+      }
+      if (parsedDetail.length < 3) {
+        throw new BadRequestException('Nội dung lý do hủy phải có ít nhất 3 ký tự.');
+      }
+    }
+
+    const idQuery = isValidObjectId(id)
+      ? { $or: [{ orderId: id }, { _id: new Types.ObjectId(id) }] }
+      : { orderId: id };
+
+    const order: any = await this.orderModel.findOne(idQuery);
+    if (!order) {
+      throw new NotFoundException('Không tìm thấy đơn hàng cần hủy.');
+    }
+
+    // 2. Backend xác minh quyền sở hữu đơn hàng (hoặc admin)
+    const orderUserId = (order.userId || order._user)?.toString();
+    const currentUserId = user?._id?.toString();
+    const orderEmail = (order.customerEmail || order.customer?.email || '').toLowerCase().trim();
+    const userEmail = (user?.email || '').toLowerCase().trim();
+
+    const userRoles = (user as any)?.roles || (user as any)?.role || [];
+    const roles = Array.isArray(userRoles) ? userRoles : [userRoles];
+    const isAdmin = roles.some((r: any) => typeof r === 'string' && r.toLowerCase().includes('admin'));
+
+    const isOwner = (orderUserId && currentUserId && orderUserId === currentUserId) ||
+      (orderEmail && userEmail && orderEmail === userEmail);
+
+    if (!isAdmin && !isOwner) {
+      throw new ForbiddenException('Bạn không có quyền hủy đơn hàng này.');
+    }
+
+    // 3. Backend xác minh trạng thái thực tế: chỉ cho phép hủy khi là PENDING / NEW / Chờ xác nhận
+    const rawStatus = (order.status || '').toUpperCase().trim();
+    if (rawStatus !== 'PENDING' && rawStatus !== 'NEW' && rawStatus !== 'CHỜ XÁC NHẬN') {
+      throw new BadRequestException('Đơn hàng hiện không ở trạng thái Chờ xác nhận, không thể hủy.');
+    }
+
+    // 4. Cập nhật các trường dữ liệu hủy đơn hàng
+    const cancelledAt = new Date();
+    const cancelledBy = user?._id && isValidObjectId(user._id) ? new Types.ObjectId(user._id) : null;
+    const fullCancelNote = parsedDetail
+      ? `${parsedReason} - Chi tiết: ${parsedDetail}`
+      : parsedReason;
+
+    order.status = OrderStatus.CANCELLED;
+    order.cancelReason = parsedReason;
+    order.cancelReasonDetail = parsedDetail || null;
+    order.cancelledAt = cancelledAt;
+    order.cancelledBy = cancelledBy;
+
+    // Ghi nhận vào notes (bảo toàn ghi chú cũ)
+    order.notes = order.notes ? `${order.notes}\n[Hủy đơn]: ${fullCancelNote}` : `[Hủy đơn]: ${fullCancelNote}`;
+
+    // Ghi nhận vào statusHistory
+    if (!Array.isArray(order.statusHistory)) {
+      order.statusHistory = [];
+    }
+    order.statusHistory.push({
+      status: OrderStatus.CANCELLED,
+      updatedAt: cancelledAt,
+      updatedBy: cancelledBy,
+      note: fullCancelNote,
+    });
+
+    await order.save();
+    return {
+      success: true,
+      message: 'Hủy đơn hàng thành công.',
+      orderId: order.orderId,
+      status: order.status,
+      cancelReason: order.cancelReason,
+      cancelReasonDetail: order.cancelReasonDetail,
+      cancelledAt: order.cancelledAt,
+      cancelledBy: order.cancelledBy,
+      order,
+    };
+  }
+
+  private saveBase64Image(dataUri: string, folderName = 'returns'): string | null {
+    if (!dataUri || typeof dataUri !== 'string') return null;
+    if (dataUri.startsWith('http://') || dataUri.startsWith('https://') || dataUri.startsWith('/uploads/')) {
+      return dataUri;
+    }
+    const match = dataUri.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/);
+    if (!match) return null;
+    try {
+      const mime = match[1];
+      const base64Data = match[2];
+      const ext = mime.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
+      const filename = `return_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
+      const targetDir = join(process.cwd(), 'server', 'uploads', folderName);
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+      fs.writeFileSync(join(targetDir, filename), Buffer.from(base64Data, 'base64'));
+      return `/uploads/${folderName}/${filename}`;
+    } catch (e) {
+      this.logger.error('Failed to save return image: ' + e?.message);
+      return null;
+    }
+  }
+
+  getReturnUploadSignature(subfolder?: string) {
+    const { generateReturnUploadSignature } = require('../services/cloudinary-service');
+    return generateReturnUploadSignature(subfolder);
+  }
+
+  // ─── Yêu cầu Trả hàng / Hoàn tiền (Khách hàng sở hữu đơn hàng đã giao) ────
+  async createReturnRequest(
+    id: string,
+    payload: any,
+    user: User,
+  ): Promise<any> {
+    const idQuery = isValidObjectId(id)
+      ? { $or: [{ orderId: id }, { _id: new Types.ObjectId(id) }] }
+      : { orderId: id };
+
+    const order: any = await this.orderModel.findOne(idQuery);
+    if (!order) {
+      throw new NotFoundException('Không tìm thấy đơn hàng cần yêu cầu đổi trả.');
+    }
+
+    // 1. Backend xác minh quyền sở hữu đơn hàng
+    const orderUserId = (order.userId || order._user)?.toString();
+    const currentUserId = user?._id?.toString();
+    const orderEmail = (order.customerEmail || order.customer?.email || '').toLowerCase().trim();
+    const userEmail = (user?.email || '').toLowerCase().trim();
+
+    const isOwner = (orderUserId && currentUserId && orderUserId === currentUserId) ||
+      (orderEmail && userEmail && orderEmail === userEmail);
+
+    if (!isOwner) {
+      throw new ForbiddenException('Bạn không có quyền gửi yêu cầu đổi trả cho đơn hàng này.');
+    }
+
+    // 2. Backend kiểm tra trạng thái thực tế: chỉ cho phép khi đã giao hàng (DELIVERED)
+    const rawStatus = (order.status || '').toUpperCase().trim();
+    if (rawStatus !== 'DELIVERED') {
+      throw new BadRequestException('Chỉ có thể gửi yêu cầu trả hàng / hoàn tiền cho đơn hàng đã giao thành công.');
+    }
+
+    // 2.5. Không cho phép gửi yêu cầu trả hàng / hoàn tiền cho đơn hàng đã đánh giá
+    if (order.isReviewed) {
+      throw new BadRequestException('Đơn hàng đã được đánh giá thành công, không thể gửi yêu cầu trả hàng / hoàn tiền.');
+    }
+
+    // 3. Chống gửi yêu cầu trùng lặp khi đang có yêu cầu PENDING
+    const existingRequests: any[] = Array.isArray(order.returnRequests) ? order.returnRequests : [];
+    const hasPending = existingRequests.some((r: any) => r.status === ReturnRequestStatus.PENDING) ||
+      (order.returnRequest && order.returnRequest.status === 'PENDING');
+    if (hasPending) {
+      throw new ConflictException('Đơn hàng này đang có yêu cầu trả hàng / hoàn tiền chờ xử lý. Vui lòng chờ phản hồi từ Chéri trước khi gửi thêm yêu cầu mới.');
+    }
+
+    // 4. Kiểm tra lý do
+    const reason = (payload?.reason || '').trim();
+    if (!reason) {
+      throw new BadRequestException('Vui lòng chọn lý do yêu cầu trả hàng / hoàn tiền.');
+    }
+
+    // 5. Kiểm tra danh sách sản phẩm yêu cầu trả
+    const items = Array.isArray(payload?.items) ? payload.items : [];
+    if (items.length === 0) {
+      throw new BadRequestException('Vui lòng chọn ít nhất một sản phẩm cần trả hàng.');
+    }
+
+    // Tính toán phân bổ giảm giá thực tế của đơn hàng (nếu có)
+    const orderItems = Array.isArray(order.items) ? order.items : [];
+    const orderSubtotal = Number(order.subtotal) || orderItems.reduce((acc: number, it: any) => acc + (Number(it.unitPrice) || 0) * (Number(it.quantity) || 1), 0);
+    const totalDiscounts = (Number(order.discountAmount) || 0) + (Number(order.couponDiscount) || 0);
+    const discountRatio = orderSubtotal > 0 ? Math.min(1, Math.max(0, totalDiscounts / orderSubtotal)) : 0;
+
+    // Xác minh từng sản phẩm, số lượng đã trả ở các yêu cầu trước đó
+    const sanitizedItems: any[] = [];
+    let totalRequestedAmount = 0;
+
+    for (const item of items) {
+      const pId = String(item.productId || item.id || '');
+      const matchedOrderItem = orderItems.find((oi: any) => {
+        const oiPid = String(oi.productId?._id || oi.productId || oi.id || oi.productSnapshot?.id || oi.productSnapshot?._id || '');
+        const oiSku = String(oi.productSnapshot?.sku || oi.sku || '');
+        return oiPid === pId || (oiSku && oiSku === pId);
+      });
+
+      if (!matchedOrderItem) {
+        throw new BadRequestException(`Sản phẩm với mã ${pId} không tồn tại trong đơn hàng này.`);
+      }
+
+      const boughtQty = Number(matchedOrderItem.quantity) || 1;
+
+      // Tính tổng số lượng sản phẩm này đã được yêu cầu trả ở các yêu cầu trước (ngoại trừ bị REJECTED hoặc CANCELLED)
+      let previouslyReturnedQty = 0;
+      for (const req of existingRequests) {
+        if (req.status !== ReturnRequestStatus.REJECTED && req.status !== ReturnRequestStatus.CANCELLED) {
+          for (const reqItem of (req.items || [])) {
+            const reqPid = String(reqItem.productId?._id || reqItem.productId || reqItem.productSnapshot?.id || reqItem.productSnapshot?._id || '');
+            if (reqPid === pId) {
+              previouslyReturnedQty += Number(reqItem.quantity) || 0;
+            }
+          }
+        }
+      }
+
+      const remainingAvailableQty = Math.max(0, boughtQty - previouslyReturnedQty);
+      const returnQty = Number(item.quantity) || 1;
+
+      if (returnQty <= 0) {
+        throw new BadRequestException(`Số lượng trả cho sản phẩm "${matchedOrderItem.productSnapshot?.title || pId}" phải lớn hơn 0.`);
+      }
+      if (returnQty > remainingAvailableQty) {
+        throw new BadRequestException(`Số lượng yêu cầu trả (${returnQty}) vượt quá số lượng còn đủ điều kiện trả (${remainingAvailableQty}) của sản phẩm "${matchedOrderItem.productSnapshot?.title || pId}".`);
+      }
+
+      const baseUnitPrice = Number(matchedOrderItem.unitPrice) || 0;
+      // Giá sau khi phân bổ giảm giá thực tế của đơn hàng
+      const effectiveUnitPrice = Math.max(0, Math.round(baseUnitPrice * (1 - discountRatio)));
+      const lineSubtotal = effectiveUnitPrice * returnQty;
+      totalRequestedAmount += lineSubtotal;
+
+      const snapshotTitle = matchedOrderItem.productSnapshot?.title
+        || matchedOrderItem.productSnapshot?.name
+        || matchedOrderItem.title
+        || matchedOrderItem.name
+        || 'Sản phẩm';
+      const snapshotSku = matchedOrderItem.productSnapshot?.sku
+        || matchedOrderItem.sku
+        || '';
+      let snapshotImage = matchedOrderItem.productSnapshot?.image
+        || matchedOrderItem.image
+        || '';
+      if (snapshotImage && typeof snapshotImage === 'object') {
+        snapshotImage = snapshotImage.url || snapshotImage.src || '';
+      }
+      const snapshotVariant = matchedOrderItem.productSnapshot?.variant
+        || matchedOrderItem.variant
+        || { color: '', size: '', classification: '' };
+
+      sanitizedItems.push({
+        productId: matchedOrderItem.productId || matchedOrderItem.id,
+        variantId: matchedOrderItem.variantId || null,
+        productSnapshot: {
+          title: snapshotTitle,
+          name: snapshotTitle,
+          sku: snapshotSku,
+          image: snapshotImage,
+          price: baseUnitPrice,
+          variant: snapshotVariant,
+        },
+        quantity: returnQty,
+        boughtQuantity: boughtQty,
+        unitPrice: effectiveUnitPrice,
+        subtotal: lineSubtotal,
+        reason: item.reason || reason,
+      });
+    }
+
+    // 6. Xử lý ảnh minh chứng (Đồng bộ Cloudinary cheri/return-proofs, tối đa 5 ảnh)
+    const rawImages = Array.isArray(payload?.images) ? payload.images.slice(0, 5) : [];
+    const { normalizeReturnProofImages } = require('../services/cloudinary-service');
+    let savedImages: string[] = [];
+    try {
+      savedImages = await normalizeReturnProofImages(rawImages);
+    } catch (cldErr: any) {
+      this.logger.error('Lỗi khi xử lý ảnh minh chứng Cloudinary: ' + cldErr?.message);
+      throw new BadRequestException('Không thể tải ảnh minh chứng lên hệ thống lưu trữ: ' + (cldErr?.message || 'Lỗi không xác định'));
+    }
+
+    const requestedAt = new Date();
+    const orderCode = order.orderId || String(order._id).slice(-6).toUpperCase();
+    const requestId = `RET-${orderCode}-${Date.now().toString().slice(-4)}`;
+
+    const newReturnRequest: any = {
+      requestId,
+      requestedAt,
+      reason,
+      description: String(payload?.description || '').trim(),
+      images: savedImages,
+      refundMethod: String(payload?.refundMethod || 'ORIGINAL_PAYMENT'),
+      status: ReturnRequestStatus.PENDING,
+      rejectionReason: '',
+      items: sanitizedItems,
+      returnShipping: {
+        carrier: '',
+        trackingCode: '',
+        shippedAt: null,
+        receivedAt: null,
+        instructions: '',
+      },
+      inspection: {
+        inspectedAt: null,
+        inspectedBy: null,
+        conditionNotes: '',
+        isEligible: null,
+        restocked: false,
+      },
+      refund: {
+        status: RefundStatus.PENDING,
+        requestedAmount: totalRequestedAmount,
+        approvedAmount: 0,
+        refundedAmount: 0,
+        transactionId: '',
+        bankName: '',
+        accountNumber: '',
+        accountHolder: '',
+        refundedAt: null,
+        failureReason: '',
+        notes: '',
+      },
+      history: [
+        {
+          action: 'CREATED',
+          fromStatus: '',
+          toStatus: ReturnRequestStatus.PENDING,
+          updatedAt: requestedAt,
+          updatedBy: user?._id || null,
+          note: `Khách hàng gửi yêu cầu trả hàng / hoàn tiền cho ${sanitizedItems.length} sản phẩm. Tổng tiền đề nghị: ${totalRequestedAmount.toLocaleString('vi-VN')} đ`,
+        },
+      ],
+    };
+
+    if (!Array.isArray(order.returnRequests)) {
+      order.returnRequests = [];
+    }
+    order.returnRequests.push(newReturnRequest);
+
+    // Đồng bộ legacy returnRequest
+    order.returnRequest = newReturnRequest;
+
+    const noteEntry = `[Yêu cầu Trả hàng / Hoàn tiền - ${requestId}] Lý do: ${reason}. Số lượng món: ${sanitizedItems.length}. Đề nghị hoàn: ${totalRequestedAmount.toLocaleString('vi-VN')} đ`;
+    order.notes = order.notes ? `${order.notes}\n${noteEntry}` : noteEntry;
+
+    if (Array.isArray(order.statusHistory)) {
+      order.statusHistory.push({
+        status: order.status,
+        updatedAt: requestedAt,
+        note: `Khách hàng gửi yêu cầu đổi trả mã ${requestId}`,
+        updatedBy: user?._id || null,
+      });
+    }
+
+    // Chuẩn hóa và làm sạch dữ liệu các item cũ trong order để tránh lỗi validation khi lưu
+    if (Array.isArray(order.items)) {
+      for (const oi of order.items) {
+        if (oi.productSnapshot) {
+          if (!oi.productSnapshot.title) {
+            oi.productSnapshot.title = oi.productSnapshot.name || oi.name || oi.title || 'Sản phẩm';
+          }
+          if (!oi.productSnapshot.sku) {
+            oi.productSnapshot.sku = oi.sku || '';
+          }
+          if (oi.productSnapshot.image && typeof oi.productSnapshot.image === 'object') {
+            oi.productSnapshot.image = oi.productSnapshot.image.url || oi.productSnapshot.image.src || '';
+          }
+        }
+        if (oi.image && typeof oi.image === 'object') {
+          oi.image = oi.image.url || oi.image.src || '';
+        }
+      }
+    }
+
+    order.markModified('returnRequests');
+    order.markModified('returnRequest');
+
+    try {
+      await order.save();
+    } catch (saveErr: any) {
+      this.logger.warn(`order.save() gặp lỗi (${saveErr?.message}), tiến hành cập nhật trực tiếp vào MongoDB bằng updateOne...`);
+      try {
+        await this.orderModel.updateOne(
+          { _id: order._id },
+          {
+            $set: {
+              returnRequests: order.returnRequests,
+              returnRequest: order.returnRequest,
+              notes: order.notes,
+              statusHistory: order.statusHistory,
+            },
+          },
+        );
+      } catch (updateErr: any) {
+        this.logger.error(`Lỗi cập nhật đơn hàng khi tạo yêu cầu đổi trả (${orderCode}): ${updateErr?.message}`, updateErr?.stack);
+        throw new BadRequestException(`Không thể lưu yêu cầu trả hàng vào cơ sở dữ liệu: ${updateErr?.message}`);
+      }
+    }
+
+    return {
+      success: true,
+      message: 'Yêu cầu trả hàng / hoàn tiền đã được tiếp nhận thành công. Chéri sẽ kiểm tra và phản hồi sớm nhất.',
+      data: newReturnRequest,
+      order,
+    };
+  }
+
+  // ─── Khách hàng: Hủy yêu cầu Trả hàng / Hoàn tiền (khi còn PENDING) ─────────
+  async cancelReturnRequest(
+    orderId: string,
+    reqId: string,
+    payload: { reason?: string },
+    user: User,
+  ): Promise<any> {
+    const idQuery = isValidObjectId(orderId)
+      ? { $or: [{ orderId: orderId }, { _id: new Types.ObjectId(orderId) }] }
+      : { orderId: orderId };
+
+    const order: any = await this.orderModel.findOne(idQuery);
+    if (!order) {
+      throw new NotFoundException('Không tìm thấy đơn hàng cần hủy yêu cầu đổi trả.');
+    }
+
+    // 1. Kiểm tra quyền sở hữu đơn hàng
+    const orderUserId = (order.userId || order._user)?.toString();
+    const currentUserId = user?._id?.toString();
+    const orderEmail = (order.customerEmail || order.customer?.email || '').toLowerCase().trim();
+    const userEmail = (user?.email || '').toLowerCase().trim();
+
+    const isOwner = (orderUserId && currentUserId && orderUserId === currentUserId) ||
+      (orderEmail && userEmail && orderEmail === userEmail);
+
+    if (!isOwner) {
+      throw new ForbiddenException('Bạn không có quyền hủy yêu cầu đổi trả cho đơn hàng này.');
+    }
+
+    // 2. Tìm yêu cầu trả hàng
+    const requests: any[] = Array.isArray(order.returnRequests) ? order.returnRequests : [];
+    let reqIndex = requests.findIndex((r: any) => r.requestId === reqId || String(r._id) === reqId);
+
+    if (reqIndex === -1 && order.returnRequest && (order.returnRequest.requestId === reqId || reqId === 'latest')) {
+      order.returnRequests = [order.returnRequest];
+      reqIndex = 0;
+    }
+
+    if (reqIndex === -1) {
+      throw new NotFoundException(`Không tìm thấy yêu cầu trả hàng với mã ${reqId}.`);
+    }
+
+    const req = order.returnRequests[reqIndex];
+
+    // 3. Chỉ cho phép hủy khi đang ở trạng thái PENDING
+    if (req.status !== ReturnRequestStatus.PENDING) {
+      throw new BadRequestException('Chỉ có thể hủy yêu cầu khi đang ở trạng thái Chờ duyệt. Yêu cầu này đã được tiếp nhận hoặc đã đóng.');
+    }
+
+    const now = new Date();
+    const prevStatus = req.status;
+    const fixedCancelReason = 'Bạn đã yêu cầu hủy quy trình trả hàng hoàn tiền.';
+
+    req.status = 'CANC';
+    req.rejectionReason = fixedCancelReason;
+    if (req.refund) {
+      req.refund.status = RefundStatus.CANCELLED;
+    }
+
+    if (!Array.isArray(req.history)) {
+      req.history = [];
+    }
+    req.history.push({
+      action: 'CANCELLED_BY_CUSTOMER',
+      fromStatus: prevStatus,
+      toStatus: 'CANC',
+      updatedAt: now,
+      updatedBy: user?._id || null,
+      note: fixedCancelReason,
+    });
+
+    // Đảm bảo đơn hàng quay trở về trạng thái DELIVERED trong MongoDB
+    if (order.status === OrderStatus.RETURNED || order.status === 'RETURNED' || !order.status) {
+      order.status = OrderStatus.DELIVERED;
+      order.markModified('status');
+    }
+
+    // Đồng bộ legacy returnRequest
+    if (order.returnRequest && (order.returnRequest.requestId === req.requestId || order.returnRequest.requestId === reqId)) {
+      order.returnRequest = req;
+    }
+
+    if (Array.isArray(order.statusHistory)) {
+      order.statusHistory.push({
+        status: order.status,
+        updatedAt: now,
+        note: `Khách hàng hủy yêu cầu trả hàng / hoàn tiền mã ${req.requestId}. Lý do: ${fixedCancelReason}`,
+        updatedBy: user?._id || null,
+      });
+    }
+
+    order.markModified('returnRequests');
+    order.markModified('returnRequest');
+
+    await order.save();
+
+    return {
+      success: true,
+      message: 'Đã hủy yêu cầu trả hàng / hoàn tiền thành công.',
+      data: req,
+      order,
+    };
+  }
+
+  // ─── Admin: Xử lý quy trình Trả hàng & Hoàn tiền ──────────────────────────
+  async updateReturnRequestWorkflow(
+    orderId: string,
+    reqId: string,
+    action: string,
+    body: any,
+    adminUser: any,
+  ): Promise<any> {
+    const idQuery = isValidObjectId(orderId)
+      ? { $or: [{ orderId: orderId }, { _id: new Types.ObjectId(orderId) }] }
+      : { orderId: orderId };
+
+    const order: any = await this.orderModel.findOne(idQuery);
+    if (!order) {
+      throw new NotFoundException('Không tìm thấy đơn hàng.');
+    }
+
+    const requests: any[] = Array.isArray(order.returnRequests) ? order.returnRequests : [];
+    let reqIndex = requests.findIndex((r: any) => r.requestId === reqId || String(r._id) === reqId);
+
+    // Nếu chưa có trong returnRequests nhưng có legacy returnRequest
+    if (reqIndex === -1 && order.returnRequest && (order.returnRequest.requestId === reqId || reqId === 'legacy' || reqId === 'latest')) {
+      order.returnRequests = [order.returnRequest];
+      reqIndex = 0;
+    }
+
+    if (reqIndex === -1) {
+      throw new NotFoundException(`Không tìm thấy yêu cầu trả hàng với mã ${reqId}.`);
+    }
+
+    const req = order.returnRequests[reqIndex];
+    const now = new Date();
+
+    switch ((action || '').toUpperCase()) {
+      case 'APPROVE': {
+        if (req.status !== ReturnRequestStatus.PENDING) {
+          throw new BadRequestException(`Chỉ có thể duyệt yêu cầu khi đang ở trạng thái Chờ duyệt (PENDING). Trạng thái hiện tại: ${req.status}`);
+        }
+        const requestedAmt = Number(req.refund?.requestedAmount) || 0;
+        const approvedAmt = Number(body?.approvedAmount) >= 0 ? Number(body.approvedAmount) : requestedAmt;
+
+        req.status = ReturnRequestStatus.APPROVED;
+        req.approvedAt = now;
+        if (body?.note) {
+          req.approveNote = String(body.note).trim();
+        }
+        req.refund = req.refund || {};
+        req.refund.approvedAmount = approvedAmt;
+        if (body?.instructions) {
+          req.returnShipping = req.returnShipping || {};
+          req.returnShipping.instructions = String(body.instructions).trim();
+        }
+
+        req.history.push({
+          action: 'APPROVED',
+          fromStatus: ReturnRequestStatus.PENDING,
+          toStatus: ReturnRequestStatus.APPROVED,
+          updatedAt: now,
+          updatedBy: adminUser?._id || null,
+          note: body?.note ? String(body.note).trim() : `Admin duyệt yêu cầu. Số tiền duyệt dự kiến: ${approvedAmt.toLocaleString('vi-VN')} đ.`.trim(),
+        });
+        break;
+      }
+
+      case 'REJECT': {
+        if (req.status === ReturnRequestStatus.COMPLETED || req.status === ReturnRequestStatus.CANCELLED) {
+          throw new BadRequestException(`Không thể từ chối yêu cầu đã ở trạng thái ${req.status}`);
+        }
+        const reason = String(body?.reason || '').trim();
+        if (!reason) {
+          throw new BadRequestException('Từ chối yêu cầu bắt buộc phải có lý do cụ thể.');
+        }
+
+        const prevStatus = req.status;
+        req.status = ReturnRequestStatus.REJECTED;
+        req.rejectedAt = now;
+        req.rejectionReason = reason;
+        req.refund = req.refund || {};
+        req.refund.status = RefundStatus.NOT_REQUIRED;
+
+        req.history.push({
+          action: 'REJECTED',
+          fromStatus: prevStatus,
+          toStatus: ReturnRequestStatus.REJECTED,
+          updatedAt: now,
+          updatedBy: adminUser?._id || null,
+          note: `Admin từ chối yêu cầu. Lý do: ${reason}`,
+        });
+        break;
+      }
+
+      case 'CUSTOMER_SHIPPED': {
+        if (req.status !== ReturnRequestStatus.APPROVED && req.status !== ReturnRequestStatus.WAITING_FOR_RETURN_SHIPMENT) {
+          throw new BadRequestException('Chỉ có thể xác nhận đã gửi hàng sau khi yêu cầu đã được duyệt.');
+        }
+
+        const prevStatus = req.status;
+        req.status = ReturnRequestStatus.RETURN_SHIPPED;
+        req.returnShipping = req.returnShipping || {};
+        req.returnShipping.carrier = String(body?.carrier || req.returnShipping.carrier || '').trim();
+        req.returnShipping.trackingCode = String(body?.trackingCode || req.returnShipping.trackingCode || '').trim();
+        req.returnShipping.shippedAt = body?.shippedAt ? new Date(body.shippedAt) : now;
+        if (body?.note) {
+          req.returnShipping.notes = String(body.note).trim();
+        }
+
+        req.history.push({
+          action: 'CUSTOMER_SHIPPED',
+          fromStatus: prevStatus,
+          toStatus: ReturnRequestStatus.RETURN_SHIPPED,
+          updatedAt: now,
+          updatedBy: adminUser?._id || null,
+          note: body?.note
+            ? String(body.note).trim()
+            : `Xác nhận khách đã gửi hàng hoàn. ĐVVC: ${req.returnShipping.carrier || 'Chưa rõ'}, Mã vận đơn: ${req.returnShipping.trackingCode || 'Chưa rõ'}`,
+        });
+        break;
+      }
+
+      case 'RECEIVE_GOODS': {
+        if (req.status !== ReturnRequestStatus.RETURN_SHIPPED && req.status !== ReturnRequestStatus.APPROVED) {
+          throw new BadRequestException('Chỉ có thể xác nhận đã nhận hàng sau khi đơn hàng hoàn đã được gửi hoặc duyệt.');
+        }
+
+        const prevStatus = req.status;
+        req.status = ReturnRequestStatus.RETURN_RECEIVED;
+        req.returnShipping = req.returnShipping || {};
+        req.returnShipping.receivedAt = now;
+        if (body?.note) {
+          req.returnShipping.receivedNote = String(body.note).trim();
+        }
+
+        req.history.push({
+          action: 'RECEIVE_GOODS',
+          fromStatus: prevStatus,
+          toStatus: ReturnRequestStatus.RETURN_RECEIVED,
+          updatedAt: now,
+          updatedBy: adminUser?._id || null,
+          note: body?.note
+            ? String(body.note).trim()
+            : 'Chéri đã nhận kiện hàng hoàn từ khách hàng. Sẵn sàng chuyển qua bước kiểm tra sản phẩm.',
+        });
+        break;
+      }
+
+      case 'INSPECT_GOODS': {
+        if (
+          req.status !== ReturnRequestStatus.RETURN_RECEIVED &&
+          req.status !== ReturnRequestStatus.RETURN_SHIPPED &&
+          req.status !== ReturnRequestStatus.APPROVED
+        ) {
+          throw new BadRequestException('Chỉ có thể kiểm tra sản phẩm sau khi đã nhận được hàng hoàn.');
+        }
+
+        const prevStatus = req.status;
+        req.status = ReturnRequestStatus.INSPECTED;
+        const isEligible = Boolean(body?.isEligible !== false && body?.isEligible !== 'false');
+        const conditionNotes = String(body?.conditionNotes || '').trim();
+        const restock = Boolean(body?.restock);
+
+        req.inspection = {
+          inspectedAt: now,
+          inspectedBy: adminUser?._id || null,
+          conditionNotes,
+          isEligible,
+          restocked: restock,
+        };
+
+        req.refund = req.refund || {};
+        if (isEligible) {
+          const approvedAmount = Number(body?.approvedAmount) >= 0
+            ? Number(body.approvedAmount)
+            : (Number(req.refund?.approvedAmount) || Number(req.refund?.requestedAmount) || 0);
+          req.refund.approvedAmount = approvedAmount;
+          req.refund.status = RefundStatus.PENDING;
+
+          // Cập nhật tồn kho nếu Admin xác nhận hàng đủ điều kiện nhập kho lại (Inventory Hook)
+          if (restock) {
+            for (const item of (req.items || [])) {
+              try {
+                const qtyToRestock = Number(item.quantity) || 0;
+                if (qtyToRestock > 0) {
+                  const vIdStr = item.variantId ? String(item.variantId).trim() : null;
+                  const sku = item.productSnapshot?.sku || item.sku;
+                  let variantUpdated = false;
+
+                  // 1. Cập nhật ProductVariant collection
+                  if (vIdStr && isValidObjectId(vIdStr)) {
+                    const res = await this.variantModel.findByIdAndUpdate(vIdStr, {
+                      $inc: { stock: qtyToRestock },
+                    });
+                    if (res) variantUpdated = true;
+                  }
+
+                  if (!variantUpdated && (sku || vIdStr)) {
+                    const skuQuery = sku || vIdStr;
+                    const res = await this.variantModel.findOneAndUpdate(
+                      { sku: skuQuery },
+                      { $inc: { stock: qtyToRestock } },
+                    );
+                    if (res) variantUpdated = true;
+                  }
+
+                  // 2. Cập nhật Product Model (cả quantity và stock)
+                  const pId = item.productId;
+                  if (pId && isValidObjectId(String(pId))) {
+                    await this.productModel.findByIdAndUpdate(String(pId), {
+                      $inc: { quantity: qtyToRestock, stock: qtyToRestock },
+                    });
+
+                    // Cập nhật subdocument embedded variants nếu có
+                    if (sku) {
+                      await this.productModel.updateOne(
+                        { _id: new Types.ObjectId(String(pId)), 'variants.sku': sku },
+                        { $inc: { 'variants.$.stock': qtyToRestock } },
+                      );
+                    }
+                  }
+                }
+              } catch (restockErr) {
+                this.logger.error('Lỗi khi hoàn kho sản phẩm: ' + restockErr?.message);
+              }
+            }
+          }
+        } else {
+          req.refund.status = RefundStatus.NOT_REQUIRED;
+          req.refund.approvedAmount = 0;
+        }
+
+        req.history.push({
+          action: 'INSPECT_GOODS',
+          fromStatus: prevStatus,
+          toStatus: ReturnRequestStatus.INSPECTED,
+          updatedAt: now,
+          updatedBy: adminUser?._id || null,
+          note: `Kiểm tra sản phẩm: ${isEligible ? 'Đủ điều kiện hoàn tiền' : 'Không đủ điều kiện'}. Ghi chú: ${conditionNotes || 'Không có'}. ${restock ? 'Đã cộng hoàn lại tồn kho.' : ''}`,
+        });
+        break;
+      }
+
+      case 'PROCESS_REFUND': {
+        // Phải phân biệt rõ COD và Thanh toán trước, tuân thủ nguyên tắc an toàn
+        const paymentMethod = (order.payment?.method || order.paymentMethodSnapshot?.method || '').toUpperCase();
+        const paymentStatus = (order.payment?.status || order.paymentStatus || '').toUpperCase();
+        const codCollected = Boolean(order.payment?.codCollected);
+
+        // 1. Kiểm tra điều kiện thu tiền thực tế
+        let actualCollected = Number(order.payment?.actualCollectedAmount) || 0;
+
+        if (paymentMethod === 'COD') {
+          if (!codCollected && paymentStatus !== 'PAID') {
+            throw new BadRequestException(
+              'Đơn hàng COD chưa có xác nhận đã thu tiền thực tế (chưa đối soát COD). Vui lòng cập nhật đối soát COD trước khi thực hiện hoàn tiền.',
+            );
+          }
+          if (actualCollected <= 0) {
+            actualCollected = Number(order.totalAmount) || Number(order.total) || 0;
+          }
+        } else {
+          // Thanh toán trước (BANK_TRANSFER, STRIPE, ONEPAY, MOMO, PAYPAL, etc.)
+          if (paymentStatus !== 'PAID' && paymentStatus !== 'PARTIALLY_REFUNDED') {
+            throw new BadRequestException(
+              'Đơn hàng thanh toán trực tuyến chưa hoàn tất thanh toán thành công (Trạng thái: ' + (paymentStatus || 'UNPAID') + '). Không thể thực hiện hoàn tiền.',
+            );
+          }
+          if (actualCollected <= 0) {
+            actualCollected = Number(order.totalAmount) || Number(order.total) || 0;
+          }
+        }
+
+        // 2. Kiểm tra số tiền có thể hoàn
+        const totalRefundedSoFar = Number(order.payment?.refundedAmount) || 0;
+        const remainingRefundable = Math.max(0, actualCollected - totalRefundedSoFar);
+
+        const refundAmt = Number(body?.refundAmount) > 0
+          ? Number(body.refundAmount)
+          : (Number(req.refund?.approvedAmount) || Number(req.refund?.requestedAmount) || 0);
+
+        if (refundAmt <= 0) {
+          throw new BadRequestException('Số tiền hoàn phải lớn hơn 0.');
+        }
+
+        if (refundAmt > remainingRefundable) {
+          throw new BadRequestException(
+            `Số tiền hoàn (${refundAmt.toLocaleString('vi-VN')} đ) vượt quá số tiền thực tế đã thu còn có thể hoàn (${remainingRefundable.toLocaleString('vi-VN')} đ).`,
+          );
+        }
+
+        // 3. Ghi nhận giao dịch hoàn tiền
+        const txId = String(body?.transactionId || `RFD-${order.orderId || String(order._id).slice(-6)}-${Date.now().toString().slice(-4)}`).trim();
+        const bankName = String(body?.bankName || '').trim();
+        const accountNumber = String(body?.accountNumber || '').trim();
+        const accountHolder = String(body?.accountHolder || '').trim();
+        const notes = String(body?.notes || '').trim();
+
+        req.refund = req.refund || {};
+        const prevReqStatus = req.status;
+        req.refund.status = RefundStatus.COMPLETED;
+        req.refund.refundedAmount = refundAmt;
+        req.refund.transactionId = txId;
+        req.refund.bankName = bankName;
+        req.refund.accountNumber = accountNumber;
+        req.refund.accountHolder = accountHolder;
+        req.refund.refundedAt = now;
+        req.refund.notes = notes;
+
+        // Trạng thái trả hàng hoàn tất
+        req.status = ReturnRequestStatus.COMPLETED;
+
+        // Cập nhật Order payment
+        order.payment = order.payment || {};
+        const newTotalRefunded = totalRefundedSoFar + refundAmt;
+        order.payment.refundedAmount = newTotalRefunded;
+        order.payment.refundedAt = now;
+        order.refundedAmount = newTotalRefunded;
+        order.refundedAt = now;
+
+        // Tính tổng số lượng sản phẩm đặt hàng ban đầu của đơn
+        const totalOrderedQty = Array.isArray(order.items) && order.items.length > 0
+          ? order.items.reduce((sum: number, it: any) => sum + (Number(it.quantity) || 0), 0)
+          : (Number(order.cart?.totalQty) || 0);
+
+        // Tính tổng số lượng sản phẩm hoàn trả thành công từ tất cả yêu cầu đã COMPLETED
+        const allRequests: any[] = Array.isArray(order.returnRequests) ? order.returnRequests : [];
+        let totalReturnedQty = 0;
+        for (const r of allRequests) {
+          if (r.status === ReturnRequestStatus.COMPLETED || r.requestId === req.requestId) {
+            for (const it of (r.items || [])) {
+              totalReturnedQty += (Number(it.quantity) || 0);
+            }
+          }
+        }
+
+        // Quy tắc cập nhật trạng thái đơn hàng cha (order.status):
+        // - Trả hết toàn bộ sản phẩm: order.status = RETURNED & paymentStatus = REFUNDED
+        // - Trả 1 phần sản phẩm: order.status giữ nguyên (DELIVERED) & paymentStatus = PARTIALLY_REFUNDED
+        const isFullReturn = totalOrderedQty > 0 && totalReturnedQty >= totalOrderedQty;
+
+        if (isFullReturn) {
+          order.status = OrderStatus.RETURNED;
+          order.payment.status = PaymentStatus.REFUNDED;
+          order.paymentStatus = PaymentStatus.REFUNDED;
+        } else {
+          if (newTotalRefunded >= actualCollected) {
+            order.payment.status = PaymentStatus.REFUNDED;
+            order.paymentStatus = PaymentStatus.REFUNDED;
+          } else {
+            order.payment.status = PaymentStatus.PARTIALLY_REFUNDED;
+            order.paymentStatus = PaymentStatus.PARTIALLY_REFUNDED;
+          }
+        }
+
+        req.history.push({
+          action: 'PROCESS_REFUND',
+          fromStatus: prevReqStatus,
+          toStatus: ReturnRequestStatus.COMPLETED,
+          updatedAt: now,
+          updatedBy: adminUser?._id || null,
+          note: `Xác nhận hoàn tiền thành công: ${refundAmt.toLocaleString('vi-VN')} đ. Mã GD: ${txId}. ${bankName ? 'Ngân hàng: ' + bankName + ' - STK: ' + accountNumber + ' - Chủ TK: ' + accountHolder : ''}. Ghi chú: ${notes || 'Không'}`,
+        });
+
+        if (Array.isArray(order.statusHistory)) {
+          order.statusHistory.push({
+            status: order.status,
+            updatedAt: now,
+            note: isFullReturn
+              ? `Hoàn trả toàn bộ đơn hàng (${totalReturnedQty}/${totalOrderedQty} sản phẩm). Đơn hàng chuyển sang ĐÃ HOÀN TRẢ (RETURNED). Hoàn tiền: ${refundAmt.toLocaleString('vi-VN')} đ.`
+              : `Hoàn trả một phần (${totalReturnedQty}/${totalOrderedQty} sản phẩm). Đơn hàng giữ trạng thái ${order.status}, trạng thái thanh toán: ${order.paymentStatus}. Hoàn tiền: ${refundAmt.toLocaleString('vi-VN')} đ.`,
+            updatedBy: adminUser?._id || null,
+          });
+        }
+        break;
+      }
+
+      case 'REFUND_FAILED': {
+        const failureReason = String(body?.reason || body?.failureReason || 'Giao dịch hoàn tiền không thành công').trim();
+        req.refund = req.refund || {};
+        req.refund.status = RefundStatus.FAILED;
+        req.refund.failureReason = failureReason;
+
+        req.history.push({
+          action: 'REFUND_FAILED',
+          fromStatus: req.status,
+          toStatus: req.status,
+          updatedAt: now,
+          updatedBy: adminUser?._id || null,
+          note: `Hoàn tiền thất bại: ${failureReason}. Cho phép Admin kiểm tra và thực hiện lại an toàn.`,
+        });
+        break;
+      }
+
+      default:
+        throw new BadRequestException(`Hành động "${action}" không hợp lệ trong quy trình xử lý trả hàng.`);
+    }
+
+    // Luôn đồng bộ vào legacy field returnRequest
+    order.returnRequest = req;
+    order.markModified('returnRequests');
+    order.markModified('returnRequest');
+    order.markModified('payment');
+
+    await order.save();
+
+    return {
+      success: true,
+      message: `Đã thực hiện thao tác ${action} thành công cho yêu cầu ${req.requestId}.`,
+      data: req,
+      order,
+    };
+  }
+
+  // ─── Admin: Cập nhật xác nhận thu tiền / Đối soát COD ───────────────────────
+  async updateCodReconciliation(
+    orderId: string,
+    body: any,
+    adminUser: any,
+  ): Promise<any> {
+    const idQuery = isValidObjectId(orderId)
+      ? { $or: [{ orderId: orderId }, { _id: new Types.ObjectId(orderId) }] }
+      : { orderId: orderId };
+
+    const order: any = await this.orderModel.findOne(idQuery);
+    if (!order) {
+      throw new NotFoundException('Không tìm thấy đơn hàng.');
+    }
+
+    const codCollected = Boolean(body?.codCollected);
+    const orderTotal = Number(order.totalAmount) || Number(order.total) || 0;
+    const actualCollectedAmount = Number(body?.actualCollectedAmount) >= 0
+      ? Number(body.actualCollectedAmount)
+      : (codCollected ? orderTotal : 0);
+    const codReconciliationStatus = String(body?.codReconciliationStatus || (codCollected ? 'COLLECTED_UNRECONCILED' : 'UNCOLLECTED'));
+    const notes = String(body?.notes || '').trim();
+    const now = new Date();
+
+    order.payment = order.payment || {};
+    order.payment.codCollected = codCollected;
+    if (codCollected && !order.payment.codCollectedAt) {
+      order.payment.codCollectedAt = now;
+    } else if (!codCollected) {
+      order.payment.codCollectedAt = null;
+    }
+
+    order.payment.actualCollectedAmount = actualCollectedAmount;
+    order.payment.codReconciliationStatus = codReconciliationStatus;
+    if (codReconciliationStatus === 'RECONCILED') {
+      order.payment.codReconciledAt = now;
+    }
+
+    // Nếu đã thu tiền COD thực tế và trạng thái thanh toán đang là UNPAID hoặc PENDING, cập nhật sang PAID
+    if (codCollected && (order.payment.status === 'UNPAID' || order.payment.status === 'PENDING' || !order.payment.status)) {
+      order.payment.status = 'PAID';
+      order.payment.paidAt = order.payment.paidAt || now;
+    } else if (!codCollected && order.payment.status === 'PAID') {
+      order.payment.status = 'UNPAID';
+    }
+
+    if (Array.isArray(order.statusHistory)) {
+      order.statusHistory.push({
+        status: order.status,
+        updatedAt: now,
+        note: `Admin cập nhật đối soát COD: ${codCollected ? 'ĐÃ THU TIỀN' : 'CHƯA THU TIỀN'} (Số tiền thực thu: ${actualCollectedAmount.toLocaleString('vi-VN')} đ, Trạng thái: ${codReconciliationStatus}). Ghi chú: ${notes || 'Không'}`,
+        updatedBy: adminUser?._id || null,
+      });
+    }
+
+    order.markModified('payment');
+    await order.save();
+
+    return {
+      success: true,
+      message: 'Cập nhật thông tin thu tiền và đối soát COD thành công.',
+      order,
+    };
+  }
+
 
   // ─── Lấy tất cả orders (admin) ────────────────────────────────────────────
   async getAllOrders(): Promise<Order[]> {
@@ -304,11 +1377,88 @@ export class OrdersService {
     return order;
   }
 
-  // ─── Xóa order ────────────────────────────────────────────────────────────
+  // ─── Cập nhật riêng trường status (admin) ──────────────────────────────────
+  async updateOrderStatus(id: string, status: string, note?: string, user?: any): Promise<any> {
+    if (!status || typeof status !== 'string') {
+      throw new BadRequestException('Vui lòng cung cấp trạng thái mới');
+    }
+
+    const targetStatus = status.trim().toUpperCase();
+    const VALID_STATUSES: Record<string, string> = {
+      DELIVERED: 'Đã giao',
+      SHIPPING: 'Đang giao',
+      PROCESSING: 'Đang xử lý',
+      PENDING: 'Chờ xác nhận',
+      CANCELLED: 'Đã hủy',
+      RETURNED: 'Đã hoàn trả',
+    };
+
+    if (!VALID_STATUSES[targetStatus]) {
+      throw new BadRequestException(
+        `Trạng thái không hợp lệ. Các trạng thái được chấp nhận: ${Object.keys(VALID_STATUSES).join(', ')}`
+      );
+    }
+
+    const trimmedId = id ? id.trim() : '';
+    const query = isValidObjectId(trimmedId)
+      ? { $or: [{ _id: trimmedId }, { orderId: trimmedId }] }
+      : { orderId: trimmedId };
+
+    const order = await this.orderModel.findOne(query);
+    if (!order) {
+      throw new NotFoundException('Không tìm thấy đơn hàng');
+    }
+
+    const currentStatus = (order.status || 'PENDING').toUpperCase();
+    if (currentStatus === targetStatus) {
+      throw new BadRequestException(
+        `Đơn hàng hiện tại đã ở trạng thái "${VALID_STATUSES[currentStatus] || currentStatus}".`
+      );
+    }
+
+    const VALID_TRANSITIONS: Record<string, string[]> = {
+      PENDING: ['PROCESSING', 'CANCELLED'],
+      PROCESSING: ['SHIPPING', 'CANCELLED'],
+      SHIPPING: ['DELIVERED', 'CANCELLED'],
+      DELIVERED: ['RETURNED'],
+      CANCELLED: [],
+      RETURNED: [],
+    };
+
+    const allowedTransitions = VALID_TRANSITIONS[currentStatus] || [];
+    if (!allowedTransitions.includes(targetStatus)) {
+      const allowedLabels = allowedTransitions.map(s => VALID_STATUSES[s] || s).join(', ') || 'Không có';
+      throw new BadRequestException(
+        `Trạng thái mới không hợp lệ với trạng thái hiện tại. Từ "${VALID_STATUSES[currentStatus] || currentStatus}" chỉ có thể chuyển sang: ${allowedLabels}.`
+      );
+    }
+
+    const now = new Date();
+    order.status = targetStatus as any;
+    if (!Array.isArray(order.statusHistory)) {
+      order.statusHistory = [];
+    }
+    order.statusHistory.unshift({
+      status: targetStatus as any,
+      updatedAt: now,
+      updatedBy: user?._id && isValidObjectId(user._id) ? new Types.ObjectId(user._id) : null,
+      note: note || `Admin cập nhật trạng thái từ ${VALID_STATUSES[currentStatus] || currentStatus} sang ${VALID_STATUSES[targetStatus] || targetStatus}`,
+    } as any);
+
+    await order.save();
+
+    return {
+      success: true,
+      message: `Đã cập nhật trạng thái đơn hàng thành "${VALID_STATUSES[targetStatus] || targetStatus}"`,
+      data: order,
+    };
+  }
+
+  // ─── Xóa order (Vô hiệu hóa để bảo vệ dữ liệu nghiệp vụ) ──────────────────
   async removeOrder(id: string): Promise<any> {
-    return this.orderModel.findOneAndDelete({
-      $or: [{ orderId: id }, { _id: id }],
-    });
+    throw new MethodNotAllowedException(
+      'Không hỗ trợ thao tác xóa đơn hàng. Đơn hàng là dữ liệu nghiệp vụ cần được lưu trữ để tra cứu, đối soát và quản lý lịch sử giao dịch.',
+    );
   }
 
   // ─── Tra cứu vận đơn dành cho khách vãng lai ─────────────────────────────
@@ -484,11 +1634,31 @@ export class OrdersService {
     }
   }
 
+  // ─── Lấy thông tin địa chỉ gửi cửa hàng từ settings (MongoDB) cho hóa đơn ─
+  async getStoreContact(): Promise<{ email: string; phone: string; address: string }> {
+    try {
+      const settings: any = await this.orderModel.db.collection('settings').findOne(
+        {},
+        { projection: { 'contact.email': 1, 'contact.phone': 1, 'contact.address': 1 } }
+      );
+      const contact = settings?.contact || {};
+      return {
+        email: contact.email ? String(contact.email).trim() : '',
+        phone: contact.phone ? String(contact.phone).trim() : '',
+        address: contact.address ? String(contact.address).trim() : '',
+      };
+    } catch {
+      return { email: '', phone: '', address: '' };
+    }
+  }
+
   // ─── Thêm order COD ───────────────────────────────────────────────────────
   async addOrder(
     orderDto: OrderDto,
     user: User | null,
     lang = 'vi',
+    session?: any,
+    guestCartId?: string,
   ): Promise<{ error: string; result: Order }> {
     try {
       if (await this.isMaintenanceMode()) {
@@ -498,7 +1668,14 @@ export class OrdersService {
       const newOrder = new this.orderModel(orderData);
       await newOrder.save();
 
+      // Ghi nhận tương tác mua hàng cho mô hình ML
+      await this.recordPurchaseInteractions(newOrder);
+
+      // Giảm tồn kho sản phẩm/biến thể
+      await this.decreaseStock(newOrder.items);
+
       // Xóa các sản phẩm đã đặt khỏi giỏ hàng của user
+      let updatedGuestCart: any = null;
       if (user) {
         if (orderDto.selectedItemIds && orderDto.selectedItemIds.length > 0) {
           const selectedSet = new Set(orderDto.selectedItemIds.map(id => String(id)));
@@ -517,6 +1694,15 @@ export class OrdersService {
             'cart.items': [],
           });
         }
+      } else if (session) {
+        // Dọn giỏ hàng session của khách vãng lai & đồng bộ dữ liệu chuẩn
+        updatedGuestCart = await this.syncGuestCartAfterOrder(
+          session,
+          guestCartId,
+          orderDto.selectedItemIds,
+          newOrder.items,
+          lang,
+        );
       }
 
       if (newOrder.couponCode) {
@@ -527,7 +1713,11 @@ export class OrdersService {
       }
 
       await this.sendOrderEmail(newOrder, lang);
-      return { error: '', result: newOrder };
+      return {
+        error: '',
+        result: newOrder,
+        ...(updatedGuestCart ? { cart: updatedGuestCart } : {}),
+      };
     } catch (err) {
       this.logger.error(err.stack || err.message);
       return { error: err.message || 'ORDER_CREATION_FAIL', result: null };
@@ -539,7 +1729,9 @@ export class OrdersService {
     body,
     user: User | null,
     lang = 'vi',
-  ): Promise<{ error: string; result: Order }> {
+    session?: any,
+    guestCartId?: string,
+  ): Promise<{ error: string; result: Order; cart?: any }> {
     try {
       if (await this.isMaintenanceMode()) {
         return { error: 'Hệ thống đang bảo trì. Quý khách vui lòng quay lại sau.', result: null };
@@ -561,10 +1753,14 @@ export class OrdersService {
       });
 
       const capturePayment = await stripe.charges.capture(charge.id);
+      let updatedGuestCart: any = null;
       if (capturePayment) {
         newOrder.paymentStatus = PaymentStatus.PAID;
         newOrder.paidAt = new Date();
         await newOrder.save();
+
+        // Ghi nhận tương tác mua hàng cho mô hình ML
+        await this.recordPurchaseInteractions(newOrder);
 
         await this.decreaseStock(newOrder.items);
 
@@ -586,6 +1782,14 @@ export class OrdersService {
               'cart.items': [],
             });
           }
+        } else if (session) {
+          updatedGuestCart = await this.syncGuestCartAfterOrder(
+            session,
+            guestCartId,
+            body.selectedItemIds,
+            newOrder.items,
+            lang,
+          );
         }
 
         if (newOrder.couponCode) {
@@ -598,11 +1802,95 @@ export class OrdersService {
         await this.sendOrderEmail(newOrder, lang);
       }
 
-      return { error: '', result: newOrder };
+      return {
+        error: '',
+        result: newOrder,
+        ...(updatedGuestCart ? { cart: updatedGuestCart } : {}),
+      };
     } catch (err) {
       this.logger.error(err.stack || err.message);
       return { error: 'ORDER_CREATION_FAIL', result: null };
     }
+  }
+
+  /**
+   * Đồng bộ & làm sạch giỏ hàng của khách vãng lai sau khi đơn hàng được tạo thành công
+   */
+  private async syncGuestCartAfterOrder(
+    session: any,
+    guestCartId: string | undefined,
+    selectedItemIds: string[] | undefined,
+    purchasedItems: any[],
+    lang = 'vi',
+  ): Promise<any> {
+    if (!session) return { items: [], totalQty: 0, totalPrice: 0 };
+
+    const guestKey = guestCartId ? `cart_${guestCartId}` : null;
+    const existingGuestCart = (guestKey && session[guestKey]) ? session[guestKey] : session.cart;
+    const rawItems: any[] = Array.isArray(existingGuestCart?.items) ? existingGuestCart.items : [];
+
+    let remainingItems: any[] = [];
+
+    if (rawItems.length > 0) {
+      const selectedSet = new Set((selectedItemIds || []).map((id: any) => String(id)));
+
+      const purchasedMatchList = (Array.isArray(purchasedItems) ? purchasedItems : []).map((p: any) => {
+        const prodId = String(p.productId || p.item?._id || p.item?.id || p.id || '');
+        const varId = (p.variantId !== undefined && p.variantId !== null && p.variantId !== '') ? String(p.variantId).trim() : null;
+        return { prodId, varId, compoundId: varId ? `${prodId}_${varId}` : prodId };
+      });
+
+      remainingItems = rawItems.filter((item: any) => {
+        const rawPId = item.productId || item.item?._id || item.item?.id || item.id || '';
+        const pId = String(typeof rawPId === 'string' && rawPId.includes('_') ? rawPId.split('_')[0] : rawPId);
+        const vId = (item.variantId !== undefined && item.variantId !== null && item.variantId !== '') ? String(item.variantId).trim() : null;
+        const compoundId = vId ? `${pId}_${vId}` : pId;
+        const itemId = item.id ? String(item.id) : '';
+
+        const isSelected = selectedSet.size > 0 && (
+          selectedSet.has(compoundId) ||
+          selectedSet.has(itemId) ||
+          selectedSet.has(pId)
+        );
+
+        const isPurchased = purchasedMatchList.some((p: any) => {
+          if (p.prodId && p.prodId === pId) {
+            if (p.varId || vId) {
+              return p.varId === vId;
+            }
+            return true;
+          }
+          return false;
+        });
+
+        if (selectedSet.size > 0) {
+          return !isSelected && !isPurchased;
+        } else {
+          return !isPurchased;
+        }
+      });
+    }
+
+    const updatedCartObj = new Cart({ items: remainingItems } as any);
+    if (guestKey) {
+      session[guestKey] = updatedCartObj;
+    }
+    session.cart = updatedCartObj;
+
+    if (typeof session.save === 'function') {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          session.save((err: any) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+      } catch (err: any) {
+        this.logger.error(`Error saving guest cart session: ${err?.message || err}`);
+      }
+    }
+
+    return prepareCart(updatedCartObj, lang, session?.config);
   }
 
   // ─── Build order data từ cart của user ────────────────────────────────────
@@ -792,6 +2080,7 @@ export class OrdersService {
     return {
       orderId,
       _user: user ? new Types.ObjectId(user._id as string) : null,
+      userId: user ? new Types.ObjectId(user._id as string) : null,
       customerEmail: orderDto.email,
       customerPhone: orderDto.customerPhone || normalizedShippingAddress.phone || '',
       status: OrderStatus.PENDING,
@@ -841,11 +2130,68 @@ export class OrdersService {
     const orderItems = [];
 
     for (const cartItem of cartItems) {
-      const productId = cartItem.productId;
-      const variantId = cartItem.variantId;
-      const quantity = cartItem.quantity || 1;
+      // 1. Trích xuất productId an toàn: hỗ trợ ObjectId thuần, compound id (prodId_varId) hoặc snapshot item
+      let rawProdId = cartItem.productId || cartItem.item?._id || cartItem.item?.id || cartItem.id;
+      let cleanProdId = '';
+      if (rawProdId) {
+        cleanProdId = String(rawProdId).trim();
+        if (cleanProdId.includes('_')) {
+          cleanProdId = cleanProdId.split('_')[0];
+        }
+      }
 
-      const product = await this.productModel.findById(productId).lean() as any;
+      // 2. Trích xuất variantId an toàn
+      let variantId = cartItem.variantId;
+      if (!variantId && typeof cartItem.id === 'string' && cartItem.id.includes('_')) {
+        const parts = cartItem.id.split('_');
+        if (parts.length > 1) {
+          variantId = parts.slice(1).join('_');
+        }
+      }
+
+      const quantity = Math.max(1, Number(cartItem.quantity || cartItem.qty) || 1);
+
+      // 3. Tìm sản phẩm trong DB bằng findById (nếu ObjectId hợp lệ) hoặc findOne theo SKU/code
+      let product: any = null;
+      if (cleanProdId && isValidObjectId(cleanProdId)) {
+        product = await this.productModel.findById(cleanProdId).lean() as any;
+      }
+
+      if (!product && cleanProdId) {
+        product = await this.productModel.findOne({
+          $or: [
+            { sku: cleanProdId },
+            { code: cleanProdId },
+            { 'vi.sku': cleanProdId },
+          ]
+        }).lean() as any;
+      }
+
+      // 4. Nếu không tìm thấy product trong DB nhưng cartItem có snapshot/item sẵn (phòng vệ cao)
+      if (!product && (cartItem.productSnapshot || cartItem.item)) {
+        const fallbackItem = cartItem.item || {};
+        const fallbackSnapshot = cartItem.productSnapshot || {};
+        const title = fallbackSnapshot.title || fallbackItem.title || fallbackItem.vi?.title || 'Sản phẩm Chéri';
+        const sku = fallbackSnapshot.sku || fallbackItem.sku || fallbackItem.vi?.sku || (cleanProdId ? `SKU-${cleanProdId}` : 'SKU-CHERI');
+        const image = fallbackSnapshot.image || fallbackItem.mainImage?.url || fallbackItem.image || (Array.isArray(fallbackItem.images) && (fallbackItem.images[0]?.url || fallbackItem.images[0])) || '';
+        const unitPrice = Number(cartItem.unitPrice || cartItem.price || fallbackItem.salePrice || fallbackItem.price || 0);
+
+        orderItems.push({
+          productId: cleanProdId && isValidObjectId(cleanProdId) ? new Types.ObjectId(cleanProdId) : null,
+          variantId: variantId && isValidObjectId(String(variantId)) ? new Types.ObjectId(String(variantId)) : (variantId ? String(variantId) : null),
+          productSnapshot: {
+            title,
+            sku,
+            image,
+            variant: fallbackSnapshot.variant || null,
+          },
+          quantity,
+          unitPrice,
+          subtotal: unitPrice * quantity,
+        });
+        continue;
+      }
+
       if (!product) continue;
 
       // Chặn nếu sản phẩm bị Ẩn (Case 3 & 4)
@@ -908,6 +2254,8 @@ export class OrdersService {
             classification: variant.classification || '',
           };
           snapshot.sku = variant.sku || snapshot.sku;
+        } else if (cartItem.productSnapshot?.variant) {
+          snapshot.variant = cartItem.productSnapshot.variant;
         }
       }
 
@@ -922,8 +2270,12 @@ export class OrdersService {
       const finalVariantId = matchedVariantDocId
         || (variantId && isValidObjectId(String(variantId)) ? new Types.ObjectId(String(variantId)) : (variantId ? String(variantId) : null));
 
+      const finalProductId = product._id && isValidObjectId(String(product._id))
+        ? new Types.ObjectId(String(product._id))
+        : (cleanProdId && isValidObjectId(cleanProdId) ? new Types.ObjectId(cleanProdId) : null);
+
       orderItems.push({
-        productId: new Types.ObjectId(productId.toString()),
+        productId: finalProductId,
         variantId: finalVariantId,
         productSnapshot: snapshot,
         quantity,
@@ -957,12 +2309,12 @@ export class OrdersService {
           if (res) updated = true;
         }
 
-        if (item.productId) {
+        if (item.productId && isValidObjectId(String(item.productId))) {
           await this.productModel.findByIdAndUpdate(item.productId, {
             $inc: { quantity: -item.quantity },
           });
         }
-      } else if (item.productId) {
+      } else if (item.productId && isValidObjectId(String(item.productId))) {
         await this.productModel.findByIdAndUpdate(item.productId, {
           $inc: { quantity: -item.quantity },
         });
@@ -1182,6 +2534,8 @@ export class OrdersService {
     const returnOrders = orders.filter(
       o => o.status === OrderStatus.RETURNED ||
            (o as any).type === 'RETURN' ||
+           (Array.isArray((o as any).returnRequests) && (o as any).returnRequests.some((r: any) => r.status === 'PENDING' || r.status === 'APPROVED' || r.status === 'INSPECTED')) ||
+           ((o as any).returnRequest && ((o as any).returnRequest.status === 'PENDING' || (o as any).returnRequest.status === 'APPROVED')) ||
            (o.notes && /đổi|trả|refund|return/i.test(o.notes)),
     );
     if (returnOrders.length) {
@@ -1195,7 +2549,7 @@ export class OrdersService {
         count: returnOrders.length,
         level: 'warning',
         time: returnOrders[0]?.createdAt || (returnOrders[0] as any)?.dateAdded || new Date(),
-        targetUrl: '/admin/orders?status=RETURNED',
+        targetUrl: '/admin/orders?status=RETURN_PENDING',
       });
     }
 
@@ -1812,10 +3166,84 @@ export class OrdersService {
           { status: 'CANCELLED' },
           { status: 'CANCELED' },
         ];
-      } else if (statusUpper === 'RETURNED') {
-        filter.$or = [{ status: OrderStatus.RETURNED }, { type: 'RETURN' }];
+      } else if (statusUpper === 'RETURN_PENDING') {
+        filter.$or = [
+          { 'returnRequests.status': ReturnRequestStatus.PENDING },
+          { 'returnRequest.status': 'PENDING' },
+        ];
+      } else if (statusUpper === 'RETURNED' || statusUpper === 'RETURN_REQUESTS' || statusUpper === 'RETURN') {
+        filter.$or = [
+          { status: OrderStatus.RETURNED },
+          { type: 'RETURN' },
+          { 'returnRequests.0': { $exists: true } },
+          { 'returnRequest.status': { $exists: true } },
+        ];
       } else {
         filter.status = statusUpper;
+      }
+    }
+
+    if (query.returnStatus) {
+      const rs = String(query.returnStatus).trim().toUpperCase();
+      let rsOr: any[] = [];
+      if (rs === 'NONE' || rs === 'NO_REQUEST') {
+        rsOr = [
+          { returnRequests: { $exists: false } },
+          { returnRequests: { $size: 0 } },
+          { returnRequests: null },
+        ];
+      } else if (rs === 'PENDING') {
+        rsOr = [
+          { 'returnRequests.status': ReturnRequestStatus.PENDING },
+          { 'returnRequest.status': 'PENDING' },
+        ];
+      } else if (rs === 'APPROVED') {
+        rsOr = [
+          { 'returnRequests.status': ReturnRequestStatus.APPROVED },
+          { 'returnRequest.status': 'APPROVED' },
+        ];
+      } else if (rs === 'RETURN_SHIPPED') {
+        rsOr = [
+          { 'returnRequests.status': ReturnRequestStatus.RETURN_SHIPPED },
+          { 'returnRequests.status': ReturnRequestStatus.WAITING_FOR_RETURN_SHIPMENT },
+          { 'returnRequest.status': 'RETURN_SHIPPED' },
+        ];
+      } else if (rs === 'RETURN_RECEIVED') {
+        rsOr = [
+          { 'returnRequests.status': ReturnRequestStatus.RETURN_RECEIVED },
+          { 'returnRequest.status': 'RETURN_RECEIVED' },
+        ];
+      } else if (rs === 'INSPECTED') {
+        rsOr = [
+          { 'returnRequests.status': ReturnRequestStatus.INSPECTED },
+          { 'returnRequest.status': 'INSPECTED' },
+        ];
+      } else if (rs === 'COMPLETED') {
+        rsOr = [
+          { 'returnRequests.status': ReturnRequestStatus.COMPLETED },
+          { 'returnRequest.status': 'COMPLETED' },
+        ];
+      } else if (rs === 'REJECTED') {
+        rsOr = [
+          { 'returnRequests.status': ReturnRequestStatus.REJECTED },
+          { 'returnRequest.status': 'REJECTED' },
+        ];
+      } else if (rs === 'CANCELLED') {
+        rsOr = [
+          { 'returnRequests.status': ReturnRequestStatus.CANCELLED },
+          { 'returnRequest.status': 'CANCELLED' },
+        ];
+      }
+
+      if (rsOr.length > 0) {
+        if (filter.$or) {
+          filter.$and = [{ $or: filter.$or }, { $or: rsOr }];
+          delete filter.$or;
+        } else if (filter.$and) {
+          filter.$and.push({ $or: rsOr });
+        } else {
+          filter.$or = rsOr;
+        }
       }
     }
 
@@ -1856,7 +3284,16 @@ export class OrdersService {
       }
     }
 
-    const total = await this.orderModel.countDocuments(filter);
+    const [total, pendingReturnCount] = await Promise.all([
+      this.orderModel.countDocuments(filter),
+      this.orderModel.countDocuments({
+        $or: [
+          { 'returnRequests.status': ReturnRequestStatus.PENDING },
+          { 'returnRequest.status': 'PENDING' },
+        ],
+      }),
+    ]);
+
     const orders = await this.orderModel
       .find(filter)
       .sort({ createdAt: -1, dateAdded: -1 })
@@ -1881,12 +3318,16 @@ export class OrdersService {
         label: o.status || 'Không rõ',
         variant: 'neutral',
       };
-      const customerName =
+      const isGuest = !o.userId && !o._user;
+      const rawCustomerName =
         o.customer?.name ||
         o.shippingAddress?.fullName ||
         (o.addresses && o.addresses[0]?.name) ||
         o.customerEmail ||
-        'Khách vãng lai';
+        '';
+      const customerName = rawCustomerName
+        ? (isGuest ? `${rawCustomerName} (Khách vãng lai)` : rawCustomerName)
+        : 'Khách vãng lai';
 
       const totalVal = o.totalAmount ?? o.amount ?? o.subtotal ?? o.total ?? 0;
       const paymentMethodName =
@@ -1896,16 +3337,62 @@ export class OrdersService {
         o.type ||
         'COD';
 
+      const returnRequests = Array.isArray(o.returnRequests) && o.returnRequests.length > 0
+        ? o.returnRequests
+        : (o.returnRequest ? [o.returnRequest] : []);
+
+      const getReturnScore = (st: string) => {
+        const s = String(st || '').toUpperCase();
+        if (s === ReturnRequestStatus.PENDING || s === 'PENDING') return 5;
+        if ([
+          ReturnRequestStatus.APPROVED,
+          ReturnRequestStatus.WAITING_FOR_RETURN_SHIPMENT,
+          ReturnRequestStatus.RETURN_SHIPPED,
+          ReturnRequestStatus.RETURN_RECEIVED,
+          ReturnRequestStatus.INSPECTED,
+          'APPROVED',
+          'WAITING_FOR_RETURN_SHIPMENT',
+          'RETURN_SHIPPED',
+          'RETURN_RECEIVED',
+          'INSPECTED',
+        ].includes(s)) return 4;
+        if (s === ReturnRequestStatus.COMPLETED || s === 'COMPLETED') return 3;
+        if (s === ReturnRequestStatus.REJECTED || s === 'REJECTED') return 2;
+        if (s === ReturnRequestStatus.CANCELLED || s === 'CANCELLED') return 1;
+        return 0;
+      };
+
+      const sortedRequests = [...returnRequests].sort((a: any, b: any) => {
+        const scoreDiff = getReturnScore(b?.status) - getReturnScore(a?.status);
+        if (scoreDiff !== 0) return scoreDiff;
+        const timeA = new Date(a?.requestedAt || a?.createdAt || 0).getTime();
+        const timeB = new Date(b?.requestedAt || b?.createdAt || 0).getTime();
+        return timeB - timeA;
+      });
+
+      const activeReq = sortedRequests.length > 0 ? sortedRequests[0] : null;
+      const hasPendingReturn = returnRequests.some((r: any) => (r.status || '').toUpperCase() === 'PENDING');
+
       return {
         ...o,
         id: o._id?.toString() || o.id,
         code: o.orderId || ('#' + String(o._id).slice(-6).toUpperCase()),
         customer: customerName,
+        isGuest,
+        customerType: isGuest ? 'GUEST' : 'MEMBER',
         total: totalVal,
         payment: paymentMethodName,
         status: o.status,
         statusText: statusMeta.label,
         statusVariant: statusMeta.variant,
+        returnRequests,
+        activeReturnRequest: activeReq,
+        returnRequestsCount: returnRequests.length,
+        hasPendingReturn,
+        latestReturnStatus: activeReq ? activeReq.status : null,
+        latestReturnRequestId: activeReq ? activeReq.requestId : null,
+        latestReturnRefundStatus: activeReq?.refund?.status || null,
+        latestReturnRequestedAmount: activeReq ? (activeReq.refund?.approvedAmount || activeReq.refund?.requestedAmount || 0) : 0,
         createdAt: o.createdAt || o.dateAdded,
       };
     });
@@ -1913,6 +3400,7 @@ export class OrdersService {
     return {
       success: true,
       data: formatted,
+      pendingReturnCount,
       pagination: {
         page,
         pageSize: limit,

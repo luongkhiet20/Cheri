@@ -23,17 +23,6 @@
         <span>Quay lại</span>
       </button>
 
-      <!-- Button Bật / Tắt -->
-      <button type="button" [class]="method.isActive !== false ? 'btn btn-warning-outline' : 'btn btn-success-outline'"
-        (click)="onToggleStatusClick()" id="btn-toggle-status">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="8" x2="12" y2="12"></line>
-          <line x1="12" y1="16" x2="12.01" y2="16"></line>
-        </svg>
-        <span>{{ method.isActive !== false ? 'Tắt phương thức' : 'Bật phương thức' }}</span>
-      </button>
 
       <!-- Button Chỉnh sửa -->
       <button type="button" class="btn btn-primary" (click)="onEdit()" id="btn-edit-payment">

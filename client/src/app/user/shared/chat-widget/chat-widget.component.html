@@ -1,0 +1,49 @@
+<div class="chat-widget">
+  @if (isOpen()) {
+    <section id="cheri-chat-panel" class="chat-panel" role="dialog" aria-labelledby="cheri-chat-title"
+      aria-describedby="cheri-chat-note" aria-modal="false">
+      <header class="chat-header">
+        <span class="chat-avatar" aria-hidden="true">C</span>
+        <div class="chat-heading">
+          <h2 id="cheri-chat-title">Trò chuyện cùng Chéri</h2>
+          <span>Khung chat mẫu</span>
+        </div>
+        <button class="chat-close" type="button" (click)="closeChat()" aria-label="Thu gọn trò chuyện">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" /></svg>
+        </button>
+      </header>
+
+      <div #messageList class="chat-messages" role="log" aria-label="Nội dung trò chuyện"
+        aria-live="polite" aria-relevant="additions">
+        <p class="chat-start">Một lời chào nhỏ từ Chéri</p>
+        @for (message of messages(); track message.id) {
+          <div class="chat-message" [class.from-user]="message.sender === 'user'">
+            <span class="chat-sender">{{ message.sender === 'user' ? 'Bạn' : 'Chéri' }}</span>
+            <p>{{ message.text }}</p>
+          </div>
+        }
+      </div>
+
+      <form class="chat-composer" (ngSubmit)="sendMessage()">
+        <label class="chat-sr-only" for="cheri-chat-input">Nhập lời nhắn</label>
+        <div class="chat-input-row">
+          <textarea #composer id="cheri-chat-input" name="message" [(ngModel)]="draft" rows="2" maxlength="1000"
+            placeholder="Bạn muốn hỏi điều gì?" (keydown.enter)="onEnter($event)"
+            aria-describedby="cheri-chat-note"></textarea>
+          <button type="submit" class="chat-send" [disabled]="!draft.trim() || draft.trim().length > 1000"
+            aria-label="Gửi lời nhắn">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 14-7-4 14-3-6-7-1Zm7 1 7-8" /></svg>
+          </button>
+        </div>
+        <p id="cheri-chat-note">Tin nhắn chỉ hiển thị tại đây, chưa gửi đến cửa hàng.</p>
+      </form>
+    </section>
+  }
+
+  <button #launcher type="button" class="chat-launcher" [class.chat-launcher-open]="isOpen()"
+    (click)="isOpen() ? closeChat() : openChat()" [attr.aria-expanded]="isOpen()"
+    aria-controls="cheri-chat-panel" [attr.aria-label]="isOpen() ? 'Thu gọn trò chuyện' : 'Mở trò chuyện cùng Chéri'">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-6 4V6a2 2 0 0 1 2-2Z" /><path d="M7 9h10M7 13h7" /></svg>
+    <span>Trò chuyện</span>
+  </button>
+</div>

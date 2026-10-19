@@ -28,8 +28,7 @@ export class UsersComponent implements OnInit {
   actions: RowAction[] = [
     { key: 'view', label: 'Xem' },
     { key: 'edit', label: 'Sửa' },
-    { key: 'lock', label: 'Khóa / Mở', variant: 'warning' },
-    { key: 'delete', label: 'Xóa', variant: 'danger' }
+    { key: 'lock', label: 'Khóa / Mở', variant: 'warning' }
   ];
   filterFields: FilterField[] = [
     { key: 'role', label: 'Vai trò', type: 'select', options: [{ value: 'admin', label: 'Admin' }, { value: 'user', label: 'Khách hàng' }] },
@@ -45,16 +44,7 @@ export class UsersComponent implements OnInit {
   selectedRole = '';
   selectedStatus = '';
 
-  selectedIds: Set<any> = new Set();
-  get selectedCount(): number { return this.selectedIds.size; }
-  get allSelected(): boolean { return this.data.length > 0 && this.data.every((r: any) => this.selectedIds.has(r.id)); }
-  get isIndeterminate(): boolean { return this.selectedCount > 0 && !this.allSelected; }
   get displayTotal(): number { return this.pagination?.total ?? this.data.length; }
-
-  confirmOpen = false;
-  confirmMessage = '';
-  pendingDeleteId: any = null;
-  isBulkDelete = false;
 
   constructor(
     private apiService: AdminService,
@@ -119,7 +109,6 @@ export class UsersComponent implements OnInit {
         this.data = [...this.allUsers];
         const totalFromApi = Number(res?.pagination?.total ?? res?.total ?? this.data.length);
         this.pagination = { ...this.pagination, total: totalFromApi };
-        this.selectedIds.clear();
 
         if (statusParam) {
           const statusField = this.filterFields.find(f => f.key === 'status');
@@ -139,69 +128,6 @@ export class UsersComponent implements OnInit {
     this.router.navigate(['/admin/users/add']);
   }
 
-  onSelectionChange(ids: Set<any>): void { this.selectedIds = new Set(ids); }
-  onToolbarSelectAll(): void {
-    if (this.allSelected) { this.selectedIds = new Set(); }
-    else { this.selectedIds = new Set(this.data.map((r: any) => r.id)); }
-  }
-
-  onDeleteSelected(): void {
-    const c = this.selectedCount;
-    if (c === 0) return;
-    this.isBulkDelete = true;
-    this.pendingDeleteId = null;
-    this.confirmMessage = `Bạn có chắc chắn muốn xóa ${c} người dùng đã chọn không?`;
-    this.confirmOpen = true;
-  }
-
-  onConfirmDelete(): void {
-    if (this.isBulkDelete) {
-      const ids = Array.from(this.selectedIds);
-      this.apiService.bulkDeleteUsers(ids).subscribe({
-        next: () => {
-          this.selectedIds.clear();
-          this.confirmOpen = false;
-          this.isBulkDelete = false;
-          this.loadUsers();
-          this.cdr.markForCheck();
-        },
-        error: (err) => {
-          console.error('Lỗi khi xóa nhiều users:', err);
-          this.confirmOpen = false;
-          this.isBulkDelete = false;
-          this.cdr.markForCheck();
-        }
-      });
-    } else if (this.pendingDeleteId) {
-      this.apiService.deleteUser(this.pendingDeleteId).subscribe({
-        next: () => {
-          this.confirmOpen = false;
-          this.pendingDeleteId = null;
-          this.notificationService.success('Xóa người dùng thành công.');
-          this.loadUsers();
-          this.cdr.markForCheck();
-        },
-        error: (err) => {
-          console.error('Lỗi khi xóa user:', err);
-          this.confirmOpen = false;
-          this.pendingDeleteId = null;
-          this.notificationService.error('Lỗi khi xóa người dùng.');
-          this.cdr.markForCheck();
-        }
-      });
-    } else {
-      this.confirmOpen = false;
-      this.cdr.markForCheck();
-    }
-  }
-
-  onCancelDelete(): void {
-    this.confirmOpen = false;
-    this.pendingDeleteId = null;
-    this.isBulkDelete = false;
-    this.cdr.markForCheck();
-  }
-
   onAction(e: ActionEvent): void {
     if (e.action === 'view') {
       this.router.navigate(['/admin/users', e.row.id]);
@@ -219,12 +145,6 @@ export class UsersComponent implements OnInit {
           this.cdr.markForCheck();
         }
       });
-    } else if (e.action === 'delete') {
-      this.isBulkDelete = false;
-      this.pendingDeleteId = e.row.id;
-      this.confirmMessage = `Bạn có chắc muốn xóa người dùng ${e.row.email}?`;
-      this.confirmOpen = true;
-      this.cdr.markForCheck();
     }
   }
 

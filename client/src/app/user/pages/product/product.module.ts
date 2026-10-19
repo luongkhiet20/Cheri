@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { ReactiveFormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -18,12 +18,12 @@ import { CategoriesListComponent } from '../../shared/categories-list/categories
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { PriceFormatPipe } from '../../../pipes/price.pipe';
 import { ProductContentComponent } from '../../shared/product-content/product-content.component';
-import { ProductsListComponent } from '../../shared/products-list/products-list.component';
 import { PaginationComponent } from '../../shared/pagination/pagination.component';
 import { SidebarComponent } from '../../shared/sidebar/sidebar.component';
 import { WishlistButtonComponent } from '../../shared/wishlist-button/wishlist-button.component';
 import { ProductReviewsComponent } from '../../shared/reviews/product-reviews.component';
 import { RatingSummaryComponent } from '../../shared/reviews/rating-summary.component';
+import { ProductRecommendationsComponent } from './product/product-recommendations/product-recommendations';
 
 @NgModule({
   declarations: [
@@ -32,6 +32,7 @@ import { RatingSummaryComponent } from '../../shared/reviews/rating-summary.comp
   ],
   imports: [
     CommonModule,
+    FormsModule,
     ReactiveFormsModule,
     MatCardModule,
     MatButtonModule,
@@ -47,10 +48,10 @@ import { RatingSummaryComponent } from '../../shared/reviews/rating-summary.comp
 
     CategoriesListComponent,
     ProductContentComponent,
-    ProductsListComponent,
     PaginationComponent,
     SidebarComponent,
     WishlistButtonComponent,
+    ProductRecommendationsComponent,
     ProductReviewsComponent,
     RatingSummaryComponent,
 

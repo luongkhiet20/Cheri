@@ -705,7 +705,7 @@ export class AboutComponent implements OnInit, OnDestroy {
     }
     this.cdr.markForCheck();
 
-    this.apiService.uploadImage({ fileToUpload: file, titleUrl: '' }).subscribe({
+    this.apiService.uploadImage({ fileToUpload: file, titleUrl: '', folder: 'cheri/cms' }).subscribe({
       next: (res: any) => {
         if (target === 'desktop') {
           this.isUploadingDesktop = false;

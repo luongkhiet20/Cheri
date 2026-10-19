@@ -1,0 +1,357 @@
+:host {
+  display: block;
+  position: relative;
+  z-index: 99999;
+}
+
+/* ── BACKDROP OVERLAY ── */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(18, 14, 12, 0.58);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+  animation: backdropFadeIn 0.22s ease-out;
+  z-index: 99999;
+}
+
+@keyframes backdropFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ── MODAL CARD ── */
+.dialog-card {
+  width: 100%;
+  max-width: 490px;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 20px 48px -8px rgba(36, 12, 14, 0.22), 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: 1px solid #ebdcd5;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-height: calc(100vh - 40px);
+  animation: cardScaleIn 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+@keyframes cardScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ── CARD HEADER ── */
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 22px;
+  background: #faf7f5;
+  border-bottom: 1px solid #eee5e0;
+}
+
+.dialog-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dialog-title {
+  margin: 0;
+  font-size: 16.5px;
+  font-weight: 700;
+  color: #74070E;
+  letter-spacing: -0.2px;
+}
+
+.dialog-req-badge {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #74070E;
+  background: #fdf2f2;
+  border: 1px solid #fecaca;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.dialog-order-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #635850;
+  background: #ede6e1;
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+
+.dialog-close-btn {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  line-height: 1;
+  color: #8c7e75;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.18s ease;
+}
+
+.dialog-close-btn:hover:not(:disabled) {
+  color: #74070E;
+  background: #f4ede8;
+}
+
+.dialog-close-svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ── CARD BODY ── */
+.dialog-body {
+  padding: 20px 22px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dialog-alert-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #fff7ed;
+  border: 1px solid #ffedd5;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.alert-icon {
+  width: 18px;
+  height: 18px;
+  color: #ea580c;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.dialog-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: #9a3412;
+  line-height: 1.5;
+}
+
+.reasons-heading {
+  font-size: 13px;
+  font-weight: 600;
+  color: #332d27;
+  margin-top: 4px;
+}
+
+.reasons-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reason-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #ebe5de;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.reason-item:hover:not(.disabled) {
+  background: #fbf9f7;
+  border-color: #d8cec4;
+}
+
+.reason-item.selected {
+  background: #fdf5f5;
+  border-color: #fca5a5;
+}
+
+.reason-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.radio-indicator {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #cbd5e1;
+  margin-top: 2px;
+  flex-shrink: 0;
+  position: relative;
+  transition: all 0.18s ease;
+  box-sizing: border-box;
+}
+
+.reason-item.selected .radio-indicator {
+  border-color: #74070E;
+}
+
+.reason-item.selected .radio-indicator::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #74070E;
+}
+
+.reason-text {
+  font-size: 13px;
+  color: #332d27;
+  line-height: 1.45;
+  user-select: none;
+}
+
+.other-reason-wrap {
+  margin-top: 2px;
+}
+
+.other-reason-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #2b2520;
+  background: #faf8f6;
+  border: 1px solid #e2d8ce;
+  border-radius: 8px;
+  resize: vertical;
+  min-height: 72px;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.other-reason-textarea:focus {
+  border-color: #74070E;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(116, 7, 14, 0.08);
+}
+
+.dialog-feedback-box {
+  padding: 9px 12px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.dialog-feedback-box.error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+
+/* ── CARD FOOTER ── */
+.dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 14px 22px;
+  background: #faf7f5;
+  border-top: 1px solid #eee5e0;
+}
+
+.dialog-btn-dismiss {
+  background: #ffffff;
+  color: #574c43;
+  border: 1px solid #dcd3ca;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-family: inherit;
+}
+
+.dialog-btn-dismiss:hover:not(:disabled) {
+  background: #f5eee8;
+  border-color: #c4b8ac;
+}
+
+.dialog-btn-confirm {
+  background: #74070E;
+  color: #ffffff;
+  border: 1px solid #74070E;
+  border-radius: 6px;
+  padding: 8px 18px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.18s ease;
+  font-family: inherit;
+}
+
+.dialog-btn-confirm:hover:not(:disabled) {
+  background: #56050a;
+  border-color: #56050a;
+  box-shadow: 0 2px 8px rgba(116, 7, 14, 0.28);
+}
+
+.dialog-btn-confirm:disabled,
+.dialog-btn-dismiss:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.submitting-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.spinner-svg {
+  width: 14px;
+  height: 14px;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 480px) {
+  .dialog-footer {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+  .dialog-btn-dismiss,
+  .dialog-btn-confirm {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 14px;
+  }
+}

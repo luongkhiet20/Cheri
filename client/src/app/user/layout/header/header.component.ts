@@ -1,5 +1,5 @@
 import { debounceTime, take, delay } from 'rxjs/operators';
-import { Component, OnInit, PLATFORM_ID, Inject, Signal, ChangeDetectorRef, effect } from '@angular/core';
+import { Component, OnInit, PLATFORM_ID, Inject, Signal, ChangeDetectorRef, effect, HostListener } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Observable, BehaviorSubject, of } from 'rxjs';
@@ -18,9 +18,10 @@ import { MatInputModule } from '@angular/material/input';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatMenuModule } from '@angular/material/menu';
 
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { SearchModalComponent } from '../../shared/search-modal/search-modal.component';
+import { NotificationService } from '../../shared/notification/notification.service';
 
 @Component({
   selector: 'app-header',
@@ -65,8 +66,39 @@ export class HeaderComponent implements OnInit {
   isSearchOpen = false;
 
   scrollToTop(): void {
+    if (!isPlatformBrowser(this._platformId)) return;
+    const scrollWrap = document.querySelector('.main-scroll-wrap') as HTMLElement | null;
+    if (scrollWrap) {
+      const prevBehavior = scrollWrap.style.scrollBehavior;
+      scrollWrap.style.scrollBehavior = 'auto';
+      scrollWrap.scrollTop = 0;
+      scrollWrap.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      requestAnimationFrame(() => {
+        if (scrollWrap) {
+          scrollWrap.scrollTop = 0;
+          scrollWrap.style.scrollBehavior = prevBehavior;
+        }
+      });
+    }
+    const adminMain = document.querySelector('.admin-main') as HTMLElement | null;
+    if (adminMain) {
+      adminMain.scrollTop = 0;
+    }
     if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }
+    if (typeof document !== 'undefined') {
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    }
+  }
+
+  @HostListener('click', ['$event'])
+  onHeaderClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement | null;
+    const navLink = target?.closest('a, button[routerLink], .cheri-logo, .nav-label, .nav-cart-label, .nav-avatar-btn, .nav-account-guest-btn');
+    if (navLink && !navLink.classList.contains('nav-search-trigger') && !navLink.classList.contains('mat-mdc-icon-button')) {
+      this.scrollToTop();
     }
   }
 
@@ -94,6 +126,8 @@ export class HeaderComponent implements OnInit {
     private store: SignalStore,
     private selectors: SignalStoreSelectors,
     public translate: TranslateService,
+    private router: Router,
+    private notify: NotificationService,
     private cdr: ChangeDetectorRef) {
 
     this.lang$ = this.translate.getLang$() || of('vi');
@@ -224,7 +258,11 @@ export class HeaderComponent implements OnInit {
     const currentLang = (this.translate as any)?.lang || 'vi';
     const targetUrl = `/${currentLang}`;
 
+    let hadToken = false;
+    let localCleanFailed = false;
+
     if (isPlatformBrowser(this._platformId)) {
+      hadToken = Boolean(localStorage.getItem(accessTokenKey) || sessionStorage.getItem(accessTokenKey));
       try {
         localStorage.removeItem(accessTokenKey);
         sessionStorage.clear();
@@ -232,12 +270,41 @@ export class HeaderComponent implements OnInit {
         document.cookie = 'token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
         document.cookie = 'accessToken=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
         document.cookie = 'connect.sid=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-      } catch (e) { }
+      } catch (e) {
+        localCleanFailed = true;
+      }
     }
 
-    this.store.signOut(() => {
+    // 1. Phiên đã hết hạn trước khi đăng xuất hoặc người dùng đã đăng xuất ở tab khác
+    if (!hadToken) {
+      this.notify.info('Phiên đăng nhập đã hết hạn. Bạn đã được đưa về trạng thái chưa đăng nhập.');
+      this.store.signOut(() => {
+        if (isPlatformBrowser(this._platformId)) {
+          this.router.navigateByUrl(targetUrl);
+        }
+      });
+      return;
+    }
+
+    // 2. Mất kết nối mạng trong lúc đăng xuất
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      this.notify.error('Không thể kết nối đến máy chủ để hoàn tất đăng xuất.');
+      return;
+    }
+
+    this.store.signOut((res) => {
+      if (res?.networkError) {
+        this.notify.error('Không thể kết nối đến máy chủ để hoàn tất đăng xuất.');
+      } else if (res?.serverError) {
+        this.notify.error('Chưa thể hoàn tất đăng xuất. Vui lòng thử lại.');
+      } else if (localCleanFailed) {
+        this.notify.warning('Đã đăng xuất khỏi tài khoản, nhưng không thể xóa toàn bộ dữ liệu phiên trên thiết bị. Vui lòng tải lại trang.');
+      } else {
+        this.notify.success('Bạn đã đăng xuất thành công. Hẹn gặp lại tại Chéri!');
+      }
+
       if (isPlatformBrowser(this._platformId)) {
-        window.location.href = targetUrl;
+        this.router.navigateByUrl(targetUrl);
       }
     });
   }

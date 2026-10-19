@@ -1,0 +1,170 @@
+<div class="cheri-reviews-card" id="cheri-product-reviews">
+  <div class="cheri-reviews-header">
+    <h2 class="cheri-reviews-title">
+      <svg class="cheri-title-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#74070E"
+        stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+          fill="#74070E" fill-opacity="0.12" />
+      </svg>
+      Đánh giá sản phẩm
+    </h2>
+    @if (totalReviewCount > 0) {
+    <span class="cheri-reviews-badge">{{ totalReviewCount }} nhận xét</span>
+    }
+  </div>
+
+  <!-- A. TỔNG QUAN ĐÁNH GIÁ -->
+  <div class="cheri-reviews-overview">
+    <!-- Cột trái: Điểm số trung bình -->
+    <div class="cheri-score-box">
+      @if (totalReviewCount > 0) {
+      <div class="cheri-score-number">{{ reviewStats?.averageRating || 5.0 }}</div>
+      <div class="cheri-score-stars">
+        @for (s of [1, 2, 3, 4, 5]; track s) {
+        <i class="material-icons star-icon" [class.is-active]="s <= ((reviewStats?.averageRating || 5) + 0.2)">star</i>
+        }
+      </div>
+      <div class="cheri-score-count">Dựa trên {{ totalReviewCount }} đánh giá</div>
+      } @else {
+      <div class="cheri-score-empty">
+        <i class="material-icons empty-icon">star_border</i>
+        <div class="empty-title">Chưa có đánh giá</div>
+        <div class="empty-desc">Sản phẩm này chưa có lượt đánh giá nào từ khách hàng.</div>
+      </div>
+      }
+    </div>
+
+    <!-- Cột phải: Thanh phân bố sao 1-5 -->
+    @if (totalReviewCount > 0) {
+    <div class="cheri-distribution-box">
+      @for (star of [5, 4, 3, 2, 1]; track star) {
+      <div class="cheri-dist-row" (click)="onFilterStar(star)" [class.is-filtered]="selectedStarFilter === star">
+        <span class="dist-star-label">{{ star }} sao</span>
+        <div class="dist-bar-track">
+          <div class="dist-bar-fill" [style.width.%]="getStarPercentage(star)"></div>
+        </div>
+        <span class="dist-star-count">{{ getStarCount(star) }}</span>
+      </div>
+      }
+    </div>
+    }
+  </div>
+
+  <!-- B. BỘ LỌC VÀ DANH SÁCH ĐÁNH GIÁ -->
+  <div class="cheri-reviews-list-section">
+    <!-- Thanh bộ lọc sao & sắp xếp -->
+    <div class="cheri-filter-bar">
+      <div class="filter-chips-list">
+        <button type="button" class="filter-chip" [class.is-active]="selectedStarFilter === null"
+          (click)="onFilterStar(null)">
+          Tất cả ({{ totalReviewCount }})
+        </button>
+        @for (s of [5, 4, 3, 2, 1]; track s) {
+        <button type="button" class="filter-chip" [class.is-active]="selectedStarFilter === s"
+          (click)="onFilterStar(s)">
+          {{ s }} sao ({{ getStarCount(s) }})
+        </button>
+        }
+      </div>
+
+      <div class="sort-select-wrap">
+        <label for="reviewSortSelect" class="sort-label">Sắp xếp:</label>
+        <select id="reviewSortSelect" class="cheri-select" [value]="selectedSortBy" (change)="onSortChange($event)">
+          <option value="newest">Mới nhất</option>
+          <option value="highest">Điểm cao nhất</option>
+          <option value="lowest">Điểm thấp nhất</option>
+          <option value="oldest">Cũ nhất</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Danh sách Reviews theo các trạng thái -->
+    @if (isLoadingReviews) {
+    <!-- 1. Trạng thái Đang tải -->
+    <div class="cheri-reviews-loading" role="status" aria-live="polite">
+      <span class="reviews-spinner"></span>
+      <span>Đang tải nhận xét...</span>
+    </div>
+    } @else if (hasError) {
+    <!-- 2. Trạng thái Lỗi API / Mất kết nối (phân biệt rõ với danh sách rỗng) -->
+    <div class="cheri-reviews-error" role="alert">
+      <i class="material-icons error-icon">error_outline</i>
+      <div class="error-title">Không thể tải nhận xét</div>
+      <p class="error-desc">{{ errorMessage || 'Đã có lỗi xảy ra trong quá trình tải dữ liệu nhận xét.' }}</p>
+      <button type="button" class="cheri-retry-btn" (click)="retry()">
+        <i class="material-icons">refresh</i>
+        Thử lại
+      </button>
+    </div>
+    } @else if (reviewsList && reviewsList.length > 0) {
+    <!-- 3. Trạng thái Có nhận xét -->
+    <div class="cheri-reviews-feed">
+      @for (rev of reviewsList; track rev._id) {
+      <div class="cheri-review-item">
+        <div class="review-item-header">
+          <div class="user-meta">
+            <div class="user-avatar-circle">
+              {{ (rev.userName || 'K').charAt(0).toUpperCase() }}
+            </div>
+            <div class="user-info">
+              <div class="user-name-line">
+                <span class="user-name">{{ rev.userName || 'Khách hàng Chéri' }}</span>
+                @if (rev.isVerifiedPurchase) {
+                <span class="verified-tag">
+                  <i class="material-icons">check_circle</i>
+                  Đã mua hàng
+                </span>
+                }
+              </div>
+              <div class="review-date">{{ formatDate(rev.createdAt) }}</div>
+            </div>
+          </div>
+
+          <!-- Rating sao -->
+          <div class="review-stars-row">
+            @for (st of [1, 2, 3, 4, 5]; track st) {
+            <i class="material-icons review-star" [class.is-active]="st <= rev.rating">star</i>
+            }
+          </div>
+        </div>
+
+        <div class="review-comment-body">
+          {{ rev.comment }}
+        </div>
+      </div>
+      }
+    </div>
+
+    <!-- Phân trang -->
+    @if (reviewsTotalPages > 1) {
+    <div class="cheri-reviews-pagination">
+      <button type="button" class="page-nav-btn" [disabled]="reviewsPage <= 1" (click)="onPageChange(reviewsPage - 1)">
+        Trước
+      </button>
+      <span class="page-indicator">Trang {{ reviewsPage }} / {{ reviewsTotalPages }}</span>
+      <button type="button" class="page-nav-btn" [disabled]="reviewsPage >= reviewsTotalPages"
+        (click)="onPageChange(reviewsPage + 1)">
+        Sau
+      </button>
+    </div>
+    }
+    } @else if (selectedStarFilter !== null) {
+    <!-- 4. Trạng thái Lọc không có kết quả -->
+    <div class="cheri-reviews-no-items is-filter-empty">
+      <div class="no-items-title">Chưa có nhận xét {{ selectedStarFilter }} sao</div>
+      <p class="no-items-desc">Hiện chưa có khách hàng nào để lại đánh giá {{ selectedStarFilter }} sao cho sản phẩm
+        này.</p>
+      <button type="button" class="cheri-clear-filter-btn" (click)="clearFilter()">
+        Xem tất cả nhận xét
+      </button>
+    </div>
+    } @else {
+    <!-- 5. Trạng thái Sản phẩm chưa có nhận xét nào -->
+    <div class="cheri-reviews-no-items is-global-empty">
+      <i class="material-icons no-items-icon">rate_review</i>
+      <div class="no-items-title">Chưa có nhận xét nào</div>
+      <p class="no-items-desc">Sản phẩm này hiện chưa có đánh giá nào từ khách hàng.</p>
+    </div>
+    }
+  </div>
+</div>

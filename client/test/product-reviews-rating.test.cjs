@@ -59,9 +59,11 @@ function loadProduct(core, toObservable) {
     '@angular/platform-browser': { Meta: class {}, Title: class {} },
     '@angular/material/dialog': { MatDialog: class {} },
     '@angular/material/snack-bar': { MatSnackBar: class {} },
+    '../../../../services/api.service': { ApiService: class {} },
     '../../../../services/jsonLD.service': { JsonLDService: class {} },
     '../../../../services/translate.service': { TranslateService: class {} },
     '../../../../services/cart-toast.service': { CartToastService: class {} },
+    '../../../shared/notification/notification.service': { NotificationService: class {} },
     '../../../../store/signal.store': { SignalStore: class {} },
     '../../../../store/signal.store.selectors': { SignalStoreSelectors: class {} },
     '../../../shared/images-dialog/images-dialog.component': { ImagesDialogComponent: class {} },
@@ -110,8 +112,8 @@ test('persisted PUT updates detail and card summaries without reinitializing a s
   const h = await storeHarness();
   const ProductComponent = loadProduct(h.core, observableBridge(h.selectors));
   const component = new ProductComponent({ params: of({ id: 'product-a' }) }, h.store, h.selectors, {},
-    { updateTag() {} }, { setTitle() {} }, {}, { open() {} }, { show() {} }, {},
-    { getLang$: () => of('vi') }, { insertSchema() {} });
+    { updateTag() {} }, { setTitle() {} }, {}, {}, {}, { getLang$: () => of('vi') }, { insertSchema() {} }, 'browser',
+    { recordInteraction: () => of(null) });
   t.after(() => component.ngOnDestroy());
   let initCalls = 0;
   const init = component.initProductState.bind(component);

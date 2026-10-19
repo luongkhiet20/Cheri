@@ -136,19 +136,42 @@
       <div class="sf-price-boxes">
         <div class="sf-price-box">
           <span class="sf-box-label">TỪ</span>
-          <span class="sf-box-value">{{ localMin | priceFormat }} {{ currency }}</span>
+          <div class="sf-box-value">
+            <input type="text"
+              class="sf-price-input"
+              [value]="inputMinStr"
+              (focus)="onMinInputFocus()"
+              (input)="onMinTextInput($event)"
+              (blur)="onMinInputBlur()"
+              (keydown.enter)="onInputEnter($event)"
+              [placeholder]="minPlaceholder"
+              aria-label="Giá tối thiểu" />
+            <span class="sf-box-currency">{{ currency }}</span>
+          </div>
         </div>
         <span class="sf-box-dash">—</span>
         <div class="sf-price-box">
           <span class="sf-box-label">ĐẾN</span>
-          <span class="sf-box-value">{{ localMax | priceFormat }} {{ currency }}</span>
+          <div class="sf-box-value">
+            <input type="text"
+              class="sf-price-input"
+              [value]="inputMaxStr"
+              (focus)="onMaxInputFocus()"
+              (input)="onMaxTextInput($event)"
+              (blur)="onMaxInputBlur()"
+              (keydown.enter)="onInputEnter($event)"
+              [placeholder]="maxPlaceholder"
+              aria-label="Giá tối đa" />
+            <span class="sf-box-currency">{{ currency }}</span>
+          </div>
         </div>
       </div>
 
       <!-- Material Slider matching mockup -->
       <div class="sf-slider-wrapper">
         <mat-slider class="sf-mat-slider w-100" [min]="minPrice" [max]="maxPrice" [step]="50000">
-          <input matSliderThumb [value]="localMax" (valueChange)="onMaxPriceChange($event)" />
+          <input matSliderStartThumb [value]="localMin" (valueChange)="onMinSliderChange($event)" aria-label="Khoảng giá tối thiểu" />
+          <input matSliderEndThumb [value]="localMax" (valueChange)="onMaxSliderChange($event)" aria-label="Khoảng giá tối đa" />
         </mat-slider>
         <div class="sf-slider-labels">
           <span>{{ minPrice | priceFormat }} {{ currency }}</span>

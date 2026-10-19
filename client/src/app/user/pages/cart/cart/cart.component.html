@@ -143,8 +143,8 @@
             @if (!appliedCoupon) {
             <div class="coupon-form">
               <input type="text" class="coupon-input" placeholder="Nhập mã (VD: CHERI10, CHERI50K)"
-                [(ngModel)]="couponInput" (input)="onCouponInputChange($event)" (keyup.enter)="applyCoupon(cart)" autocomplete="off"
-                (click)="$event.stopPropagation()" />
+                [(ngModel)]="couponInput" (input)="onCouponInputChange($event)" (keyup.enter)="applyCoupon(cart)"
+                autocomplete="off" (click)="$event.stopPropagation()" />
               <button type="button" class="coupon-btn" [disabled]="isApplyingCoupon"
                 (click)="applyCoupon(cart); $event.stopPropagation()">
                 {{ isApplyingCoupon ? 'Đang kiểm tra...' : 'Áp dụng' }}
@@ -165,12 +165,15 @@
                     <span class="applied-code">{{ appliedCoupon.code }}</span>
                   </div>
                   <span class="applied-type-tag">
-                    {{ appliedCoupon.discountType === 'PERCENTAGE' ? ('Giảm ' + appliedCoupon.discountValue + '%') : 'Giảm trực tiếp' }}
+                    {{ appliedCoupon.discountType === 'PERCENTAGE' ? ('Giảm ' + appliedCoupon.discountValue + '%') :
+                    'Giảm trực tiếp' }}
                   </span>
                 </div>
                 <div class="applied-desc">{{ appliedCoupon.description || 'Ưu đãi đã được áp dụng' }}</div>
-                <div class="applied-conditions" *ngIf="(appliedCoupon.discountType === 'PERCENTAGE' && appliedCoupon.maxDiscount && appliedCoupon.maxDiscount > 0) || (appliedCoupon.minOrderValue && appliedCoupon.minOrderValue > 0)">
-                  <span class="cond-pill" *ngIf="appliedCoupon.discountType === 'PERCENTAGE' && appliedCoupon.maxDiscount && appliedCoupon.maxDiscount > 0">
+                <div class="applied-conditions"
+                  *ngIf="(appliedCoupon.discountType === 'PERCENTAGE' && appliedCoupon.maxDiscount && appliedCoupon.maxDiscount > 0) || (appliedCoupon.minOrderValue && appliedCoupon.minOrderValue > 0)">
+                  <span class="cond-pill"
+                    *ngIf="appliedCoupon.discountType === 'PERCENTAGE' && appliedCoupon.maxDiscount && appliedCoupon.maxDiscount > 0">
                     Tối đa: {{ appliedCoupon.maxDiscount | priceFormat }} {{ currency$ | async }}
                   </span>
                   <span class="cond-pill" *ngIf="appliedCoupon.minOrderValue && appliedCoupon.minOrderValue > 0">
@@ -295,7 +298,8 @@
             </div>
             <h3 class="cart-empty-heading">Giỏ hàng đang trống</h3>
             <p class="cart-empty-subtext">Bạn chưa có sản phẩm nào trong giỏ hàng.</p>
-            <a [routerLink]="['/' + (lang$ | async) + '/product/all']" (click)="goToProducts($event)" class="btn-continue-shopping">
+            <a [routerLink]="['/' + (lang$ | async) + '/product/all']" (click)="goToProducts($event)"
+              class="btn-continue-shopping">
               Tiếp tục mua sắm
             </a>
           </div>
@@ -309,6 +313,25 @@
         @if (!(loading$ | async)) {
         <div class="order-form-wrap">
           <h2 class="cart-order-title">Thông tin đặt hàng</h2>
+
+          @if (!(user$ | async)) {
+          <div class="guest-checkout-banner">
+            <div class="guest-banner-icon">
+              <mat-icon>person_outline</mat-icon>
+            </div>
+            <div class="guest-banner-body">
+              <div class="guest-banner-title">Mua hàng nhanh không cần tài khoản</div>
+              <div class="guest-banner-text">
+                Bạn đang mua hàng với tư cách <strong>Khách vãng lai</strong>. Nếu đã có tài khoản, hãy
+                <a [routerLink]="['/' + ((lang$ | async) || 'vi') + '/auth/signin']" class="guest-link">Đăng nhập</a>
+                hoặc
+                <a [routerLink]="['/' + ((lang$ | async) || 'vi') + '/auth/signup']" class="guest-link">Đăng ký</a>
+                để lưu lịch sử đơn hàng. Hoặc chỉ cần điền thông tin bên dưới để hoàn tất đặt hàng ngay!
+              </div>
+            </div>
+          </div>
+          }
+
           <mat-horizontal-stepper [linear]="true" #stepper>
             <!-- BƯỚC 1: ĐỊA CHỈ NHẬN HÀNG -->
             <mat-step [stepControl]="orderForm">
@@ -557,13 +580,15 @@
 
               @if (isCardPaymentSelected()) {
               <app-card [price]="getFinalTotal(cart) | priceFormat" [currency]="currency$ | async"
-                [loading]="loading$ | async" (scrollToTop)="scrollToTop()" (payWithCardEmit)="payWithCard($event)">
+                [loading]="(loading$ | async) || isSubmittingOrder" (scrollToTop)="scrollToTop()"
+                (payWithCardEmit)="payWithCard($event)">
               </app-card>
               } @else {
               <button mat-raised-button color="primary" type="submit" class="submit-order-button"
-                [disabled]="orderForm.invalid || selectedItemIds.size === 0 || paymentMethodControl.invalid"
+                [disabled]="orderForm.invalid || selectedItemIds.size === 0 || paymentMethodControl.invalid || isSubmittingOrder"
                 (click)="submit()">
-                Hoàn tất đặt hàng ({{ getFinalTotal(cart) | priceFormat }} {{ (currency$ | async) || 'đ' }})
+                {{ isSubmittingOrder ? 'Đang xử lý đặt hàng...' : ('Hoàn tất đặt hàng (' + (getFinalTotal(cart) |
+                priceFormat) + ' ' + ((currency$ | async) || 'đ') + ')') }}
               </button>
               }
               <div>

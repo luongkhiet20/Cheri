@@ -1,4 +1,4 @@
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { NotificationService } from '../../../shared/notification/notification.service';
 import { map, distinctUntilChanged, filter, take, skip } from 'rxjs/operators';
 import { Component, ChangeDetectionStrategy, ChangeDetectorRef, OnDestroy, Signal, computed, effect, signal, Inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
@@ -9,7 +9,6 @@ import { Meta, Title } from '@angular/platform-browser';
 
 import { TranslateService } from '../../../../services/translate.service';
 import { WishlistService } from '../../../../services/wishlist.service';
-import { CartToastService } from '../../../../services/cart-toast.service';
 import { sortOptions } from '../../../shared/constants';
 import { Product, Category, Pagination, Cart } from '../../../shared/models';
 import { SignalStore } from '../../../../store/signal.store';
@@ -135,8 +134,7 @@ export class ProductsComponent implements OnDestroy {
     private selectors: SignalStoreSelectors,
     private route: ActivatedRoute,
     private router: Router,
-    private snackBar: MatSnackBar,
-    private cartToast: CartToastService,
+    private notify: NotificationService,
     private meta: Meta,
     private title: Title,
     private translate: TranslateService,
@@ -201,11 +199,11 @@ export class ProductsComponent implements OnDestroy {
   addToCart(id: string): void {
     const p = (this.products() || []).find((item: any) => (item._id || item.id) === id);
     if (p && (this.isOutOfStock(p) || p.visibility === false)) {
-      this.snackBar.open('Sản phẩm hiện đã hết hàng', 'Đóng', { duration: 3000 });
+      this.notify.warning('✨Sản phẩm hiện đã hết hàng✨');
       return;
     }
     this.store.addToCart('?id=' + id);
-    this.cartToast.show();
+    this.notify.success('✨Đã thêm sản phẩm vào giỏ hàng✨');
   }
 
   removeFromCart(id: string): void {
@@ -348,8 +346,11 @@ export class ProductsComponent implements OnDestroy {
     const next = this.selectedCategories().filter(c => c !== catUrl);
     this.selectedCategories.set(next);
     if (this.category()) {
+      const queryParams = { ...this.route.snapshot.queryParams };
+      queryParams['sort'] = this.sortBy() || queryParams['sort'] || 'newest';
+      queryParams['page'] = 1;
       this.router.navigate(['/' + this.lang() + '/product/all'], {
-        queryParams: { sort: this.sortBy() || 'newest', page: 1 },
+        queryParams,
       });
     }
     this.store.updatePosition({ productsComponent: 0 });

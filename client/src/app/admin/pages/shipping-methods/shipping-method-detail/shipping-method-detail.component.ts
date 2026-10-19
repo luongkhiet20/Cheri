@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
 import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
+import { formatVND } from '../../../../pipes/price.pipe';
 
 @Component({
   selector: 'app-shipping-method-detail',
@@ -190,9 +191,6 @@ export class ShippingMethodDetailComponent implements OnInit {
   }
 
   formatCurrency(value: number | null | undefined): string {
-    if (value === null || value === undefined || isNaN(Number(value))) {
-      return '0 đ';
-    }
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(value));
+    return formatVND(value);
   }
 }

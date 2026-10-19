@@ -38,11 +38,6 @@
                 "glob": "favicon.ico",
                 "input": "client/src",
                 "output": "."
-              },
-              {
-                "glob": "manifest.webmanifest",
-                "input": "client/src",
-                "output": "."
               }
             ],
             "styles": [

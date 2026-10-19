@@ -1,0 +1,1092 @@
+/* ── LEFT: Orders Section ── */
+.profile-orders-section {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Header: heading is strictly 18px */
+.orders-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #ebe5dc;
+  padding-bottom: 12px;
+  margin-bottom: 18px;
+}
+
+.orders-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f1b18;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.orders-sync-time {
+  font-size: 12px;
+  color: #8c8278;
+  white-space: nowrap;
+}
+
+/* Tabs */
+.orders-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+.order-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  background: #ffffff;
+  border: 1px solid #e2ddd5;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #38312b;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+}
+
+.order-tab-btn:hover {
+  background: #fbf9f6;
+  border-color: #cbbeae;
+}
+
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  background: #f3efe9;
+  border: 1px solid #dfd8cd;
+  color: #766a5e;
+  line-height: 1;
+}
+
+.order-tab-btn.active {
+  background: var(--cheri-primary, #74070E);
+  border-color: var(--cheri-primary, #74070E);
+  color: #ffffff;
+}
+
+.order-tab-btn.active .tab-badge {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: transparent;
+  color: #ffffff;
+}
+
+/* Loading */
+.orders-loading {
+  padding: 16px 0;
+}
+
+.orders-loading-bar {
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #ede7de 25%, rgba(116, 7, 14, 0.2) 50%, #ede7de 75%);
+  background-size: 200% 100%;
+  animation: ordershimmer 1.4s infinite;
+}
+
+@keyframes ordershimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Empty State Container (No icon) */
+.orders-empty-box {
+  background: #fbf9f6;
+  border: 1px solid #ede8e1;
+  border-radius: 12px;
+  padding: 64px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 280px;
+  box-sizing: border-box;
+}
+
+.empty-text {
+  font-size: 13.5px;
+  color: #7d7267;
+  margin: 0 0 16px;
+  font-weight: 400;
+}
+
+.empty-shop-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cheri-primary, #74070E);
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 9px 22px;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.empty-shop-btn:hover {
+  background: #56050a;
+}
+
+/* ── Orders List with Structured Cards ── */
+.orders-list-box {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.order-card {
+  background: #ffffff;
+  border: 1px solid #ebe5dc;
+  border-radius: 12px;
+  padding: 22px 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.order-card:hover {
+  border-color: #d8cebf;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+/* Card Header */
+.order-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.order-code-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #241f1c;
+}
+
+.order-created-date {
+  font-size: 12px;
+  color: #887e74;
+  margin-top: 3px;
+}
+
+.order-header-right {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Status Pill (No icon) */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-delivered {
+  background: #e8f8f0;
+  border: 1px solid #c3edd7;
+  color: #0e8a52;
+}
+
+.status-pending {
+  background: #fff8eb;
+  border: 1px solid #fed7aa;
+  color: #b45309;
+}
+
+.status-confirmed {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+}
+
+.status-processing {
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  color: #6d28d9;
+}
+
+.status-shipping {
+  background: #ecfeff;
+  border: 1px solid #a5f3fc;
+  color: #0e7490;
+}
+
+.status-cancelled {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+
+.status-returned {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #4b5563;
+}
+
+.order-card-divider {
+  height: 1px;
+  background: #eee9e2;
+  margin: 16px 0;
+  border: none;
+}
+
+/* Order Items */
+.order-items-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.order-product-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.product-thumb-box {
+  width: 68px;
+  height: 80px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #faf8f5;
+  border: 1px solid #ede7df;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.product-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.product-details-box {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.product-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #221e1a;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.product-variants-row {
+  font-size: 12px;
+  color: #7d7267;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.product-variants-row strong {
+  color: #221e1a;
+  font-weight: 600;
+}
+
+.variant-separator {
+  color: #d1c8bd;
+  margin: 0 2px;
+}
+
+.product-price-box {
+  font-size: 14px;
+  font-weight: 600;
+  color: #221e1a;
+  white-space: nowrap;
+  margin-left: 12px;
+}
+
+/* Mid bar: Summary & Action Buttons */
+.order-action-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.summary-left-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.total-vat-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.vat-label {
+  font-size: 13px;
+  color: #6d6359;
+}
+
+/* All totals strictly smaller than 18px */
+.vat-amount {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--cheri-primary, #74070E);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.review-deadline-text {
+  font-size: 11.5px;
+  color: #8e8378;
+}
+
+.action-buttons-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Nút Đã đánh giá: Hiển thị trạng thái đơn hàng đã được đánh giá */
+.btn-action-reviewed {
+  background: #FFF4E6;
+  color: #E47A4E;
+  border: 1px solid #FFE2CA;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: default;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: inherit;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.btn-action-primary {
+  background: var(--cheri-primary, #74070E);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.btn-action-primary:hover {
+  background: #56050a;
+}
+
+/* Nút Hủy yêu cầu đổi trả (Khi đang ở PENDING) */
+.btn-action-cancel-return {
+  background: var(--cheri-primary, #74070E);
+  color: #ffffff;
+  border: 1px solid var(--cheri-primary, #74070E);
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.btn-action-cancel-return:hover:not(:disabled) {
+  background: #56050a;
+  border-color: #56050a;
+  box-shadow: 0 2px 6px rgba(116, 7, 14, 0.25);
+}
+
+.btn-action-cancel-return:focus-visible {
+  outline: 2px solid #74070E;
+  outline-offset: 2px;
+}
+
+.btn-action-cancel-return:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.btn-action-outline {
+  background: #ffffff;
+  color: #332d27;
+  border: 1px solid #dcd5cb;
+  border-radius: 6px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-action-outline:hover {
+  background: #fbf9f6;
+  border-color: #b5aba0;
+}
+
+.btn-action-cancel {
+  background: #ffffff;
+  color: var(--cheri-primary, #74070E);
+  border: 1px solid #74070E;
+  border-radius: 6px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.btn-action-cancel:hover {
+  background: var(--cheri-primary, #74070E);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(116, 7, 14, 0.22);
+}
+
+.btn-action-more {
+  background: #ffffff;
+  color: #332d27;
+  border: 1px solid #dcd5cb;
+  border-radius: 6px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-action-more:hover {
+  background: #fbf9f6;
+  border-color: #b5aba0;
+}
+
+/* Shipping Address Strip (No icon) */
+.order-shipping-strip {
+  background: #fbf9f6;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-top: 14px;
+  font-size: 12.5px;
+  color: #584e45;
+}
+
+.shipping-strip-text {
+  line-height: 1.45;
+}
+
+.shipping-strip-text strong {
+  color: #221e1a;
+  font-weight: 600;
+}
+
+/* Bottom Tracking & Final Total */
+.order-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 14px;
+  padding-top: 6px;
+}
+
+.btn-track-route {
+  display: inline-flex;
+  align-items: center;
+  background: #fdf5f5;
+  border: 1px solid #f2d8d8;
+  border-radius: 6px;
+  padding: 8px 15px;
+  color: var(--cheri-primary, #74070E);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.btn-track-route:hover {
+  background: #faeaea;
+  border-color: #e5bebe;
+}
+
+.footer-final-total {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.final-total-label {
+  font-size: 12.5px;
+  color: #766a5e;
+}
+
+.final-total-val {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--cheri-primary, #74070E);
+}
+
+/* ── Return & Refund Tracking in Profile ── */
+.status-pill-return {
+  background: #fdf2f3;
+  color: #74070e;
+  border: 1px solid #fecdd3;
+  margin-left: 6px;
+  font-weight: 600;
+}
+
+.order-return-tracking-box {
+  margin: 12px 0 0;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 16px;
+  background: #fdf2f3;
+  border: 1px solid #fce7e9;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.order-return-tracking-box.is-collapsed {
+  gap: 0;
+}
+
+.return-box-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px dashed #fecdd3;
+  padding-bottom: 8px;
+  transition: border-bottom 0.2s ease, padding-bottom 0.2s ease;
+}
+
+.order-return-tracking-box.is-collapsed .return-box-header {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.return-box-title-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.return-box-title {
+  font-size: 13px;
+  color: #74070e;
+}
+
+.return-box-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Nút Xem / Thu gọn tiến trình */
+.btn-toggle-tracking {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background-color: #ffffff;
+  border: 1px solid #fecdd3;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #74070e;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.btn-toggle-tracking:hover {
+  background-color: #fff1f2;
+  border-color: #74070e;
+}
+
+.btn-toggle-tracking:focus-visible {
+  outline: 2px solid #74070e;
+  outline-offset: 2px;
+}
+
+.toggle-arrow {
+  transition: transform 0.25s ease;
+  stroke: #74070e;
+}
+
+.toggle-arrow.rotated {
+  transform: rotate(180deg);
+}
+
+.return-tracking-collapsible-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+  animation: fadeInReturnBody 0.2s ease-out;
+}
+
+@keyframes fadeInReturnBody {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.return-status-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #74070e;
+  color: #fff;
+}
+
+.return-status-pill.status-completed {
+  background: #15803d;
+  color: #ffffff;
+}
+
+.return-refund-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #74070e;
+  border: 1px solid #fecdd3;
+}
+
+.return-box-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #334155;
+}
+
+.return-detail-item {
+  display: flex;
+  gap: 6px;
+  line-height: 1.4;
+}
+
+.return-detail-item.reject {
+  color: #b91c1c;
+  background: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #fca5a5;
+}
+
+.return-detail-item.instructions {
+  display: flex;
+  gap: 6px;
+  line-height: 1.4;
+  color: #92400e;
+}
+
+.return-detail-item.refund {
+  color: #15803d;
+  font-size: 12px;
+}
+
+.return-detail-item.refund .item-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #15803d;
+}
+
+.return-detail-item.refund .item-val {
+  font-size: 12px;
+  font-weight: 700;
+  color: #15803d;
+}
+
+.return-detail-item .item-label {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── Return Stepper (Timeline đường mảnh 6 giai đoạn - Thin Line Timeline Stepper) ── */
+.return-stepper {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 4px 8px;
+  background: transparent;
+  border-radius: 0;
+  border: none;
+  box-sizing: border-box;
+  margin: 4px 0 8px;
+  overflow: hidden;
+}
+
+.stepper-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex: 0 1 76px;
+  min-width: 52px;
+  max-width: 82px;
+  box-sizing: border-box;
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+  transition: transform 0.15s ease;
+}
+
+.stepper-step:hover .step-circle {
+  transform: scale(1.1);
+}
+
+/* Nút tròn kích thước 20px (18–20px), hiển thị số thứ tự hoặc dấu tích ✓ */
+.step-circle {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+  z-index: 2;
+}
+
+/* Đường nối ngang mảnh 1px, liền mạch đi qua tâm các nút (tâm nút 20px là Y=10px) */
+.stepper-line {
+  flex: 1 1 0%;
+  height: 1px;
+  background: #e2e8f0;
+  margin-top: 10px;
+  margin-left: 2px;
+  margin-right: 2px;
+  min-width: 8px;
+  transition: background 0.2s ease;
+}
+
+/* Tên giai đoạn bên dưới nút: khoảng cách 6–8px (7px), font 11–12px, font-weight 400 */
+.step-label {
+  font-size: 11.5px;
+  font-weight: 400;
+  line-height: 1.3;
+  color: #64748b;
+  margin-top: 7px;
+  text-align: center;
+  width: 100%;
+  word-break: normal;
+  overflow-wrap: break-word;
+  white-space: normal;
+  transition: color 0.2s ease, font-weight 0.2s ease;
+}
+
+/* 1. Bước đã hoàn thành: Nút tròn màu chuẩn #15803d, dấu ✓, đường nối màu hoàn thành */
+.stepper-step.done .step-circle {
+  background: #15803d;
+  border: 1px solid #15803d;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.stepper-step.done .step-label {
+  color: #15803d;
+  font-weight: 400;
+}
+
+.stepper-line.done {
+  background: #15803d;
+}
+
+/* 2. Bước đang xử lý: Số thứ tự trong nút tròn, viền nhấn nhẹ, tên bước font-weight 600 */
+.stepper-step.active .step-circle {
+  background: #ffffff;
+  border: 1.5px solid #74070e;
+  color: #74070e;
+  box-shadow: 0 0 0 2px rgba(116, 7, 14, 0.12);
+  font-weight: 600;
+}
+
+.stepper-step.active .step-label {
+  color: #74070e;
+  font-weight: 600;
+}
+
+/* 3. Giai đoạn đang được chọn nhấn xem chi tiết (is-selected) */
+.stepper-step.is-selected .step-circle {
+  outline: 2px solid #0f172a;
+  outline-offset: 2px;
+}
+
+.stepper-step.done.is-selected .step-circle {
+  outline: 2px solid #15803d;
+  outline-offset: 2px;
+}
+
+.stepper-step.active.is-selected .step-circle {
+  outline: 2px solid #74070e;
+  outline-offset: 2px;
+}
+
+.stepper-step.is-selected .step-label {
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* 4. Khi hoàn tất: Cả 6 bước thể hiện trạng thái hoàn thành */
+.return-stepper.is-completed .step-circle {
+  background: #15803d;
+  border: 1px solid #15803d;
+  color: #ffffff;
+}
+
+.return-stepper.is-completed .step-label {
+  color: #15803d;
+  font-weight: 400;
+}
+
+.return-stepper.is-completed .stepper-step:last-child .step-label {
+  font-weight: 600;
+}
+
+.return-stepper.is-completed .stepper-line {
+  background: #15803d;
+}
+
+/* 5. Khung chi tiết theo từng giai đoạn (Stage Detail Box) */
+.return-box-stage-detail {
+  margin-top: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.stage-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.stage-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stage-num {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.stage-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.stage-state-tag {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  line-height: 1.2;
+}
+
+.stage-state-tag.tag-done {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.stage-state-tag.tag-current {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.stage-state-tag.tag-future {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.stage-detail-content {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: #334155;
+  animation: fadeInStage 0.18s ease-in-out;
+}
+
+@keyframes fadeInStage {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.return-stage-item {
+  font-size: 12px;
+  color: #334155;
+  padding: 2px 0;
+  line-height: 1.4;
+}
+
+.stage-empty-msg {
+  font-size: 11.5px;
+  color: #64748b;
+  font-style: italic;
+  padding: 4px 0;
+}
+
+/* Responsive */
+@media (max-width: 680px) {
+  .orders-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .order-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .order-product-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .product-price-box {
+    margin-left: 0;
+  }
+
+  .order-action-summary-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .action-buttons-group {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .order-card-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .return-stepper {
+    padding: 8px 0 6px;
+  }
+
+  .stepper-step {
+    min-width: 46px;
+    max-width: 62px;
+  }
+
+  .step-label {
+    font-size: 10.5px;
+    margin-top: 6px;
+  }
+
+  .stepper-line {
+    min-width: 4px;
+    margin-left: 1px;
+    margin-right: 1px;
+  }
+}

@@ -1,7 +1,12 @@
 import { Document, Types } from 'mongoose';
 
 // ─── Enum (re-export từ schema để dùng ở service) ────────────────────────────
-export { OrderStatus, PaymentStatus } from '../schemas/order.schema';
+export {
+  OrderStatus,
+  PaymentStatus,
+  ReturnRequestStatus,
+  RefundStatus,
+} from '../schemas/order.schema';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -23,6 +28,71 @@ export interface OrderItem {
   quantity: number;
   unitPrice: number;
   subtotal: number;
+}
+
+export interface ReturnItem {
+  productId: Types.ObjectId;
+  variantId?: Types.ObjectId | string | null;
+  productSnapshot: ProductSnapshot;
+  quantity: number;
+  boughtQuantity: number;
+  unitPrice: number;
+  subtotal: number;
+  reason?: string;
+  inspectedQuantity?: number;
+  eligibleQuantity?: number;
+  damagedQuantity?: number;
+  isEligible?: boolean | null;
+  conditionNotes?: string;
+}
+
+export interface ReturnHistoryEntry {
+  action: string;
+  fromStatus?: string;
+  toStatus: string;
+  updatedAt: Date;
+  updatedBy?: Types.ObjectId | string | null;
+  note?: string;
+}
+
+export interface ReturnRequest {
+  requestId: string;
+  requestedAt: Date;
+  reason: string;
+  description?: string;
+  images?: string[];
+  refundMethod: string;
+  status: string;
+  rejectionReason?: string;
+  items: ReturnItem[];
+  returnShipping?: {
+    carrier?: string;
+    trackingCode?: string;
+    shippedAt?: Date | null;
+    receivedAt?: Date | null;
+    instructions?: string;
+  };
+  inspection?: {
+    inspectedAt?: Date | null;
+    inspectedBy?: Types.ObjectId | string | null;
+    conditionNotes?: string;
+    isEligible?: boolean | null;
+    restocked?: boolean;
+  };
+  refund?: {
+    status: string;
+    requestedAmount: number;
+    approvedAmount: number;
+    refundedAmount: number;
+    transactionId?: string;
+    bankName?: string;
+    accountNumber?: string;
+    accountHolder?: string;
+    refundedAt?: Date | null;
+    failureReason?: string;
+    notes?: string;
+  };
+  history: ReturnHistoryEntry[];
 }
 
 export interface ShippingAddress {
@@ -83,6 +153,11 @@ export interface OrderPaymentInfo {
   paidAt?: Date | null;
   refundedAmount?: number;
   refundedAt?: Date | null;
+  actualCollectedAmount?: number;
+  codCollected?: boolean;
+  codCollectedAt?: Date | null;
+  codReconciliationStatus?: string;
+  codReconciledAt?: Date | null;
 }
 
 export interface OrderShippingInfo {
@@ -104,6 +179,12 @@ export interface Order extends Document {
   customerPhone?: string;
   status: string;
   notes?: string;
+
+  // Thông tin hủy đơn hàng
+  cancelReason?: string;
+  cancelReasonDetail?: string;
+  cancelledAt?: Date;
+  cancelledBy?: Types.ObjectId;
 
   // Sản phẩm
   items: OrderItem[];
@@ -147,6 +228,10 @@ export interface Order extends Document {
 
   // Lịch sử
   statusHistory: StatusHistoryEntry[];
+
+  // Yêu cầu đổi trả / hoàn tiền
+  returnRequests?: ReturnRequest[];
+  returnRequest?: any;
 
   // Timestamps
   createdAt: Date;

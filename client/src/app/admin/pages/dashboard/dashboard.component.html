@@ -200,7 +200,7 @@
           </div>
         </div>
         <div class="kpi-card__value kpi-card__value--highlight">
-          {{ stats.totalRevenue | currency:'VND':'symbol':'1.0-0' }}
+          {{ stats.totalRevenue | priceFormat }} đ
         </div>
         <div class="kpi-card__foot">
           <ng-container *ngIf="getChangePct() !== null; else noChange1">
@@ -299,7 +299,7 @@
         <div class="rev-summary-row" *ngIf="stats">
           <div class="rev-summary-total">
             <span class="rev-summary-label">Tổng kỳ này</span>
-            <span class="rev-summary-value">{{ stats.totalRevenue | currency:'VND':'symbol':'1.0-0' }}</span>
+            <span class="rev-summary-value">{{ stats.totalRevenue | priceFormat }} đ</span>
           </div>
           <div *ngIf="getChangePct() !== null" class="rev-summary-change" [class.rev-change--up]="getChangePct()! > 0"
             [class.rev-change--down]="getChangePct()! < 0">

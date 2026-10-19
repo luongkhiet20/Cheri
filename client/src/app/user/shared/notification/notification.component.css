@@ -1,0 +1,227 @@
+/* ── 1. CONTAINER CHÍNH CỦA NOTIFICATION ── */
+.cheri-notification-container {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999999;
+  /* Luôn nổi trên tất cả thành phần: header, modal backdrop, dialog, chat widget */
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  max-width: 90vw;
+  box-sizing: border-box;
+  padding: 0 16px;
+}
+
+/* ── 2. TOAST PILL (DẠNG VIÊN THUỐC BO TRÒN 999PX, NỀN ĐỎ RƯỢU VANG #74070E) ── */
+.cheri-notification-pill {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 999px;
+  padding: 9px 22px;
+  background-color: #74070E;
+  /* Màu đỏ rượu vang đặc trưng của thương hiệu Chéri */
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 28px rgba(116, 7, 14, 0.38), 0 4px 12px rgba(0, 0, 0, 0.2);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: 0.25px;
+  max-width: 100%;
+  word-break: break-word;
+  user-select: none;
+  cursor: pointer;
+  animation: cheriToastSlideDown 0.36s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  will-change: transform, opacity;
+  outline: none;
+}
+
+.cheri-notification-pill:hover {
+  box-shadow: 0 12px 32px rgba(116, 7, 14, 0.46), 0 6px 14px rgba(0, 0, 0, 0.26);
+  transform: translateY(-1px);
+}
+
+.cheri-notification-pill:active {
+  transform: translateY(0);
+}
+
+.cheri-notification-pill:focus-visible {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5), 0 10px 28px rgba(116, 7, 14, 0.4);
+}
+
+/* ── 3. BIỂU TƯỢNG ✨ Ở HAI BÊN ── */
+.notify-sparkle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 14px;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+  color: #ffffff;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+}
+
+/* ── 4. NỘI DUNG THÔNG BÁO Ở CHÍNH GIỮA ── */
+.notify-text {
+  flex: 0 1 auto;
+  color: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  text-align: center;
+  white-space: normal;
+  pointer-events: none;
+}
+
+/* ── 5. CÁC BIẾN THỂ LOẠI THÔNG BÁO ── */
+/* Success (Thành công - Mặc định thương hiệu Chéri #74070E) */
+.cheri-notification-pill.type-success {
+  background-color: #74070E;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 28px rgba(116, 7, 14, 0.38), 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Error (Lỗi) */
+.cheri-notification-pill.type-error {
+  background-color: #991B1B;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 10px 28px rgba(153, 27, 27, 0.38), 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Warning (Cảnh báo) */
+.cheri-notification-pill.type-warning {
+  background-color: #92400E;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 10px 28px rgba(146, 64, 14, 0.38), 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Info (Thông tin) */
+.cheri-notification-pill.type-info {
+  background-color: #74070E;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 28px rgba(116, 7, 14, 0.38), 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* ── 6. HIỆU ỨNG BIẾN MẤT (SLIDE UP, SCALE DOWN & FADE OUT) ── */
+.cheri-notification-pill.is-leaving {
+  animation: cheriToastSlideUp 0.28s cubic-bezier(0.32, 0, 0.2, 1) forwards;
+  pointer-events: none;
+}
+
+/* ── 7. KEYFRAME ANIMATIONS ── */
+/* Xuất hiện: trượt từ trên xuống, fade-in và scale nhẹ */
+@keyframes cheriToastSlideDown {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.94);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Biến mất: mờ dần, thu nhỏ nhẹ và trượt ngược lên trên */
+@keyframes cheriToastSlideUp {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-18px) scale(0.94);
+  }
+}
+
+/* ── 8. HỖ TRỢ GIẢM HIỆU ỨNG (PREFERS-REDUCED-MOTION) ── */
+@media (prefers-reduced-motion: reduce) {
+  .cheri-notification-pill {
+    animation: cheriToastFadeIn 0.2s ease-in-out forwards;
+  }
+
+  .cheri-notification-pill.is-leaving {
+    animation: cheriToastFadeOut 0.2s ease-in-out forwards;
+  }
+}
+
+@keyframes cheriToastFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes cheriToastFadeOut {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+/* ── 9. RESPONSIVE DESIGN TRÊN MOBILE VÀ TABLET ── */
+@media (max-width: 768px) {
+  .cheri-notification-container {
+    top: 18px;
+    max-width: 94vw;
+    padding: 0 10px;
+  }
+
+  .cheri-notification-pill {
+    padding: 8px 16px;
+    gap: 8px;
+    font-size: 13px;
+  }
+
+  .notify-sparkle {
+    font-size: 13px;
+  }
+
+  .notify-text {
+    font-size: 12.5px;
+  }
+}
+
+@media (max-width: 480px) {
+  .cheri-notification-container {
+    top: 14px;
+    max-width: 96vw;
+    padding: 0 8px;
+  }
+
+  .cheri-notification-pill {
+    padding: 7px 14px;
+    gap: 7px;
+  }
+
+  .notify-sparkle {
+    font-size: 12px;
+  }
+
+  .notify-text {
+    font-size: 12px;
+    line-height: 1.35;
+  }
+}

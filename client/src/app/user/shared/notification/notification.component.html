@@ -1,0 +1,20 @@
+<div class="cheri-notification-container" *ngIf="current as notif" aria-live="polite" role="status">
+  <div
+    class="cheri-notification-pill"
+    [ngClass]="['type-' + notif.type, notif.isLeaving ? 'is-leaving' : '']"
+    (click)="onClose()"
+    tabindex="0"
+    (keydown.enter)="onClose()"
+    (keydown.space)="onClose()"
+    title="Nhấp để đóng thông báo"
+  >
+    <!-- Biểu tượng ✨ bên trái -->
+    <span class="notify-sparkle notify-sparkle-left" aria-hidden="true">✨</span>
+
+    <!-- Nội dung thông báo ở chính giữa -->
+    <span class="notify-text">{{ getCleanMessage(notif.message) }}</span>
+
+    <!-- Biểu tượng ✨ bên phải -->
+    <span class="notify-sparkle notify-sparkle-right" aria-hidden="true">✨</span>
+  </div>
+</div>

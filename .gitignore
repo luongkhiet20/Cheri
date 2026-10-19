@@ -60,9 +60,44 @@ typings/
 # Yarn Integrity file
 .yarn-integrity
 
-# dotenv environment variables file
+# Environment & Secrets (Never commit secrets!)
 .env
-.env.test
+.env.*
+.env*.local
+.env.vercel*
+*.env
+!.env.example
+!server/ml/.env.example
+
+# Vercel & Serverless Deployment
+.vercel
+.serverless/
+
+# Python Virtual Environments & ML Cache
+.venv/
+venv/
+env/
+server/ml/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Private Keys, Certificates & SSL
+*.key
+*.pem
+*.crt
+localhost.key
+localhost.crt
+
+# Uploaded Files & Temporary Assets
+server/uploads/*
+!server/uploads/.gitkeep
+
+# IDE & OS Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
@@ -70,9 +105,6 @@ typings/
 # Nuxt.js build / generate output
 .nuxt
 dist
-
-# Serverless directories
-.serverless/
 
 # TernJS port file
 .tern-port

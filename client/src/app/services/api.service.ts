@@ -9,7 +9,7 @@ import { environment } from '../../environments/environment';
 import { Translations } from '../user/shared/models';
 import { accessTokenKey } from '../user/shared/constants';
 import { SignalStoreSelectors } from '../store/signal.store.selectors';
-import { BehaviorSubject, combineLatest, Observable, of } from 'rxjs';
+import { BehaviorSubject, combineLatest, Observable, of, Subject } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -19,6 +19,7 @@ export class ApiService {
   ranNumber = 0;
   private currentLang = 'vi';
   currentUser$ = new BehaviorSubject<any>(null);
+  public readonly reviewCreated$ = new Subject<{ productId: string; review?: any }>();
 
   constructor(
     private readonly http: HttpClient,
@@ -75,6 +76,10 @@ export class ApiService {
         return;
       }
       if (cartData && Array.isArray(cartData.items)) {
+        if (cartData.items.length === 0) {
+          localStorage.removeItem('cheri_guest_cart');
+          return;
+        }
         const items = cartData.items.map((ci: any) => ({
           productId: ci.item?._id || ci.item?.id || (ci.id && ci.id.includes('_') ? ci.id.split('_')[0] : ci.id),
           variantId: ci.variantId || null,
@@ -84,15 +89,19 @@ export class ApiService {
           selectedSize: ci.selectedSize || null,
         }));
         localStorage.setItem('cheri_guest_cart', JSON.stringify(items));
+      } else if (cartData && !cartData.items) {
+        localStorage.removeItem('cheri_guest_cart');
       }
     } catch {}
   }
 
-  public clearGuestCartLocal(): void {
+  public clearGuestCartLocal(removeId: boolean = false): void {
     if (!isPlatformBrowser(this.platformId)) return;
     try {
       localStorage.removeItem('cheri_guest_cart');
-      localStorage.removeItem('cheri_guest_cart_id');
+      if (removeId) {
+        localStorage.removeItem('cheri_guest_cart_id');
+      }
     } catch {}
   }
 
@@ -193,6 +202,45 @@ export class ApiService {
     return this.http.post(sendContact, req, this.getRequestOptions()).pipe(
       map((response: any) => response),
       catchError((error: Error) => of({ error })),
+    );
+  }
+
+  exchangeToken(code: string): Observable<any> {
+    const exchangeUrl = this.apiUrl + '/api/auth/exchange-token';
+    return this.http.post(exchangeUrl, { code }, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
+  requestPasswordReset(email: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(
+      `${this.apiUrl}/api/auth/forgot-password`,
+      { email },
+      this.getRequestOptions(),
+    );
+  }
+
+  verifyPasswordResetOtp(
+    email: string,
+    otp: string,
+  ): Observable<{ message: string; resetToken: string }> {
+    return this.http.post<{ message: string; resetToken: string }>(
+      `${this.apiUrl}/api/auth/verify-reset-otp`,
+      { email, otp },
+      this.getRequestOptions(),
+    );
+  }
+
+  resetPassword(
+    email: string,
+    resetToken: string,
+    newPassword: string,
+  ): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(
+      `${this.apiUrl}/api/auth/reset-password`,
+      { email, resetToken, newPassword },
+      this.getRequestOptions(),
     );
   }
 
@@ -334,6 +382,37 @@ export class ApiService {
     );
   }
 
+  getRecommendations(
+    paramsOrProductId?: string | { productId?: string; limit?: number; lang?: string },
+    limit?: number,
+    lang?: string
+  ): Observable<any> {
+    let pId: string | undefined;
+    let lim: number | undefined;
+    let l: string | undefined;
+
+    if (typeof paramsOrProductId === 'object' && paramsOrProductId !== null) {
+      pId = paramsOrProductId.productId;
+      lim = paramsOrProductId.limit;
+      l = paramsOrProductId.lang;
+    } else if (typeof paramsOrProductId === 'string') {
+      pId = paramsOrProductId;
+      lim = limit;
+      l = lang;
+    }
+
+    const queryParts: string[] = [];
+    if (pId) queryParts.push('productId=' + encodeURIComponent(pId));
+    if (lim) queryParts.push('limit=' + lim);
+    if (l) queryParts.push('lang=' + encodeURIComponent(l));
+    const qs = queryParts.length ? '?' + queryParts.join('&') : '';
+    const recUrl = `${this.apiUrl}/api/recommendations${qs}`;
+    return this.http.get(recUrl, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: any) => of({ status: 'error', error, products: [] })),
+    );
+  }
+
   addProduct(product) {
     const addProductUrl = this.apiUrl + '/api/products/add';
     return this.http.post(addProductUrl, product, this.getRequestOptions()).pipe(
@@ -446,13 +525,15 @@ export class ApiService {
     );
   }
 
-  deleteOrder(orderId: string) {
-    const orderDeleteUrl = this.apiUrl + '/api/orders/' + orderId;
-    return this.http.delete(orderDeleteUrl, this.getRequestOptions()).pipe(
+  cancelOrder(orderId: string, payload: { reason: string; reasonDetail?: string } | string) {
+    const cancelUrl = `${this.apiUrl}/api/orders/${orderId}/cancel`;
+    const body = typeof payload === 'string' ? { reason: payload } : payload;
+    return this.http.post(cancelUrl, body, this.getRequestOptions()).pipe(
       map((response: any) => response),
-      catchError((error: Error) => of({ error })),
+      catchError((error: any) => of({ error: error?.error?.message || error?.message || 'Có lỗi xảy ra khi hủy đơn hàng' })),
     );
   }
+
 
   trackOrder(payload: { trackingCode?: string; authContact?: string; orderId?: string; trackingNumber?: string; email?: string; phone?: string }) {
     const trackUrl = this.apiUrl + '/api/orders/track';
@@ -510,6 +591,35 @@ export class ApiService {
     return this.http.delete(this.apiUrl + '/api/orders/shipping-methods/' + id, this.getRequestOptions()).pipe(
       map((response: any) => response),
       catchError((error: Error) => of({ error })),
+    );
+  }
+
+  // ─── Store Contact / Sender Info (Hóa đơn) ────────────────────────────────
+  getStoreContact(): Observable<{ email?: string; phone?: string; address?: string }> {
+    const storeContactUrl = this.apiUrl + '/api/orders/store-contact';
+    return this.http.get<any>(storeContactUrl, this.getRequestOptions()).pipe(
+      map((res: any) => {
+        const contact = res?.data || res || {};
+        return {
+          email: contact.email ? String(contact.email).trim() : '',
+          phone: contact.phone ? String(contact.phone).trim() : '',
+          address: contact.address ? String(contact.address).trim() : '',
+        };
+      }),
+      catchError(() => {
+        const fallbackUrl = (environment.adminApiUrl || 'http://localhost:5000/api') + '/settings';
+        return this.http.get<any>(fallbackUrl).pipe(
+          map((res: any) => {
+            const contact = res?.data?.contact || res?.contact || {};
+            return {
+              email: contact.email ? String(contact.email).trim() : '',
+              phone: contact.phone ? String(contact.phone).trim() : '',
+              address: contact.address ? String(contact.address).trim() : '',
+            };
+          }),
+          catchError(() => of({ email: '', phone: '', address: '' }))
+        );
+      })
     );
   }
 
@@ -662,6 +772,16 @@ export class ApiService {
     );
   }
 
+  clearCart(lang = 'vi') {
+    this.ranNumber = this.ranNumber + 1;
+    const randomNum = '&random=' + this.ranNumber;
+    const url = `${this.apiUrl}/api/cart/clear?lang=${lang}${randomNum}`;
+    return this.http.get(url, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: Error) => of({ error })),
+    );
+  }
+
   validateCoupon(code: string, subtotal: number) {
     const url = `${this.apiUrl}/api/orders/coupon/validate`;
     return this.http.post(url, { code, subtotal }, this.getRequestOptions()).pipe(
@@ -728,9 +848,13 @@ export class ApiService {
     );
   }
 
-  uploadImage({ fileToUpload, titleUrl }: { fileToUpload: any; titleUrl?: string }) {
+  uploadImage({ fileToUpload, titleUrl, folder }: { fileToUpload: any; titleUrl?: string; folder?: string }) {
     if (isPlatformBrowser(this.platformId)) {
-      const titleUrlQuery = titleUrl ? '?titleUrl=' + titleUrl : '';
+      const params = new URLSearchParams();
+      if (titleUrl) params.set('titleUrl', titleUrl);
+      if (folder) params.set('folder', folder);
+      const queryString = params.toString() ? '?' + params.toString() : '';
+
       const accessToken = localStorage.getItem(accessTokenKey);
       const formData: FormData = new FormData();
       formData.append('file', fileToUpload);
@@ -740,7 +864,7 @@ export class ApiService {
         headers = headers.set('Authorization', 'Bearer ' + accessToken);
       }
       const sendHeaders = { headers, withCredentials: true };
-      const uploadUrl = this.apiUrl + '/api/admin/images/upload' + titleUrlQuery;
+      const uploadUrl = this.apiUrl + '/api/admin/images/upload' + queryString;
 
       return this.http
         .post(uploadUrl, formData, {
@@ -753,6 +877,31 @@ export class ApiService {
           catchError((error: Error) => of({ error })),
         );
     }
+    return of(null);
+  }
+
+  getCloudinarySignature(folder: string = 'cheri/products'): Observable<any> {
+    const accessToken = localStorage.getItem(accessTokenKey);
+    let headers = new HttpHeaders();
+    if (accessToken && accessToken !== 'null' && accessToken !== 'undefined') {
+      headers = headers.set('Authorization', 'Bearer ' + accessToken);
+    }
+    return this.http.get(`${this.apiUrl}/api/admin/cloudinary-signature?folder=${encodeURIComponent(folder)}`, {
+      headers,
+      withCredentials: true
+    });
+  }
+
+  uploadDirectToCloudinary(file: File, sigData: any): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('api_key', sigData.apiKey);
+    formData.append('timestamp', String(sigData.timestamp));
+    formData.append('signature', sigData.signature);
+    formData.append('folder', sigData.folder);
+
+    const cloudUploadUrl = `https://api.cloudinary.com/v1_1/${sigData.cloudName}/image/upload`;
+    return this.http.post(cloudUploadUrl, formData);
   }
 
   sendContact(req) {
@@ -919,6 +1068,130 @@ export class ApiService {
     );
   }
 
+  public recordInteraction(payload: {
+    productId: string;
+    variantId?: string | null;
+    eventType?: string;
+    sessionId?: string;
+  }): Observable<any> {
+    const url = `${this.apiUrl}/api/interactions`;
+    const guestCartId = this.getOrCreateGuestCartId();
+    let headers = new HttpHeaders({
+      'Content-Type': 'application/json',
+    });
+    if (guestCartId) {
+      headers = headers.set('x-guest-cart-id', guestCartId);
+    }
+    if (isPlatformBrowser(this.platformId)) {
+      try {
+        const token = localStorage.getItem(accessTokenKey);
+        if (token && token !== 'null' && token !== 'undefined' && token.trim() !== '') {
+          headers = headers.set('Authorization', `Bearer ${token}`);
+        }
+      } catch {}
+    }
+
+    const body = {
+      productId: payload.productId,
+      variantId: payload.variantId || null,
+      eventType: payload.eventType || 'VIEW',
+      sessionId: payload.sessionId || guestCartId || undefined,
+    };
+
+    return this.http.post(url, body, { headers }).pipe(
+      catchError((err) => {
+        // Ghi nhận lỗi ngầm, không làm gián đoạn trải nghiệm của người dùng
+        return of({ success: false, error: err?.message || 'Tracking error' });
+      }),
+    );
+  }
+
+  // ─── Product Reviews APIs ──────────────────────────────────────────────────
+  getProductReviewStats(productId: string): Observable<any> {
+    const url = `${this.apiUrl}/api/reviews/product/${encodeURIComponent(productId)}/stats`;
+    return this.http.get(url);
+  }
+
+  getProductReviews(
+    productId: string,
+    query?: { page?: number; limit?: number; rating?: number; sortBy?: string },
+  ): Observable<any> {
+    const url = `${this.apiUrl}/api/reviews/product/${encodeURIComponent(productId)}`;
+    let params = new HttpParams();
+    if (query?.page) params = params.set('page', query.page.toString());
+    if (query?.limit) params = params.set('limit', query.limit.toString());
+    if (query?.rating) params = params.set('rating', query.rating.toString());
+    if (query?.sortBy) params = params.set('sortBy', query.sortBy);
+    return this.http.get(url, { params });
+  }
+
+  checkReviewEligibility(productId: string, orderId?: string): Observable<any> {
+    let url = `${this.apiUrl}/api/reviews/check-eligible/${encodeURIComponent(productId)}`;
+    if (orderId) {
+      url += `?orderId=${encodeURIComponent(orderId)}`;
+    }
+    return this.http.get(url);
+  }
+
+  createProductReview(payload: {
+    productId: string;
+    rating: number;
+    comment: string;
+    orderId?: string;
+  }): Observable<any> {
+    const url = `${this.apiUrl}/api/reviews`;
+    return this.http.post(url, payload).pipe(
+      tap((res: any) => {
+        if (res && !res.error) {
+          this.reviewCreated$.next({
+            productId: payload.productId,
+            review: res.data || res,
+          });
+        }
+      })
+    );
+  }
+
+  createReturnRequest(orderId: string, payload: any): Observable<any> {
+    const url = `${this.apiUrl}/api/orders/${encodeURIComponent(orderId)}/return-request`;
+    return this.http.post(url, payload).pipe(
+      map((res: any) => res),
+      catchError((err: any) => of({ error: err?.error || err })),
+    );
+  }
+
+  getReturnUploadSignature(): Observable<any> {
+    const url = `${this.apiUrl}/api/orders/return-upload-signature`;
+    return this.http.get(url, this.getRequestOptions()).pipe(
+      map((res: any) => res),
+      catchError((err: any) => of({ error: err?.error || err })),
+    );
+  }
+
+  uploadToCloudinaryDirect(file: File, signData: any): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('api_key', signData.apiKey);
+    formData.append('timestamp', signData.timestamp.toString());
+    formData.append('signature', signData.signature);
+    formData.append('folder', signData.folder);
+
+    const uploadUrl = `https://api.cloudinary.com/v1_1/${signData.cloudName}/image/upload`;
+    return this.http.post(uploadUrl, formData).pipe(
+      map((res: any) => res),
+      catchError((err: any) => of({ error: err?.error || err })),
+    );
+  }
+
+  cancelReturnRequest(orderId: string, reqId: string, payload?: any): Observable<any> {
+    const url = `${this.apiUrl}/api/orders/${encodeURIComponent(orderId)}/return-requests/${encodeURIComponent(reqId)}/cancel`;
+    return this.http.patch(url, payload || {}).pipe(
+      map((res: any) => res),
+      catchError((err: any) => of({ error: err?.error || err })),
+    );
+  }
+
+
   private initAuthTracking() {
     const selectors = inject(SignalStoreSelectors);
     combineLatest([toObservable(selectors.appLang), toObservable(selectors.user)]).subscribe(([lang, user]) => {
@@ -932,4 +1205,3 @@ export class ApiService {
     });
   }
 }
-

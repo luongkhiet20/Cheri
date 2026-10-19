@@ -1,0 +1,160 @@
+@if (isLoading) {
+<div class="cheri-rec-card cheri-rec-loading-card">
+  <div class="rec-loading-wrap">
+    <div class="rec-spinner"></div>
+    <span class="rec-loading-text">Đang tải sản phẩm đề xuất...</span>
+  </div>
+</div>
+} @else if (recommendedProducts && recommendedProducts.length > 0) {
+<section class="cheri-rec-card" id="cheri-product-recommendations" aria-labelledby="rec-section-title">
+  <!-- Header với tiêu đề và nút điều hướng -->
+  <div class="wishlist-header">
+    <div class="wishlist-header-left">
+      <h2 class="wishlist-title" id="rec-section-title">Sản phẩm đề xuất</h2>
+      <span class="wishlist-count">({{ recommendedProducts.length }} sản phẩm)</span>
+    </div>
+
+    @if (hasScrollableContent) {
+    <div class="rec-header-nav" aria-label="Điều hướng sản phẩm đề xuất">
+      <button
+        type="button"
+        class="rec-nav-btn rec-nav-btn--prev"
+        [disabled]="!canScrollLeft"
+        (click)="scrollPrev()"
+        aria-label="Xem sản phẩm trước"
+        title="Xem sản phẩm trước"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m15 18-6-6 6-6"/>
+        </svg>
+      </button>
+      <button
+        type="button"
+        class="rec-nav-btn rec-nav-btn--next"
+        [disabled]="!canScrollRight"
+        (click)="scrollNext()"
+        aria-label="Xem sản phẩm tiếp theo"
+        title="Xem sản phẩm tiếp theo"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m9 18 6-6-6-6"/>
+        </svg>
+      </button>
+    </div>
+    }
+  </div>
+
+  <!-- Băng chuyền sản phẩm cuộn ngang (Horizontal Product Carousel) -->
+  <div class="rec-carousel-container">
+    @if (hasScrollableContent) {
+    <button
+      type="button"
+      class="rec-arrow-btn rec-arrow-btn--prev"
+      [class.is-hidden]="!canScrollLeft"
+      [disabled]="!canScrollLeft"
+      (click)="scrollPrev()"
+      aria-label="Xem sản phẩm trước"
+      title="Xem sản phẩm trước"
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m15 18-6-6 6-6"/>
+      </svg>
+    </button>
+    }
+
+    <div
+      #carouselTrack
+      class="rec-carousel-track"
+      tabindex="0"
+      role="region"
+      aria-label="Danh sách băng chuyền sản phẩm đề xuất"
+      (scroll)="onScroll()"
+      (mousedown)="onMouseDown($event)"
+      (mousemove)="onMouseMove($event)"
+      (mouseup)="onMouseUp()"
+      (mouseleave)="onMouseLeave()"
+    >
+      @for (product of recommendedProducts; track (product._id || product.id)) {
+      <div class="pcard" (click)="onOpenQuickView(product)">
+
+        <!-- Image -->
+        <div class="pcard-img-wrap">
+          <img class="pcard-img"
+            [src]="product.image || product.mainImage?.url || (product.images && product.images[0]) || 'assets/images/placeholder.png'"
+            [alt]="product.name || product.title"
+            loading="lazy" />
+
+          <!-- Badges -->
+          @if (isOutOfStock(product)) {
+          <span class="pcard-badge pcard-badge--sold">Hết hàng</span>
+          } @else {
+          <span class="pcard-badge pcard-badge--new">NEW</span>
+          }
+          @if (hasDiscount(product)) {
+          <span class="pcard-badge pcard-badge--sale pcard-badge--top-right">ƯU ĐÃI</span>
+          }
+
+          <!-- Heart button (Wishlist) -->
+          <app-wishlist-button [product]="product" [lang]="lang"></app-wishlist-button>
+
+          <!-- Hover overlay -->
+          <div class="pcard-overlay">
+            @if (!isOutOfStock(product)) {
+            <button type="button" class="pcard-overlay-btn pcard-overlay-btn--cart"
+              (click)="addToCart(product); $event.stopPropagation()" title="Thêm vào giỏ hàng">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <path d="M16 10a4 4 0 0 1-8 0" />
+              </svg>
+            </button>
+            }
+            <button type="button" class="pcard-overlay-btn pcard-overlay-btn--view"
+              (click)="onOpenQuickView(product); $event.stopPropagation()" title="Xem chi tiết">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Info -->
+        <div class="pcard-info">
+          @if (product.tags?.length || product.categoryName) {
+          <span class="pcard-tag">{{ product.categoryName || product.tags[0] }}</span>
+          }
+          <h4 class="pcard-name">{{ product.name || product.title }}</h4>
+          <div class="pcard-prices">
+            <span class="pcard-price">{{ formatVND(hasDiscount(product) ? (product.salePrice || product.regularPrice) :
+              (product.salePrice || product.regularPrice || product.price || 0)) }}</span>
+            @if (hasDiscount(product)) {
+            <span class="pcard-original">{{ formatVND(product.regularPrice || product.salePrice) }}</span>
+            }
+          </div>
+        </div>
+
+      </div>
+      }
+    </div>
+
+    @if (hasScrollableContent) {
+    <button
+      type="button"
+      class="rec-arrow-btn rec-arrow-btn--next"
+      [class.is-hidden]="!canScrollRight"
+      [disabled]="!canScrollRight"
+      (click)="scrollNext()"
+      aria-label="Xem sản phẩm tiếp theo"
+      title="Xem sản phẩm tiếp theo"
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m9 18 6-6-6-6"/>
+      </svg>
+    </button>
+    }
+  </div>
+</section>
+}

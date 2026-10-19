@@ -3,7 +3,8 @@
   <div class="nav-left">
     @for (item of leftNavItems; track item.page) {
     <a class="nav-label" [routerLink]="item.page === 'home' ? ['/'] : ['/' + ((lang$ | async) || 'vi') + '/' + item.page]"
-      routerLinkActive="active" [routerLinkActiveOptions]="{ exact: item.page === 'home' }">
+      routerLinkActive="active" [routerLinkActiveOptions]="{ exact: item.page === 'home' }"
+      (click)="scrollToTop()">
       {{ item.label }}
     </a>
     }
@@ -24,7 +25,8 @@
     <!-- 2. Yêu thích -->
     <div class="nav-right-links">
       @for (item of rightNavItems; track item.page) {
-      <a class="nav-label" [routerLink]="['/' + ((lang$ | async) || 'vi') + '/' + item.page]" routerLinkActive="active">
+      <a class="nav-label" [routerLink]="['/' + ((lang$ | async) || 'vi') + '/' + item.page]" routerLinkActive="active"
+        (click)="scrollToTop()">
         {{ item.label }}
       </a>
       }
@@ -33,11 +35,13 @@
     <!-- 3. Giỏ hàng -->
     <div class="nav-basic nav-cart-wrap">
       @if (cart$(); as cart) {
-      <a class="nav-label nav-cart-label" [routerLink]="['/' + ((lang$ | async) || 'vi') + '/cart']" routerLinkActive="active">
+      <a class="nav-label nav-cart-label" [routerLink]="['/' + ((lang$ | async) || 'vi') + '/cart']" routerLinkActive="active"
+        (click)="scrollToTop()">
         Giỏ hàng@if (cart?.totalQty) { ({{ cart?.totalQty }}) }
       </a>
       } @else {
-      <a class="nav-label nav-cart-label" [routerLink]="['/' + ((lang$ | async) || 'vi') + '/cart']" routerLinkActive="active">
+      <a class="nav-label nav-cart-label" [routerLink]="['/' + ((lang$ | async) || 'vi') + '/cart']" routerLinkActive="active"
+        (click)="scrollToTop()">
         Giỏ hàng
       </a>
       }
@@ -46,7 +50,8 @@
     <!-- 4. Quản trị (chỉ hiển thị khi isAdmin() === true) - CSS giống Giỏ hàng -->
     @if (isAdmin()) {
     <div class="nav-basic nav-admin-wrap">
-      <a class="nav-label" [routerLink]="['/admin']" routerLinkActive="active" title="Trang quản trị">
+      <a class="nav-label" [routerLink]="['/admin']" routerLinkActive="active" title="Trang quản trị"
+        (click)="scrollToTop()">
         Quản trị
       </a>
     </div>
@@ -56,12 +61,12 @@
     <div class="nav-desktop nav-account-wrap">
       @if (!user$() || !user$()?.email) {
       <a class="nav-account-guest-btn" [routerLink]="['/' + ((lang$ | async) || 'vi') + '/authorize/signin']"
-        routerLinkActive="active" title="Đăng nhập">
+        routerLinkActive="active" title="Đăng nhập" (click)="scrollToTop()">
         <mat-icon>account_circle</mat-icon>
       </a>
       } @else {
       <a class="nav-avatar-btn" [routerLink]="['/' + ((lang$ | async) || 'vi') + '/profile']" routerLinkActive="active"
-        [title]="getUserDisplayName() || 'Hồ sơ cá nhân'">
+        [title]="getUserDisplayName() || 'Hồ sơ cá nhân'" (click)="scrollToTop()">
         @if (getUserAvatar()) {
         <img class="header-avatar-img" [src]="getUserAvatar()" [alt]="getUserDisplayName() || 'Avatar'"
           (error)="onAvatarError()" />
@@ -90,7 +95,7 @@
   <div class="mobile-nav-links">
     @for (item of leftNavItems; track item.page) {
     <button mat-menu-item [routerLink]="item.page === 'home' ? ['/'] : ['/' + ((lang$ | async) || 'vi') + '/' + item.page]"
-      routerLinkActive="active">
+      routerLinkActive="active" (click)="scrollToTop()">
       <span class="nav-label">{{ item.label }}</span>
     </button>
     }
@@ -100,18 +105,20 @@
     </button>
 
     @for (item of rightNavItems; track item.page) {
-    <button mat-menu-item [routerLink]="['/' + ((lang$ | async) || 'vi') + '/' + item.page]" routerLinkActive="active">
+    <button mat-menu-item [routerLink]="['/' + ((lang$ | async) || 'vi') + '/' + item.page]" routerLinkActive="active"
+      (click)="scrollToTop()">
       <span class="nav-label">{{ item.label }}</span>
     </button>
     }
 
-    <button mat-menu-item [routerLink]="['/' + ((lang$ | async) || 'vi') + '/cart']" routerLinkActive="active">
+    <button mat-menu-item [routerLink]="['/' + ((lang$ | async) || 'vi') + '/cart']" routerLinkActive="active"
+      (click)="scrollToTop()">
       <span class="nav-label">Giỏ hàng@if (cart$()?.totalQty) { ({{ cart$()?.totalQty }}) }</span>
     </button>
 
 
     @if (isAdmin()) {
-    <button mat-menu-item [routerLink]="['/admin']" routerLinkActive="active">
+    <button mat-menu-item [routerLink]="['/admin']" routerLinkActive="active" (click)="scrollToTop()">
       <span class="nav-label">Quản trị</span>
     </button>
     }

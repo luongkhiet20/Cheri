@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { escapeCsvTextField, paymentStatusLabel } = require('./orders-report-csv.cjs');
+const { escapeCsvTextField, paymentStatusLabel } = require('../../../utils/orders-report-csv.cjs');
 
 test('encodes text-formula fields as valid CSV while preserving leading zeros and embedded delimiters', () => {
   assert.equal(

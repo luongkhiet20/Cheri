@@ -82,6 +82,31 @@ export class AdminService {
     return this.http.post(`${this.baseUrl}/products/bulk-delete`, { ids });
   }
 
+  // ── Cloudinary & Images ──────────────────────
+  getCloudinarySignature(folder: string = 'cheri/products'): Observable<any> {
+    return this.http.get(`${this.baseUrl}/admin/cloudinary-signature`, {
+      params: { folder }
+    });
+  }
+
+  uploadDirectToCloudinary(file: File, sigData: any): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('api_key', sigData.apiKey);
+    formData.append('timestamp', String(sigData.timestamp));
+    formData.append('signature', sigData.signature);
+    formData.append('folder', sigData.folder);
+
+    const cloudUploadUrl = `https://api.cloudinary.com/v1_1/${sigData.cloudName}/image/upload`;
+    return this.http.post(cloudUploadUrl, formData);
+  }
+
+  uploadImage(file: File, folder: string = 'cheri/products'): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post(`${this.baseUrl}/admin/images/upload?folder=${encodeURIComponent(folder)}`, formData);
+  }
+
   // ── CSV Import ─────────────────────────────
   downloadProductCsvTemplate(): Observable<Blob> {
     return this.http.get(`${this.baseUrl}/products/csv-template`, {
@@ -114,6 +139,18 @@ export class AdminService {
     return this.http.put(`${this.baseUrl}/categories/${id}`, data);
   }
 
+  toggleCategoryVisibility(id: string, visibility: boolean, name?: string): Observable<any> {
+    const payload: any = {
+      visibility,
+      vi: { visibility }
+    };
+    if (name) {
+      payload.name = name;
+      payload.vi.title = name;
+    }
+    return this.http.put(`${this.baseUrl}/categories/${id}`, payload);
+  }
+
   deleteCategory(id: string): Observable<any> {
     return this.http.delete(`${this.baseUrl}/categories/${id}`);
   }
@@ -123,13 +160,14 @@ export class AdminService {
   }
 
   // ── Orders ─────────────────────────────────
-  getOrders(params?: { page?: number; limit?: number; search?: string; status?: string; paymentMethod?: string; userId?: string }): Observable<any> {
+  getOrders(params?: { page?: number; limit?: number; search?: string; status?: string; returnStatus?: string; paymentMethod?: string; userId?: string }): Observable<any> {
     let httpParams = new HttpParams();
     if (params) {
       if (params.page) httpParams = httpParams.set('page', params.page.toString());
       if (params.limit) httpParams = httpParams.set('limit', params.limit.toString());
       if (params.search) httpParams = httpParams.set('search', params.search);
       if (params.status) httpParams = httpParams.set('status', params.status);
+      if (params.returnStatus) httpParams = httpParams.set('returnStatus', params.returnStatus);
       if (params.paymentMethod) httpParams = httpParams.set('paymentMethod', params.paymentMethod);
       if (params.userId) httpParams = httpParams.set('userId', params.userId);
     }
@@ -160,13 +198,14 @@ export class AdminService {
     return this.http.patch(`${this.baseUrl}/orders/${id}/status`, { status, note });
   }
 
-  deleteOrder(id: string): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/orders/${id}`);
+  updateReturnRequestWorkflow(orderId: string, reqId: string, action: string, data: any = {}): Observable<any> {
+    return this.http.patch(`${this.baseUrl}/orders/${orderId}/return-requests/${reqId}/status`, { action, ...data });
   }
 
-  bulkDeleteOrders(ids: string[]): Observable<any> {
-    return this.http.post(`${this.baseUrl}/orders/bulk-delete`, { ids });
+  updateCodReconciliation(orderId: string, data: any): Observable<any> {
+    return this.http.patch(`${this.baseUrl}/orders/${orderId}/cod-reconciliation`, data);
   }
+
 
   // ── Users (Accounts) ────────────────────────
   getUsers(params?: { page?: number; limit?: number; pageSize?: number; search?: string; role?: string; status?: string }): Observable<any> {

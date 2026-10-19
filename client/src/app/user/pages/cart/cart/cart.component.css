@@ -1735,6 +1735,19 @@
   color: #666;
 }
 
+/* Container chứa hai nút điều hướng bước thanh toán (Quay lại & Tiếp tục) */
+:host div:has(> .cart-navigation-button + .cart-navigation-button) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+@supports not (selector(:has(*))) {
+  :host .cart-navigation-button + .cart-navigation-button {
+    margin-left: 10px;
+  }
+}
+
 :host .cart-navigation-button {
   margin: 10px 0 0 0;
   font-family: inherit;
@@ -2281,4 +2294,61 @@
   :host .order-confirmation-box {
     padding: 12px 10px;
   }
+}
+
+/* ── GUEST CHECKOUT BANNER ── */
+:host .guest-checkout-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #FFF8E7;
+  border: 1px solid #FFE0A3;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+
+:host .guest-banner-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #B27300;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+:host .guest-banner-icon mat-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+:host .guest-banner-body {
+  flex: 1;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #5C4314;
+}
+
+:host .guest-banner-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: #4A3508;
+  margin-bottom: 2px;
+}
+
+:host .guest-banner-text {
+  color: #6B5120;
+}
+
+:host .guest-link {
+  color: #8C5300;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+:host .guest-link:hover {
+  color: #5C3600;
 }

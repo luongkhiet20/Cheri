@@ -2,7 +2,7 @@
    ADMIN SHELL LAYOUT
    ============================================= */
 
-@import '../../styles.css';
+@import '../../styles/styles.css';
 @import '../../shared/styles/admin-shared.css';
 
 :host {

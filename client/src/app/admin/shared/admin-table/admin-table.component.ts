@@ -1,5 +1,6 @@
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, ViewChildren, QueryList, ElementRef, AfterViewChecked, ChangeDetectorRef } from '@angular/core';
 import { TableColumn, RowAction, ActionEvent, PaginationConfig } from '../models/admin-table.models';
+import { formatVND } from '../../../pipes/price.pipe';
 
 @Component({
   selector: 'app-admin-table',
@@ -156,7 +157,7 @@ export class AdminTableComponent implements OnChanges, AfterViewChecked {
     switch (col.type) {
       case 'currency':
         return val != null && val !== ''
-          ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(val))
+          ? formatVND(val)
           : '';
       case 'number':
         return val != null && val !== '' ? Number(val).toLocaleString('vi-VN') : '';

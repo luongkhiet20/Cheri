@@ -1,0 +1,208 @@
+<div class="dialog-backdrop" (click)="onBackdropClick($event)" role="dialog" aria-modal="true"
+  aria-labelledby="return-dialog-title">
+  <div class="dialog-card">
+
+    <!-- Card Header -->
+    <div class="dialog-header">
+      <div class="dialog-title-group">
+        <h3 class="dialog-title" id="return-dialog-title">Yêu cầu trả hàng hoàn tiền</h3>
+        <span class="dialog-order-badge" *ngIf="order?.orderId">
+          Mã đơn: #{{ order.orderId }}
+        </span>
+      </div>
+      <button type="button" class="dialog-close-btn" (click)="onClose()" [disabled]="isSubmitting" title="Đóng"
+        aria-label="Đóng popup">
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
+
+    <!-- Card Body -->
+    <div class="dialog-body">
+      <p class="dialog-subtitle">
+        Nếu sản phẩm gặp vấn đề hoặc chưa đáp ứng mong đợi, vui lòng cung cấp thông tin để Chéri hỗ trợ bạn.
+      </p>
+
+      <!-- Order Summary Card -->
+      <div class="order-summary-box">
+        <div class="summary-col">
+          <span class="summary-label">Mã đơn hàng:</span>
+          <span class="summary-val highlight">#{{ order?.orderId || '—' }}</span>
+        </div>
+        <div class="summary-col" *ngIf="order?.createdAt">
+          <span class="summary-label">Ngày đặt:</span>
+          <span class="summary-val">{{ formatDate(order?.createdAt) }}</span>
+        </div>
+        <div class="summary-col" *ngIf="order?.deliveredAt || order?.updatedAt">
+          <span class="summary-label">Ngày giao:</span>
+          <span class="summary-val">{{ formatDate(order?.deliveredAt || order?.updatedAt) }}</span>
+        </div>
+        <div class="summary-col">
+          <span class="summary-label">Tổng tiền:</span>
+          <span class="summary-val total">{{ formatAmount(order?.totalAmount || order?.total) }}</span>
+        </div>
+      </div>
+
+      <!-- Item Selection Section -->
+      <div class="items-selection-section">
+        <label class="section-label">
+          Chọn sản phẩm cần trả <span class="required-mark">*</span>
+        </label>
+
+        <div class="items-list">
+          <div class="item-row" *ngFor="let item of orderItems; let idx = index"
+            [class.selected]="isItemSelected(item, idx)">
+            <label class="item-checkbox-wrap">
+              <input type="checkbox" class="item-checkbox" [checked]="isItemSelected(item, idx)"
+                (change)="toggleItemSelection(item, idx)" [disabled]="isSubmitting" />
+            </label>
+
+            <div class="item-thumb-wrap">
+              <img [src]="getItemImage(item)" [alt]="item.productSnapshot?.title || 'Sản phẩm'"
+                class="item-thumb-img" />
+            </div>
+
+            <div class="item-info">
+              <div class="item-title">{{ item.productSnapshot?.title || 'Sản phẩm Chéri' }}</div>
+              <div class="item-variant" *ngIf="getVariantText(item)">
+                {{ getVariantText(item) }}
+              </div>
+              <div class="item-price-row">
+                <span class="item-price">{{ formatAmount(item.price) }}</span>
+                <span class="item-purchased-qty">Đã mua: {{ item.quantity || 1 }}</span>
+              </div>
+            </div>
+
+            <!-- Return Quantity Stepper (Only active if item is checked) -->
+            <div class="item-qty-stepper-wrap" *ngIf="isItemSelected(item, idx)">
+              <span class="stepper-label">Số lượng trả:</span>
+              <div class="qty-stepper">
+                <button type="button" class="stepper-btn" (click)="changeItemReturnQty(item, idx, -1)"
+                  [disabled]="isSubmitting || getItemReturnQty(item, idx) <= 1" aria-label="Giảm">
+                  -
+                </button>
+                <span class="stepper-value">{{ getItemReturnQty(item, idx) }}</span>
+                <button type="button" class="stepper-btn" (click)="changeItemReturnQty(item, idx, 1)"
+                  [disabled]="isSubmitting || getItemReturnQty(item, idx) >= (item.quantity || 1)" aria-label="Tăng">
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Return Reason Section -->
+      <div class="reason-section">
+        <label class="section-label">
+          Lý do yêu cầu <span class="required-mark">*</span>
+        </label>
+
+        <div class="reasons-radio-group">
+          <label class="reason-radio-item" *ngFor="let reason of returnReasons"
+            [class.active]="selectedReason === reason">
+            <input type="radio" name="returnReason" [value]="reason" [checked]="selectedReason === reason"
+              (change)="onSelectReason(reason)" [disabled]="isSubmitting" class="reason-radio-input" />
+            <span class="reason-radio-text">{{ reason }}</span>
+          </label>
+        </div>
+
+        <!-- Detail if 'Lý do khác' -->
+        <div class="other-reason-input-wrap" *ngIf="isOtherReason()">
+          <input type="text" class="input-other-reason" [(ngModel)]="otherReason" (ngModelChange)="validationError = ''"
+            placeholder="Vui lòng nêu rõ lý do cụ thể..." maxlength="200" [disabled]="isSubmitting" />
+        </div>
+      </div>
+
+      <!-- Problem Description Section -->
+      <div class="description-section">
+        <div class="desc-header-row">
+          <label for="return-desc-textarea" class="section-label">
+            Mô tả vấn đề <span class="required-mark">*</span>
+          </label>
+          <span class="char-counter" [class.near-limit]="description.length > maxDescLength * 0.9">
+            {{ description.length }}/{{ maxDescLength }}
+          </span>
+        </div>
+
+        <textarea id="return-desc-textarea" class="return-textarea" [(ngModel)]="description"
+          (ngModelChange)="validationError = ''" [disabled]="isSubmitting" rows="3" [maxlength]="maxDescLength"
+          placeholder="Vui lòng mô tả tình trạng sản phẩm và lý do bạn muốn trả hàng hoặc yêu cầu hoàn tiền."></textarea>
+      </div>
+
+      <!-- Proof Images Attachment Section -->
+      <div class="photos-section">
+        <div class="photos-header">
+          <span class="photos-label">Hình ảnh minh chứng (Tùy chọn)</span>
+          <span class="photos-limit-hint">{{ selectedImages.length }}/5 ảnh (tối đa 5MB/ảnh)</span>
+        </div>
+
+        <div class="photos-grid">
+          <div class="photo-preview-box" *ngFor="let img of selectedImages; let i = index">
+            <img [src]="img.preview" [alt]="img.name" class="photo-preview-img" />
+            <button type="button" class="photo-remove-btn" (click)="removeImage(i)" [disabled]="isSubmitting"
+              title="Xóa ảnh" aria-label="Xóa ảnh">
+              &times;
+            </button>
+          </div>
+
+          <label class="photo-upload-btn" *ngIf="selectedImages.length < 5" [class.disabled]="isSubmitting">
+            <input type="file" accept="image/png, image/jpeg, image/jpg, image/webp" multiple
+              (change)="onFilesSelected($event)" [disabled]="isSubmitting" class="photo-file-input" />
+            <svg viewBox="0 0 24 24" class="upload-icon" fill="currentColor">
+              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+            </svg>
+            <span class="upload-text">Thêm hình ảnh</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Refund Method Selection -->
+      <div class="refund-method-section">
+        <label class="section-label">Phương thức xử lý</label>
+        <div class="refund-method-card">
+          <label class="refund-method-option active">
+            <input type="radio" name="refundMethod" value="ORIGINAL_PAYMENT" [(ngModel)]="refundMethod"
+              [disabled]="isSubmitting" />
+            <div class="refund-method-text">
+              <span class="refund-method-title">Hoàn về phương thức thanh toán ban đầu</span>
+              <span class="refund-method-desc">Tiền sẽ được hoàn trả theo phương thức thanh toán đơn hàng sau khi Chéri
+                tiếp nhận và xử lý hàng trả về.</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Validation Error -->
+      <div class="dialog-alert alert-validation" *ngIf="validationError">
+        <span class="alert-icon">!</span>
+        <span class="alert-text">{{ validationError }}</span>
+      </div>
+
+      <!-- Server Error -->
+      <div class="dialog-alert alert-server" *ngIf="errorMessage">
+        <span class="alert-icon">!</span>
+        <span class="alert-text">{{ errorMessage }}</span>
+      </div>
+
+      <!-- Success Message -->
+      <div class="dialog-alert alert-success" *ngIf="successMessage">
+        <span class="alert-icon">&#10003;</span>
+        <span class="alert-text">{{ successMessage }}</span>
+      </div>
+
+    </div>
+
+    <!-- Card Footer -->
+    <div class="dialog-footer">
+      <button type="button" class="btn-dialog-back" (click)="onClose()" [disabled]="isSubmitting">
+        Hủy
+      </button>
+
+      <button type="button" class="btn-dialog-confirm" (click)="onSubmit()" [disabled]="isSubmitting">
+        <span class="btn-spinner" *ngIf="isSubmitting"></span>
+        <span>{{ isSubmitting ? 'Đang gửi yêu cầu...' : 'Gửi yêu cầu' }}</span>
+      </button>
+    </div>
+
+  </div>
+</div>

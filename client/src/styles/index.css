@@ -2052,92 +2052,6 @@ html {
   --mat-snack-bar-supporting-text-weight: 400;
 }
 
-/* ==========================================================================
-   CHÉRI LUXURY CART TOAST: ✨Đã thêm sản phẩm vào giỏ✨
-   ========================================================================== */
-.cdk-global-overlay-wrapper:has(.cheri-cart-toast-snackbar) {
-  top: 30px !important;
-  align-items: flex-start !important;
-  justify-content: center !important;
-  pointer-events: none !important;
-}
-
-.cdk-overlay-pane:has(.cheri-cart-toast-snackbar) {
-  max-width: calc(100vw - 24px) !important;
-  width: auto !important;
-  pointer-events: none !important;
-}
-
-.mat-mdc-snack-bar-container.cheri-cart-toast-snackbar {
-  background: transparent !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-  margin: 30px auto 0 auto !important;
-  pointer-events: auto !important;
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
-  min-width: unset !important;
-  width: auto !important;
-  max-width: calc(100vw - 24px) !important;
-}
-
-.cheri-cart-toast-snackbar .mdc-snackbar__surface {
-  background-color: #74070E !important;
-  color: #FFFFFF !important;
-  border-radius: 999px !important;
-  height: 46px !important;
-  min-height: 46px !important;
-  max-height: 46px !important;
-  padding: 0 24px !important;
-  box-shadow: 0 4px 16px rgba(116, 7, 14, 0.28), 0 2px 6px rgba(0, 0, 0, 0.08) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: auto !important;
-  min-width: unset !important;
-  max-width: calc(100vw - 24px) !important;
-  box-sizing: border-box !important;
-  animation: cheriCartToastEnter 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
-}
-
-.cheri-cart-toast-snackbar .mdc-snackbar__label {
-  color: #FFFFFF !important;
-  font-family: var(--font-sans, "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif) !important;
-  font-size: 13.5px !important;
-  font-weight: 500 !important;
-  line-height: 46px !important;
-  letter-spacing: 0.2px !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  text-align: center !important;
-  white-space: nowrap !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
-.cheri-cart-toast-snackbar .mdc-snackbar__actions {
-  display: none !important;
-}
-
-@keyframes cheriCartToastEnter {
-  0% {
-    opacity: 0;
-    transform: translateY(-12px) scale(0.98);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .cheri-cart-toast-snackbar .mdc-snackbar__surface {
-    animation-duration: 0.01ms !important;
-  }
-}
 
 html {
   --mat-table-row-item-outline-width: 1px;
@@ -3095,4 +3009,50 @@ a:hover {
     clip-path: none !important;
     opacity: 1 !important;
   }
+}
+
+/* ==========================================================================
+   Cheri Product Gallery Dialog (Lightbox)
+   ========================================================================== */
+.cheri-gallery-dialog-backdrop {
+  background: rgba(15, 15, 17, 0.90) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+}
+
+.cdk-overlay-pane.cheri-gallery-dialog-panel {
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  margin: 0 !important;
+}
+
+.cheri-gallery-dialog-panel .mat-mdc-dialog-container,
+.cheri-gallery-dialog-panel .mdc-dialog__container {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  display: flex !important;
+}
+
+.cheri-gallery-dialog-panel .mat-mdc-dialog-surface,
+.cheri-gallery-dialog-panel .mdc-dialog__surface {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
 }

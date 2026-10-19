@@ -50,7 +50,7 @@
         [lang]="lang$ | async"
         [lastSyncTime]="lastSyncTime"
         (cancelOrder)="openCancelDialog($event)"
-        (reviewOrder)="openReviewDialog($event)"
+        (reviewOrder)="onReviewOrder($event)"
         (returnRefundOrder)="openReturnRefundDialog($event)"
         (cancelReturnOrder)="openReturnCancelDialog($event)">
       </app-profile-orders>
@@ -63,17 +63,23 @@
 
     </div><!-- /profile-main-grid -->
 
+    <section class="profile-review-chooser" *ngIf="reviewOrder as order" aria-label="Chọn sản phẩm để đánh giá">
+      <div class="profile-review-chooser-card" (click)="$event.stopPropagation()">
+        <h3>Chọn sản phẩm bạn muốn đánh giá</h3>
+        <button type="button" class="profile-review-product" *ngFor="let product of getOrderReviewProducts(order)"
+          (click)="openProductReview(product.productId)">
+          {{ product.title }}
+        </button>
+        <button type="button" class="profile-review-close" (click)="reviewOrder = null">Đóng</button>
+      </div>
+    </section>
+
   </div>
 
   <!-- ── ORDER CANCEL POPUP DIALOG ── -->
   <app-order-cancel-dialog *ngIf="isCancelDialogOpen" [order]="selectedOrderToCancel" (close)="closeCancelDialog()"
     (cancelled)="onOrderCancelled($event)">
   </app-order-cancel-dialog>
-
-  <!-- ── PRODUCT REVIEW POPUP DIALOG ── -->
-  <app-product-review-dialog *ngIf="isReviewDialogOpen" [order]="selectedOrderToReview" (close)="closeReviewDialog()"
-    (reviewed)="onOrderReviewed($event)">
-  </app-product-review-dialog>
 
   <!-- ── ORDER RETURN / REFUND POPUP DIALOG ── -->
   <app-order-return-refund-dialog *ngIf="isReturnRefundDialogOpen" [order]="selectedOrderToReturn"

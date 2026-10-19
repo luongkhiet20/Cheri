@@ -24,6 +24,8 @@ import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
 import { ThemeService } from '../../../../services/theme.service';
 import { PriceFormatPipe } from '../../../../pipes/price.pipe';
 import { WishlistButtonComponent } from '../../../shared/wishlist-button/wishlist-button.component';
+import { ReviewSummary } from '../../../shared/reviews/review.models';
+import { RatingSummaryComponent } from '../../../shared/reviews/rating-summary.component';
 import {
   HomeSection,
   CarouselSlideItem,
@@ -50,6 +52,7 @@ import {
     TranslatePipe,
     PriceFormatPipe,
     WishlistButtonComponent,
+    RatingSummaryComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -155,6 +158,10 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     if (q !== undefined && q !== null && Number(q) <= 0) return true;
     const s = product.stock;
     return s === '0' || s === 'out' || s === 'outOfStock' || s === 'unavailable';
+  }
+
+  resolveProductReviewSummary(product: Product): ReviewSummary {
+    return this.store.resolveProductReviewSummary(product);
   }
 
   addToCart(id: string): void {

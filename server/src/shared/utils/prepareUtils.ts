@@ -1,6 +1,16 @@
 import { CartModel } from '../../cart/models/cart.model';
 import { Product } from '../../products/models/product.model';
 import { shippingCost, shippingTypes } from '../constans';
+import { summarizeReviews } from '../../products/reviews/review-write';
+
+// Explicit public language fields also protect strict:false legacy documents.
+const productLanguageFields = [
+  'sku', 'mainImage', 'images', 'tags', 'variants',
+  'title', 'description', 'descriptionFull', 'regularPrice', 'salePrice', 'onSale',
+  'stock', 'stockDate', 'quantity', 'visibility', 'shipping', 'shippingCost',
+  'shippingBasicCost', 'shippingExtendedCost', 'productType', 'hasColors', 'colors',
+  'hasSizes', 'sizes', 'hasClassification', 'classifications', 'categoryLevel1', 'categoryLevel2',
+];
 
 export const prepareProduct = (
   product,
@@ -10,6 +20,9 @@ export const prepareProduct = (
 ): Product => {
   const p = (product && typeof product.toObject === 'function') ? product.toObject() : (product || {});
   const langData = p[lang] || p.vi || p.en || p.sk || p.cs || {};
+  const publicLangData = Object.fromEntries(productLanguageFields
+    .filter((field) => Object.prototype.hasOwnProperty.call(langData, field))
+    .map((field) => [field, langData[field]]));
 
   // Human-readable title fallback from titleUrl or primary language
   const title =
@@ -117,6 +130,8 @@ export const prepareProduct = (
   const isLangVisible = langData.visibility !== false && (p.vi?.visibility !== false);
   const visibility = isGloballyVisible && isLangVisible;
 
+  // Keep the existing Product return contract for this plain response object;
+  // Product also extends Mongoose Document, whose methods are never serialized.
   return {
     _id: p._id,
     id: p.id || (p._id ? p._id.toString() : ''),
@@ -141,7 +156,8 @@ export const prepareProduct = (
     shippingExtendedCost: p.shippingExtendedCost !== undefined ? p.shippingExtendedCost : langData.shippingExtendedCost,
     shippingCost: p.shippingCost !== undefined ? p.shippingCost : langData.shippingCost,
     shipping: p.shipping || langData.shipping,
-    ...langData,
+    ...publicLangData,
+    reviewSummary: summarizeReviews(Array.isArray(p.reviews) ? p.reviews : []),
     title,
     regularPrice,
     salePrice,
@@ -150,7 +166,7 @@ export const prepareProduct = (
     stock,
     visibility,
     descriptionFull: !light ? (langData.descriptionFull || []) : [],
-  };
+  } as unknown as Product;
 };
 
 export const prepareCart = (cart, lang: string, config): CartModel => {

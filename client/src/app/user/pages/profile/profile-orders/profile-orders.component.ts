@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { User, Order } from '../../../shared/models';
 import { formatVND, PriceFormatPipe } from '../../../../pipes/price.pipe';
 import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
+import { canShowOrderReviewAction } from '../order-review-links';
 
 @Component({
   selector: 'app-profile-orders',
@@ -283,23 +284,7 @@ export class ProfileOrdersComponent {
   }
 
   canReviewOrder(order: any): boolean {
-    if (!order) return false;
-    if (this.isOrderReviewed(order)) return false;
-    if (this.normalizeStatus(order.statusCode || order.rawStatus || order.status) !== 'DELIVERED') return false;
-    if (this.isReturnCompleted(order)) return false;
-
-    const requests: any[] = Array.isArray(order.returnRequests) && order.returnRequests.length > 0
-      ? order.returnRequests
-      : (order.returnRequest ? [order.returnRequest] : []);
-
-    const inactiveReturnStatuses = ['CANCELLED', 'CANC', 'CANCELLED_BY_CUSTOMER', 'REJECTED', 'REJ'];
-    const hasActiveReturn = requests.some((r: any) => {
-      const s = (r?.status || '').toUpperCase().trim();
-      return s && !inactiveReturnStatuses.includes(s);
-    });
-
-    if (hasActiveReturn) return false;
-    return true;
+    return canShowOrderReviewAction(order as Order);
   }
 
   openReviewDialog(order: Order | any): void {

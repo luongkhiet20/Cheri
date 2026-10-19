@@ -122,7 +122,7 @@
           <!-- Nút Đánh giá: Chỉ hiển thị khi đơn đã giao thành công, chưa đánh giá & không có yêu cầu đổi trả đang tồn tại -->
           <button type="button" class="btn-action-primary" *ngIf="canReviewOrder(order)"
             (click)="openReviewDialog(order)">
-            Đánh giá
+            {{ isOrderReviewed(order) ? 'Chỉnh sửa đánh giá' : 'Đánh giá sản phẩm' }}
           </button>
 
           <!-- Nút Trả hàng / Hoàn tiền: Chỉ hiển thị khi chưa hoàn tất hoàn trả & không có yêu cầu đổi trả đang active -->

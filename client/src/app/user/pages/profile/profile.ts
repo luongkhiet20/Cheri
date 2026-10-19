@@ -15,6 +15,7 @@ import { OrderCancelDialogComponent } from './order-cancel-dialog/order-cancel-d
 import { ProductReviewDialogComponent } from './product-review-dialog.component/product-review-dialog.component';
 import { OrderReturnRefundDialogComponent } from './order-return-refund-dialog.component/order-return-refund-dialog.component';
 import { OrderReturnCancelDialogComponent } from './order-return-cancel-dialog/order-return-cancel-dialog.component';
+import { canShowOrderReviewAction, getOrderReviewProducts } from './order-review-links';
 
 @Component({
   selector: 'app-profile',
@@ -47,6 +48,9 @@ export class Profile implements OnInit {
   // Return / refund dialog state
   isReturnRefundDialogOpen: boolean = false;
   selectedOrderToReturn: any = null;
+  reviewOrder: Order | null = null;
+  readonly canShowOrderReviewAction = canShowOrderReviewAction;
+  readonly getOrderReviewProducts = getOrderReviewProducts;
 
   // Cancel return request dialog state
   isReturnCancelDialogOpen: boolean = false;
@@ -98,6 +102,32 @@ export class Profile implements OnInit {
       this.store.getUserOrders();
       this.updateSyncTime();
     }
+  }
+
+  onReviewOrder(order: Order): void {
+    if (!order || !(this.userOrders$() || []).includes(order) || !canShowOrderReviewAction(order)) return;
+    const products = getOrderReviewProducts(order);
+    if (products.length === 1) this.openProductReview(products[0].productId);
+    else if (products.length > 1) {
+      this.reviewOrder = this.reviewOrder === order ? null : order;
+      this.cdr.markForCheck();
+    }
+  }
+
+  isReviewChooserOpen(order: Order): boolean {
+    return this.reviewOrder === order && (this.userOrders$() || []).includes(order)
+      && canShowOrderReviewAction(order);
+  }
+
+  openProductReview(productId: string): void {
+    if (typeof productId !== 'string' || !/^[a-f\d]{24}$/i.test(productId)) return;
+    const ownedProductIds = (this.userOrders$() || [])
+      .filter(order => canShowOrderReviewAction(order))
+      .flatMap(order => getOrderReviewProducts(order).map(product => product.productId));
+    if (!ownedProductIds.includes(productId.toLowerCase())) return;
+    this.reviewOrder = null;
+    const lang = this.translate.lang || 'vi';
+    this.router.navigate(['/' + lang + '/product', productId.toLowerCase()], { queryParams: { review: 1 } });
   }
 
   updateSyncTime(): void {

@@ -9,6 +9,7 @@ const fs = require('fs');
 const multer = require('multer');
 const os = require('os');
 const { trackingNumberUpdateFields } = require('./src/orders/tracking-update.cjs');
+const { sanitizeProductWrite } = require('./shared/product-write-fields.cjs');
 const {
   getGoogleCallbackUrl,
   getFrontendOrigin,
@@ -30,7 +31,10 @@ const {
 
 const app = express();
 const PORT = process.env.ADMIN_PORT || process.env.PORT_ADMIN || 5000;
-const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://tinhvttk24411_db_user:gZ7aJJyCWgYffiXa@cluster0.cbvni8r.mongodb.net/cheri?retryWrites=true&w=majority";
+const MONGO_URI = process.env.MONGO_URI;
+if (!MONGO_URI) {
+  throw new Error('MONGO_URI is required');
+}
 
 // Uploads directory setup for static serving (Serverless / read-only filesystem safe)
 let uploadsDir = path.join(__dirname, 'uploads', 'payment-proofs');
@@ -624,6 +628,17 @@ app.get('/api/admin/dashboard', dashboardHandler);
 // ─────────────────────────────────────────────────────────────
 // 2. PRODUCTS API
 // ─────────────────────────────────────────────────────────────
+function omitReviewArrays(value) {
+  if (Array.isArray(value)) return value.map(omitReviewArrays);
+  if (!value || typeof value !== 'object') return value;
+  if (value._bsontype || Object.prototype.toString.call(value) !== '[object Object]') return value;
+  const sanitized = {};
+  for (const [key, nested] of Object.entries(value)) {
+    if (key !== 'reviews') sanitized[key] = omitReviewArrays(nested);
+  }
+  return sanitized;
+}
+
 function formatProduct(p, lang = 'vi') {
   const langData = p[lang] || p.vi || p.en || {};
   const fallbackData = p.en || p.vi || {};
@@ -653,6 +668,17 @@ function formatProduct(p, lang = 'vi') {
   const isGloballyVisible = p.visibility !== false;
   const isLangVisible = langData.visibility !== false && p.vi?.visibility !== false;
   const visibility = isGloballyVisible && isLangVisible;
+
+  const validReviews = Array.isArray(p.reviews)
+    ? p.reviews.filter(review => Number.isFinite(Number(review?.rating)) && Number(review.rating) >= 1 && Number(review.rating) <= 5)
+    : [];
+  const reviewSummary = {
+    average: validReviews.length
+      ? Math.round(validReviews.reduce((sum, review) => sum + Number(review.rating), 0) / validReviews.length * 100) / 100
+      : null,
+    count: validReviews.length
+  };
+  const publicRaw = omitReviewArrays(p);
 
   let status = 'Đang bán';
   let statusVariant = 'success';
@@ -688,6 +714,7 @@ function formatProduct(p, lang = 'vi') {
     description: langData.description || fallbackData.description || p.description || '',
     descriptionFull: langData.descriptionFull || fallbackData.descriptionFull || p.descriptionFull || [],
     rating: p.rating !== undefined ? p.rating : 5,
+    reviewSummary,
     colors: langData.colors || p.colors || fallbackData.colors || [],
     sizes: langData.sizes || p.sizes || fallbackData.sizes || [],
     hasColors: Boolean(langData.hasColors !== undefined ? langData.hasColors : (p.hasColors || false)),
@@ -695,7 +722,7 @@ function formatProduct(p, lang = 'vi') {
     hasClassification: Boolean(langData.hasClassification !== undefined ? langData.hasClassification : (p.hasClassification || false)),
     classifications: langData.classifications || p.classifications || fallbackData.classifications || [],
     variants: Array.isArray(p.variants) ? p.variants : [],
-    raw: p
+    raw: publicRaw
   };
 }
 
@@ -1651,7 +1678,8 @@ app.post('/api/products/import-csv', async (req, res) => {
     let failedCount = 0;
     const nowIso = new Date().toISOString();
 
-    for (const p of productsToImport) {
+    for (const incomingProduct of productsToImport) {
+      const p = sanitizeProductWrite(incomingProduct);
       try {
         const query = { titleUrl: p.titleUrl };
         const existing = await db.collection('products').findOne(query);
@@ -1828,7 +1856,7 @@ app.get('/api/products/:id', async (req, res) => {
 // Create product (POST /api/products)
 app.post('/api/products', async (req, res) => {
   try {
-    const body = req.body || {};
+    const body = sanitizeProductWrite(req.body);
     const vi = body.vi || {};
 
     // Backend validation
@@ -1986,7 +2014,7 @@ app.post('/api/products', async (req, res) => {
 app.put('/api/products/:id', async (req, res) => {
   try {
     const id = req.params.id;
-    const body = req.body || {};
+    const body = sanitizeProductWrite(req.body);
     const vi = body.vi || {};
 
     const existing = await db.collection('products').findOne({ _id: new ObjectId(id) });

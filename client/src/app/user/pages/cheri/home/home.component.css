@@ -605,6 +605,10 @@
   color: #74070e;
 }
 
+.home-product-info app-rating-summary {
+  margin: 2px 0;
+}
+
 .home-product-prices {
   display: flex;
   align-items: center;

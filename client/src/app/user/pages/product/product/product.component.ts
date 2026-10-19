@@ -2,10 +2,10 @@ import { toObservable } from '@angular/core/rxjs-interop';
 import { JsonLDService } from '../../../../services/jsonLD.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
 import { filter, map, take, distinctUntilChanged, skip, withLatestFrom } from 'rxjs/operators';
-import { Component, OnDestroy, Signal } from '@angular/core';
+import { AfterViewChecked, Component, Inject, OnDestroy, PLATFORM_ID, Signal, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Observable, combineLatest, Subscription } from 'rxjs';
-import { Location } from '@angular/common';
+import { Observable, combineLatest, of, Subscription } from 'rxjs';
+import { isPlatformBrowser, Location } from '@angular/common';
 import { Meta, Title } from '@angular/platform-browser';
 import { MatDialog } from '@angular/material/dialog';
 
@@ -16,6 +16,8 @@ import { ApiService } from '../../../../services/api.service';
 import { SignalStore } from '../../../../store/signal.store';
 import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
 import { filterProductDescriptionBullets } from './product-description';
+import { ReviewSummary } from '../../../shared/reviews/review.models';
+import type { ProductReviewsComponent } from '../../../shared/reviews/product-reviews.component';
 
 @Component({
   selector: 'app-product',
@@ -23,7 +25,12 @@ import { filterProductDescriptionBullets } from './product-description';
   styleUrls: ['./product.component.css'],
   standalone: false
 })
-export class ProductComponent implements OnDestroy {
+export class ProductComponent implements OnDestroy, AfterViewChecked {
+  @ViewChild('reviews') private reviewSection?: ProductReviewsComponent;
+  private reviewQuerySub: Subscription;
+  private reviewFocusPending = false;
+  private reviewNavigationKey = '';
+  private reviewRouteId = '';
   categories$: Observable<Category[]>;
   productLoading$: Signal<boolean>;
   currency$: Observable<string>;
@@ -88,6 +95,7 @@ export class ProductComponent implements OnDestroy {
     private router: Router,
     private translate: TranslateService,
     private jsonLDService: JsonLDService,
+    @Inject(PLATFORM_ID) private platformId: Object,
     private apiService: ApiService,
   ) {
     this.lang$ = this.translate.getLang$();
@@ -122,6 +130,35 @@ export class ProductComponent implements OnDestroy {
         this.initProductState(product);
       }
     });
+    this.reviewQuerySub = combineLatest([this.lang$, this.route.params, this.route.queryParams || of({})])
+      .subscribe(([lang, params, query]) => {
+        const routeId = params['id'] || '';
+        const requested = String(query['review']) === '1';
+        const key = `${lang}/${routeId}/${requested}`;
+        if (key !== this.reviewNavigationKey) {
+          this.reviewNavigationKey = key;
+          this.reviewRouteId = routeId;
+          this.reviewFocusPending = requested;
+        }
+      });
+  }
+
+  ngAfterViewChecked(): void {
+    this.focusReviewsFromQuery();
+  }
+
+  focusReviewsFromQuery(): void {
+    if (!isPlatformBrowser(this.platformId) || !this.reviewFocusPending || this.productLoading$()) return;
+    const product = this.product$();
+    if (!product || product.visibility === false || product.vi?.visibility === false || !this.reviewSection) return;
+    if (product._id !== this.reviewRouteId && product.titleUrl !== this.reviewRouteId) return;
+    if (this.reviewSection.productId !== product._id) return;
+    this.reviewFocusPending = false;
+    this.reviewSection.focusReviews();
+  }
+
+  focusProductReviews(): void {
+    this.reviewSection?.focusReviews();
   }
 
   private initProductState(product: Product): void {
@@ -271,6 +308,14 @@ export class ProductComponent implements OnDestroy {
 
     this.quantity = 1;
     this.updateSelectedVariant();
+  }
+
+  resolveProductReviewSummary(product: Product): ReviewSummary {
+    return this.store.resolveProductReviewSummary(product);
+  }
+
+  onReviewSummaryChanged(event: { productId: string; summary: ReviewSummary }): void {
+    this.store.updateProductReviewSummary(event.productId, event.summary);
   }
 
   updateSelectedVariant(): void {
@@ -477,6 +522,8 @@ export class ProductComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.reviewFocusPending = false;
+    if (this.reviewQuerySub) this.reviewQuerySub.unsubscribe();
     this.lastTrackedProductId = null;
     if (this.routeSub) this.routeSub.unsubscribe();
     if (this.categoriesSub) this.categoriesSub.unsubscribe();

@@ -70,6 +70,8 @@
 
           <!-- 4.2 Tên sản phẩm -->
           <h1 class="cheri-product-heading">{{ productTitle }}</h1>
+          <app-rating-summary class="cheri-product-rating" [summary]="resolveProductReviewSummary(product$())"
+            [showStars]="true" [interactive]="true" (activate)="focusProductReviews()"></app-rating-summary>
 
           <!-- Mã sản phẩm SKU nếu có -->
           @if (displaySku) {
@@ -252,9 +254,9 @@
     <!-- ==========================================================================
          KHU VỰC ĐÁNH GIÁ SẢN PHẨM (CHÉRI PRODUCT REVIEWS)
          ========================================================================== -->
-    <app-product-reviews
-      [productId]="currentProductId || product$()?._id || product$()?.id || ''"
-      [lang]="currentLang">
-    </app-product-reviews>
+    @if (product$() && !isUnavailable && !productLoading$()) {
+    <app-product-reviews #reviews [productId]="product$()._id" [lang]="currentLang"
+      (summaryChanged)="onReviewSummaryChanged($event)"></app-product-reviews>
+    }
   </div>
 </div>

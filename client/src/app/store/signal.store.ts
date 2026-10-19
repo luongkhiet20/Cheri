@@ -1,7 +1,8 @@
 import { SignalStoreSelectors } from './signal.store.selectors';
 import { Injectable } from '@angular/core';
 import { ApiService } from '../services/api.service';
-import { User } from '../user/shared/models';
+import { Product, User } from '../user/shared/models';
+import { ReviewSummary } from '../user/shared/reviews/review.models';
 import { catchError, map, of } from 'rxjs';
 
 
@@ -10,6 +11,7 @@ import { catchError, map, of } from 'rxjs';
   providedIn: 'root',
 })
 export class SignalStore {
+  private readonly reviewSummaryRevisions: Record<string, number> = {};
 
 
   constructor(private apiService: ApiService,
@@ -66,6 +68,38 @@ export class SignalStore {
       error: () => {}
     });
   };
+
+  updateProductReviewSummary(productId: string, summary: ReviewSummary): void {
+    const publicSummary = { average: summary.average, count: summary.count };
+    this.reviewSummaryRevisions[productId] = (this.reviewSummaryRevisions[productId] || 0) + 1;
+    this.selectors.reviewSummaries.update(summaries => ({ ...summaries, [productId]: publicSummary }));
+  }
+
+  private acceptFreshProductSummaries(products: Product | Product[], revisionsAtStart: Record<string, number>): void {
+    const productList = Array.isArray(products) ? products : [products];
+    const freshSummaries: Record<string, ReviewSummary> = {};
+    for (const product of productList) {
+      const summary = product?.reviewSummary;
+      if (!product?._id || !summary || !Number.isInteger(summary.count) || summary.count < 0
+        || (summary.average !== null && !Number.isFinite(summary.average))
+        || (revisionsAtStart[product._id] || 0) !== (this.reviewSummaryRevisions[product._id] || 0)) continue;
+      freshSummaries[product._id] = { average: summary.average, count: summary.count };
+    }
+    if (!Object.keys(freshSummaries).length) return;
+    // Keep the canonical read in the shared map so every retained Product copy sees it,
+    // and make responses that began earlier ineligible to supersede this read.
+    for (const productId of Object.keys(freshSummaries)) {
+      this.reviewSummaryRevisions[productId] = (this.reviewSummaryRevisions[productId] || 0) + 1;
+    }
+    this.selectors.reviewSummaries.update(summaries => ({ ...summaries, ...freshSummaries }));
+  }
+
+  resolveProductReviewSummary(product: Product): ReviewSummary {
+    // A persisted PUT must keep winning over an older in-flight product response.
+    return this.selectors.reviewSummaries()[product?._id]
+      ?? product?.reviewSummary
+      ?? { average: null, count: 0 };
+  }
 
   signIn = (payload) => {
     this.selectors.userState.update((state) => ({ ...state, loading: true }));
@@ -239,12 +273,14 @@ export class SignalStore {
   };
 
   getProducts = (payload) => {
+    const revisionsAtStart = { ...this.reviewSummaryRevisions };
     this.selectors.productState.update((state) => ({ ...state, loadingProducts: true }));
     this.apiService.getProducts(payload).subscribe((response: any) => {
       if (response.error) {
         this.selectors.productState.update((state) => ({ ...state, loadingProducts: false }));
         return;
       }
+      this.acceptFreshProductSummaries(response.products || [], revisionsAtStart);
       this.selectors.productState.update((state) => ({
         ...state,
         products: response.products,
@@ -263,8 +299,10 @@ export class SignalStore {
   };
 
   getProduct = (payload) => {
+    const revisionsAtStart = { ...this.reviewSummaryRevisions };
     this.selectors.productState.update((state) => ({ ...state, loadingProduct: true }));
     this.apiService.getProduct(payload).subscribe((response: any) => {
+      this.acceptFreshProductSummaries(response, revisionsAtStart);
       this.selectors.productState.update((state) => ({ ...state, product: response, loadingProduct: false }));
     });
   };

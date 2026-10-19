@@ -3,6 +3,15 @@ const { Schema } = mongoose;
 import * as paginate from '../../shared/utils/paginate';
 import { languages } from '../../shared/constans';
 
+const ProductReviewSchema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  authorName: { type: String, required: true, trim: true },
+  rating: { type: Number, required: true, min: 1, max: 5, validate: Number.isInteger },
+  comment: { type: String, required: true, trim: true, minlength: 1, maxlength: 1000 },
+  createdAt: { type: Date, required: true },
+  updatedAt: { type: Date, required: true },
+});
+
 const getProductLangInfo = (): { [lang: string]: any } => {
   return languages.reduce(
     (prev, lang) => ({
@@ -72,6 +81,7 @@ const ProductSchema = new Schema(
     visibility: { type: Boolean, default: true },
     _user: { type: Schema.Types.ObjectId, ref: 'User' },
     rating: { type: Number, default: 5 },
+    reviews: { type: [ProductReviewSchema], default: [] },
     dateAdded: { type: Date, default: Date.now },
     ...getProductLangInfo(),
   },

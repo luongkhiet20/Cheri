@@ -1,0 +1,23 @@
+@if (interactive) {
+  <button type="button" class="rating-line rating-link" (click)="onActivate($event)">
+    @if (showStars) {
+      <span class="rating-stars" aria-hidden="true">
+        @for (star of stars; track star) {
+          <span class="rating-star">★<span class="rating-star-fill" [style.width.%]="starFill(star)">★</span></span>
+        }
+      </span>
+    }
+    <span class="rating-text">{{ text }}</span>
+  </button>
+} @else {
+  <span class="rating-line">
+    @if (showStars) {
+      <span class="rating-stars" aria-hidden="true">
+        @for (star of stars; track star) {
+          <span class="rating-star">★<span class="rating-star-fill" [style.width.%]="starFill(star)">★</span></span>
+        }
+      </span>
+    }
+    <span class="rating-text">{{ text }}</span>
+  </span>
+}

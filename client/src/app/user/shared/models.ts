@@ -1,4 +1,5 @@
 import { languages } from './constants';
+import { ReviewSummary } from './reviews/review.models';
 
 export interface Translations {
   lang: string;
@@ -34,6 +35,7 @@ export interface Product {
   categoryLevel1?     : string | string[];
   categoryLevel2?     : string;
   quantity?           : number;
+  reviewSummary?      : ReviewSummary;
   variants?           : ProductVariant[];
   mainImage           : { url: string; name: string };
   images              : string[];

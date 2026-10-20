@@ -1,6 +1,6 @@
 # Đặc tả chatbot Chéri dùng Gemini
 
-Ngày: 2026-10-20. Thiết kế trong hội thoại đã được người dùng duyệt; tài liệu này chờ duyệt trước khi viết implementation plan.
+Ngày: 2026-10-20. Thiết kế và bản đặc tả đã được người dùng duyệt trong hội thoại; chuyển sang viết implementation plan. Chưa bắt đầu viết code chatbot.
 
 ## 1. Mục tiêu và tiêu chí thành công
 

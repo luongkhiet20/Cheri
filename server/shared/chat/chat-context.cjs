@@ -60,7 +60,7 @@ function plainStringArray(value, maxItems = 12) {
 function normalizeProduct(product, lang) {
   if (!product || product.visibility === false || !product._id || !validSlug(product.titleUrl)) return null;
   const { langData, fallback } = translated(product, lang);
-  if (langData.visibility === false) return null;
+  if (langData.visibility === false || fallback.visibility === false) return null;
   const title = stripHtml(langData.title ?? fallback.title ?? product.title, 150);
   if (!title) return null;
 
@@ -103,9 +103,9 @@ function normalizeProduct(product, lang) {
   return productResult;
 }
 
-function relevance(product, requestWords) {
+function relevance(product, requestWords, lang = 'vi') {
   if (!requestWords.length) return 0;
-  const { langData, fallback } = translated(product, 'vi');
+  const { langData, fallback } = translated(product, lang);
   const source = [
     langData.title, fallback.title, product.title, langData.description, fallback.description,
     product.description, langData.categoryLevel1, fallback.categoryLevel1, product.categoryLevel1,
@@ -136,13 +136,22 @@ function normalizePolicy(page, lang) {
   return { id: String(page._id), title, path: `/${lang}/cheri/${encodeURIComponent(page.titleUrl)}`, text };
 }
 
+function regexVariants(word) {
+  const variants = { a: '[aáàảãạăắằẳẵặâấầẩẫậ]', e: '[eéèẻẽẹêếềểễệ]', i: '[iíìỉĩị]',
+    o: '[oóòỏõọôốồổỗộơớờởỡợ]', u: '[uúùủũụưứừửữự]', y: '[yýỳỷỹỵ]', d: '[dđ]' };
+  return [...word].map((char) => variants[char] || escapeRegex(char)).join('');
+}
+
 function safeRegexQuery(queryWords, lang = 'vi') {
-  return queryWords.flatMap((word) => [
-    { title: { $regex: escapeRegex(word), $options: 'i' } },
-    { [`${lang}.title`]: { $regex: escapeRegex(word), $options: 'i' } },
-    ...(lang === 'vi' ? [] : [{ 'vi.title': { $regex: escapeRegex(word), $options: 'i' } }]),
-    { tags: { $regex: escapeRegex(word), $options: 'i' } },
-  ]);
+  return queryWords.flatMap((word) => {
+    const regex = regexVariants(word);
+    return [
+      { title: { $regex: regex, $options: 'i' } },
+      { [`${lang}.title`]: { $regex: regex, $options: 'i' } },
+      ...(lang === 'vi' ? [] : [{ 'vi.title': { $regex: regex, $options: 'i' } }]),
+      { tags: { $regex: regex, $options: 'i' } },
+    ];
+  });
 }
 
 async function findLimited(collection, filter, projection, limit) {
@@ -166,22 +175,36 @@ async function loadPublicContext(db, request) {
     onSale: 1, colors: 1, sizes: 1, hasColors: 1, hasSizes: 1,
     vi: 1, en: 1,
   };
-  const rawProducts = await findLimited(db.collection('products'), productFilter, productProjection, PRODUCT_SCAN_LIMIT);
-  const candidates = rawProducts.map((raw) => ({ raw, score: relevance(raw, searchWords) }))
+  const rawProducts = searchWords.length
+    ? await findLimited(db.collection('products'), productFilter, productProjection, PRODUCT_SCAN_LIMIT) : [];
+  const candidates = rawProducts.map((raw) => ({ raw, score: relevance(raw, searchWords, request.lang) }))
     .filter(({ score }) => score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, PRODUCT_LIMIT)
     .map(({ raw }) => normalizeProduct(raw, request.lang))
     .filter(Boolean);
 
-  const policyFilter = {
-    $or: [{ titleUrl: { $exists: true } }],
-    $and: safeRegexQuery(searchWords, request.lang).slice(0, 12),
-  };
+  const policyFilter = { $or: safeRegexQuery(searchWords, request.lang) };
   const pageProjection = { _id: 1, titleUrl: 1, status: 1, statusCode: 1, isPublished: 1, visibility: 1, vi: 1, en: 1 };
-  let rawPolicies = await findLimited(db.collection('pages_policies'), policyFilter, pageProjection, POLICY_LIMIT * 2);
-  if (!rawPolicies.length) rawPolicies = await findLimited(db.collection('pages'), policyFilter, pageProjection, POLICY_LIMIT * 2);
-  const policies = rawPolicies.map((page) => normalizePolicy(page, request.lang)).filter(Boolean).slice(0, POLICY_LIMIT);
+  const policyScore = (page) => {
+    const vi = page.vi && typeof page.vi === 'object' ? page.vi : {};
+    const language = page[request.lang] && typeof page[request.lang] === 'object' ? page[request.lang] : {};
+    const source = stripHtml([language.title, language.contentHTML, language.content, vi.title, vi.contentHTML, vi.content].join(' '), 4000)
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLocaleLowerCase();
+    return searchWords.reduce((score, word) => score + (source.includes(word) ? 1 : 0), 0);
+  };
+  const loadPolicies = async (name) => searchWords.length
+    ? findLimited(db.collection(name), policyFilter, pageProjection, 100) : [];
+  let rawPolicies = await loadPolicies('pages_policies');
+  let policies = rawPolicies.map((page) => ({ page, score: policyScore(page) }))
+    .filter(({ score }) => score > 0).sort((a, b) => b.score - a.score)
+    .map(({ page }) => normalizePolicy(page, request.lang)).filter(Boolean).slice(0, POLICY_LIMIT);
+  if (!policies.length) {
+    rawPolicies = await loadPolicies('pages');
+    policies = rawPolicies.map((page) => ({ page, score: policyScore(page) }))
+      .filter(({ score }) => score > 0).sort((a, b) => b.score - a.score)
+      .map(({ page }) => normalizePolicy(page, request.lang)).filter(Boolean).slice(0, POLICY_LIMIT);
+  }
 
   const context = { products: candidates, policies };
   while (Buffer.byteLength(JSON.stringify(context), 'utf8') > CONTEXT_MAX_BYTES) {

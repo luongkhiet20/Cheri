@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { finalizeAnswer } = require('../shared/chat/chat-policy.cjs');
+const { SYSTEM_INSTRUCTION, finalizeAnswer } = require('../shared/chat/chat-policy.cjs');
 
 const context = {
   products: [
@@ -38,6 +38,23 @@ test('product cards contain only catalog values and at most three validated prod
       { id: 'p2', title: 'Áo trắng', path: '/vi/product/ao-trang' },
     ],
   });
+});
+
+test('product replies can vary naturally while unverified commercial claims remain fixed out', () => {
+  const productContext = { products: [context.products[0]], policies: [] };
+  const valid = (reply) => ({ status: 'answer', mode: 'products', productIds: ['p1'], policyIds: [], reply });
+  assert.equal(finalizeAnswer(valid('Mẫu này có thể hợp với buổi hẹn nhẹ nhàng của bạn.'), productContext).reply,
+    'Mẫu này có thể hợp với buổi hẹn nhẹ nhàng của bạn.');
+  assert.equal(finalizeAnswer(valid('Mẫu này giá chỉ 199.000đ và đang còn hàng.'), productContext).reply,
+    'Bạn có thể tham khảo các sản phẩm sau.');
+  assert.equal(finalizeAnswer(valid('Mẫu này có màu đỏ và chất liệu lụa rất đẹp.'), productContext).reply,
+    'Bạn có thể tham khảo các sản phẩm sau.');
+});
+
+test('system guidance covers distinct fashion and service reply situations without inventing brand facts', () => {
+  for (const phrase of ['phối đồ', 'so sánh', 'đổi trả', 'không gây áp lực', 'không hứa kết quả', 'không phán xét vóc dáng']) {
+    assert.ok(SYSTEM_INSTRUCTION.includes(phrase), `missing reply guidance: ${phrase}`);
+  }
 });
 
 test('policy answer is rendered from public policy text rather than model assertions', () => {

@@ -48,3 +48,13 @@ test('maps deadline and context errors to sanitized application errors', async (
     headers: {},
   });
 });
+
+test('missing Gemini configuration only disables chat and returns a private provider error safely', async () => {
+  const unavailable = setup({
+    gemini: { generate: async () => { throw Object.assign(new Error('private'), { code: 'CHAT_UNAVAILABLE' }); } },
+  });
+  const result = await unavailable.handler({ message: 'hello' }, 'client');
+  assert.equal(result.status, 503);
+  assert.equal(result.body.error.code, 'CHAT_UNAVAILABLE');
+  assert.equal(result.body.error.message.includes('private'), false);
+});

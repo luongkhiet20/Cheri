@@ -43,6 +43,13 @@ test('zero sale price is not treated as a valid discount', async () => {
   assert.equal(context.products[0].price, 450000);
 });
 
+test('english storefront still excludes a product hidden in Vietnamese visibility', async () => {
+  const db = mockDb([
+    { _id: 'hidden-in-vi', titleUrl: 'dress', visibility: true, vi: { visibility: false, title: 'Black dress' }, en: { visibility: true, title: 'Black dress' } },
+  ]);
+  assert.deepEqual((await loadPublicContext(db, { message: 'black dress', history: [], lang: 'en' })).products, []);
+});
+
 test('limits returned products and public context size', async () => {
   const products = Array.from({ length: 12 }, (_, i) => ({
     _id: `p${i}`, titleUrl: `dam-${i}`, visibility: true,
@@ -60,11 +67,13 @@ test('policy context includes only explicitly published public page content', as
     { _id: 'public', titleUrl: 'doi-tra', status: 'published', isPublished: true, vi: { title: 'Đổi trả', contentHTML: '<p>Liên hệ Chéri.</p>' } },
     { _id: 'draft', titleUrl: 'draft', status: 'draft', isPublished: false, vi: { title: 'Bản nháp', contentHTML: 'DRAFT_MARKER' } },
     { _id: 'unmarked', titleUrl: 'unknown', vi: { title: 'Chưa xác nhận', contentHTML: 'UNKNOWN_MARKER' } },
-    { _id: 'injected', titleUrl: 'inject', status: 'published', vi: { title: 'Liên hệ', contentHTML: '<script>BAD_SCRIPT</script><p>Gọi cửa hàng.</p>' } },
+    { _id: 'injected', titleUrl: 'inject', status: 'published', vi: { title: 'Đổi trả', contentHTML: '<script>BAD_SCRIPT</script><p>Gọi cửa hàng.</p>' } },
+    { _id: 'irrelevant', titleUrl: 'ba-mat', status: 'published', vi: { title: 'Bảo mật', contentHTML: '<p>NO_IRRELEVANT_POLICY</p>' } },
   ]);
   const context = await loadPublicContext(db, { message: 'đổi trả', history: [], lang: 'vi' });
   assert.deepEqual(context.policies, [
     { id: 'public', title: 'Đổi trả', path: '/vi/cheri/doi-tra', text: 'Liên hệ Chéri.' },
-    { id: 'injected', title: 'Liên hệ', path: '/vi/cheri/inject', text: 'Gọi cửa hàng.' },
+    { id: 'injected', title: 'Đổi trả', path: '/vi/cheri/inject', text: 'Gọi cửa hàng.' },
   ]);
+  assert.doesNotMatch(JSON.stringify(context.policies), /NO_IRRELEVANT_POLICY/);
 });

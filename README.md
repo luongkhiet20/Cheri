@@ -386,3 +386,24 @@ Việc tích hợp Docker **hoàn toàn độc lập** với cấu hình Vercel:
 - File [`vercel.json`](file:///c:/Users/ACER/Downloads/Cheri/vercel.json) và các serverless function trong [`api/`](file:///c:/Users/ACER/Downloads/Cheri/api) vẫn được bảo toàn nguyên vẹn 100%.
 - Khi bạn push code lên GitHub, Vercel vẫn tự động nhận diện và build deploy serverless bình thường theo quy trình cũ của bạn.
 - Bạn có thể lựa chọn chạy trên Vercel hoặc tự host trên VPS Docker bất kỳ lúc nào mà không bị xung đột kỹ thuật.
+
+## Chat tư vấn Chéri (Gemini)
+
+Chat widget gửi câu hỏi tới `POST /api/chat`; Gemini chỉ được gọi từ backend. Trước khi chạy backend, cấu hình `GEMINI_API_KEY` và `GEMINI_MODEL` trong environment của môi trường chạy (local có thể đặt trong `.env` riêng, production dùng secret/environment settings của hosting). Không đặt hai biến này trong Angular environment hoặc bundle trình duyệt. `.env.example` chỉ có giá trị minh họa.
+
+Chat dùng dữ liệu sản phẩm công khai đang được hiển thị trong storefront và nội dung chính sách CMS đã được xuất bản. Tên, mô tả, danh mục, màu, size, giá và tình trạng được lấy từ catalog hiện tại; nội dung chính sách chỉ được trích từ trang được đánh dấu xuất bản. Không có dữ liệu catalog/CMS đã xác nhận thì bot trả “Chéri chưa có thông tin này”. Hướng dẫn hội thoại bao gồm chào hỏi, phối đồ, tìm/chọn/so sánh sản phẩm, câu hỏi dịch vụ, khiếu nại và yêu cầu nhạy cảm; câu trả lời giữ ngắn gọn, thay đổi cách diễn đạt theo nhu cầu và không gây áp lực mua.
+
+Backend giới hạn 10 lượt/phút mỗi client, giữ lịch sử tối đa 10 lượt trong bộ nhớ của widget và đặt timeout Gemini 20 giây. Các thông tin về giá/chính sách không được tin từ lời mô hình; backend dựng thẻ sản phẩm và phần trả lời chính sách từ nguồn công khai đã kiểm tra.
+
+Kiểm tra chatbot:
+
+```bash
+npm run test:chat:server
+npm run test:chat:client
+npm run build:server
+npm run build:ssr
+```
+
+Test Mongo limiter chỉ chạy khi đặt `CHAT_TEST_MONGO_URI` tới database test cô lập. Test gọi Gemini thật không nằm trong test mặc định; đặt `CHAT_LIVE_TEST=1` và `CHAT_BACKEND_URL` rồi chạy `npm run test:chat:live`. Bài đánh giá live có 12 câu, gồm gợi ý phong cách, sản phẩm/dịch vụ, ngoài phạm vi, ngôn từ xúc phạm và prompt injection; sau 9 câu sẽ chờ qua phút đầu để tuân thủ rate limit. Mỗi lượt tiêu tốn quota Gemini.
+
+Xem kết quả và giới hạn kiểm chứng hiện tại tại [`docs/chatbot/verification.md`](docs/chatbot/verification.md).

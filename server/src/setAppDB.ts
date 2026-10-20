@@ -9,6 +9,7 @@ import compression from 'compression';
 import { json, urlencoded } from 'body-parser';
 import { join } from 'path';
 import * as fs from 'fs';
+const { createChatBodyGate } = require('./routes/chat-routes.js');
 
 export const setAppDB = (app: NestExpressApplication): void => {
   const uploadsDir = join(process.cwd(), 'server', 'uploads');
@@ -20,6 +21,8 @@ export const setAppDB = (app: NestExpressApplication): void => {
   });
 
   app.use(compression());
+  // Route-local byte limit must run before the normal 10 MiB JSON parser.
+  app.use('/api/chat', createChatBodyGate());
   app.use(json({ limit: '10mb' }));
   app.use(urlencoded({ limit: '10mb' }));
   app.use(cookieParser());

@@ -28,6 +28,12 @@ const {
   normalizeProductImages,
   normalizeSettingsImages
 } = require('./src/services/cloudinary-service');
+const { createChatHandler } = require('./shared/chat/chat-handler.cjs');
+const { loadPublicContext } = require('./shared/chat/chat-context.cjs');
+const { createMongoLimiter } = require('./shared/chat/chat-limit.cjs');
+const { createGeminiClient } = require('./shared/chat/gemini-client.cjs');
+const { finalizeAnswer } = require('./shared/chat/chat-policy.cjs');
+const { createChatRouter } = require('./src/routes/chat-routes.js');
 
 const app = express();
 const PORT = process.env.ADMIN_PORT || process.env.PORT_ADMIN || 5000;
@@ -90,6 +96,15 @@ app.use(cors({
   },
   credentials: true
 }));
+const getChatDb = () => connectToMongo();
+const chatHandler = createChatHandler({
+  getDb: getChatDb,
+  limiter: createMongoLimiter(getChatDb),
+  gemini: createGeminiClient(),
+  loadContext: loadPublicContext,
+  finalize: finalizeAnswer,
+});
+app.use('/api/chat', createChatRouter({ handler: chatHandler }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 

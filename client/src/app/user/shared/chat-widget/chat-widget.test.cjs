@@ -148,17 +148,21 @@ async function renderShell(isDashboard, openMessage) {
 }
 
 test('the real storefront shell renders the chat launcher', async () => {
-  assert.match(await renderShell(false), /aria-label="Mở trò chuyện cùng Chéri"/);
+  assert.match(await renderShell(false), /aria-label="Mở tư vấn cùng Chéri"/);
 });
 
 test('the real admin shell renders no chat widget or controls', async () => {
-  assert.doesNotMatch(await renderShell(true), /<app-chat-widget|cheri-chat-panel|Mở trò chuyện cùng Chéri/);
+  assert.doesNotMatch(await renderShell(true), /<app-chat-widget|cheri-chat-panel|Mở tư vấn cùng Chéri/);
 });
 
 test('open chat renders accessible controls and escapes HTML-looking messages during SSR', async () => {
   const html = await renderShell(false, '<img src=x onerror=alert(1)>');
   assert.match(html, /role="dialog"/);
   assert.match(html, /role="log"/);
+  assert.match(html, /Tư vấn cùng Chéri/);
+  assert.match(html, /Chatbot Chéri chỉ hỗ trợ tham khảo về thời trang, sản phẩm và dịch vụ/);
+  assert.match(html, /✨ Chào bạn!/);
+  assert.match(html, />Tư vấn</);
   assert.match(html, /aria-label="Gửi lời nhắn"/);
   assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;/);
   assert.doesNotMatch(html, /<img src=x onerror/);

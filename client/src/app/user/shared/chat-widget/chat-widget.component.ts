@@ -16,7 +16,7 @@ import { ChatMessage, ChatRequest, ChatResponse, ChatTurn } from './chat.models'
 export class ChatWidgetComponent implements AfterViewChecked, OnDestroy {
   readonly isOpen = signal(false);
   readonly messages = signal<ChatMessage[]>([
-    { id: 1, sender: 'store', text: 'Chào bạn! Bạn đang tìm một món đồ cho dịp nào? Hãy thử để lại lời nhắn nhé.' },
+    { id: 1, sender: 'store', text: '✨ Chào bạn! Chéri có thể gợi ý phối đồ hoặc giúp bạn tìm sản phẩm phù hợp. Bạn đang chuẩn bị cho dịp nào?' },
   ]);
   draft = '';
   private nextMessageId = 2;

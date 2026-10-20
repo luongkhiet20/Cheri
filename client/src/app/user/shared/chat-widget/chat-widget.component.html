@@ -5,15 +5,15 @@
       <header class="chat-header">
         <span class="chat-avatar" aria-hidden="true">C</span>
         <div class="chat-heading">
-          <h2 id="cheri-chat-title">Trò chuyện cùng Chéri</h2>
-          <span>Trợ lý AI Chéri</span>
+          <h2 id="cheri-chat-title">Tư vấn cùng Chéri</h2>
+          <span>Thời trang · Sản phẩm · Dịch vụ</span>
         </div>
-        <button class="chat-close" type="button" (click)="closeChat()" aria-label="Thu gọn trò chuyện">
+        <button class="chat-close" type="button" (click)="closeChat()" aria-label="Thu gọn tư vấn">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" /></svg>
         </button>
       </header>
 
-      <div #messageList class="chat-messages" role="log" aria-label="Nội dung trò chuyện"
+      <div #messageList class="chat-messages" role="log" aria-label="Nội dung tư vấn"
         aria-live="polite" aria-relevant="additions">
         <p class="chat-start">Một lời chào nhỏ từ Chéri</p>
         @for (message of messages(); track message.id) {
@@ -45,10 +45,10 @@
       </div>
 
       <form class="chat-composer" (ngSubmit)="sendMessage()">
-        <label class="chat-sr-only" for="cheri-chat-input">Nhập lời nhắn</label>
+        <label class="chat-sr-only" for="cheri-chat-input">Nhập câu hỏi cần tư vấn</label>
         <div class="chat-input-row">
           <textarea #composer id="cheri-chat-input" name="message" [(ngModel)]="draft" rows="2" maxlength="1000"
-            placeholder="Bạn muốn hỏi điều gì?" (keydown.enter)="onEnter($event)"
+            placeholder="Bạn muốn được tư vấn điều gì?" (keydown.enter)="onEnter($event)"
             aria-describedby="cheri-chat-note"></textarea>
           <button type="submit" class="chat-send" [disabled]="!draft.trim() || draft.trim().length > 1000 || isSending() || !!errorMessage()"
             aria-label="Gửi lời nhắn">
@@ -60,15 +60,15 @@
             <button type="button" class="chat-retry" (click)="retryMessage()" [disabled]="isSending()">Thử lại</button>
           </p>
         }
-        <p id="cheri-chat-note">Chéri dùng Gemini để hỗ trợ trả lời. Vui lòng không gửi thông tin nhạy cảm.</p>
+        <p id="cheri-chat-note">Chatbot Chéri chỉ hỗ trợ tham khảo về thời trang, sản phẩm và dịch vụ. Vui lòng kiểm tra lại thông tin trước khi mua; không gửi thông tin cá nhân hoặc nhạy cảm.</p>
       </form>
     </section>
   }
 
   <button #launcher type="button" class="chat-launcher" [class.chat-launcher-open]="isOpen()"
     (click)="isOpen() ? closeChat() : openChat()" [attr.aria-expanded]="isOpen()"
-    aria-controls="cheri-chat-panel" [attr.aria-label]="isOpen() ? 'Thu gọn trò chuyện' : 'Mở trò chuyện cùng Chéri'">
+    aria-controls="cheri-chat-panel" [attr.aria-label]="isOpen() ? 'Thu gọn tư vấn' : 'Mở tư vấn cùng Chéri'">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-6 4V6a2 2 0 0 1 2-2Z" /><path d="M7 9h10M7 13h7" /></svg>
-    <span>Trò chuyện</span>
+    <span>Tư vấn</span>
   </button>
 </div>

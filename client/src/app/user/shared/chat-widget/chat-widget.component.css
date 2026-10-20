@@ -124,6 +124,18 @@ svg {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+.chat-product-list { display: grid; gap: 8px; width: min(88%, 280px); margin-top: 8px; }
+.chat-product {
+  display: flex; align-items: center; gap: 10px; min-width: 0; padding: 8px;
+  border: 1px solid #eee4dc; border-radius: 12px; background: #fff; color: #3e3030;
+  text-decoration: none;
+}
+.chat-product:hover { border-color: #b98170; }
+.chat-product img { width: 54px; height: 64px; flex: 0 0 54px; border-radius: 8px; object-fit: cover; }
+.chat-product-copy { display: grid; gap: 5px; min-width: 0; font-size: 12px; line-height: 1.4; }
+.chat-product-copy span:first-child { overflow-wrap: anywhere; }
+.chat-product-copy span + span { color: #74070e; font-weight: 600; }
+.chat-status { margin: 4px 0 12px; color: #786c66; font-size: 12px; }
 .from-user { align-items: flex-end; }
 .from-user p { border-color: #eadbd8; border-radius: 14px 0 14px 14px; background: #f3e6e3; color: #59090f; }
 .chat-composer { padding: 14px 16px; background: #fff; border-top: 1px solid #eee4dc; flex-shrink: 0; }
@@ -158,6 +170,8 @@ svg {
 }
 .chat-send:disabled { cursor: default; background: #e2d5d1; color: #76645d; }
 .chat-composer > p { margin: 10px 0 0; color: #786c66; font-size: 10px; line-height: 1.5; }
+.chat-composer .chat-error { color: #74070e; font-size: 12px; }
+.chat-retry { margin-left: 8px; padding: 4px 8px; border: 1px solid #74070e; border-radius: 8px; background: #fff; color: #74070e; font-size: 12px; }
 .chat-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
 @media (max-width: 480px) {

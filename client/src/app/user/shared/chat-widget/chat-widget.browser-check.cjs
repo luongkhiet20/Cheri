@@ -7,11 +7,11 @@ const assert = require('node:assert/strict');
 
 const root = process.cwd();
 const widgetDir = path.join(root, 'client/src/app/user/shared/chat-widget');
-const artifactDir = path.join(root, '.superpowers/sdd/2026-10-08-chat-widget-ui');
+const artifactDir = path.join(root, '.superpowers/sdd/2026-10-20-cheri-chatbot');
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function main() {
   const bundle = await build({
-    stdin: { contents: `import '@angular/compiler'; import {provideZonelessChangeDetection} from '@angular/core'; import {bootstrapApplication} from '@angular/platform-browser'; import {ChatWidgetComponent} from './client/src/app/user/shared/chat-widget/chat-widget.component'; bootstrapApplication(ChatWidgetComponent,{providers:[provideZonelessChangeDetection()]});`, resolveDir: root, loader: 'ts' },
+    stdin: { contents: `import '@angular/compiler'; import {provideZonelessChangeDetection} from '@angular/core'; import {bootstrapApplication} from '@angular/platform-browser'; import {ChatWidgetComponent} from './client/src/app/user/shared/chat-widget/chat-widget.component'; import {ChatService} from './client/src/app/services/chat.service'; import {of} from 'rxjs'; bootstrapApplication(ChatWidgetComponent,{providers:[provideZonelessChangeDetection(),{provide:ChatService,useValue:{send:()=>of({status:'general',reply:'Chéri xin chào, mình có thể hỗ trợ bạn về thời trang và sản phẩm.',products:[],policies:[]})}}]});`, resolveDir: root, loader: 'ts' },
     bundle: true, write: false, format: 'iife', platform: 'browser', target: 'es2022',
     tsconfigRaw: { compilerOptions: { experimentalDecorators: true, useDefineForClassFields: false } },
     plugins: [{ name: 'inline-widget-resources', setup(plugin) {

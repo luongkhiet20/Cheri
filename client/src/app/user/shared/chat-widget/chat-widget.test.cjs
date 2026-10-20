@@ -8,11 +8,13 @@ process.env.TS_NODE_COMPILER_OPTIONS = JSON.stringify({
 });
 require('ts-node/register/transpile-only');
 require('@angular/compiler');
+const { of, throwError, Subject } = require('rxjs');
+const { ChatService } = require('../../../services/chat.service.ts');
 
-function createWidget() {
+function createWidget(chatService = { send: () => new Subject() }) {
   assert.ok(fs.existsSync(path.join(__dirname, 'chat-widget.component.ts')), 'Chat widget component must exist');
   const { ChatWidgetComponent } = require('./chat-widget.component.ts');
-  return new ChatWidgetComponent();
+  return new ChatWidgetComponent(chatService);
 }
 
 test('chat starts collapsed with a greeting and no persisted user messages', () => {
@@ -114,6 +116,7 @@ async function renderShell(isDashboard, openMessage) {
   const { bootstrapApplication } = require('@angular/platform-browser');
   const { renderApplication, provideServerRendering } = require('@angular/platform-server');
   const { ChatWidgetComponent } = require('./chat-widget.component.ts');
+  const { ChatService } = require('../../../services/chat.service.ts');
   await ɵresolveComponentResources((url) => Promise.resolve(fs.readFileSync(path.join(__dirname, url), 'utf8')));
   class ShellPreview {
     isDashboard = isDashboard;
@@ -128,7 +131,12 @@ async function renderShell(isDashboard, openMessage) {
     template: fs.readFileSync(path.resolve(__dirname, '../../../app.component.html'), 'utf8'),
   })(ShellPreview);
   return renderApplication(async () => {
-    const app = await bootstrapApplication(ShellPreview, { providers: [provideZonelessChangeDetection(), provideServerRendering()] });
+    const app = await bootstrapApplication(ShellPreview, {
+      providers: [
+        provideZonelessChangeDetection(), provideServerRendering(),
+        { provide: ChatService, useValue: { send: () => of({ reply: 'Chéri sẵn sàng hỗ trợ.', products: [] }) } },
+      ],
+    });
     if (openMessage !== undefined) {
       app.components[0].instance.widget.openChat();
       app.components[0].instance.widget.draft = openMessage;
@@ -154,4 +162,83 @@ test('open chat renders accessible controls and escapes HTML-looking messages du
   assert.match(html, /aria-label="Gửi lời nhắn"/);
   assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;/);
   assert.doesNotMatch(html, /<img src=x onerror/);
+});
+
+test('a successful reply reaches the widget and sends no greeting in history', () => {
+  let sent;
+  const widget = createWidget({ send: (request) => { sent = request; return of({ reply: 'Chéri chào bạn.', products: [] }); } });
+  widget.draft = 'Xin chào';
+  widget.sendMessage();
+  assert.equal(sent.message, 'Xin chào');
+  assert.deepEqual(sent.history, []);
+  assert.equal(widget.messages().length, 3);
+  assert.equal(widget.messages()[2].sender, 'store');
+  assert.equal(widget.messages()[2].text, 'Chéri chào bạn.');
+  assert.equal(widget.isSending(), false);
+});
+
+test('a failed request can be retried without duplicating the user message', () => {
+  const sent = [];
+  const widget = createWidget({ send: (request) => {
+    sent.push(request);
+    return sent.length === 1
+      ? throwError(() => new Error('provider details must not appear in the widget'))
+      : of({ reply: 'Bạn có thể chọn màu đen.', products: [] });
+  } });
+  widget.draft = '  Gợi ý giúp tôi  ';
+  widget.sendMessage();
+  assert.match(widget.errorMessage(), /thử lại/i);
+  assert.equal(widget.isSending(), false);
+  const messagesBeforeRetry = widget.messages().length;
+  widget.retryMessage();
+  assert.equal(sent.length, 2);
+  assert.deepEqual(sent[0], sent[1]);
+  assert.equal(widget.messages().length, messagesBeforeRetry + 1);
+  assert.equal(widget.messages().filter((message) => message.sender === 'user').length, 1);
+  assert.doesNotMatch(widget.errorMessage(), /provider details/i);
+  assert.equal(widget.messages().at(-1).text, 'Bạn có thể chọn màu đen.');
+});
+
+test('sending is single-flight, preserves a new draft, and closing leaves the request alive', () => {
+  let observer;
+  let cancelled = 0;
+  const widget = createWidget({ send: () => ({ subscribe(value) {
+    observer = value;
+    return { closed: false, unsubscribe() { cancelled++; } };
+  } }) });
+  widget.draft = 'Đầu tiên';
+  widget.sendMessage();
+  widget.draft = 'Tin mới';
+  widget.sendMessage();
+  assert.equal(widget.messages().filter((message) => message.sender === 'user').length, 1);
+  widget.closeChat();
+  assert.equal(cancelled, 0);
+  observer.next({ reply: 'Đã nhận.', products: [] });
+  observer.complete();
+  assert.equal(widget.draft, 'Tin mới');
+  assert.equal(widget.isSending(), false);
+});
+
+test('response rendering rejects external product paths and non-HTTP images', () => {
+  const widget = createWidget({ send: () => of({ reply: '<b>plain text</b>', products: [
+    { id: 'safe', title: 'Váy', path: '/vi/product/vay-den', imageUrl: 'javascript:alert(1)', price: 200000 },
+    { id: 'unsafe', title: 'Lừa đảo', path: '//evil.example', imageUrl: 'https://evil.example/image.jpg', price: -2 },
+  ] }) });
+  widget.draft = 'Gợi ý';
+  widget.sendMessage();
+  assert.equal(widget.messages().at(-1).text, '<b>plain text</b>');
+  assert.deepEqual(widget.messages().at(-1).products, [
+    { id: 'safe', title: 'Váy', path: '/vi/product/vay-den', price: 200000 },
+  ]);
+});
+
+test('destroying the widget cancels an active HTTP subscription', () => {
+  let unsubscribed = 0;
+  const widget = createWidget({ send: () => ({ subscribe() {
+    return { closed: false, unsubscribe() { unsubscribed++; } };
+  } }) });
+  widget.draft = 'Gửi';
+  widget.sendMessage();
+  widget.ngOnDestroy();
+  assert.equal(unsubscribed, 1);
 });

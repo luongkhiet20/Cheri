@@ -6,7 +6,7 @@
         <span class="chat-avatar" aria-hidden="true">C</span>
         <div class="chat-heading">
           <h2 id="cheri-chat-title">Trò chuyện cùng Chéri</h2>
-          <span>Khung chat mẫu</span>
+          <span>Trợ lý AI Chéri</span>
         </div>
         <button class="chat-close" type="button" (click)="closeChat()" aria-label="Thu gọn trò chuyện">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" /></svg>
@@ -20,7 +20,27 @@
           <div class="chat-message" [class.from-user]="message.sender === 'user'">
             <span class="chat-sender">{{ message.sender === 'user' ? 'Bạn' : 'Chéri' }}</span>
             <p>{{ message.text }}</p>
+            @if (message.products?.length) {
+              <div class="chat-product-list" aria-label="Sản phẩm Chéri gợi ý">
+                @for (product of message.products; track product.id) {
+                  <a class="chat-product" [routerLink]="product.path">
+                    @if (product.imageUrl) {
+                      <img [src]="product.imageUrl" [alt]="product.title" loading="lazy" />
+                    }
+                    <span class="chat-product-copy">
+                      <span>{{ product.title }}</span>
+                      @if (product.price !== undefined) {
+                        <span>{{ product.price | priceFormat:true }}</span>
+                      }
+                    </span>
+                  </a>
+                }
+              </div>
+            }
           </div>
+        }
+        @if (isSending()) {
+          <p class="chat-status" role="status">Chéri đang trả lời…</p>
         }
       </div>
 
@@ -30,12 +50,17 @@
           <textarea #composer id="cheri-chat-input" name="message" [(ngModel)]="draft" rows="2" maxlength="1000"
             placeholder="Bạn muốn hỏi điều gì?" (keydown.enter)="onEnter($event)"
             aria-describedby="cheri-chat-note"></textarea>
-          <button type="submit" class="chat-send" [disabled]="!draft.trim() || draft.trim().length > 1000"
+          <button type="submit" class="chat-send" [disabled]="!draft.trim() || draft.trim().length > 1000 || isSending() || !!errorMessage()"
             aria-label="Gửi lời nhắn">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 14-7-4 14-3-6-7-1Zm7 1 7-8" /></svg>
           </button>
         </div>
-        <p id="cheri-chat-note">Tin nhắn chỉ hiển thị tại đây, chưa gửi đến cửa hàng.</p>
+        @if (errorMessage()) {
+          <p class="chat-error" role="alert">{{ errorMessage() }}
+            <button type="button" class="chat-retry" (click)="retryMessage()" [disabled]="isSending()">Thử lại</button>
+          </p>
+        }
+        <p id="cheri-chat-note">Chéri dùng Gemini để hỗ trợ trả lời. Vui lòng không gửi thông tin nhạy cảm.</p>
       </form>
     </section>
   }

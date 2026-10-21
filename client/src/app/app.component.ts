@@ -27,10 +27,11 @@ import { FooterComponent } from './user/layout/footer/footer.component';
 import { HeaderComponent } from './user/layout/header/header.component';
 import { ChatWidgetComponent } from './user/shared/chat-widget/chat-widget.component';
 import { NotificationComponent } from './user/shared/notification/notification.component';
+import { ScrollToTopComponent } from './user/shared/scroll-to-top/scroll-to-top.component';
 
 @Component({
   selector: 'cheri-app',
-  imports: [CommonModule, RouterOutlet, FooterComponent, HeaderComponent, ChatWidgetComponent, NotificationComponent],
+  imports: [CommonModule, RouterOutlet, FooterComponent, HeaderComponent, ChatWidgetComponent, NotificationComponent, ScrollToTopComponent],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })

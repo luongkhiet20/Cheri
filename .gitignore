@@ -98,6 +98,7 @@ server/uploads/*
 Thumbs.db
 .vscode/
 .idea/
+.superpowers/
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache

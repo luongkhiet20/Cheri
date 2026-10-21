@@ -3,10 +3,10 @@
 }
 
 .scroll-to-top-btn {
-  position: fixed;
-  right: 24px;
-  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
-  z-index: 890;
+  position: fixed !important;
+  right: 33px !important;
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important;
+  z-index: 1040 !important;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -16,11 +16,11 @@
   min-height: 34px;
   padding: 0;
   border-radius: 50%;
-  background-color: #921a22e6;
-  border: 1.5px solid #921a22;
+  background-color: var(--cheri-primary, #74070E);
+  border: 1.5px solid var(--cheri-primary-hover, #5C050B);
   color: #ffffff;
   cursor: pointer;
-  box-shadow: 0 2px 8px #921a22;
+  box-shadow: 0 4px 12px rgba(116, 7, 14, 0.32);
 
   /* Trạng thái ẩn ban đầu */
   opacity: 0;
@@ -34,38 +34,37 @@
     transform 300ms cubic-bezier(0.4, 0, 0.2, 1),
     visibility 300ms cubic-bezier(0.4, 0, 0.2, 1),
     background-color 200ms ease,
-    border-color 200ms ease;
+    border-color 200ms ease,
+    box-shadow 200ms ease;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Khi có widget chat ở góc dưới bên phải, tự động xếp nút lên trên launcher chat để không che nhau */
-:host-context(body:has(.chat-widget)) .scroll-to-top-btn,
-:host-context(:has(.chat-widget)) .scroll-to-top-btn,
-body:has(.chat-widget) .scroll-to-top-btn {
-  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
-}
-
 .scroll-to-top-btn.is-visible {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transform: translateY(0);
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: translateY(0) !important;
 }
 
 .scroll-to-top-btn:hover {
-  background-color: #921a22;
+  background-color: var(--cheri-primary-hover, #5C050B);
   border-color: #74070e;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 16px rgba(116, 7, 14, 0.45);
 }
 
 .scroll-to-top-btn:active {
-  transform: translateY(1px);
+  background-color: #921a22;
+  transform: translateY(0) !important;
 }
 
 .scroll-to-top-btn:focus-visible {
-  outline: 2px solid #74070e;
+  outline: 2px solid var(--cheri-primary, #74070E);
   outline-offset: 3px;
 }
+
+
 
 .scroll-to-top-icon {
   width: 16px;

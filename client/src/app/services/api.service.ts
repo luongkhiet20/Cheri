@@ -1199,6 +1199,16 @@ export class ApiService {
     );
   }
 
+  sendChatMessage(payload: {
+    message: string;
+    history?: Array<{ sender: 'user' | 'store'; text: string }>;
+    lang?: string;
+    guestCartId?: string;
+    sessionId?: string;
+  }): Observable<any> {
+    const url = `${this.apiUrl}/api/chat/message`;
+    return this.http.post(url, payload);
+  }
 
   private initAuthTracking() {
     const selectors = inject(SignalStoreSelectors);

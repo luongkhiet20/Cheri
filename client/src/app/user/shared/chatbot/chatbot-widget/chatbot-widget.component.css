@@ -1,0 +1,91 @@
+:host {
+  display: block;
+}
+
+.chatbot-root {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 14px;
+  font-family: inherit;
+}
+
+.chatbot-window-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+/* 52x52 Circular Launcher Button with Chéri Brand Red */
+.chatbot-launcher-btn {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background-color: var(--cheri-primary, #74070E);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 4px 16px rgba(116, 7, 14, 0.32), 0 2px 6px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, box-shadow 0.25s ease;
+  user-select: none;
+}
+
+.chatbot-launcher-btn:hover {
+  transform: scale(1.08);
+  background-color: var(--cheri-primary-hover, #5C050B);
+  box-shadow: 0 8px 24px rgba(116, 7, 14, 0.42), 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.chatbot-launcher-btn:active {
+  transform: scale(0.96);
+}
+
+.chatbot-launcher-btn.active {
+  background-color: var(--cheri-primary-hover, #5C050B);
+  box-shadow: 0 4px 14px rgba(92, 5, 11, 0.4);
+}
+
+.launcher-icon {
+  width: 24px;
+  height: 24px;
+  stroke: #ffffff;
+  transition: transform 0.2s ease;
+}
+
+.launcher-pulse-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 10px;
+  height: 10px;
+  background-color: #ffffff;
+  border: 2px solid var(--cheri-primary, #74070E);
+  border-radius: 50%;
+}
+
+/* Mobile viewport adjustments */
+@media (max-width: 480px) {
+  .chatbot-root {
+    bottom: 16px;
+    right: 16px;
+  }
+
+  .chatbot-window-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1100;
+  }
+}

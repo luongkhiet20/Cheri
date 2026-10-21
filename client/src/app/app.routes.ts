@@ -50,6 +50,8 @@ export const routes: Routes = [
   { path: 'products', redirectTo: '/vi/product/all', pathMatch: 'full' },
   { path: 'product/all', redirectTo: '/vi/product/all', pathMatch: 'full' },
   { path: 'product', redirectTo: '/vi/product/all', pathMatch: 'full' },
+  { path: 'product/:titleUrl', redirectTo: '/vi/product/:titleUrl' },
+  { path: 'products/:titleUrl', redirectTo: '/vi/product/:titleUrl' },
   { path: 'cart', redirectTo: '/vi/cart', pathMatch: 'full' },
   { path: 'order', redirectTo: '/vi/order', pathMatch: 'full' },
   { path: 'orders', redirectTo: '/vi/order', pathMatch: 'full' },

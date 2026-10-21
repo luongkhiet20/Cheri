@@ -7,12 +7,8 @@
       <div class="footer-subscribe">
         <h4 class="footer-col-title footer-subscribe-title">Đăng ký để nhận ưu đãi</h4>
         <form class="footer-subscribe-form" (submit)="$event.preventDefault()">
-          <input
-            type="email"
-            class="footer-subscribe-input"
-            placeholder="Nhập email của bạn"
-            aria-label="Nhập email của bạn"
-          />
+          <input type="email" class="footer-subscribe-input" placeholder="Nhập email của bạn"
+            aria-label="Nhập email của bạn" />
           <button type="submit" class="footer-subscribe-btn">
             Đăng ký
           </button>
@@ -51,8 +47,7 @@
         <li *ngIf="isPageVisible('shipping-policy')"><a class="footer-link"
             [routerLink]="['/' + lang + '/shipping-policy']">Chính sách vận chuyển - giao
             hàng</a></li>
-        <li *ngIf="isPageVisible('terms-of-service')"><a class="footer-link"
-            [routerLink]="['/' + lang + '/terms-of-service']">Điều khoản sử dụng</a></li>
+
       </ul>
     </div>
 

@@ -35,6 +35,6 @@ import { DashboardController } from './dashboard.controller';
   ],
   controllers: [OrdersController, DashboardController],
   providers: [OrdersService],
-  exports: [MongooseModule],
+  exports: [MongooseModule, OrdersService],
 })
 export class OrdersModule {}

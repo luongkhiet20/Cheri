@@ -10,6 +10,7 @@ import { CheriModule } from './cheri/cheri.module';
 import { InteractionsModule } from './interactions/interactions.module';
 import { RecommendationsModule } from './recommendations/recommendations.module';
 import { ReviewsModule } from './reviews/reviews.module';
+import { ChatModule } from './chat/chat.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 // import { join } from 'path';
 // import { ServeStaticModule } from '@nestjs/serve-static';
@@ -43,6 +44,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     InteractionsModule,
     RecommendationsModule,
     ReviewsModule,
+    ChatModule,
 
     // ServeStaticModule.forRoot({
     //   rootPath: staticFile,

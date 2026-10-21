@@ -1,0 +1,124 @@
+<div class="chatbot-products-table-wrap" *ngIf="allProducts.length > 0">
+  <table class="chatbot-products-table">
+    <thead>
+      <tr>
+        <th class="th-product">Sản phẩm</th>
+        <th class="th-price">Giá</th>
+        <th class="th-action"></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr
+        *ngFor="let p of displayedProducts"
+        class="product-table-row"
+        (click)="onCardClick(p, $event)"
+        (keydown.enter)="onCardClick(p, $event)"
+        tabindex="0"
+        role="button"
+        [attr.aria-label]="'Xem chi tiết sản phẩm ' + p.title"
+      >
+        <!-- Product col: Thumbnail + Title -->
+        <td class="td-product">
+          <div class="product-cell">
+            <div class="table-thumb-wrap">
+              <img
+                *ngIf="p.imageUrl"
+                [src]="p.imageUrl"
+                [alt]="p.title"
+                class="table-thumb"
+                loading="lazy"
+              />
+              <div *ngIf="!p.imageUrl" class="table-thumb-placeholder">
+                <span>C</span>
+              </div>
+              <span *ngIf="p.onSale" class="table-sale-badge">Sale</span>
+            </div>
+            <span class="table-product-title" [title]="p.title">
+              {{ p.title }}
+            </span>
+          </div>
+        </td>
+
+        <!-- Price col -->
+        <td class="td-price">
+          <div class="price-cell">
+            <span class="price-current">{{ p.price | currency : 'VND' : 'symbol' : '1.0-0' }}</span>
+            <span *ngIf="p.originalPrice && p.onSale" class="price-original">
+              {{ p.originalPrice | currency : 'VND' : 'symbol' : '1.0-0' }}
+            </span>
+          </div>
+        </td>
+
+        <!-- Action col -->
+        <td class="td-action">
+          <span class="table-view-btn" [title]="'Xem chi tiết ' + p.title" aria-hidden="true">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="lucide lucide-arrow-right"
+              aria-hidden="true"
+            >
+              <path d="M5 12h14" />
+              <path d="m12 5 7 7-7 7" />
+            </svg>
+          </span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- "Xem thêm" / "Thu gọn" button if > 3 products -->
+  <button
+    *ngIf="allProducts.length > 3"
+    type="button"
+    class="table-expand-btn"
+    (click)="toggleExpand($event)"
+  >
+    <ng-container *ngIf="!isExpanded">
+      <span>Xem thêm ({{ remainingCount }})</span>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="lucide lucide-chevron-down"
+        aria-hidden="true"
+      >
+        <path d="m6 9 6 6 6-6" />
+      </svg>
+    </ng-container>
+
+    <ng-container *ngIf="isExpanded">
+      <span>Thu gọn</span>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="lucide lucide-chevron-up"
+        aria-hidden="true"
+      >
+        <path d="m18 15-6-6-6 6" />
+      </svg>
+    </ng-container>
+  </button>
+</div>
+
+

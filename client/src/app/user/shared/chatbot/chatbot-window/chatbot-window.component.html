@@ -1,0 +1,68 @@
+<div class="chatbot-window" role="dialog" aria-modal="true" aria-label="Cửa sổ trò chuyện Chéri">
+  <!-- Header -->
+  <header class="chatbot-header">
+    <div class="header-brand">
+      <div class="brand-avatar" aria-hidden="true">
+        <iframe
+          src="https://assets.pinterest.com/ext/embed.html?id=904238431461200760"
+          height="434"
+          width="236"
+          frameborder="0"
+          scrolling="no"
+          class="brand-avatar-iframe"
+          title="Chéri Avatar"
+        ></iframe>
+      </div>
+      <div class="brand-meta">
+        <h2 class="brand-name">Chéri</h2>
+
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button type="button" class="action-btn" (click)="onClear()" title="Làm mới cuộc trò chuyện"
+        aria-label="Làm mới cuộc trò chuyện">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+          <path d="M21 3v5h-5" />
+          <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+          <path d="M8 16H3v5" />
+        </svg>
+      </button>
+
+      <button type="button" class="action-btn close-btn" (click)="onClose()" title="Đóng cửa sổ"
+        aria-label="Đóng cửa sổ trò chuyện">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Message Body -->
+  <div #messageScrollContainer class="chatbot-body" role="log" aria-live="polite" aria-relevant="additions text">
+    <app-chatbot-message *ngFor="let msg of state.messages()" [message]="msg" (retry)="onRetry($event)"
+      (authAction)="onClose()" (productClick)="onProductClick($event)"></app-chatbot-message>
+
+
+    <div *ngIf="state.isLoading()" class="typing-wrapper">
+      <div class="avatar-store-small" aria-hidden="true">C</div>
+      <app-chatbot-typing></app-chatbot-typing>
+    </div>
+  </div>
+
+  <!-- Quick Replies -->
+  <div class="chatbot-quick-replies-wrap">
+    <app-chatbot-quick-replies [replies]="state.quickReplies()" [disabled]="state.isLoading()"
+      (selectReply)="onSelectQuickReply($event)"></app-chatbot-quick-replies>
+  </div>
+
+  <!-- Footer / Input -->
+  <footer class="chatbot-footer">
+    <app-chatbot-input [disabled]="state.isLoading()" (sendMessage)="onSendMessage($event)"></app-chatbot-input>
+
+  </footer>
+</div>

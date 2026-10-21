@@ -12,6 +12,8 @@
     "start:dev": "cross-env NODE_ENV=development nest start --watch --config ./server/nest-cli.json --path ./server/tsconfig.json",
     "test:server": "node --test server/src/test/cloudinary-all-features.test.cjs server/src/test/cloudinary-return-proof.test.cjs server/src/test/google-oauth-flow.test.cjs",
     "test:order-tracking": "node --test server/src/test/order-tracking-contract.test.cjs server/src/test/tracking-service-errors.test.cjs server/src/test/tracking-stale-number.test.cjs server/src/test/tracking-update.test.cjs",
+    "test:chat": "node --test server/src/test/chatbot-full-suite.test.cjs",
+    "test:chatbot": "node --test server/src/test/chatbot-full-suite.test.cjs",
     "test:storefront-search": "node --test client/src/app/user/pages/product/products/products-search-flow.test.cjs server/src/test/products-keyword-search.test.cjs",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node server/dist/main",

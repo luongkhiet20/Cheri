@@ -108,6 +108,45 @@ test('new messages scroll to the latest bubble after the view updates', () => {
   assert.equal(list.scrollTop, 100, 'later checks must not override manual scrolling');
 });
 
+test('clicking outside an open chat collapses it without stealing focus, while clicking inside leaves it open', () => {
+  const widget = createWidget();
+  const insideElement = { id: 'chat-inner' };
+  const outsideElement = { id: 'outside-body' };
+  const hostElement = {
+    contains: (node) => node === insideElement,
+  };
+  widget.elementRef = { nativeElement: hostElement };
+
+  // When chat is closed, clicking outside does nothing
+  widget.onDocumentClick({ target: outsideElement });
+  assert.equal(widget.isOpen(), false);
+
+  // Open chat
+  widget.openChat();
+  assert.equal(widget.isOpen(), true);
+
+  // Click inside chat: remains open
+  widget.onDocumentClick({ target: insideElement });
+  assert.equal(widget.isOpen(), true);
+
+  // Click inside with composedPath: remains open
+  widget.onDocumentClick({
+    target: insideElement,
+    composedPath: () => [insideElement, hostElement],
+  });
+  assert.equal(widget.isOpen(), true);
+
+  // Click outside chat: closes, without stealing focus to launcher
+  let launcherFocused = 0;
+  widget.launcher = { nativeElement: { focus: () => launcherFocused++ } };
+  widget.onDocumentClick({
+    target: outsideElement,
+    composedPath: () => [outsideElement, { id: 'body' }],
+  });
+  assert.equal(widget.isOpen(), false);
+  assert.equal(launcherFocused, 0, 'Clicking outside must not steal focus to launcher');
+});
+
 async function renderShell(isDashboard, openMessage) {
   const { Component, CUSTOM_ELEMENTS_SCHEMA, ViewChild, provideZonelessChangeDetection, ɵresolveComponentResources } = require('@angular/core');
   const { CommonModule } = require('@angular/common');

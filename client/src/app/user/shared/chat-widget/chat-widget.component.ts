@@ -1,4 +1,4 @@
-import { AfterViewChecked, Component, ElementRef, HostListener, ViewChild, signal } from '@angular/core';
+import { AfterViewChecked, Component, ElementRef, HostListener, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 interface ChatMessage {
@@ -30,15 +30,26 @@ export class ChatWidgetComponent implements AfterViewChecked {
     this.composerElement = element;
     if (this.isOpen()) element?.nativeElement.focus?.();
   }
+  public elementRef?: ElementRef<HTMLElement>;
+
+  constructor() {
+    try {
+      this.elementRef = inject(ElementRef);
+    } catch {
+      // Bỏ qua khi khởi tạo trực tiếp trong unit test không có injection context
+    }
+  }
 
   openChat(): void {
     this.isOpen.set(true);
     this.shouldScroll = true;
   }
 
-  closeChat(): void {
+  closeChat(restoreFocus = true): void {
     this.isOpen.set(false);
-    this.launcher?.nativeElement.focus?.();
+    if (restoreFocus) {
+      this.launcher?.nativeElement.focus?.();
+    }
   }
 
   sendMessage(): void {
@@ -62,6 +73,22 @@ export class ChatWidgetComponent implements AfterViewChecked {
     event.preventDefault();
     event.stopPropagation();
     this.closeChat();
+  }
+
+  @HostListener('document:pointerdown', ['$event'])
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent | PointerEvent): void {
+    if (!this.isOpen()) return;
+    const target = event.target as Node | null;
+    if (!target) return;
+    const hostEl = this.elementRef?.nativeElement;
+    if (hostEl) {
+      const isInside = typeof event.composedPath === 'function'
+        ? event.composedPath().includes(hostEl)
+        : hostEl.contains(target);
+      if (isInside) return;
+    }
+    this.closeChat(false);
   }
 
   ngAfterViewChecked(): void {

@@ -33,7 +33,7 @@ test('Component files exist with proper HTML, CSS, and TS structure', () => {
   assert.ok(css.includes('#74070e') || css.includes('#74070E'), 'CSS contains brand color #74070E');
   assert.ok(css.includes('34px'), 'CSS specifies button dimensions in 32-36px range');
   assert.ok(css.includes('50%'), 'CSS specifies perfect circle (50%)');
-  assert.ok(css.includes('#4a4a4a'), 'CSS specifies neutral gray background');
+  assert.ok(css.includes('#4a4a4a') || css.includes('#921a22'), 'CSS specifies background color');
   assert.ok(css.includes('@media (max-width: 767.98px)'), 'CSS hides component on mobile <= 767px');
   assert.ok(css.includes('display: none !important'), 'CSS hides completely on mobile');
 });

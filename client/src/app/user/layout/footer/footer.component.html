@@ -2,11 +2,28 @@
   <!-- Main grid -->
   <div class="footer-inner">
 
-    <!-- Col 1: Địa chỉ & liên hệ -->
+    <!-- Col 1: Đăng ký nhận ưu đãi & Địa chỉ, liên hệ -->
     <div class="footer-col footer-col--contact">
-      <p class="footer-contact-line" *ngIf="contact?.address">Địa chỉ: {{ contact.address }}</p>
-      <p class="footer-contact-line" *ngIf="contact?.phone">Hotline: {{ contact.phone }}</p>
-      <p class="footer-contact-line" *ngIf="contact?.email">Email: {{ contact.email }}</p>
+      <div class="footer-subscribe">
+        <h4 class="footer-col-title footer-subscribe-title">Đăng ký để nhận ưu đãi</h4>
+        <form class="footer-subscribe-form" (submit)="$event.preventDefault()">
+          <input
+            type="email"
+            class="footer-subscribe-input"
+            placeholder="Nhập email của bạn"
+            aria-label="Nhập email của bạn"
+          />
+          <button type="submit" class="footer-subscribe-btn">
+            Đăng ký
+          </button>
+        </form>
+      </div>
+
+      <div class="footer-contact-info">
+        <p class="footer-contact-line" *ngIf="contact?.address">Địa chỉ: {{ contact.address }}</p>
+        <p class="footer-contact-line" *ngIf="contact?.phone">Hotline: {{ contact.phone }}</p>
+        <p class="footer-contact-line" *ngIf="contact?.email">Email: {{ contact.email }}</p>
+      </div>
     </div>
 
     <!-- Col 2: Hỗ trợ -->

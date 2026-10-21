@@ -278,6 +278,8 @@ export class AuthService {
       throw new UnauthorizedException('Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động');
     }
 
+    await this.userModel.updateOne({ _id: user._id }, { $set: { tokenRevokedAt: null } });
+
     const payload: JwtPayload = { email: user.email, id: user._id.toString(), roles: user.roles };
     const accessToken = await this.jwtService.sign(payload);
 
@@ -434,6 +436,7 @@ export class AuthService {
     }
 
     // 5. Cấp JWT nhất quán (email, id, roles)
+    await this.userModel.updateOne({ _id: user._id }, { $set: { tokenRevokedAt: null } });
     const payload: JwtPayload = {
       email: user.email,
       id: user._id.toString(),
@@ -1020,4 +1023,31 @@ async resetPassword(
 
   return { message: 'Đặt lại mật khẩu thành công' };
 }
+
+  async revokeUserToken(req: any): Promise<void> {
+    try {
+      let token = '';
+      const authHeader = req?.headers?.authorization || '';
+      if (authHeader.startsWith('Bearer ')) {
+        token = authHeader.slice(7).trim();
+      } else if (req?.cookies) {
+        token = req.cookies['jwt'] || req.cookies['token'] || req.cookies['accessToken'] || '';
+      }
+      if (!token && req?.session) {
+        token = req.session.token || req.session.accessToken || '';
+      }
+      if (token) {
+        const secret = process.env.JWT_SECRET;
+        if (secret) {
+          const decoded: any = this.jwtService.verify(token, { secret });
+          if (decoded && (decoded.email || decoded.id)) {
+            const query = decoded.id ? { _id: decoded.id } : { email: decoded.email };
+            await this.userModel.updateOne(query, { $set: { tokenRevokedAt: new Date() } });
+          }
+        }
+      }
+    } catch (_) {
+      // Bỏ qua nếu token không giải mã được hoặc đã hết hạn
+    }
+  }
 }

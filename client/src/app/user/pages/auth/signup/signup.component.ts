@@ -1,5 +1,6 @@
 import { take, switchMap, map } from 'rxjs/operators';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Inject, OnInit, OnDestroy, PLATFORM_ID } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Inject, Injector, OnInit, OnDestroy, PLATFORM_ID } from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { Observable, of, Subscription } from 'rxjs';
 import { AbstractControl, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
@@ -27,6 +28,7 @@ export class SignUpComponent implements OnInit, OnDestroy {
   lang$: Observable<string>;
   lang = 'vi';
   private langSub?: Subscription;
+  private userSub?: Subscription;
 
   showRegPassword = false;
   isSubmitting = false;
@@ -68,14 +70,30 @@ export class SignUpComponent implements OnInit, OnDestroy {
       }
       this.signUpForm.get('password')?.updateValueAndValidity({ emitEvent: false });
     });
+
+    if (isPlatformBrowser(this.platformId)) {
+      this.userSub = toObservable(this.selectors.user).subscribe((user) => {
+        const hasToken = Boolean(localStorage.getItem(accessTokenKey));
+        if (hasToken && user && (user.email || user.accessToken)) {
+          this.router.navigate(['/' + (this.lang || 'vi')]);
+        }
+      });
+    }
   }
 
   ngOnInit(): void {
     if (isPlatformBrowser(this.platformId)) {
-      const currentUser = this.selectors.user();
-      if (currentUser && (currentUser.email || currentUser.accessToken)) {
-        this.router.navigate(['/' + (this.lang || 'vi')]);
-        return;
+      const hasLocalToken = Boolean(localStorage.getItem(accessTokenKey));
+      if (!hasLocalToken) {
+        if (this.selectors.user()) {
+          this.store.storeUser(null);
+        }
+      } else {
+        const currentUser = this.selectors.user();
+        if (currentUser && (currentUser.email || currentUser.accessToken)) {
+          this.router.navigate(['/' + (this.lang || 'vi')]);
+          return;
+        }
       }
     }
 
@@ -117,6 +135,7 @@ export class SignUpComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.langSub?.unsubscribe();
+    this.userSub?.unsubscribe();
   }
 
   emailFormatValidator(control: AbstractControl): ValidationErrors | null {

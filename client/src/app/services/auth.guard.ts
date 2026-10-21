@@ -31,15 +31,18 @@ export const AuthGuard: CanActivateFn = (_route: ActivatedRouteSnapshot): Observ
     return true;
   }
 
+  const token = localStorage.getItem(accessTokenKey);
+  if (!token) {
+    if (selectors.user()) {
+      store.storeUser(null);
+    }
+    router.navigate(['/']);
+    return false;
+  }
+
   const currentUser = selectors.user();
   if (currentUser) {
     return Boolean(currentUser.email || currentUser.accessToken);
-  }
-
-  const token = localStorage.getItem(accessTokenKey);
-  if (!token) {
-    router.navigate(['/']);
-    return false;
   }
 
   return apiService.getUser().pipe(
@@ -71,6 +74,15 @@ export const AdminGuard: CanActivateFn = (_route: ActivatedRouteSnapshot): Obser
     return true;
   }
 
+  const token = localStorage.getItem(accessTokenKey);
+  if (!token) {
+    if (selectors.user()) {
+      store.storeUser(null);
+    }
+    router.navigate(['/vi/authorize/signin'], { queryParams: { returnUrl: '/admin' } });
+    return false;
+  }
+
   const currentUser = selectors.user();
   if (currentUser) {
     const isAdmin = checkIsAdmin(currentUser);
@@ -80,13 +92,6 @@ export const AdminGuard: CanActivateFn = (_route: ActivatedRouteSnapshot): Obser
       return false;
     }
     return true;
-  }
-
-  const token = localStorage.getItem(accessTokenKey);
-  if (!token) {
-    // Chưa đăng nhập hoặc đã đăng xuất -> chuyển về trang đăng nhập Admin kèm returnUrl
-    router.navigate(['/vi/authorize/signin'], { queryParams: { returnUrl: '/admin' } });
-    return false;
   }
 
   return apiService.getUser().pipe(

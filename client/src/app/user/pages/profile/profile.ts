@@ -1,4 +1,4 @@
-import { Component, OnInit, Inject, PLATFORM_ID, Signal, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, Inject, PLATFORM_ID, Signal, ViewChild, ElementRef, ChangeDetectorRef, effect } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
@@ -76,6 +76,14 @@ export class Profile implements OnInit {
     this.lang$ = this.translate.getLang$();
     this.user$ = this.selectors.user;
     this.userOrders$ = this.selectors.userOrders;
+
+    effect(() => {
+      const u = this.selectors.user();
+      if (u && isPlatformBrowser(this.platformId)) {
+        this.updateSyncTime();
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   ngOnInit(): void {
@@ -474,39 +482,13 @@ export class Profile implements OnInit {
     const currentLang = (this.translate as any)?.lang || 'vi';
     const targetUrl = `/${currentLang}`;
 
-    let hadToken = false;
-    let localCleanFailed = false;
-
-    if (isPlatformBrowser(this.platformId)) {
-      hadToken = Boolean(localStorage.getItem(accessTokenKey) || sessionStorage.getItem(accessTokenKey));
-      try {
-        localStorage.removeItem(accessTokenKey);
-        sessionStorage.removeItem(accessTokenKey);
-      } catch (e) {
-        localCleanFailed = true;
-      }
-    }
-
-    if (!hadToken) {
-      this.notify.info('Phiên đăng nhập đã hết hạn.');
-      this.store.signOut(() => {
-        this.router.navigateByUrl(targetUrl);
-      });
-      return;
-    }
-
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      this.notify.error('Không thể kết nối đến máy chủ để hoàn tất đăng xuất.');
-      return;
-    }
+    const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
 
     this.store.signOut((res) => {
-      if (res?.networkError) {
-        this.notify.error('Không thể kết nối đến máy chủ để hoàn tất đăng xuất.');
+      if (isOffline || res?.networkError) {
+        this.notify.warning('Đã đăng xuất trên thiết bị này (thiết bị đang ở chế độ ngoại tuyến).');
       } else if (res?.serverError) {
-        this.notify.error('Chưa thể hoàn tất đăng xuất. Vui lòng thử lại.');
-      } else if (localCleanFailed) {
-        this.notify.warning('Đã đăng xuất khỏi tài khoản, nhưng không thể xóa toàn bộ dữ liệu phiên trên thiết bị. Vui lòng tải lại trang.');
+        this.notify.warning('Đã đăng xuất trên thiết bị này.');
       } else {
         this.notify.success('Hẹn gặp lại tại Chéri!');
       }

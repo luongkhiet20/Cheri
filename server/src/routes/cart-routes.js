@@ -37,12 +37,20 @@ module.exports = function registerCartRoutes(app, { getDb, db: staticDb, formatP
           token,
           process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789'
         );
+        let user = null;
         if (decoded && decoded.email) {
-          return await db.collection('users').findOne({ email: decoded.email.toLowerCase() });
+          user = await db.collection('users').findOne({ email: decoded.email.toLowerCase() });
+        } else if (decoded && decoded.id && ObjectId.isValid(decoded.id)) {
+          user = await db.collection('users').findOne({ _id: new ObjectId(decoded.id) });
         }
-        if (decoded && decoded.id && ObjectId.isValid(decoded.id)) {
-          return await db.collection('users').findOne({ _id: new ObjectId(decoded.id) });
+
+        if (user && user.tokenRevokedAt && decoded.iat) {
+          const revokedSec = Math.floor(new Date(user.tokenRevokedAt).getTime() / 1000);
+          if (decoded.iat < revokedSec) {
+            return null;
+          }
         }
+        return user;
       }
     } catch (_) {}
     return null;

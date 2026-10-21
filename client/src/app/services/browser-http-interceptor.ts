@@ -1,17 +1,19 @@
 import { catchError } from 'rxjs/operators';
 import { Observable, throwError } from 'rxjs';
-import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
+import { Injectable, Inject, PLATFORM_ID, Injector } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpEvent, HttpInterceptor, HttpHandler, HttpRequest, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { accessTokenKey } from '../user/shared/constants';
+import { SignalStore } from '../store/signal.store';
 
 @Injectable()
 export class BrowserHttpInterceptor implements HttpInterceptor {
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
-    private router: Router
+    private router: Router,
+    private injector: Injector
   ) {}
 
   intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
@@ -59,25 +61,33 @@ export class BrowserHttpInterceptor implements HttpInterceptor {
           url.includes('/api/auth/exchange-token');
 
         if (!isAuthAttempt) {
-          const hadToken = !!localStorage.getItem(accessTokenKey);
-          if (hadToken) {
+          const hadToken = typeof window !== 'undefined' && Boolean(localStorage.getItem(accessTokenKey));
+          try {
+            const store = this.injector.get(SignalStore);
+            store.cleanLocalSession();
+          } catch {
             localStorage.removeItem(accessTokenKey);
             try {
               sessionStorage.removeItem(accessTokenKey);
             } catch {}
+          }
 
-            const currentUrl = this.router.url;
-            const isOnAuthPage =
-              currentUrl.includes('/authorize/signin') ||
-              currentUrl.includes('/authorize/signup') ||
-              currentUrl.includes('/signin') ||
-              currentUrl.includes('/signup');
+          const browserPath = typeof window !== 'undefined' ? (window.location.pathname || '') : '';
+          const currentUrl = this.router.url || '';
+          const isOnAuthPage =
+            currentUrl.includes('/authorize/signin') ||
+            currentUrl.includes('/authorize/signup') ||
+            currentUrl.includes('/signin') ||
+            currentUrl.includes('/signup') ||
+            browserPath.includes('/authorize/signin') ||
+            browserPath.includes('/authorize/signup') ||
+            browserPath.includes('/signin') ||
+            browserPath.includes('/signup');
 
-            if (!isOnAuthPage) {
-              this.router.navigate(['/vi/authorize/signin'], {
-                queryParams: { session: 'expired' },
-              });
-            }
+          if (hadToken && !isOnAuthPage) {
+            this.router.navigate(['/vi/authorize/signin'], {
+              queryParams: { session: 'expired' },
+            });
           }
         }
         break;

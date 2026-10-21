@@ -1,7 +1,7 @@
 import { toObservable } from '@angular/core/rxjs-interop';
-import { ChangeDetectorRef, Component, OnInit, Signal, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, Injector, OnDestroy, OnInit, Signal, signal } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Observable, of } from 'rxjs';
+import { Observable, Subscription, of } from 'rxjs';
 import { filter, map, switchMap, take } from 'rxjs/operators';
 
 import { TranslateService } from '../../../../services/translate.service';
@@ -24,12 +24,13 @@ import { checkIsAdmin } from '../../../../services/auth.guard';
   styleUrls: ['./signin.component.css'],
   imports: [CommonModule, TranslatePipe, RouterLink, MatInputModule, FormsModule, ReactiveFormsModule]
 })
-export class SignInComponent implements OnInit {
+export class SignInComponent implements OnInit, OnDestroy {
   signInForm: FormGroup;
   lang$: Observable<string>;
   loading$: Observable<boolean>;
   sendRequest$ = signal(false);
   user$: Signal<User>;
+  private userSub?: Subscription;
 
   isForgotPassword = false;
   forgotStep: 'request' | 'verify' | 'reset' = 'request';
@@ -68,6 +69,22 @@ export class SignInComponent implements OnInit {
       email: ['', [Validators.required, Validators.email]],
       password: ['', Validators.required],
       agreeTerms: [false]
+    });
+
+    this.userSub = toObservable(this.selectors.user).subscribe((user) => {
+      const hasToken = typeof window !== 'undefined' && Boolean(localStorage.getItem(accessTokenKey));
+      if (hasToken && user && (user.email || user.accessToken)) {
+        const returnUrl = this.route.snapshot.queryParams['returnUrl'];
+        if (this.isRequestingAdmin) {
+          if (checkIsAdmin(user)) {
+            this.router.navigateByUrl(returnUrl || '/admin');
+          }
+        } else {
+          const defaultHome = '/' + (this.translate.lang || 'vi');
+          const target = this.getSafeReturnUrl(returnUrl, defaultHome);
+          this.router.navigateByUrl(target);
+        }
+      }
     });
   }
 
@@ -115,9 +132,18 @@ export class SignInComponent implements OnInit {
     }
 
     this.isRequestingAdmin = Boolean(returnUrl && returnUrl.startsWith('/admin'));
-    this.currentLoggedUser = this.selectors.user();
+    const hasLocalToken = typeof window !== 'undefined' && Boolean(localStorage.getItem(accessTokenKey));
 
-    if (this.currentLoggedUser && (this.currentLoggedUser.email || this.currentLoggedUser.accessToken)) {
+    if (sessionParam === 'expired' || !hasLocalToken) {
+      this.currentLoggedUser = null;
+      if (this.selectors.user()) {
+        this.store.storeUser(null);
+      }
+    } else {
+      this.currentLoggedUser = this.selectors.user();
+    }
+
+    if (hasLocalToken && this.currentLoggedUser && (this.currentLoggedUser.email || this.currentLoggedUser.accessToken)) {
       if (this.isRequestingAdmin) {
         if (checkIsAdmin(this.currentLoggedUser)) {
           this.router.navigateByUrl(returnUrl || '/admin');
@@ -127,6 +153,12 @@ export class SignInComponent implements OnInit {
         const target = this.getSafeReturnUrl(returnUrl, defaultHome);
         this.router.navigateByUrl(target);
       }
+    }
+  }
+
+  ngOnDestroy(): void {
+    if (this.userSub) {
+      this.userSub.unsubscribe();
     }
   }
 

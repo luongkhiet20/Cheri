@@ -8897,10 +8897,25 @@ app.post('/api/auth/signup', async (req, res) => {
   }
 });
 
-app.post('/api/auth/signout', (req, res) => {
-  res.clearCookie('jwt');
-  res.clearCookie('token');
-  res.clearCookie('accessToken');
+app.post('/api/auth/signout', async (req, res) => {
+  res.clearCookie('jwt', { path: '/' });
+  res.clearCookie('token', { path: '/' });
+  res.clearCookie('accessToken', { path: '/' });
+  res.clearCookie('connect.sid', { path: '/' });
+  try {
+    const authHeader = req.headers.authorization || '';
+    let token = '';
+    if (authHeader.startsWith('Bearer ')) token = authHeader.slice(7).trim();
+    else if (req.cookies) token = req.cookies.jwt || req.cookies.token || req.cookies.accessToken;
+    if (token) {
+      const jwtSecret = process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789';
+      const decoded = jwt.verify(token, jwtSecret);
+      if (decoded && (decoded.email || decoded.id)) {
+        const query = decoded.id && ObjectId.isValid(decoded.id) ? { _id: new ObjectId(decoded.id) } : { email: decoded.email.toLowerCase() };
+        await db.collection('users').updateOne(query, { $set: { tokenRevokedAt: new Date() } });
+      }
+    }
+  } catch (_) {}
   return res.json({ success: true, message: 'Đăng xuất thành công' });
 });
 

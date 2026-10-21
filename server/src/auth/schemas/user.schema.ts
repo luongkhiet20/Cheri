@@ -73,6 +73,7 @@ const UserSchema = new Schema(
       default: () => ({ items: [] }),
     },
     dateAdded: { type: Date, default: Date.now },
+    tokenRevokedAt: { type: Date, default: null },
   },
   { timestamps: true },
 );

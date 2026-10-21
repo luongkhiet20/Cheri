@@ -1,19 +1,21 @@
 import { SignalStoreSelectors } from './signal.store.selectors';
-import { Injectable } from '@angular/core';
+import { Injectable, NgZone } from '@angular/core';
+import { Router } from '@angular/router';
 import { ApiService } from '../services/api.service';
 import { User } from '../user/shared/models';
+import { accessTokenKey } from '../user/shared/constants';
 import { catchError, map, of } from 'rxjs';
-
-
 
 @Injectable({
   providedIn: 'root',
 })
 export class SignalStore {
 
-
-  constructor(private apiService: ApiService,
-    private selectors: SignalStoreSelectors
+  constructor(
+    private apiService: ApiService,
+    private selectors: SignalStoreSelectors,
+    private router: Router,
+    private ngZone: NgZone
   ) {
     if (this.apiService?.reviewCreated$) {
       this.apiService.reviewCreated$.subscribe(({ productId }) => {
@@ -22,7 +24,69 @@ export class SignalStore {
         }
       });
     }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', (event: StorageEvent) => {
+        if (event.key === 'accessToken') {
+          this.handleMultiTabStorageChange(event);
+        }
+      });
+    }
   }
+
+  private handleMultiTabStorageChange = (event: StorageEvent) => {
+    this.ngZone.run(() => {
+      const rawPath = (this.router.url || (typeof window !== 'undefined' ? window.location.pathname : '') || '').toLowerCase();
+      const currentPath = rawPath.split('?')[0].split('#')[0];
+      const lang = (this.selectors.userState()?.lang) || 'vi';
+
+      if (!event.newValue) {
+        // Tab 1 ĐĂNG XUẤT:
+        console.log('[Store] Multi-tab sync: User logged out in another tab');
+        this.cleanLocalSession();
+        this.getCart(lang);
+
+        if (currentPath.includes('/admin')) {
+          this.router.navigate(['/' + lang + '/authorize/signin'], {
+            queryParams: { returnUrl: '/admin', session: 'expired' }
+          });
+        } else if (currentPath.includes('/profile')) {
+          this.router.navigate(['/' + lang + '/authorize/signin'], {
+            queryParams: { session: 'expired' }
+          });
+        }
+      } else {
+        // Tab 1 ĐĂNG NHẬP / ĐĂNG KÝ THÀNH CÔNG (Token mới được cấp):
+        console.log('[Store] Multi-tab sync: New token set in another tab');
+
+        // 1. Đồng bộ tài khoản mới: nạp user mới, đơn hàng mới, giỏ hàng mới
+        this.getUser((user) => {
+          if (user) {
+            this.getUserOrders();
+            this.getCart(lang);
+          }
+        });
+
+        // 2. Xử lý điều hướng theo trang hiện tại của Tab 2:
+        const isAuthPage =
+          currentPath.includes('/authorize') ||
+          currentPath.includes('/signin') ||
+          currentPath.includes('/signup') ||
+          currentPath.includes('/login') ||
+          currentPath.includes('/register');
+
+        if (isAuthPage) {
+          // Tab 2 đang ở trang Đăng nhập hoặc Đăng ký -> tự động chuyển về trang chủ
+          this.router.navigateByUrl('/' + lang);
+        } else if (currentPath.includes('/profile')) {
+          // Tab 2 đang ở trang cá nhân -> đồng bộ tài khoản mới và tải lại dữ liệu theo tài khoản
+          // getUser() và getUserOrders() đã được gọi ở trên để nạp dữ liệu mới
+        } else {
+          // Tab 2 đang ở trang chủ hoặc các trang công khai khác -> giữ nguyên trang
+        }
+      }
+    });
+  };
 
   refreshProductRating = (productId: string) => {
     if (!productId) return;
@@ -81,20 +145,35 @@ export class SignalStore {
     });
   };
 
-  getUser = () => {
+  getUser = (callback?: (user: any) => void) => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem(accessTokenKey);
+      if (!token || token === 'null' || token === 'undefined' || token.trim() === '') {
+        if (this.selectors.user()) {
+          this.storeUser(null);
+        }
+        this.selectors.userState.update((state) => ({ ...state, loading: false }));
+        if (callback) callback(null);
+        return;
+      }
+    }
     this.selectors.userState.update((state) => ({ ...state, loading: true }));
     this.apiService.getUser().subscribe((response: any) => {
       if (!response || response.error) {
         this.selectors.userState.update((state) => ({ ...state, loading: false }));
+        if (callback) callback(null);
         return;
       }
       const user = response.data || response;
       this.selectors.userState.update((state) => ({ ...state, user, loading: false }));
+      this.apiService.currentUser$.next(user);
+      if (callback) callback(user);
     });
   };
 
-  storeUser = (payload) => {
+  storeUser = (payload: any) => {
     this.selectors.userState.update((state) => ({ ...state, user: payload, loading: false }));
+    this.apiService.currentUser$.next(payload);
   };
 
   mergeGuestCartIfAny = (lang: string = 'vi', callback?: (cart: any) => void) => {
@@ -126,21 +205,60 @@ export class SignalStore {
     }
   };
 
-  signOut = (callback?: (res: { success: boolean; networkError?: boolean; serverError?: boolean }) => void) => {
-    console.log('[Cart] signOut triggered: Clearing user and cart state');
+  cleanLocalSession = () => {
     if (typeof window !== 'undefined') {
       try {
         localStorage.removeItem('accessToken');
-        sessionStorage.removeItem('accessToken');
-      } catch {}
-    }
-    this.storeUser(null);
-    // Reset ngay lập tức cart trong state bộ nhớ của client để không bị lộ cho user khác hay guest
-    this.selectors.productState.update((state) => ({ ...state, cart: null, userOrders: null, order: null }));
-    this.selectors.dashboardState.update((state) => ({ ...state, orders: null, order: null, allProducts: [], allCategories: [] }));
-    this.apiService.clearGuestCartLocal(true);
+        localStorage.removeItem('cheri_cart_selected_ids');
+        localStorage.removeItem('cheri_cart_payment_method');
+        localStorage.removeItem('cheri_cart_shipping_method');
+        localStorage.removeItem('cheri_wishlist');
+        localStorage.removeItem('wishlist');
+        localStorage.removeItem('cheri_wishlist_items');
 
-    this.apiService.signOut().subscribe({
+        const pendingNotify = sessionStorage.getItem('cheri_pending_notify');
+        sessionStorage.clear();
+        if (pendingNotify) {
+          sessionStorage.setItem('cheri_pending_notify', pendingNotify);
+        }
+
+        const cookieNames = ['jwt', 'token', 'accessToken', 'connect.sid'];
+        const currentCookies = document.cookie || '';
+        const hasAuthCookie = cookieNames.some((name) => currentCookies.includes(`${name}=`));
+        if (hasAuthCookie) {
+          cookieNames.forEach((name) => {
+            document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
+            if (window.location.hostname) {
+              document.cookie = `${name}=; Path=/; Domain=${window.location.hostname}; Expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('[Store] cleanLocalSession warning:', e);
+      }
+    }
+
+    if (this.selectors.user()) {
+      this.storeUser(null);
+      this.apiService.currentUser$.next(null);
+    }
+    const currentProduct = this.selectors.productState();
+    if (currentProduct.cart || currentProduct.userOrders || currentProduct.order) {
+      this.selectors.productState.update((state) => ({ ...state, cart: null, userOrders: null, order: null }));
+    }
+    const currentDashboard = this.selectors.dashboardState();
+    if (currentDashboard.orders || currentDashboard.order || currentDashboard.allProducts?.length || currentDashboard.allCategories?.length) {
+      this.selectors.dashboardState.update((state) => ({ ...state, orders: null, order: null, allProducts: [], allCategories: [] }));
+    }
+    this.apiService.clearGuestCartLocal(true);
+  };
+
+  signOut = (callback?: (res: { success: boolean; networkError?: boolean; serverError?: boolean }) => void) => {
+    console.log('[Cart] signOut triggered: Clearing user and cart state');
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    this.cleanLocalSession();
+
+    this.apiService.signOut(token).subscribe({
       next: () => {
         // Tải lại giỏ hàng cho Guest mới (giỏ rỗng)
         this.getCart('vi');

@@ -1,4 +1,4 @@
-import { debounceTime, take, delay } from 'rxjs/operators';
+import { debounceTime, take, delay, distinctUntilChanged } from 'rxjs/operators';
 import { Component, OnInit, PLATFORM_ID, Inject, Signal, ChangeDetectorRef, effect, HostListener } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
@@ -136,12 +136,11 @@ export class HeaderComponent implements OnInit {
     this.productTitles$ = this.selectors.productsTitles;
     this.userOrders$ = this.selectors.userOrders;
 
-    // Tự động re-render Header ngay lập tức khi user signal thay đổi
+    // Tự động re-render Header khi user signal thay đổi
     effect(() => {
       const u = this.selectors.user();
       this.avatarLoadFailed = false;
       this.cdr.markForCheck();
-      this.cdr.detectChanges();
     });
   }
 
@@ -162,9 +161,16 @@ export class HeaderComponent implements OnInit {
       }
     }
 
-    this.query.valueChanges.pipe(debounceTime(200)).subscribe(value => {
-      const sendQuery = value || 'EMPTY___QUERY';
-      this.store.getProductSearch(sendQuery);
+    this.query.valueChanges.pipe(
+      debounceTime(200),
+      distinctUntilChanged()
+    ).subscribe(value => {
+      const trimmed = (value || '').trim();
+      if (!trimmed) {
+        this.selectors.productState.update((state) => ({ ...state, productsTitles: [] }));
+        return;
+      }
+      this.store.getProductSearch(trimmed);
     });
   }
 
@@ -258,47 +264,13 @@ export class HeaderComponent implements OnInit {
     const currentLang = (this.translate as any)?.lang || 'vi';
     const targetUrl = `/${currentLang}`;
 
-    let hadToken = false;
-    let localCleanFailed = false;
-
-    if (isPlatformBrowser(this._platformId)) {
-      hadToken = Boolean(localStorage.getItem(accessTokenKey) || sessionStorage.getItem(accessTokenKey));
-      try {
-        localStorage.removeItem(accessTokenKey);
-        sessionStorage.clear();
-        document.cookie = 'jwt=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-        document.cookie = 'token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-        document.cookie = 'accessToken=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-        document.cookie = 'connect.sid=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-      } catch (e) {
-        localCleanFailed = true;
-      }
-    }
-
-    // 1. Phiên đã hết hạn trước khi đăng xuất hoặc người dùng đã đăng xuất ở tab khác
-    if (!hadToken) {
-      this.notify.info('Phiên đăng nhập đã hết hạn. Bạn đã được đưa về trạng thái chưa đăng nhập.');
-      this.store.signOut(() => {
-        if (isPlatformBrowser(this._platformId)) {
-          this.router.navigateByUrl(targetUrl);
-        }
-      });
-      return;
-    }
-
-    // 2. Mất kết nối mạng trong lúc đăng xuất
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      this.notify.error('Không thể kết nối đến máy chủ để hoàn tất đăng xuất.');
-      return;
-    }
+    const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
 
     this.store.signOut((res) => {
-      if (res?.networkError) {
-        this.notify.error('Không thể kết nối đến máy chủ để hoàn tất đăng xuất.');
+      if (isOffline || res?.networkError) {
+        this.notify.warning('Đã đăng xuất trên thiết bị này (thiết bị đang ở chế độ ngoại tuyến).');
       } else if (res?.serverError) {
-        this.notify.error('Chưa thể hoàn tất đăng xuất. Vui lòng thử lại.');
-      } else if (localCleanFailed) {
-        this.notify.warning('Đã đăng xuất khỏi tài khoản, nhưng không thể xóa toàn bộ dữ liệu phiên trên thiết bị. Vui lòng tải lại trang.');
+        this.notify.warning('Đã đăng xuất trên thiết bị này.');
       } else {
         this.notify.success('Bạn đã đăng xuất thành công. Hẹn gặp lại tại Chéri!');
       }

@@ -213,19 +213,24 @@ export class AuthController {
   }
 
   @Post('/signout')
-  signOut(@Req() req, @Res() res) {
+  async signOut(@Req() req, @Res() res) {
     if (req.session) {
       req.session.destroy(() => {});
     }
-    res.clearCookie('jwt');
-    res.clearCookie('token');
-    res.clearCookie('accessToken');
-    res.clearCookie('connect.sid');
+    res.clearCookie('jwt', { path: '/' });
+    res.clearCookie('token', { path: '/' });
+    res.clearCookie('accessToken', { path: '/' });
+    res.clearCookie('connect.sid', { path: '/' });
+
+    try {
+      await this.authService.revokeUserToken(req);
+    } catch (_) {}
+
     return res.status(200).json({ success: true, message: 'Signed out successfully' });
   }
 
   @Get('/signout')
-  signOutGet(@Req() req, @Res() res) {
+  async signOutGet(@Req() req, @Res() res) {
     return this.signOut(req, res);
   }
 

@@ -18,7 +18,7 @@ import { NavigationStart, NavigationEnd, Router, RouterOutlet, Scroll } from '@a
 import { TranslateService } from './services/translate.service';
 import { JsonLDService } from './services/jsonLD.service';
 import { User } from './user/shared/models';
-import { currencyLang } from './user/shared/constants';
+import { currencyLang, accessTokenKey } from './user/shared/constants';
 import { SignalStore } from './store/signal.store';
 import { SignalStoreSelectors } from './store/signal.store.selectors';
 import { SettingsService } from './admin/pages/settings/settings.service';
@@ -83,7 +83,12 @@ export class AppComponent {
         this.resetScrollToTop();
       });
 
-    this.signalStore.getUser();
+    if (isPlatformBrowser(this.platformId)) {
+      const token = localStorage.getItem(accessTokenKey);
+      if (token && token !== 'null' && token !== 'undefined' && token.trim() !== '') {
+        this.signalStore.getUser();
+      }
+    }
 
     toObservable(this.selectors.user).pipe(delay(100))
       .subscribe((user: User) => {

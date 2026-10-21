@@ -30,6 +30,7 @@ export interface User extends Document {
   googleId?: string;
   status: boolean;
   description?: string;
+  tokenRevokedAt?: Date;
   dateAdded?: Date;
   createdAt?: Date;
   updatedAt?: Date;

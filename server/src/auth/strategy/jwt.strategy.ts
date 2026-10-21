@@ -51,6 +51,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động');
     }
 
+    if ((payload as any).iat && (user as any).tokenRevokedAt) {
+      const revokedSec = Math.floor(new Date((user as any).tokenRevokedAt).getTime() / 1000);
+      if ((payload as any).iat < revokedSec) {
+        throw new UnauthorizedException('Phiên đăng nhập đã bị hủy hoặc hết hạn');
+      }
+    }
+
     return user;
   }
 }

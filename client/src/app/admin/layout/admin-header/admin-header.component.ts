@@ -163,45 +163,15 @@ export class AdminHeaderComponent implements OnInit, OnDestroy {
 
   onLogout(): void {
     this.closeUserMenu();
+    this.apiService.currentUser$.next(null);
 
-    let hadToken = false;
-    let localCleanFailed = false;
-
-    if (isPlatformBrowser(this.platformId)) {
-      hadToken = Boolean(localStorage.getItem(accessTokenKey) || sessionStorage.getItem(accessTokenKey));
-      try {
-        localStorage.removeItem(accessTokenKey);
-        sessionStorage.clear();
-        document.cookie = 'jwt=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-        document.cookie = 'token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-        document.cookie = 'accessToken=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-        document.cookie = 'connect.sid=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-      } catch (e) {
-        localCleanFailed = true;
-      }
-    }
-
-    if (!hadToken) {
-      this.userNotify.setPending('Phiên đăng nhập đã hết hạn. Bạn đã được đưa về trạng thái chưa đăng nhập.', 'info');
-      this.store.signOut(() => {
-        this.router.navigate(['/vi/authorize/signin']);
-      });
-      return;
-    }
-
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      this.userNotify.setPending('Không thể kết nối đến máy chủ để hoàn tất đăng xuất.', 'error');
-      this.router.navigate(['/vi/authorize/signin']);
-      return;
-    }
+    const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
 
     this.store.signOut((res) => {
-      if (res?.networkError) {
-        this.userNotify.setPending('Không thể kết nối đến máy chủ để hoàn tất đăng xuất.', 'error');
+      if (isOffline || res?.networkError) {
+        this.userNotify.setPending('Đã đăng xuất trên thiết bị này (thiết bị đang ở chế độ ngoại tuyến).', 'warning');
       } else if (res?.serverError) {
-        this.userNotify.setPending('Chưa thể hoàn tất đăng xuất. Vui lòng thử lại.', 'error');
-      } else if (localCleanFailed) {
-        this.userNotify.setPending('Đã đăng xuất khỏi tài khoản, nhưng không thể xóa toàn bộ dữ liệu phiên trên thiết bị. Vui lòng tải lại trang.', 'warning');
+        this.userNotify.setPending('Đã đăng xuất trên thiết bị này.', 'warning');
       } else {
         this.userNotify.setPending('Bạn đã đăng xuất thành công. Hẹn gặp lại tại Chéri!', 'success');
       }

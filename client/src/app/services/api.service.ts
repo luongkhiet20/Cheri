@@ -252,9 +252,17 @@ export class ApiService {
     );
   }
 
-  signOut() {
+  signOut(token?: string | null) {
     const signOutUrl = this.apiUrl + '/api/auth/signout';
-    return this.http.post(signOutUrl, {}, this.getRequestOptions()).pipe(
+    let options = this.getRequestOptions();
+    if (token) {
+      options = {
+        ...options,
+        headers: options.headers.set('Authorization', 'Bearer ' + token)
+      };
+    }
+    this.currentUser$.next(null);
+    return this.http.post(signOutUrl, {}, options).pipe(
       catchError(() => of({ success: true }))
     );
   }

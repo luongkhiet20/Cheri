@@ -9,6 +9,7 @@ export interface ProductReviewResult {
   rating: number;
   comment: string;
   review?: any;
+  isEdit?: boolean;
 }
 
 @Component({
@@ -22,6 +23,7 @@ export class ProductReviewDialogComponent implements OnInit, OnChanges {
   @Input() order: any = null;
   @Input() selectedProductId?: string;
   @Input() isOpen: boolean = true;
+  @Input() isEditMode: boolean = false;
   @Output() close = new EventEmitter<void>();
   @Output() reviewed = new EventEmitter<ProductReviewResult>();
 
@@ -29,6 +31,7 @@ export class ProductReviewDialogComponent implements OnInit, OnChanges {
   rating: number = 5;
   hoverRating: number = 0;
   comment: string = '';
+  currentReviewId: string | null = null;
 
   readonly maxCommentLength: number = 1000;
   readonly stars: number[] = [1, 2, 3, 4, 5];
@@ -60,7 +63,7 @@ export class ProductReviewDialogComponent implements OnInit, OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['order'] || changes['selectedProductId']) {
+    if (changes['order'] || changes['selectedProductId'] || changes['isEditMode']) {
       this.initSelectedProduct();
     }
   }
@@ -102,6 +105,12 @@ export class ProductReviewDialogComponent implements OnInit, OnChanges {
   private initSelectedProduct(): void {
     this.alreadyReviewed = false;
     this.isEligible = true;
+    this.validationError = '';
+    this.errorMessage = '';
+    this.successMessage = '';
+    this.currentReviewId = null;
+    this.rating = 5;
+    this.comment = '';
 
     if (this.selectedProductId && this.orderItems.length > 0) {
       const idx = this.orderItems.findIndex(item => {
@@ -131,6 +140,9 @@ export class ProductReviewDialogComponent implements OnInit, OnChanges {
     this.successMessage = '';
     this.alreadyReviewed = false;
     this.isEligible = true;
+    this.currentReviewId = null;
+    this.rating = 5;
+    this.comment = '';
 
     if (!this.isOrderDelivered()) {
       this.isEligible = false;
@@ -153,36 +165,56 @@ export class ProductReviewDialogComponent implements OnInit, OnChanges {
     this.apiService.checkReviewEligibility(pId, ordId).subscribe({
       next: (res: any) => {
         this.isCheckingEligibility = false;
-        if (res?.hasReviewed) {
-          this.alreadyReviewed = true;
-          this.errorMessage = res.reason || 'Bạn đã gửi đánh giá cho sản phẩm này trong đơn hàng rồi.';
-        } else if (res?.canReview === false) {
-          this.isEligible = false;
-          this.errorMessage = res.reason || 'Bạn chỉ có thể đánh giá sản phẩm sau khi đã mua và nhận hàng thành công.';
-        } else {
-          this.alreadyReviewed = false;
-          this.isEligible = true;
-          if (this.errorMessage.includes('đánh giá') || this.errorMessage.includes('nhận hàng')) {
+        if (this.isEditMode) {
+          // CHẾ ĐỘ SỬA ĐÁNH GIÁ: Lấy và điền sẵn dữ liệu cũ từ MongoDB
+          if (res?.existingReview) {
+            const rev = res.existingReview;
+            this.currentReviewId = rev._id ? String(rev._id) : (rev.id ? String(rev.id) : null);
+            this.rating = Math.max(1, Math.min(5, Number(rev.rating) || 5));
+            this.comment = rev.comment || '';
+            this.alreadyReviewed = false; // Trong chế độ sửa, cho phép người dùng thay đổi và nhấn Lưu thay đổi
+            this.isEligible = true;
             this.errorMessage = '';
+          } else {
+            this.currentReviewId = null;
+            this.alreadyReviewed = false;
+            this.isEligible = false;
+            this.errorMessage = 'Không tìm thấy đánh giá trước đó của sản phẩm này trong cơ sở dữ liệu để chỉnh sửa.';
+          }
+        } else {
+          // CHẾ ĐỘ ĐÁNH GIÁ MỚI
+          if (res?.hasReviewed) {
+            this.alreadyReviewed = true;
+            this.errorMessage = res.reason || 'Bạn đã gửi đánh giá cho sản phẩm này trong đơn hàng rồi.';
+          } else if (res?.canReview === false) {
+            this.isEligible = false;
+            this.errorMessage = res.reason || 'Bạn chỉ có thể đánh giá sản phẩm sau khi đã mua và nhận hàng thành công.';
+          } else {
+            this.alreadyReviewed = false;
+            this.isEligible = true;
+            if (this.errorMessage.includes('đánh giá') || this.errorMessage.includes('nhận hàng')) {
+              this.errorMessage = '';
+            }
           }
         }
         this.cdr.markForCheck();
       },
-      error: () => {
+      error: (err: any) => {
         this.isCheckingEligibility = false;
+        this.errorMessage = err?.error?.message || err?.message || 'Không thể kiểm tra thông tin đánh giá. Vui lòng thử lại.';
         this.cdr.markForCheck();
       }
     });
   }
 
   onRate(star: number): void {
-    if (this.isSubmitting || this.alreadyReviewed) return;
+    if (this.isSubmitting || (!this.isEditMode && this.alreadyReviewed)) return;
     this.rating = star;
     this.validationError = '';
   }
 
   onStarHover(star: number): void {
-    if (!this.isSubmitting && !this.alreadyReviewed) {
+    if (!this.isSubmitting && (this.isEditMode || !this.alreadyReviewed)) {
       this.hoverRating = star;
     }
   }
@@ -275,7 +307,7 @@ export class ProductReviewDialogComponent implements OnInit, OnChanges {
   }
 
   onSubmit(): void {
-    if (this.isSubmitting || this.alreadyReviewed) return;
+    if (this.isSubmitting || (!this.isEditMode && this.alreadyReviewed)) return;
 
     this.validationError = '';
     this.errorMessage = '';
@@ -320,45 +352,94 @@ export class ProductReviewDialogComponent implements OnInit, OnChanges {
     this.isSubmitting = true;
     this.cdr.markForCheck();
 
-    const payload = {
-      productId: rawProductId,
-      rating: Number(this.rating),
-      comment: trimmedComment,
-      orderId: cleanOrderId
-    };
-
-    this.apiService.createProductReview(payload).subscribe({
-      next: (res: any) => {
+    if (this.isEditMode) {
+      // ── SỬA ĐÁNH GIÁ (UPDATE REVIEW) ──
+      if (!this.currentReviewId) {
         this.isSubmitting = false;
-
-        if (res?.error) {
-          this.errorMessage = typeof res.error === 'string'
-            ? res.error
-            : (res.error?.message || 'Có lỗi xảy ra khi gửi đánh giá. Vui lòng thử lại.');
-          this.cdr.markForCheck();
-          return;
-        }
-
-        this.successMessage = 'Gửi đánh giá thành công! Cảm ơn bạn đã đóng góp ý kiến cho Chéri.';
-        this.alreadyReviewed = true;
-        this.reviewed.emit({
-          productId: payload.productId,
-          orderId: payload.orderId || '',
-          rating: payload.rating,
-          comment: payload.comment,
-          review: res?.data || res
-        });
-
+        this.errorMessage = 'Không xác định được mã đánh giá cần chỉnh sửa.';
         this.cdr.markForCheck();
-        setTimeout(() => {
-          this.close.emit();
-        }, 1200);
-      },
-      error: (err: any) => {
-        this.isSubmitting = false;
-        this.errorMessage = err?.error?.message || err?.message || 'Không thể kết nối đến máy chủ. Vui lòng thử lại.';
-        this.cdr.markForCheck();
+        return;
       }
-    });
+
+      this.apiService.updateProductReview(this.currentReviewId, {
+        rating: Number(this.rating),
+        comment: trimmedComment
+      }).subscribe({
+        next: (res: any) => {
+          this.isSubmitting = false;
+
+          if (res?.error) {
+            this.errorMessage = typeof res.error === 'string'
+              ? res.error
+              : (res.error?.message || 'Có lỗi xảy ra khi cập nhật đánh giá. Vui lòng thử lại.');
+            this.cdr.markForCheck();
+            return;
+          }
+
+          this.successMessage = '✨Cập nhật đánh giá thành công!✨';
+          this.reviewed.emit({
+            productId: rawProductId,
+            orderId: cleanOrderId || '',
+            rating: Number(this.rating),
+            comment: trimmedComment,
+            review: res?.data || res,
+            isEdit: true
+          });
+
+          this.cdr.markForCheck();
+          setTimeout(() => {
+            this.close.emit();
+          }, 1000);
+        },
+        error: (err: any) => {
+          this.isSubmitting = false;
+          this.errorMessage = err?.error?.message || err?.message || 'Không thể kết nối đến máy chủ. Vui lòng thử lại.';
+          this.cdr.markForCheck();
+        }
+      });
+    } else {
+      // ── TẠO ĐÁNH GIÁ MỚI (CREATE REVIEW) ──
+      const payload = {
+        productId: rawProductId,
+        rating: Number(this.rating),
+        comment: trimmedComment,
+        orderId: cleanOrderId
+      };
+
+      this.apiService.createProductReview(payload).subscribe({
+        next: (res: any) => {
+          this.isSubmitting = false;
+
+          if (res?.error) {
+            this.errorMessage = typeof res.error === 'string'
+              ? res.error
+              : (res.error?.message || 'Có lỗi xảy ra khi gửi đánh giá. Vui lòng thử lại.');
+            this.cdr.markForCheck();
+            return;
+          }
+
+          this.successMessage = 'Gửi đánh giá thành công! Cảm ơn bạn đã đóng góp ý kiến cho Chéri.';
+          this.alreadyReviewed = true;
+          this.reviewed.emit({
+            productId: payload.productId,
+            orderId: payload.orderId || '',
+            rating: payload.rating,
+            comment: payload.comment,
+            review: res?.data || res,
+            isEdit: false
+          });
+
+          this.cdr.markForCheck();
+          setTimeout(() => {
+            this.close.emit();
+          }, 1200);
+        },
+        error: (err: any) => {
+          this.isSubmitting = false;
+          this.errorMessage = err?.error?.message || err?.message || 'Không thể kết nối đến máy chủ. Vui lòng thử lại.';
+          this.cdr.markForCheck();
+        }
+      });
+    }
   }
 }

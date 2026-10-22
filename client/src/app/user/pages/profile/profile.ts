@@ -42,6 +42,7 @@ export class Profile implements OnInit {
 
   // Review dialog state
   isReviewDialogOpen: boolean = false;
+  isReviewEditMode: boolean = false;
   selectedOrderToReview: any = null;
 
   // Return / refund dialog state
@@ -299,6 +300,15 @@ export class Profile implements OnInit {
   // ── Xử lý Đánh giá sản phẩm ──
   openReviewDialog(order: Order | any): void {
     if (!order) return;
+    this.isReviewEditMode = false;
+    this.selectedOrderToReview = order;
+    this.isReviewDialogOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  openEditReviewDialog(order: Order | any): void {
+    if (!order) return;
+    this.isReviewEditMode = true;
     this.selectedOrderToReview = order;
     this.isReviewDialogOpen = true;
     this.cdr.markForCheck();
@@ -306,12 +316,14 @@ export class Profile implements OnInit {
 
   closeReviewDialog(): void {
     this.isReviewDialogOpen = false;
+    this.isReviewEditMode = false;
     this.selectedOrderToReview = null;
     this.cdr.markForCheck();
   }
 
   onOrderReviewed(event: any): void {
     const orderId = event?.orderId || this.selectedOrderToReview?.orderId || this.selectedOrderToReview?._id;
+    const isEdit = !!event?.isEdit;
     this.closeReviewDialog();
 
     // 1. Cập nhật ngay trong local store để đổi nút sang "Đã đánh giá" tức thì
@@ -324,7 +336,7 @@ export class Profile implements OnInit {
               return {
                 ...o,
                 isReviewed: true,
-                reviewedAt: new Date(),
+                reviewedAt: o.reviewedAt || new Date(),
               };
             }
             return o;
@@ -338,7 +350,12 @@ export class Profile implements OnInit {
       this.store.getUserOrders();
       this.updateSyncTime();
     }
-    this.notify.success('✨Đã gửi đánh giá sản phẩm thành công✨');
+
+    if (isEdit) {
+      this.notify.success('✨Cập nhật đánh giá thành công!✨');
+    } else {
+      this.notify.success('✨Đã gửi đánh giá sản phẩm thành công✨');
+    }
     this.cdr.markForCheck();
   }
 

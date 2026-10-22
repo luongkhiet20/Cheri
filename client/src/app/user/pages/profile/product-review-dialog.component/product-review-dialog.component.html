@@ -5,7 +5,7 @@
     <!-- Card Header -->
     <div class="dialog-header">
       <div class="dialog-title-group">
-        <h3 class="dialog-title" id="review-dialog-title">Đánh giá sản phẩm</h3>
+        <h3 class="dialog-title" id="review-dialog-title">{{ isEditMode ? 'Sửa đánh giá sản phẩm' : 'Đánh giá sản phẩm' }}</h3>
         <span class="dialog-order-badge" *ngIf="order?.orderId">
           Mã đơn: #{{ order.orderId }}
         </span>
@@ -23,7 +23,7 @@
     <!-- Card Body -->
     <div class="dialog-body">
       <p class="dialog-subtitle">
-        Chia sẻ trải nghiệm của bạn để giúp Chéri cải thiện chất lượng sản phẩm và hỗ trợ những khách hàng khác.
+        {{ isEditMode ? 'Chỉnh sửa lại số sao hoặc chia sẻ thêm cảm nhận của bạn về sản phẩm này.' : 'Chia sẻ trải nghiệm của bạn để giúp Chéri cải thiện chất lượng sản phẩm và hỗ trợ những khách hàng khác.' }}
       </p>
 
       <!-- Multi-Product Tab Selector if Order has > 1 product -->
@@ -170,10 +170,9 @@
       </button>
 
       <button type="button" class="btn-dialog-confirm" (click)="onSubmit()"
-        [disabled]="isSubmitting || alreadyReviewed || isCheckingEligibility || !isOrderDelivered()">
+        [disabled]="isSubmitting || (!isEditMode && alreadyReviewed) || (isEditMode && !currentReviewId) || isCheckingEligibility || !isOrderDelivered()">
         <span class="btn-spinner" *ngIf="isSubmitting || isCheckingEligibility"></span>
-        <span>{{ alreadyReviewed ? 'Đã đánh giá' : (isSubmitting ? 'Đang gửi đánh giá...' : (isCheckingEligibility ?
-          'Đang kiểm tra...' : 'Gửi đánh giá')) }}</span>
+        <span>{{ isSubmitting ? (isEditMode ? 'Đang lưu thay đổi...' : 'Đang gửi đánh giá...') : (isCheckingEligibility ? 'Đang kiểm tra...' : (isEditMode ? 'Lưu thay đổi' : (alreadyReviewed ? 'Đã đánh giá' : 'Gửi đánh giá'))) }}</span>
       </button>
     </div>
 

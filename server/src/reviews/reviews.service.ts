@@ -361,7 +361,17 @@ export class ReviewsService {
       reviewFilter.orderId = cleanOrderId;
     }
 
-    const existingReview = await this.reviewModel.findOne(reviewFilter).lean();
+    let existingReview = await this.reviewModel.findOne(reviewFilter).lean();
+
+    if (!existingReview && cleanOrderId) {
+      existingReview = await this.reviewModel.findOne({
+        productId: productObjectId,
+        $or: [
+          { userId: userObjectId },
+          { userId: String(userObjectId) },
+        ],
+      }).lean();
+    }
 
     if (existingReview) {
       return {
@@ -423,6 +433,31 @@ export class ReviewsService {
       hasReviewed: false,
       existingReview: null,
     };
+  }
+
+  /**
+   * Lấy chi tiết đánh giá theo ID (yêu cầu đăng nhập, chỉ chủ nhân hoặc quản trị viên)
+   */
+  async getReviewById(reviewId: string, userId: string, user?: any): Promise<ProductReview> {
+    if (!isValidObjectId(reviewId)) {
+      throw new BadRequestException('ID đánh giá không hợp lệ');
+    }
+
+    const review = await this.reviewModel.findById(reviewId).lean();
+    if (!review) {
+      throw new NotFoundException('Không tìm thấy đánh giá');
+    }
+
+    const userRoles: string[] = user?.roles || (user?.role ? [user.role] : []);
+    const isAdmin = userRoles.some(
+      (r) => typeof r === 'string' && ['admin', 'super-admin'].includes(r.toLowerCase()),
+    );
+
+    if (!isAdmin && review.userId.toString() !== userId) {
+      throw new ForbiddenException('Bạn không có quyền truy cập đánh giá này');
+    }
+
+    return review as any;
   }
 
   /**

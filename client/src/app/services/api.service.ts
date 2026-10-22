@@ -1160,6 +1160,29 @@ export class ApiService {
     );
   }
 
+  updateProductReview(
+    reviewId: string,
+    payload: { rating?: number; comment?: string },
+  ): Observable<any> {
+    const url = `${this.apiUrl}/api/reviews/${encodeURIComponent(reviewId)}`;
+    return this.http.patch(url, payload).pipe(
+      tap((res: any) => {
+        if (res && !res.error) {
+          const updated = res.data || res;
+          this.reviewCreated$.next({
+            productId: updated.productId,
+            review: updated,
+          });
+        }
+      })
+    );
+  }
+
+  getReviewById(reviewId: string): Observable<any> {
+    const url = `${this.apiUrl}/api/reviews/${encodeURIComponent(reviewId)}`;
+    return this.http.get(url);
+  }
+
   createReturnRequest(orderId: string, payload: any): Observable<any> {
     const url = `${this.apiUrl}/api/orders/${encodeURIComponent(orderId)}/return-request`;
     return this.http.post(url, payload).pipe(

@@ -119,6 +119,12 @@
             Đã đánh giá
           </button>
 
+          <!-- Nút Sửa đánh giá: Cho phép mở popup để chỉnh sửa đánh giá đã gửi -->
+          <button type="button" class="btn-action-outline btn-action-edit-review" *ngIf="canEditReview(order)"
+            (click)="openEditReviewDialog(order)" title="Chỉnh sửa đánh giá của bạn cho đơn hàng này">
+            Sửa đánh giá
+          </button>
+
           <!-- Nút Đánh giá: Chỉ hiển thị khi đơn đã giao thành công, chưa đánh giá & không có yêu cầu đổi trả đang tồn tại -->
           <button type="button" class="btn-action-primary" *ngIf="canReviewOrder(order)"
             (click)="openReviewDialog(order)">

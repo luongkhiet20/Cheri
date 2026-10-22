@@ -70,6 +70,16 @@ export class ReviewsController {
   }
 
   /**
+   * Lấy chi tiết một đánh giá theo ID (Yêu cầu đăng nhập, chỉ chủ nhân hoặc quản trị viên)
+   */
+  @Get(':id')
+  @UseGuards(AuthGuard('jwt'))
+  async getReviewById(@Req() req: any, @Param('id') id: string) {
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
+    return this.reviewsService.getReviewById(id, userId, req.user);
+  }
+
+  /**
    * Chỉnh sửa đánh giá của người dùng
    */
   @Patch(':id')

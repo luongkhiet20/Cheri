@@ -401,6 +401,31 @@
   user-select: none;
 }
 
+/* Nút Sửa đánh giá */
+.btn-action-edit-review {
+  background: #ffffff;
+  color: var(--cheri-primary, #74070E);
+  border: 1px solid var(--cheri-primary, #74070E);
+  border-radius: 6px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.btn-action-edit-review:hover {
+  background: #fdf5f5;
+  border-color: #56050a;
+  color: #56050a;
+}
+
 .btn-action-primary {
   background: var(--cheri-primary, #74070E);
   color: #ffffff;

@@ -21,6 +21,7 @@ export class ProfileOrdersComponent {
 
   @Output() cancelOrder = new EventEmitter<Order>();
   @Output() reviewOrder = new EventEmitter<Order>();
+  @Output() editReviewOrder = new EventEmitter<Order>();
   @Output() returnRefundOrder = new EventEmitter<Order>();
   @Output() cancelReturnOrder = new EventEmitter<Order>();
   @Output() viewOrderDetail = new EventEmitter<Order>();
@@ -305,6 +306,31 @@ export class ProfileOrdersComponent {
   openReviewDialog(order: Order | any): void {
     if (!order) return;
     this.reviewOrder.emit(order);
+  }
+
+  canEditReview(order: any): boolean {
+    if (!order) return false;
+    if (!this.isOrderReviewed(order)) return false;
+    if (this.normalizeStatus(order.statusCode || order.rawStatus || order.status) !== 'DELIVERED') return false;
+    if (this.isReturnCompleted(order)) return false;
+
+    const requests: any[] = Array.isArray(order.returnRequests) && order.returnRequests.length > 0
+      ? order.returnRequests
+      : (order.returnRequest ? [order.returnRequest] : []);
+
+    const inactiveReturnStatuses = ['CANCELLED', 'CANC', 'CANCELLED_BY_CUSTOMER', 'REJECTED', 'REJ'];
+    const hasActiveReturn = requests.some((r: any) => {
+      const s = (r?.status || '').toUpperCase().trim();
+      return s && !inactiveReturnStatuses.includes(s);
+    });
+
+    if (hasActiveReturn) return false;
+    return true;
+  }
+
+  openEditReviewDialog(order: Order | any): void {
+    if (!order || !this.canEditReview(order)) return;
+    this.editReviewOrder.emit(order);
   }
 
   canRequestReturn(order: any): boolean {

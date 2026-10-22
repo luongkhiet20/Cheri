@@ -51,6 +51,7 @@
         [lastSyncTime]="lastSyncTime"
         (cancelOrder)="openCancelDialog($event)"
         (reviewOrder)="openReviewDialog($event)"
+        (editReviewOrder)="openEditReviewDialog($event)"
         (returnRefundOrder)="openReturnRefundDialog($event)"
         (cancelReturnOrder)="openReturnCancelDialog($event)">
       </app-profile-orders>
@@ -71,8 +72,8 @@
   </app-order-cancel-dialog>
 
   <!-- ── PRODUCT REVIEW POPUP DIALOG ── -->
-  <app-product-review-dialog *ngIf="isReviewDialogOpen" [order]="selectedOrderToReview" (close)="closeReviewDialog()"
-    (reviewed)="onOrderReviewed($event)">
+  <app-product-review-dialog *ngIf="isReviewDialogOpen" [order]="selectedOrderToReview" [isEditMode]="isReviewEditMode"
+    (close)="closeReviewDialog()" (reviewed)="onOrderReviewed($event)">
   </app-product-review-dialog>
 
   <!-- ── ORDER RETURN / REFUND POPUP DIALOG ── -->

@@ -1228,9 +1228,10 @@ export class ApiService {
     lang?: string;
     guestCartId?: string;
     sessionId?: string;
+    action?: string;
   }): Observable<any> {
     const url = `${this.apiUrl}/api/chat/message`;
-    return this.http.post(url, payload);
+    return this.http.post(url, payload, this.getRequestOptions());
   }
 
   private initAuthTracking() {

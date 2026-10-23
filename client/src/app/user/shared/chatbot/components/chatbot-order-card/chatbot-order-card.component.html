@@ -1,0 +1,130 @@
+<div class="chatbot-orders-table-wrap" *ngIf="allOrders.length > 0">
+  <div class="orders-list">
+    <div
+      *ngFor="let o of displayedOrders"
+      class="order-card"
+      (click)="onOrderClick(o, $event)"
+      (keydown.enter)="onOrderClick(o, $event)"
+      tabindex="0"
+      role="button"
+      [attr.aria-label]="'Theo dõi đơn hàng #' + o.orderId"
+    >
+      <!-- Hàng 1 – Thông tin đơn hàng -->
+      <div class="order-row-info">
+        <div class="order-info-left">
+          <span class="order-code">#{{ o.orderId }}</span>
+          <span class="order-date">{{ o.createdAt | date : 'dd/MM/yyyy HH:mm' }}</span>
+        </div>
+        <div class="order-info-right">
+          <span class="order-badge" [ngClass]="getStatusClass(o.status)">
+            {{ o.statusText || o.status }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Hàng 2 – Sản phẩm -->
+      <div class="order-row-product">
+        <div class="order-thumb-wrap">
+          <img
+            *ngIf="o.thumbnailUrl"
+            [src]="o.thumbnailUrl"
+            [alt]="o.firstItemName || 'Đơn hàng #' + o.orderId"
+            class="order-thumb"
+            loading="lazy"
+          />
+          <div *ngIf="!o.thumbnailUrl" class="order-thumb-placeholder">
+            <span>C</span>
+          </div>
+        </div>
+
+        <div class="order-product-meta">
+          <span class="order-product-title" [title]="o.firstItemName || 'Sản phẩm Chéri'">
+            {{ o.firstItemName || 'Sản phẩm Chéri' }}
+          </span>
+          <span class="order-items-count">
+            Số lượng: {{ o.itemsCount || 1 }} sản phẩm<ng-container *ngIf="o.totalQuantity && o.totalQuantity > (o.itemsCount || 1)"> ({{ o.totalQuantity }} món)</ng-container>
+          </span>
+        </div>
+      </div>
+
+      <!-- Hàng 3 – Thanh toán -->
+      <div class="order-row-payment">
+        <span class="payment-label">Tổng thanh toán:</span>
+        <span class="payment-amount">
+          {{ o.totalFormatted || (o.totalAmount | currency : 'VND' : 'symbol' : '1.0-0') }}
+        </span>
+      </div>
+
+      <!-- Hàng 4 – Hành động -->
+      <div class="order-row-action">
+        <button
+          type="button"
+          class="order-track-btn"
+          (click)="onOrderClick(o, $event)"
+          [attr.aria-label]="'Theo dõi đơn hàng #' + o.orderId"
+        >
+          <span>Theo dõi đơn hàng</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M5 12h14" />
+            <path d="m12 5 7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nút Xem thêm / Thu gọn khi có > 3 đơn hàng -->
+  <button
+    *ngIf="allOrders.length > 3"
+    type="button"
+    class="table-expand-btn"
+    (click)="toggleExpand($event)"
+  >
+    <ng-container *ngIf="!isExpanded">
+      <span>Xem thêm ({{ remainingCount }})</span>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="m6 9 6 6 6-6" />
+      </svg>
+    </ng-container>
+
+    <ng-container *ngIf="isExpanded">
+      <span>Thu gọn</span>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="m18 15-6-6-6 6" />
+      </svg>
+    </ng-container>
+  </button>
+</div>

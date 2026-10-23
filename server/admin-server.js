@@ -9251,6 +9251,154 @@ app.post('/api/cheri/about/publish', requireHomeAdminAuth, async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────
+// CHATBOT MESSAGE API (Parity with NestJS for Vercel Serverless)
+// ─────────────────────────────────────────────────────────────
+app.post('/api/chat/message', async (req, res) => {
+  try {
+    const { message, action, sessionId } = req.body || {};
+    const rawMessage = (message || '').trim();
+
+    // Check JWT from Authorization header
+    let user = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789');
+        user = decoded;
+      } catch (_) {}
+    }
+
+    const isOrderTracking =
+      action === 'CHECK_MY_ORDERS' ||
+      /^(?:kiểm tra tình trạng đơn hàng(?: của mình)?|tra cứu đơn hàng(?: của mình)?|xem đơn hàng(?: của mình)?)$/i.test(rawMessage) ||
+      /(đơn hàng|mã đơn|tra cứu đơn|kiểm tra đơn|tình trạng đơn|vận chuyển đơn|đơn của tôi|check đơn|giao hàng đến đâu|mã vận đơn)/i.test(rawMessage);
+
+    if (isOrderTracking) {
+      if (!user || (!user._id && !user.id && !user.userId)) {
+        return res.json({
+          reply: '✨Bạn vui lòng đăng nhập để xem và theo dõi đơn hàng của mình nhé!✨',
+          intent: 'order_tracking',
+          requiresAuth: true,
+          sessionId: sessionId || 'sess_' + Date.now(),
+        });
+      }
+
+      const uid = user._id || user.id || user.userId;
+      const conditions = [{ _user: uid }, { userId: uid }];
+      if (ObjectId.isValid(uid)) {
+        conditions.push({ _user: new ObjectId(uid) }, { userId: new ObjectId(uid) });
+      }
+      if (user.email) {
+        conditions.push({ customerEmail: user.email.toLowerCase() }, { customerEmail: user.email });
+      }
+
+      const database = await connectToMongo();
+      const orders = await database
+        .collection('orders')
+        .find({ $or: conditions })
+        .sort({ createdAt: -1, dateAdded: -1 })
+        .limit(10)
+        .toArray();
+
+      const statusMap = {
+        PENDING: 'Chờ thanh toán',
+        CONFIRMED: 'Đã xác nhận',
+        PROCESSING: 'Đang chuẩn bị hàng',
+        SHIPPING: 'Đang giao hàng',
+        DELIVERY_FAILED: 'Giao không thành công',
+        DELIVERED: 'Giao hàng thành công',
+        CANCELLED: 'Đã hủy',
+        RETURNED: 'Đã hoàn trả',
+      };
+
+      const orderCards = orders.map((o) => {
+        const oId = String(o.orderId || o.orderNumber || o._id || '');
+        const oTotal = Number(o.totalAmount || o.total || 0);
+        let thumb = '';
+        let firstItemName = '';
+        let totalQty = 0;
+        if (o.items && Array.isArray(o.items) && o.items.length > 0) {
+          const first = o.items[0];
+          firstItemName = first?.name || first?.productSnapshot?.name || first?.title || '';
+          thumb = first.image || first.productSnapshot?.image || '';
+          totalQty = o.items.reduce((acc, it) => acc + (Number(it.quantity) || 1), 0);
+        }
+        return {
+          orderId: oId,
+          orderNumber: o.orderNumber || oId,
+          createdAt: o.createdAt || o.dateAdded || new Date(),
+          status: o.status || 'PENDING',
+          statusText: statusMap[o.status] || o.status || 'Đang xử lý',
+          totalAmount: oTotal,
+          totalFormatted: new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(oTotal),
+          thumbnailUrl: thumb,
+          firstItemName,
+          itemsCount: Array.isArray(o.items) ? o.items.length : 1,
+          totalQuantity: totalQty || (Array.isArray(o.items) ? o.items.length : 1),
+          trackingNumber: o.trackingNumber || '',
+        };
+      });
+
+      if (orderCards.length === 0) {
+        return res.json({
+          reply: '✨Bạn chưa có đơn hàng nào tại Chéri. Cùng khám phá những sản phẩm xinh xắn nhé!✨',
+          intent: 'order_tracking',
+          orders: [],
+          sessionId: sessionId || 'sess_' + Date.now(),
+        });
+      }
+
+      return res.json({
+        reply: '✨Đây là danh sách đơn hàng của bạn tại Chéri. Hãy chọn một đơn hàng để xem chi tiết và theo dõi tình trạng nhé!✨',
+        intent: 'order_tracking',
+        orders: orderCards,
+        sessionId: sessionId || 'sess_' + Date.now(),
+      });
+    }
+
+    // Policy check
+    if (/(đổi trả|đổi hàng|hoàn tiền|trả hàng|đổi size|đổi mẫu|return)/i.test(rawMessage)) {
+      return res.json({
+        reply: 'Dạ, nàng xem chính sách đổi trả của Chéri tại đây nhé: [Xem chính sách đổi trả](/vi/cheri/return-policy)',
+        intent: 'policy_faq',
+        sessionId: sessionId || 'sess_' + Date.now(),
+      });
+    }
+
+    // Size consultation check
+    if (
+      /(hướng dẫn.*(?:chọn size|cỡ|bảng size)|cách chọn size|tư vấn.*(?:size|cỡ)|chọn size|bảng size|size chuẩn|chuẩn size|mặc size gì|size nào|vừa size nào|vừa size gì|mặc vừa không)/i.test(
+        rawMessage,
+      ) ||
+      /(?:cao\s*\d|nặng\s*\d|1m\d{2}|\b\d{2}\s*kg\b|vòng\s*(?:eo|ngực|mông|1|2|3)|số đo|thích mặc\s*(?:ôm|rộng|vừa|thoải mái)|mặc hơi (?:rộng|ôm|vừa)|size\s*[a-z0-9]+\s*(?:và|với|hay)\s*size\s*[a-z0-9]+|khác nhau thế nào.*size|size.*khác nhau)/i.test(
+        rawMessage,
+      )
+    ) {
+      return res.json({
+        reply:
+          '✨ Để chọn được chiếc đầm vừa vặn và tôn dáng nhất, nàng nên chú ý đo 3 vòng cơ thể bằng thước dây mềm nhé:\n\n• **Vòng 1 (Ngực):** Đo quanh đỉnh ngực lớn nhất, giữ thước dây vừa chạm sát cơ thể.\n• **Vòng 2 (Eo):** Đo tại điểm thắt nhỏ nhất phía trên rốn 2-3cm. Đây là số đo quan trọng nhất khi chọn đầm xòe hoặc đầm ôm Chéri.\n• **Vòng 3 (Mông):** Đo ngang điểm nở nang nhất của vòng 3.\n\nSau khi có số đo, nàng đối chiếu với bảng size của mẫu đầm mình thích nhé! Nếu nàng chưa rõ nên chọn size nào, hãy cho Chéri biết **chiều cao, cân nặng và số đo** (nếu có), Chéri sẽ tư vấn size phù hợp nhất cho nàng ạ! ❤️',
+        intent: 'size_consultation',
+        sessionId: sessionId || 'sess_' + Date.now(),
+      });
+    }
+
+    // Default polite response
+    return res.json({
+      reply: 'Chào bạn! Chéri luôn sẵn sàng hỗ trợ bạn tư vấn sản phẩm, chính sách và theo dõi đơn hàng.',
+      intent: 'general',
+      sessionId: sessionId || 'sess_' + Date.now(),
+    });
+  } catch (err) {
+    console.error('Error in /api/chat/message:', err);
+    return res.json({
+      reply: 'Dạ Chéri đang gặp chút sự cố kết nối. Nàng vui lòng thử lại sau giây lát nhé!',
+      intent: 'general',
+    });
+  }
+});
+
 // Start Server (Chỉ listen khi chạy trực tiếp file này bằng node server/admin-server.js)
 if (require.main === module) {
   connectToMongo().then(() => {

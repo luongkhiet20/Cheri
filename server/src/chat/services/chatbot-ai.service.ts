@@ -21,7 +21,7 @@ export class ChatbotAiService {
     const model =
       this.configService.get<string>('GEMINI_MODEL') ||
       process.env.GEMINI_MODEL ||
-      'gemini-3.8-flash';
+      'gemini-3.5-flash-lite';
 
     if (!apiKey) {
       this.logger.warn('GEMINI_API_KEY is not configured in environment. Using deterministic fallback.');

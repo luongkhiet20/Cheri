@@ -8,7 +8,7 @@ import { ChatbotProductService } from './chatbot-product.service';
 import { ChatbotSessionService } from './chatbot-session.service';
 import { ChatbotAiService } from './chatbot-ai.service';
 import { ChatbotMessageDto } from '../dto/chatbot-message.dto';
-import { ChatbotResponse, ChatProductCard } from '../interfaces/chatbot-response.interface';
+import { ChatbotResponse, ChatProductCard, ChatOrderCard, ChatbotIntent } from '../interfaces/chatbot-response.interface';
 import { CHERI_SYSTEM_PROMPTS } from '../prompts/chatbot-system.prompt';
 
 @Injectable()
@@ -92,8 +92,19 @@ export class ChatbotService {
       return response;
     }
 
-    // 6. Intent Classification
-    const intent = this.intentService.classifyIntent(rawMessage);
+    // 6. Intent Classification & Deterministic Action Routing
+    let intent: ChatbotIntent;
+    const isExplicitCheckMyOrders =
+      dto.action === 'CHECK_MY_ORDERS' ||
+      /^(?:kiểm tra tình trạng đơn hàng(?: của mình)?|tra cứu đơn hàng(?: của mình)?|xem đơn hàng(?: của mình)?)$/i.test(
+        rawMessage.trim(),
+      );
+
+    if (isExplicitCheckMyOrders) {
+      intent = 'order_tracking';
+    } else {
+      intent = this.intentService.classifyIntent(rawMessage);
+    }
 
     let response: ChatbotResponse;
 
@@ -101,7 +112,7 @@ export class ChatbotService {
       switch (intent) {
         case 'order_tracking':
         case 'order':
-          response = await this.handleOrderTracking(rawMessage, user);
+          response = await this.handleOrderTracking(rawMessage, user, isExplicitCheckMyOrders);
           break;
 
         case 'product_compare':
@@ -111,6 +122,10 @@ export class ChatbotService {
 
         case 'product_detail':
           response = await this.handleProductDetail(rawMessage, session.context);
+          break;
+
+        case 'size_consultation':
+          response = await this.handleSizeConsultation(rawMessage, session.context);
           break;
 
         case 'policy_faq':
@@ -155,6 +170,9 @@ export class ChatbotService {
       contextUpdates.lastProducts = response.products;
       contextUpdates.lastMentionedProductId = response.products[0].id;
     }
+    if (response.sizingProfile) {
+      contextUpdates.sizingProfile = response.sizingProfile;
+    }
     contextUpdates.lastIntent = intent;
 
     await this.sessionService.appendMessage(
@@ -185,55 +203,16 @@ export class ChatbotService {
   /**
    * Order Tracking: Strictly bind to authenticated user. Read-only.
    */
-  private async handleOrderTracking(message: string, user?: any): Promise<ChatbotResponse> {
+  private async handleOrderTracking(
+    message: string,
+    user?: any,
+    isExplicitCheckMyOrders = false,
+  ): Promise<ChatbotResponse> {
     if (!user || !user._id) {
       return {
-        reply:
-          'Để bảo mật thông tin đơn hàng và quyền riêng tư mua sắm của bạn, Chéri cần bạn đăng nhập tài khoản để tra cứu chi tiết nhé!',
+        reply: '✨Bạn vui lòng đăng nhập để xem và theo dõi đơn hàng của mình nhé!✨',
         intent: 'order_tracking',
         requiresAuth: true,
-      };
-    }
-
-    const words = message.match(/[A-Za-z0-9_-]{5,30}/g) || [];
-    let order: any = null;
-
-    // Only search orders owned by this verified user
-    for (const code of words) {
-      const isOid = Types.ObjectId.isValid(code) && code.length === 24;
-      order = await this.orderModel
-        .findOne({
-          _user: user._id,
-          $or: [
-            ...(isOid ? [{ _id: new Types.ObjectId(code) }] : []),
-            { trackingNumber: code },
-            { orderNumber: code },
-          ],
-        })
-        .lean();
-      if (order) break;
-    }
-
-    if (!order) {
-      // Find latest order of this user
-      try {
-        if (typeof this.orderModel.find === 'function') {
-          const list = await this.orderModel.find({ _user: user._id }).sort({ createdAt: -1 }).limit(1).lean();
-          order = list && list.length > 0 ? list[0] : null;
-        } else if (typeof this.orderModel.findOne === 'function') {
-          const query = this.orderModel.findOne({ _user: user._id });
-          order = query && typeof query.sort === 'function' ? await query.sort({ createdAt: -1 }).lean() : await query.lean();
-        }
-      } catch (err) {
-        this.logger.debug(`Could not retrieve latest order: ${err.message}`);
-      }
-    }
-
-    if (!order) {
-      return {
-        reply:
-          'Chéri không tìm thấy đơn hàng nào thuộc tài khoản của nàng. Nàng kiểm tra lại mã đơn hoặc truy cập mục Đơn hàng của tôi nhé!',
-        intent: 'order_tracking',
       };
     }
 
@@ -248,19 +227,150 @@ export class ChatbotService {
       RETURNED: 'Đã hoàn trả',
     };
 
-    const statusText = statusMap[order.status] || order.status || 'Đang xử lý';
-    const totalFormatted = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(
-      order.total || 0,
-    );
+    const toOrderCard = (o: any): ChatOrderCard => {
+      const oId = String(o.orderId || o.orderNumber || (o._id ? o._id.toString() : ''));
+      const oTotal = Number(o.totalAmount ?? o.total ?? o.amount ?? 0);
+      const statusText = statusMap[o.status] || o.status || 'Đang xử lý';
 
+      let thumb = '';
+      let firstItemName = '';
+      let totalQty = 0;
+      if (o.items && Array.isArray(o.items) && o.items.length > 0) {
+        const first = o.items[0];
+        firstItemName = first?.name || first?.productSnapshot?.name || first?.title || '';
+        const rawImg = first.image || first.productSnapshot?.image;
+        if (typeof rawImg === 'string' && rawImg) {
+          thumb = rawImg;
+        } else if (Array.isArray(rawImg) && rawImg.length > 0) {
+          thumb = typeof rawImg[0] === 'string' ? rawImg[0] : (rawImg[0]?.url || '');
+        } else if (rawImg && typeof rawImg === 'object' && rawImg.url) {
+          thumb = rawImg.url;
+        }
+        totalQty = o.items.reduce((sum: number, it: any) => sum + (Number(it.quantity) || 1), 0);
+      }
+
+      return {
+        orderId: oId,
+        orderNumber: o.orderNumber || oId,
+        createdAt: o.createdAt || o.dateAdded || new Date(),
+        status: o.status || 'PENDING',
+        statusText,
+        totalAmount: oTotal,
+        totalFormatted: new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(oTotal),
+        thumbnailUrl: thumb,
+        firstItemName,
+        itemsCount: Array.isArray(o.items) ? o.items.length : 1,
+        totalQuantity: totalQty || (Array.isArray(o.items) ? o.items.length : 1),
+        trackingNumber: o.trackingNumber || '',
+      };
+    };
+
+    // Query orders belonging strictly to this user with ObjectId support
+    let userOrders: any[] = [];
+    const userConditions: any[] = [{ _user: user._id }, { userId: user._id }];
+    if (user._id && Types.ObjectId.isValid(user._id)) {
+      const objId = new Types.ObjectId(user._id);
+      userConditions.push({ _user: objId }, { userId: objId });
+    }
+    if (user.email) {
+      userConditions.push({ customerEmail: user.email.toLowerCase() }, { customerEmail: user.email });
+    }
+    const userFilter = { $or: userConditions };
+
+    try {
+      if (typeof this.orderModel.find === 'function') {
+        const query = this.orderModel.find(userFilter);
+        userOrders =
+          query && typeof query.sort === 'function'
+            ? await query.sort({ createdAt: -1, dateAdded: -1 }).limit(10).lean()
+            : await this.orderModel.find(userFilter).lean();
+      } else if (typeof this.orderModel.findOne === 'function') {
+        // Fallback for mock environments
+        const single = await this.orderModel.findOne(userFilter).lean();
+        userOrders = single ? [single] : [];
+      }
+    } catch (err: any) {
+      this.logger.debug(`Could not retrieve user orders: ${err?.message}`);
+    }
+
+    if (!Array.isArray(userOrders)) {
+      userOrders = [];
+    }
+
+    // Check if the user specified a specific order code in their message
+    let potentialCodes: string[] = [];
+    if (!isExplicitCheckMyOrders) {
+      const words = message.match(/[A-Za-z0-9_-]{4,30}/g) || [];
+      const ignoredWords = new Set([
+        'KIEM', 'TRA', 'TINH', 'TRANG', 'DON', 'HANG', 'CUA', 'MINH', 'CHO',
+        'XEM', 'TRACKING', 'ORDER', 'ORDERS', 'MY', 'STATUS', 'NHAT', 'THEO', 'DOI',
+        'GIUP', 'BAN', 'CAC', 'MOI', 'DAT', 'CHUA', 'DANG', 'O', 'DAU', 'NAO',
+        'TOI', 'KHI', 'LAM', 'SAO', 'DUOC', 'SHOP', 'CHERI', 'XIN', 'CHAO'
+      ]);
+      potentialCodes = words.filter(w => {
+        const up = w.toUpperCase();
+        if (ignoredWords.has(up)) return false;
+        const isPrefixed = /^(?:CHERI|ORD|DH|TEST)[A-Za-z0-9_-]*/i.test(w);
+        const hasDigits = /\d/.test(w) && w.length >= 4;
+        const isMongoId = /^[a-fA-F0-9]{24}$/.test(w);
+        return isPrefixed || hasDigits || isMongoId;
+      });
+    }
+
+    if (potentialCodes.length > 0) {
+      // Find if any code matches one of this user's orders
+      const matched = userOrders.find((o) => {
+        const oId = String(o.orderId || '').toUpperCase();
+        const oNum = String(o.orderNumber || '').toUpperCase();
+        const tNum = String(o.trackingNumber || '').toUpperCase();
+        const idStr = String(o._id || '').toUpperCase();
+        return potentialCodes.some((code) => {
+          const cu = code.toUpperCase();
+          return oId === cu || oNum === cu || tNum === cu || idStr === cu;
+        });
+      });
+
+      if (matched) {
+        const card = toOrderCard(matched);
+        return {
+          reply: `Đơn hàng #${card.orderNumber || card.orderId} của nàng đang ở trạng thái: ${card.statusText}. Tổng tiền: ${card.totalFormatted}. Nàng có thể chọn đơn hàng bên dưới để xem chi tiết hành trình vận chuyển nhé!`,
+          intent: 'order_tracking',
+          orders: [card],
+          orderInfo: {
+            orderId: card.orderId,
+            orderNumber: card.orderNumber,
+            status: card.statusText,
+            total: card.totalAmount,
+          },
+        };
+      }
+
+      // Code was requested but not found in user's orders -> Neutral safety response
+      return {
+        reply: 'Chéri không tìm thấy đơn hàng nào có mã này thuộc tài khoản của bạn. Nàng kiểm tra lại mã đơn hoặc truy cập mục Đơn hàng của tôi nhé!',
+        intent: 'order_tracking',
+      };
+    }
+
+    // General order status check
+    if (userOrders.length === 0) {
+      return {
+        reply: '✨Bạn chưa có đơn hàng nào tại Chéri. Cùng khám phá những sản phẩm xinh xắn nhé!✨',
+        intent: 'order_tracking',
+        orders: [],
+      };
+    }
+
+    const orderCards = userOrders.map(toOrderCard);
     return {
-      reply: `Đơn hàng #${order.orderNumber || order._id} của nàng đang ở trạng thái: ${statusText}. Tổng tiền: ${totalFormatted}. Nàng có thể nhấn vào mục Quản lý đơn hàng trong tài khoản để xem chi tiết hành trình vận chuyển nhé!`,
+      reply: '✨Đây là danh sách đơn hàng của bạn tại Chéri. Hãy chọn một đơn hàng để xem chi tiết và theo dõi tình trạng nhé!✨',
       intent: 'order_tracking',
+      orders: orderCards,
       orderInfo: {
-        orderId: order._id,
-        orderNumber: order.orderNumber,
-        status: statusText,
-        total: order.total,
+        orderId: orderCards[0].orderId,
+        orderNumber: orderCards[0].orderNumber,
+        status: orderCards[0].statusText,
+        total: orderCards[0].totalAmount,
       },
     };
   }
@@ -352,28 +462,257 @@ export class ChatbotService {
     };
   }
 
-  /**
-   * Policy / FAQ handling: read pages_policies. Do not hallucinate missing rules.
-   */
   private async handlePolicy(message: string): Promise<ChatbotResponse> {
-    const policy = await this.knowledgeService.findRelevantPolicy(message);
-
-    if (!policy || !policy.isAvailable) {
-      const fallbackUrl = policy?.routeLink || '/vi/return-policy';
+    // If customer asks about return, refund, size exchange, or return conditions
+    if (/(đổi trả|đổi hàng|hoàn tiền|trả hàng|đổi size|đổi mẫu|return)/i.test(message)) {
       return {
-        reply: `Dạ hiện tại nội dung chi tiết về vấn đề này chưa được cập nhật đầy đủ trong hệ thống. Nàng có thể xem trang Chính sách chính thức của Chéri tại ${fallbackUrl} hoặc liên hệ hotline để được chuyên viên hỗ trợ ngay nhé!`,
+        reply:
+          'Dạ, nàng xem chính sách đổi trả của Chéri tại đây nhé: [Xem chính sách đổi trả](/vi/cheri/return-policy)',
         intent: 'policy_faq',
       };
     }
 
-    const verifiedFacts = `Chính sách: ${policy.title}\nNội dung chính thức: ${policy.content.slice(0, 1200)}\nĐường dẫn: ${policy.routeLink}`;
+    const policy = await this.knowledgeService.findRelevantPolicy(message);
+
+    if (!policy || !policy.isAvailable) {
+      return {
+        reply:
+          'Dạ, hiện mình chưa có đủ thông tin xác nhận về nội dung này của Chéri nên chưa muốn tư vấn sai cho nàng. Nàng vui lòng liên hệ kênh chăm sóc khách hàng chính thức của Chéri để được hỗ trợ kiểm tra và hướng dẫn cụ thể nhé!',
+        intent: 'policy_faq',
+      };
+    }
+
+    const verifiedFacts = `Chính sách: ${policy.title}\nĐường dẫn tương đối: ${policy.routeLink}`;
     const aiReply = await this.aiService.generateResponse(message, verifiedFacts, CHERI_SYSTEM_PROMPTS.policy);
 
-    const fallbackReply = `Dạ về "${policy.title}", Chéri luôn đảm bảo quyền lợi chu đáo cho nàng: nàng có thể xem chi tiết quy định tại trang ${policy.routeLink} nhé!`;
+    const fallbackReply = `Dạ, nàng xem ${policy.title.toLowerCase()} của Chéri tại đây nhé: [Xem ${policy.title.toLowerCase()}](${policy.routeLink})`;
 
     return {
       reply: aiReply || fallbackReply,
       intent: 'policy_faq',
+    };
+  }
+
+  /**
+   * Dedicated Size Consultation Handler
+   * Guides 3 body measurements, asks height/weight/fit preferences,
+   * inspects MongoDB products/variants for specific garments,
+   * and provides natural Gemini AI recommendations with robust deterministic fallback.
+   */
+  private async handleSizeConsultation(message: string, context?: any): Promise<ChatbotResponse> {
+    const lower = (message || '').toLowerCase();
+
+    // 1. Context parsing & multi-turn profile maintenance
+    const currentProfile: any = { ...(context?.sizingProfile || {}) };
+
+    // Height parsing: "1m60", "1m58", "cao 1m65", "160cm", "cao 160", "mình cao 1m60"
+    const heightMatch =
+      lower.match(/(?:cao|chiều cao)[^0-9]{0,15}(\d{1,2}[m\.,]\d{1,2}|\d{3})\s*(?:cm)?/i) ||
+      lower.match(/\b(1[m\.,]\d{2})\b/i) ||
+      lower.match(/\b(\d{3})\s*cm\b/i);
+    if (heightMatch) {
+      const rawH = heightMatch[1].replace(',', '.');
+      if (rawH.includes('m')) {
+        const parts = rawH.split('m');
+        const meters = parseInt(parts[0], 10) || 1;
+        const centimeters = parseInt(parts[1], 10) || 0;
+        currentProfile.height = meters * 100 + (centimeters < 10 ? centimeters * 10 : centimeters);
+      } else {
+        const val = parseFloat(rawH);
+        currentProfile.height = val < 3 ? Math.round(val * 100) : Math.round(val);
+      }
+    }
+
+    // Weight parsing: "50kg", "50 ký", "nặng 50kg", "50 kg", "mình nặng 50kg"
+    const weightMatch =
+      lower.match(/(?:nặng|cân nặng)[^0-9]{0,15}(\d{2}(?:\.\d+)?)\s*(?:kg|ký)?/i) ||
+      lower.match(/\b(\d{2}(?:\.\d+)?)\s*(?:kg|ký)\b/i);
+    if (weightMatch) {
+      currentProfile.weight = parseFloat(weightMatch[1]);
+    }
+
+    // Waist (Vòng eo) parsing: "vòng eo 68cm", "vòng eo mình 68cm", "eo 68", "v2 68"
+    const waistMatch =
+      lower.match(/(?:vòng\s*(?:2|eo)|(?:v2|eo))[^0-9]{0,15}(\d{2,3})\s*(?:cm)?/i);
+    if (waistMatch) {
+      currentProfile.waist = parseInt(waistMatch[1], 10);
+    }
+
+    // Bust (Vòng ngực) parsing: "vòng ngực 86", "vòng ngực mình 86", "ngực 86", "v1 86"
+    const bustMatch =
+      lower.match(/(?:vòng\s*(?:1|ngực)|(?:v1|ngực))[^0-9]{0,15}(\d{2,3})\s*(?:cm)?/i);
+    if (bustMatch) {
+      currentProfile.bust = parseInt(bustMatch[1], 10);
+    }
+
+    // Hips (Vòng mông) parsing: "vòng mông 92", "vòng mông mình 92", "mông 92", "v3 92"
+    const hipsMatch =
+      lower.match(/(?:vòng\s*(?:3|mông)|(?:v3|mông))[^0-9]{0,15}(\d{2,3})\s*(?:cm)?/i);
+    if (hipsMatch) {
+      currentProfile.hips = parseInt(hipsMatch[1], 10);
+    }
+
+    // 3-loop shorthand format: "84-66-90", "84 66 90"
+    const threeLoopsMatch = lower.match(/\b(\d{2})\s*[-/,\s]\s*(\d{2})\s*[-/,\s]\s*(\d{2,3})\b/);
+    if (threeLoopsMatch && !bustMatch && !waistMatch) {
+      currentProfile.bust = parseInt(threeLoopsMatch[1], 10);
+      currentProfile.waist = parseInt(threeLoopsMatch[2], 10);
+      currentProfile.hips = parseInt(threeLoopsMatch[3], 10);
+    }
+
+    // Fit preference:
+    if (/(ôm sát|bó sát|ôm dáng|body|tôn dáng|ôm body)/i.test(lower)) {
+      currentProfile.fitPreference = 'ôm sát';
+    } else if (/(rộng rãi|thoải mái|hơi rộng|dáng suông|rộng)/i.test(lower)) {
+      currentProfile.fitPreference = 'rộng thoải mái';
+    } else if (/(vừa vặn|chuẩn form|vừa người)/i.test(lower)) {
+      currentProfile.fitPreference = 'vừa vặn';
+    }
+
+    // 2. Check if inquiring about a specific product
+    let targetProductCard: ChatProductCard | null = null;
+    let targetProductDoc: any = null;
+
+    const resolvedCard = this.sessionService.resolveFollowUpProduct(message, context);
+    if (resolvedCard) {
+      targetProductCard = resolvedCard;
+      targetProductDoc = await this.productService.getProductById(resolvedCard.id);
+    } else if (
+      context?.lastProducts &&
+      context.lastProducts.length > 0 &&
+      /(mẫu này|đầm này|váy này|cái này|sản phẩm này|có size|size m|size l|size s)/i.test(lower)
+    ) {
+      targetProductCard = context.lastProducts[0];
+      targetProductDoc = await this.productService.getProductById(targetProductCard.id);
+    }
+
+    // Check inquiry about a specific size: S, M, L, XL, XXL
+    const sizeInquiredMatch =
+      lower.match(/\b(?:size|cỡ)\s*([sml]|xl|xxl)\b/i) || lower.match(/\b([sml]|xl|xxl)\b/i);
+    const inquiredSize = sizeInquiredMatch ? sizeInquiredMatch[1].toUpperCase() : null;
+
+    // 3. Assemble verified facts
+    const factsList: string[] = [];
+    factsList.push('HƯỚNG DẪN SIZE CHUẨN CỦA CHÉRI:');
+    factsList.push(
+      '- Cách đo 3 vòng: Vòng 1 (ngực - đo qua đỉnh ngực), Vòng 2 (eo - điểm nhỏ nhất trên rốn 2-3cm), Vòng 3 (mông - điểm nở nang nhất). Thước dây vừa chạm sát cơ thể, không siết chặt.',
+    );
+    factsList.push('- Bảng size tham khảo Chéri:');
+    factsList.push('  + Size S: Chiều cao 1m50 - 1m60 | Cân nặng 40 - 47kg | Eo 62 - 66cm | Ngực 80 - 85cm');
+    factsList.push('  + Size M: Chiều cao 1m55 - 1m65 | Cân nặng 48 - 53kg | Eo 66 - 70cm | Ngực 86 - 90cm');
+    factsList.push('  + Size L: Chiều cao 1m58 - 1m68 | Cân nặng 54 - 58kg | Eo 70 - 75cm | Ngực 90 - 95cm');
+    factsList.push('  + Size XL: Chiều cao 1m60 - 1m70 | Cân nặng 59 - 65kg | Eo 75 - 80cm | Ngực 95 - 100cm');
+
+    if (
+      currentProfile.height ||
+      currentProfile.weight ||
+      currentProfile.waist ||
+      currentProfile.bust ||
+      currentProfile.hips ||
+      currentProfile.fitPreference
+    ) {
+      factsList.push('\nTHÔNG TIN KHÁCH ĐÃ CUNG CẤP TRONG CUỘC HỘI THOẠI:');
+      if (currentProfile.height) factsList.push(`- Chiều cao: ${currentProfile.height}cm`);
+      if (currentProfile.weight) factsList.push(`- Cân nặng: ${currentProfile.weight}kg`);
+      if (currentProfile.waist) factsList.push(`- Vòng eo: ${currentProfile.waist}cm`);
+      if (currentProfile.bust) factsList.push(`- Vòng ngực: ${currentProfile.bust}cm`);
+      if (currentProfile.hips) factsList.push(`- Vòng mông: ${currentProfile.hips}cm`);
+      if (currentProfile.fitPreference) factsList.push(`- Sở thích mặc: ${currentProfile.fitPreference}`);
+    }
+
+    if (targetProductCard && targetProductDoc) {
+      const stockInfo = await this.productService.checkProductStock(
+        targetProductCard.id,
+        undefined,
+        inquiredSize || undefined,
+      );
+      factsList.push(`\nSẢN PHẨM KHÁCH QUAN TÂM: "${targetProductCard.title}"`);
+      factsList.push(`- Các size thực tế hiện có trong kho: ${(stockInfo.availableSizes || []).join(', ') || 'Đang cập nhật'}`);
+      if (inquiredSize) {
+        factsList.push(
+          `- Size ${inquiredSize}: ${stockInfo.inStock ? `Đang CÒN HÀNG (còn ${stockInfo.availableStock} sản phẩm)` : 'ĐÃ TẠM HẾT HÀNG'}`,
+        );
+      }
+      factsList.push('- Lưu ý: Sản phẩm không có bảng thông số chi tiết cm riêng trong cơ sở dữ liệu, tư vấn dựa trên bảng size chuẩn và độ co giãn của phom đầm.');
+    }
+
+    // 4. Call Gemini AI with verified context
+    let aiReply = '';
+    try {
+      aiReply = await this.aiService.generateResponse(
+        message,
+        factsList.join('\n'),
+        CHERI_SYSTEM_PROMPTS.sizeConsultation,
+      );
+    } catch (err) {
+      this.logger.warn(`Gemini error in handleSizeConsultation: ${err.message}`);
+    }
+
+    // 5. High-quality Deterministic Fallback (if Gemini fails or is empty)
+    let fallbackReply = '';
+
+    // Case A: Specific product size inquiry (e.g. "Mẫu đầm này có size M không?")
+    if (targetProductCard && inquiredSize) {
+      const stockInfo = await this.productService.checkProductStock(targetProductCard.id, undefined, inquiredSize);
+      if (stockInfo.inStock) {
+        fallbackReply = `Dạ mẫu "${targetProductCard.title}" hiện ĐANG CÒN size ${inquiredSize} (còn ${stockInfo.availableStock} sản phẩm) sẵn sàng gửi đến nàng ạ! ✨\n\nNàng có thể nhấn vào thẻ sản phẩm bên dưới để xem chi tiết và đặt hàng ngay, hoặc chia sẻ thêm chiều cao, cân nặng để Chéri kiểm tra xem size ${inquiredSize} có vừa vặn nhất với nàng không nhé! ❤️`;
+      } else {
+        const otherSizes = (stockInfo.availableSizes || []).filter((s) => s.toUpperCase() !== inquiredSize);
+        fallbackReply = `Dạ mẫu "${targetProductCard.title}" hiện size ${inquiredSize} ĐÃ TẠM HẾT HÀNG rồi ạ. Mẫu này hiện còn các size: ${otherSizes.join(', ') || 'Liên hệ Chéri để đặt may thêm'} ạ. Nàng có thể tham khảo các size còn lại hoặc xem thêm các mẫu đầm xinh khác nhé! ❤️`;
+      }
+    }
+    // Case B: Size comparison inquiry (e.g. "Size M và L khác nhau thế nào?")
+    else if (
+      /(khác nhau.*size|size.*khác nhau)/i.test(lower) ||
+      (lower.includes('size m') && lower.includes('size l'))
+    ) {
+      fallbackReply = `✨ Tại Chéri, các size đầm được thiết kế chuẩn phom tôn dáng với sự khác biệt chính như sau ạ:\n\n• **Size M:** Thường phù hợp cho nàng cao khoảng 1m55 - 1m65, cân nặng 48 - 53kg, số đo vòng eo khoảng 66 - 70cm.\n• **Size L:** Thường dành cho nàng cao 1m58 - 1m68, cân nặng 54 - 58kg, số đo vòng eo khoảng 70 - 75cm.\n\nSự chênh lệch giữa hai size thường là khoảng 2 - 4cm ở vòng ngực và vòng eo. Nếu nàng đang phân vân giữa hai size, hãy cho Chéri biết số đo vòng eo hoặc cân nặng của nàng, Chéri sẽ tư vấn size chuẩn xác nhất nhé! ❤️`;
+    }
+    // Case C: Customer provided height and weight (e.g. "Mình cao 1m60, nặng 50kg thì mặc size gì?")
+    else if (currentProfile.height && currentProfile.weight && !currentProfile.waist) {
+      let suggestedSize = 'M';
+      if (currentProfile.weight < 48) suggestedSize = 'S';
+      else if (currentProfile.weight > 58) suggestedSize = 'XL';
+      else if (currentProfile.weight >= 54) suggestedSize = 'L';
+
+      const altSize =
+        currentProfile.fitPreference === 'ôm sát' && suggestedSize === 'M'
+          ? 'S'
+          : currentProfile.fitPreference === 'rộng thoải mái' && suggestedSize === 'M'
+          ? 'L'
+          : null;
+
+      fallbackReply = `✨ Với chiều cao ${currentProfile.height}cm và cân nặng ${currentProfile.weight}kg, nàng mặc **size ${suggestedSize}** của Chéri là vừa vặn và tôn dáng nhất nhé!${altSize ? ` Nếu nàng thích mặc ${currentProfile.fitPreference}, nàng có thể cân nhắc chọn size ${altSize} ạ.` : ''}\n\nĐể chiếc đầm chuẩn phom tuyệt đối, nàng có thể đo thêm vòng eo (trên rốn khoảng 2-3cm). Nếu vòng eo từ 66-70cm thì size M là lựa chọn hoàn hảo ạ! Nàng đang ưng ý mẫu đầm nào của Chéri để mình kiểm tra size cho nàng nhé? ❤️`;
+    }
+    // Case D: Customer provided waist or added waist (e.g. "Vòng eo mình 68cm")
+    else if (currentProfile.waist) {
+      let sizeByWaist = 'M';
+      if (currentProfile.waist <= 66) sizeByWaist = 'S';
+      else if (currentProfile.waist <= 70) sizeByWaist = 'M';
+      else if (currentProfile.waist <= 75) sizeByWaist = 'L';
+      else sizeByWaist = 'XL';
+
+      const infoSummary: string[] = [];
+      if (currentProfile.height) infoSummary.push(`chiều cao ${currentProfile.height}cm`);
+      if (currentProfile.weight) infoSummary.push(`cân nặng ${currentProfile.weight}kg`);
+      infoSummary.push(`vòng eo ${currentProfile.waist}cm`);
+
+      fallbackReply = `✨ Với ${infoSummary.join(', ')}, nàng diện **size ${sizeByWaist}** của Chéri sẽ rất xinh và chuẩn phom nhé! Vòng eo ${currentProfile.waist}cm nằm trọn vẹn trong khoảng chuẩn của size ${sizeByWaist}.\n\nNàng thích mặc ôm sát tôn vòng 2 hay thích phom vừa vặn, hơi rộng một chút để di chuyển thoải mái ạ? Hãy nói cho Chéri biết nhé! ❤️`;
+    }
+    // Case E: Customer provided fit preference (e.g. "Mình thích mặc hơi rộng")
+    else if (currentProfile.fitPreference && (currentProfile.height || currentProfile.weight || currentProfile.waist)) {
+      fallbackReply = `✨ Dạ Chéri đã ghi nhận gu mặc **${currentProfile.fitPreference}** của nàng rồi ạ! Nếu thích form rộng rãi thoải mái khi di chuyển hoặc tiệc tùng, nàng có thể chọn tăng lên 1 size (ví dụ từ M lên L) hoặc chọn các thiết kế đầm dáng xòe A hoặc suông nhẹ nhé.\n\nNàng muốn Chéri gợi ý những mẫu đầm thiết kế form suông xòe xinh xắn đang có sẵn không ạ? ❤️`;
+    }
+    // Case F: General sizing guide (e.g. "Hướng dẫn mình cách chọn size đầm chuẩn")
+    else {
+      fallbackReply = `✨ Để chọn được chiếc đầm vừa vặn và tôn dáng nhất, nàng nên chú ý đo ba số đo chính bằng thước dây mềm nhé:\n\n• **Vòng 1 (Ngực):** Đo quanh đỉnh ngực lớn nhất, giữ thước dây vừa chạm sát cơ thể.\n• **Vòng 2 (Eo):** Đo tại điểm thắt nhỏ nhất phía trên rốn 2-3cm. Đây là số đo quan trọng nhất khi chọn đầm xòe hoặc đầm ôm Chéri.\n• **Vòng 3 (Mông):** Đo ngang điểm nở nang nhất của vòng 3.\n\nSau khi có số đo, nàng đối chiếu với bảng size của mẫu đầm mình thích nhé! Nếu nàng chưa rõ nên chọn size nào, hãy cho Chéri biết **chiều cao, cân nặng và số đo** (nếu có), Chéri sẽ tư vấn size phù hợp nhất cho nàng ạ! ❤️`;
+    }
+
+    return {
+      reply: aiReply || fallbackReply,
+      intent: 'size_consultation',
+      products: targetProductCard ? [targetProductCard] : undefined,
+      sizingProfile: currentProfile,
     };
   }
 

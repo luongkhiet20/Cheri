@@ -12,6 +12,8 @@ import {
   Session,
   Headers,
   MethodNotAllowedException,
+  NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard, AdminJwtAuthGuard, OptionalJwtAuthGuard } from '../auth/roles.guard';
@@ -261,11 +263,33 @@ export class OrdersController {
     return this.ordersService.getAllOrders();
   }
 
-  // ─── Admin: lấy order theo orderId ───────────────────────────────────────
-  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  // ─── Lấy order theo orderId (Admin hoặc User sở hữu) ─────────────────────
+  @UseGuards(AuthGuard('jwt'))
   @Get('/:id')
-  getOrderById(@Param('id') id: string) {
-    return this.ordersService.getOrderById(id);
+  async getOrderById(@Param('id') id: string, @GetUser() user: User) {
+    const order = await this.ordersService.getOrderById(id);
+    if (!order) {
+      throw new NotFoundException('Đơn hàng không tồn tại');
+    }
+    const userRoles = (user as any)?.roles || (user as any)?.role || [];
+    const roles = Array.isArray(userRoles) ? userRoles : [userRoles];
+    const isAdmin = roles.some((r: any) => typeof r === 'string' && r.toLowerCase().includes('admin'));
+    if (!isAdmin) {
+      const userIdStr = user?._id ? user._id.toString() : '';
+      const orderUserStr = (order as any)?._user ? (order as any)._user.toString() : '';
+      const orderUserIdStr = (order as any)?.userId ? (order as any).userId.toString() : '';
+      const userEmail = (user?.email || '').toLowerCase();
+      const orderEmail = ((order as any)?.customerEmail || (order as any)?.email || '').toLowerCase();
+
+      const isOwner =
+        (userIdStr && (userIdStr === orderUserStr || userIdStr === orderUserIdStr)) ||
+        (userEmail && userEmail === orderEmail);
+
+      if (!isOwner) {
+        throw new ForbiddenException('Bạn không có quyền xem đơn hàng này');
+      }
+    }
+    return order;
   }
 
   // ─── Admin: cập nhật riêng trạng thái order (status) ─────────────────────

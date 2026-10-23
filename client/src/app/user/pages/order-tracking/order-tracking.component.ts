@@ -30,6 +30,7 @@ export class OrderTrackingComponent implements OnInit {
   selectedOrder: Order | null = null;
   selectedOrderId: string = '';
   ordersLoading = false;
+  authOrderError = '';
 
   // ─── Guest flow ──────────────────────────────────────────────────────────
   guestInput = '';
@@ -69,10 +70,12 @@ export class OrderTrackingComponent implements OnInit {
         const orders = this.userOrders();
         if (!orders || orders.length === 0) {
           this.store.getUserOrders();
-        } else if (this.targetOrderIdFromQuery && !this.selectedOrder) {
+        } else if (this.targetOrderIdFromQuery && (!this.selectedOrder || (this.selectedOrder.orderId !== this.targetOrderIdFromQuery && this.selectedOrder._id !== this.targetOrderIdFromQuery))) {
           const match = findOwnedTrackingOrder(orders as any[], this.targetOrderIdFromQuery);
           if (match) {
             this.selectOrder(match);
+          } else {
+            this.fetchAndSelectDirectOrder(this.targetOrderIdFromQuery);
           }
         }
       }
@@ -94,7 +97,11 @@ export class OrderTrackingComponent implements OnInit {
           const match = findOwnedTrackingOrder(orders as any[], q);
           if (match) {
             this.selectOrder(match);
+          } else if (this.user()) {
+            this.fetchAndSelectDirectOrder(q);
           }
+        } else if (this.user()) {
+          this.fetchAndSelectDirectOrder(q);
         }
       }
 
@@ -116,10 +123,36 @@ export class OrderTrackingComponent implements OnInit {
     }
   }
 
+  private fetchAndSelectDirectOrder(orderId: string): void {
+    if (this.ordersLoading) return;
+    this.ordersLoading = true;
+    this.apiService.getOrder(orderId).subscribe({
+      next: (res: any) => {
+        this.ordersLoading = false;
+        const ord = res?.data || res;
+        if (ord && (ord.orderId || ord._id) && !ord.error) {
+          this.selectOrder(ord);
+          this.authOrderError = '';
+        } else {
+          this.authOrderError = `Đơn hàng #${orderId} không tồn tại hoặc không thuộc quyền sở hữu của tài khoản bạn.`;
+          this.clearSelection();
+        }
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.ordersLoading = false;
+        this.authOrderError = `Đơn hàng #${orderId} không tồn tại hoặc không thuộc quyền sở hữu của tài khoản bạn.`;
+        this.clearSelection();
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
   // ─── Logged-in: chọn đơn hàng ────────────────────────────────────────────
   selectOrder(order: Order): void {
     this.selectedOrder = order;
     this.selectedOrderId = order.orderId;
+    this.authOrderError = '';
     this.trackingResult = this.orderToTrackingResult(order);
     this.cdr.detectChanges();
   }
@@ -133,6 +166,9 @@ export class OrderTrackingComponent implements OnInit {
     const match = findOwnedTrackingOrder(orders as any[], orderId);
     if (match) {
       this.selectOrder(match);
+    } else {
+      this.authOrderError = `Đơn hàng #${orderId} không tồn tại hoặc không thuộc quyền sở hữu của tài khoản bạn.`;
+      this.clearSelection();
     }
   }
 

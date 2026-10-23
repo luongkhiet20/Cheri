@@ -1,42 +1,80 @@
 {
-  "generated_at": "2026-10-15T09:43:42.413796+00:00",
+  "generated_at": "2026-10-23T01:08:34.382715+00:00",
   "readiness_summary": {
     "has_interactions": true,
     "has_products": true,
     "has_orders": true,
     "is_training_ready": false,
-    "recommended_strategy": "DATASET_INITIALIZING"
+    "recommended_strategy": "PURCHASE_PREDICTION"
   },
   "interaction_metrics": {
-    "total_raw_records": 113,
-    "real_records_count": 4,
-    "synthetic_records_count": 109,
+    "total_raw_records": 383,
+    "real_records_count": 273,
+    "synthetic_records_count": 110,
     "included_synthetic_in_clean": false,
-    "total_views": 4,
-    "valid_clean_records": 3,
+    "total_views": 263,
+    "valid_clean_records": 265,
     "null_timestamp_count": 0,
     "invalid_identifier_count": 0,
     "compound_id_count": 0,
-    "linked_product_count": 4,
-    "unlinked_product_count": 0,
-    "technical_duplicate_count": 1,
-    "distinct_registered_users": 0,
-    "distinct_guest_sessions": 1,
+    "linked_product_count": 270,
+    "unlinked_product_count": 3,
+    "technical_duplicate_count": 8,
+    "distinct_registered_users": 3,
+    "distinct_guest_sessions": 0,
     "time_range_start": "2026-10-15T09:42:12.914000+00:00",
-    "time_range_end": "2026-10-15T09:42:34.926000+00:00"
+    "time_range_end": "2026-10-22T17:19:11.254000+00:00"
   },
   "product_metrics": {
-    "total_products": 99,
-    "products_with_valid_price": 99,
-    "products_with_category": 99,
-    "visible_products": 96,
-    "in_stock_products": 3
+    "total_products": 98,
+    "products_with_valid_price": 98,
+    "products_with_category": 98,
+    "visible_products": 95,
+    "in_stock_products": 4
   },
   "order_metrics": {
-    "total_orders": 43,
-    "successful_conversion_orders": 21,
-    "total_order_lines": 80,
-    "linked_order_lines": 76,
+    "total_orders": 50,
+    "successful_conversion_orders": 25,
+    "total_order_lines": 85,
+    "linked_order_lines": 81,
     "unlinked_order_lines": 4
+  },
+  "purchase_dataset": {
+    "data_source": "user_interactions + orders",
+    "is_synthetic": false,
+    "target": "purchase",
+    "label_definition": "label=1 nếu tồn tại đơn hàng THÀNH CÔNG của cùng user và cùng product trong [T, T+14 ngày]; label=0 nếu đã quan sát đủ 14 ngày sau T mà không có đơn như vậy. Snapshot chưa đủ 14 ngày theo dõi bị loại, không gán 0.",
+    "product_state_policy": "Không có lịch sử tồn kho/hiển thị theo thời điểm trong DB, nên tại snapshot lịch sử product_in_stock và product_visibility được đặt = 1 (sản phẩm đã được xem trước T nên đang hiển thị); không dùng trạng thái hiện tại để tránh leakage. product_price/product_variant_count lấy từ catalog hiện tại (không có lịch sử giá) — đây là giới hạn đã biết.",
+    "window_days": 14,
+    "snapshot_step_days": 3,
+    "candidate_lookback_days": 30,
+    "observation_end": "2026-10-23T01:08:34.382715+00:00",
+    "events_time_range": [
+      "2026-10-15T09:42:12.914000+00:00",
+      "2026-10-22T17:19:11.254000+00:00"
+    ],
+    "candidate_snapshots_total": 3,
+    "snapshots_labeled": 0,
+    "snapshots_excluded_insufficient_followup": 3,
+    "rows_excluded_insufficient_followup": 134,
+    "earliest_snapshot_with_full_followup_possible": "2026-10-30T00:00:00+00:00",
+    "split_strategy": "chronological_by_snapshot_with_embargo",
+    "embargo_days": 14,
+    "rows_purged_by_embargo": 0,
+    "snapshots_purged_by_embargo": 0,
+    "split_counts": {},
+    "split_time_ranges": {},
+    "split_mode": "none",
+    "rows": 0,
+    "snapshots_in_dataset": 0,
+    "snapshot_time_range": [
+      null,
+      null
+    ],
+    "distinct_users": 0,
+    "distinct_products": 0,
+    "label_distribution": {},
+    "positive_rate": null,
+    "split_distribution": {}
   }
 }

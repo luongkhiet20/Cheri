@@ -1,0 +1,145 @@
+{
+  "purchase": {
+    "data_source": "ml_bootstrap_interactions (synthetic)",
+    "is_synthetic": true,
+    "target": "purchase",
+    "label_definition": "label=1 nếu tồn tại đơn hàng THÀNH CÔNG của cùng user và cùng product trong [T, T+14 ngày]; label=0 nếu đã quan sát đủ 14 ngày sau T mà không có đơn như vậy. Snapshot chưa đủ 14 ngày theo dõi bị loại, không gán 0.",
+    "product_state_policy": "Không có lịch sử tồn kho/hiển thị theo thời điểm trong DB, nên tại snapshot lịch sử product_in_stock và product_visibility được đặt = 1 (sản phẩm đã được xem trước T nên đang hiển thị); không dùng trạng thái hiện tại để tránh leakage. product_price/product_variant_count lấy từ catalog hiện tại (không có lịch sử giá) — đây là giới hạn đã biết.",
+    "window_days": 14,
+    "snapshot_step_days": 3,
+    "candidate_lookback_days": 30,
+    "observation_end": "2026-10-23T00:00:00+00:00",
+    "events_time_range": [
+      "2026-07-29T13:00:10+00:00",
+      "2026-10-22T22:39:15+00:00"
+    ],
+    "candidate_snapshots_total": 29,
+    "snapshots_labeled": 24,
+    "snapshots_excluded_insufficient_followup": 5,
+    "rows_excluded_insufficient_followup": 2475,
+    "earliest_snapshot_with_full_followup_possible": "2026-08-13T00:00:00+00:00",
+    "split_strategy": "chronological_by_snapshot_with_embargo",
+    "embargo_days": 14,
+    "rows_purged_by_embargo": 2546,
+    "snapshots_purged_by_embargo": 8,
+    "split_counts": {
+      "test": 458,
+      "train": 962,
+      "val": 325
+    },
+    "split_time_ranges": {
+      "test": [
+        "2026-10-07T00:00:00+00:00",
+        "2026-10-07T00:00:00+00:00"
+      ],
+      "train": [
+        "2026-07-30T00:00:00+00:00",
+        "2026-09-07T00:00:00+00:00"
+      ],
+      "val": [
+        "2026-09-22T00:00:00+00:00",
+        "2026-09-22T00:00:00+00:00"
+      ]
+    },
+    "split_mode": "train_val_test",
+    "rows": 1745,
+    "snapshots_in_dataset": 16,
+    "snapshot_time_range": [
+      "2026-07-30T00:00:00+00:00",
+      "2026-10-07T00:00:00+00:00"
+    ],
+    "distinct_users": 113,
+    "distinct_products": 88,
+    "label_distribution": {
+      "0": 1672,
+      "1": 73
+    },
+    "positive_rate": 0.0418,
+    "split_distribution": {
+      "test": {
+        "0": 441,
+        "1": 17
+      },
+      "train": {
+        "0": 916,
+        "1": 46
+      },
+      "val": {
+        "0": 315,
+        "1": 10
+      }
+    }
+  },
+  "interest": {
+    "data_source": "ml_bootstrap_interactions (synthetic)",
+    "is_synthetic": true,
+    "target": "interest",
+    "label_definition": "interest_label=1 nếu trong [T, T+14 ngày] user thêm sản phẩm vào giỏ, mua, hoặc xem lại sản phẩm >= 2 lần; 0 nếu không. Đây là target RIÊNG, không dùng làm nhãn mua hàng.",
+    "product_state_policy": "Không có lịch sử tồn kho/hiển thị theo thời điểm trong DB, nên tại snapshot lịch sử product_in_stock và product_visibility được đặt = 1 (sản phẩm đã được xem trước T nên đang hiển thị); không dùng trạng thái hiện tại để tránh leakage. product_price/product_variant_count lấy từ catalog hiện tại (không có lịch sử giá) — đây là giới hạn đã biết.",
+    "window_days": 14,
+    "snapshot_step_days": 3,
+    "candidate_lookback_days": 30,
+    "observation_end": "2026-10-23T00:00:00+00:00",
+    "events_time_range": [
+      "2026-07-29T13:00:10+00:00",
+      "2026-10-22T22:39:15+00:00"
+    ],
+    "candidate_snapshots_total": 29,
+    "snapshots_labeled": 24,
+    "snapshots_excluded_insufficient_followup": 5,
+    "rows_excluded_insufficient_followup": 2475,
+    "earliest_snapshot_with_full_followup_possible": "2026-08-13T00:00:00+00:00",
+    "split_strategy": "chronological_by_snapshot_with_embargo",
+    "embargo_days": 14,
+    "rows_purged_by_embargo": 2546,
+    "snapshots_purged_by_embargo": 8,
+    "split_counts": {
+      "test": 458,
+      "train": 962,
+      "val": 325
+    },
+    "split_time_ranges": {
+      "test": [
+        "2026-10-07T00:00:00+00:00",
+        "2026-10-07T00:00:00+00:00"
+      ],
+      "train": [
+        "2026-07-30T00:00:00+00:00",
+        "2026-09-07T00:00:00+00:00"
+      ],
+      "val": [
+        "2026-09-22T00:00:00+00:00",
+        "2026-09-22T00:00:00+00:00"
+      ]
+    },
+    "split_mode": "train_val_test",
+    "rows": 1745,
+    "snapshots_in_dataset": 16,
+    "snapshot_time_range": [
+      "2026-07-30T00:00:00+00:00",
+      "2026-10-07T00:00:00+00:00"
+    ],
+    "distinct_users": 113,
+    "distinct_products": 88,
+    "label_distribution": {
+      "0": 1549,
+      "1": 196
+    },
+    "positive_rate": 0.1123,
+    "split_distribution": {
+      "test": {
+        "0": 396,
+        "1": 62
+      },
+      "train": {
+        "0": 866,
+        "1": 96
+      },
+      "val": {
+        "0": 287,
+        "1": 38
+      }
+    }
+  },
+  "disclaimer": "Các chỉ số dưới đây được đo trên dữ liệu SYNTHETIC bootstrap, chỉ để kiểm tra kỹ thuật pipeline; KHÔNG phải kết quả đánh giá production và không được trích dẫn như hiệu năng thực tế."
+}

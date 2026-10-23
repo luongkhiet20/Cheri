@@ -18,47 +18,47 @@ export class ChatbotKnowledgeService {
   private readonly slugMapping: Record<string, { slugs: string[]; route: string; defaultTitle: string }> = {
     returnPolicy: {
       slugs: ['return-policy', 'chinh-sach-doi-tra', 'doi-tra'],
-      route: '/vi/return-policy',
+      route: '/vi/cheri/return-policy',
       defaultTitle: 'Chính sách đổi trả',
     },
     shippingPolicy: {
       slugs: ['shipping-policy', 'chinh-sach-van-chuyen', 'van-chuyen', 'giao-hang'],
-      route: '/vi/shipping-policy',
+      route: '/vi/cheri/shipping-policy',
       defaultTitle: 'Chính sách vận chuyển & giao hàng',
     },
     warrantyPolicy: {
       slugs: ['warranty-policy', 'chinh-sach-bao-hanh', 'bao-hanh'],
-      route: '/vi/warranty-policy',
+      route: '/vi/cheri/warranty-policy',
       defaultTitle: 'Chính sách bảo hành',
     },
     privacyPolicy: {
       slugs: ['privacy-policy', 'chinh-sach-bao-mat', 'bao-mat'],
-      route: '/vi/privacy-policy',
+      route: '/vi/cheri/privacy-policy',
       defaultTitle: 'Chính sách bảo mật',
     },
     orderingGuide: {
       slugs: ['ordering-guide', 'huong-dan-dat-hang', 'dat-hang'],
-      route: '/vi/ordering-guide',
+      route: '/vi/cheri/ordering-guide',
       defaultTitle: 'Hướng dẫn đặt hàng & thanh toán',
     },
     faqs: {
       slugs: ['faqs', 'cau-hoi-thuong-gap', 'faq'],
-      route: '/vi/faqs',
+      route: '/vi/cheri/faqs',
       defaultTitle: 'Câu hỏi thường gặp (FAQs)',
     },
     termsOfService: {
       slugs: ['terms-of-service', 'dieu-khoan-dich-vu', 'dieu-khoan'],
-      route: '/vi/terms-of-service',
+      route: '/vi/cheri/terms-of-service',
       defaultTitle: 'Điều khoản dịch vụ',
     },
     aboutUs: {
       slugs: ['about-us', 've-chung-toi', 'gioi-thieu', 'thuong-hieu'],
-      route: '/vi/about-us',
+      route: '/vi/cheri/about-us',
       defaultTitle: 'Về Chéri',
     },
     sizeGuide: {
       slugs: ['size-guide', 'bang-size-chuan', 'huong-dan-chon-size', 'bang-size'],
-      route: '/vi/size-guide',
+      route: '/vi/cheri/size-guide',
       defaultTitle: 'Bảng size chuẩn Chéri',
     },
   };

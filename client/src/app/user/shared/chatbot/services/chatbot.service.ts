@@ -18,9 +18,10 @@ export class ChatbotService {
     message: string,
     history: Array<{ sender: 'user' | 'store'; text: string }> = [],
     sessionId?: string,
+    action?: string,
   ): Observable<ChatbotResponse> {
     if (this.apiService) {
-      return this.apiService.sendChatMessage({ message, history, sessionId }).pipe(
+      return this.apiService.sendChatMessage({ message, history, sessionId, action }).pipe(
         catchError((err) => {
           console.error('[ChatbotService] API error:', err);
           return of({
@@ -37,6 +38,7 @@ export class ChatbotService {
           message,
           history,
           sessionId,
+          action,
         })
         .pipe(
           catchError((err) => {

@@ -35,6 +35,11 @@
   max-width: 85%;
 }
 
+.chat-message-row.has-cards .message-content-wrap {
+  max-width: 100%;
+  width: calc(100% - 38px);
+}
+
 .chat-message-row.from-user .message-content-wrap {
   align-items: flex-end;
 }
@@ -129,11 +134,31 @@
   border-color: var(--cheri-primary, #74070E);
 }
 
-.products-carousel {
+.products-carousel,
+.orders-carousel {
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 8px 0 2px;
   width: 100%;
 }
+
+.chat-inline-link {
+  color: var(--cheri-primary, #74070E);
+  text-decoration: underline;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+  word-break: break-all;
+}
+
+.chat-inline-link:hover {
+  opacity: 0.8;
+}
+
+.user-bubble .chat-inline-link {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
 

@@ -2,9 +2,17 @@
   class="chat-message-row"
   [class.from-user]="message.sender === 'user'"
   [class.from-store]="message.sender === 'store'"
+  [class.has-cards]="(message.products && message.products.length > 0) || (message.orders && message.orders.length > 0)"
 >
   <div *ngIf="message.sender === 'store'" class="avatar-store" aria-hidden="true">
-    <span>C</span>
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16">
+      <path d="M12 4L14 10L20 12L14 14L12 20L10 14L4 12L10 10L12 4Z"
+            stroke="white" stroke-width="1.4"
+            stroke-linejoin="round"/>
+      <path d="M18 3V7M16 5H20"
+            stroke="white" stroke-width="1.2"
+            stroke-linecap="round"/>
+    </svg>
   </div>
 
   <div class="message-content-wrap">
@@ -14,11 +22,16 @@
       [class.user-bubble]="message.sender === 'user'"
       [class.store-bubble]="message.sender === 'store'"
     >
-      <div class="message-text">{{ message.text }}</div>
+      <div class="message-text">
+        <ng-container *ngFor="let seg of segments">
+          <a *ngIf="seg.isLink" [routerLink]="seg.url" class="chat-inline-link">{{ seg.text }}</a>
+          <span *ngIf="!seg.isLink">{{ seg.text }}</span>
+        </ng-container>
+      </div>
 
       <div *ngIf="message.requiresAuth" class="auth-action-wrap">
-        <a routerLink="/auth/sign-in" class="auth-btn" (click)="onAuth()">
-          <span>Đăng nhập ngay</span>
+        <a routerLink="/auth/signin" class="auth-btn" (click)="onAuth()">
+          <span>Đăng nhập</span>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="13"
@@ -69,6 +82,14 @@
         [products]="message.products"
         (cardClick)="onProductClick($event)"
       ></app-chatbot-product-card>
+    </div>
+
+    <!-- Orders List -->
+    <div *ngIf="message.orders && message.orders.length > 0" class="orders-carousel">
+      <app-chatbot-order-card
+        [orders]="message.orders"
+        (orderClick)="onOrderClick($event)"
+      ></app-chatbot-order-card>
     </div>
 
   </div>

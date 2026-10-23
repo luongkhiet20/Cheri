@@ -73,11 +73,16 @@ export class ChatbotStateService {
       this.messages.update((list) => [...list, userMessage, storeMessage]);
       return;
     }
+
+    if (reply.id === '2' || reply.icon === 'package' || reply.query.includes('đơn hàng')) {
+      this.sendMessage(reply.query, 'CHECK_MY_ORDERS');
+      return;
+    }
+
     this.sendMessage(reply.query);
   }
 
-
-  sendMessage(rawText: string): void {
+  sendMessage(rawText: string, action?: string): void {
     const text = (rawText || '').trim();
     if (!text || this.isLoading()) return;
 
@@ -97,14 +102,21 @@ export class ChatbotStateService {
       .slice(-6)
       .map((m) => ({ sender: m.sender, text: m.text }));
 
-    this.chatbotService.sendMessage(text, history, this.sessionId()).subscribe({
-      next: (res) => {
+    this.chatbotService.sendMessage(text, history, this.sessionId(), action).subscribe({
+      next: (res: any) => {
+        const payload = res?.data || res;
+        const rawOrders = payload?.orders || res?.orders;
+        const orders = Array.isArray(rawOrders) ? rawOrders : (rawOrders ? [rawOrders] : undefined);
+        const rawProducts = payload?.products || res?.products;
+        const products = Array.isArray(rawProducts) ? rawProducts : (rawProducts ? [rawProducts] : undefined);
+
         const storeMessage: ChatMessage = {
           id: this.nextMessageId++,
           sender: 'store',
-          text: res.reply,
-          products: res.products,
-          requiresAuth: res.requiresAuth,
+          text: payload?.reply || res?.reply || '',
+          products,
+          orders,
+          requiresAuth: payload?.requiresAuth ?? res?.requiresAuth,
           timestamp: new Date(),
         };
         this.messages.update((list) => [...list, storeMessage]);

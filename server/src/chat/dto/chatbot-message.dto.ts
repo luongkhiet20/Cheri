@@ -26,6 +26,11 @@ export class ChatbotMessageDto {
   @IsString()
   @MaxLength(128)
   sessionId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  action?: string;
 }
 
 // Re-exporting legacy aliases to preserve backward compatibility

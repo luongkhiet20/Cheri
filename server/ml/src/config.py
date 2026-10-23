@@ -81,7 +81,19 @@ OBJECT_ID_REGEX = re.compile(r"^[0-9a-fA-F]{24}$")
 ANONYMIZATION_SALT = os.getenv("ML_SALT", "cheri_ml_salt_2026_secured")
 
 
-def get_mongo_client(uri: Optional[str] = None, timeout_ms: int = 5000) -> MongoClient:
+# Bootstrap (synthetic) settings — synthetic data lives ONLY in this collection
+BOOTSTRAP_COLLECTION_NAME: str = os.getenv("BOOTSTRAP_COLLECTION_NAME", "ml_bootstrap_interactions")
+BOOTSTRAP_GENERATOR_NAME: str = "cheri-bootstrap-seeder"
+BOOTSTRAP_GENERATOR_VERSION: str = "2.0.0"
+SYNTHETIC_ID_PREFIX: str = "syn_bs_usr_"        # synthetic user identities (never real customers)
+SYNTHETIC_SESSION_PREFIX: str = "syn_bs_sess_"  # synthetic session identities
+SYNTHETIC_ORDER_PREFIX: str = "SYN-BS-ORD-"     # synthetic order ids (never written to 'orders')
+
+# Snapshot labeling defaults
+SNAPSHOT_STEP_DAYS: int = int(os.getenv("SNAPSHOT_STEP_DAYS", "3"))
+CANDIDATE_LOOKBACK_DAYS: int = int(os.getenv("CANDIDATE_LOOKBACK_DAYS", "30"))
+
+def get_mongo_client(uri: Optional[str] = None, timeout_ms: int = 15000) -> MongoClient:
     """Creates an authenticated MongoClient with timeout and ping verification."""
     conn_uri = uri or MONGO_URI
     client = MongoClient(conn_uri, serverSelectionTimeoutMS=timeout_ms)

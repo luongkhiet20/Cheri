@@ -1,0 +1,338 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.chatbot-orders-table-wrap {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  font-family: inherit;
+}
+
+.orders-list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Individual Order Card (Table-row feel with 4 structured rows) */
+.order-card {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  background: #ffffff;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  user-select: none;
+}
+
+.order-card:last-child {
+  border-bottom: none;
+}
+
+.order-card:hover {
+  background-color: #fdf2f3;
+}
+
+.order-card:focus-visible {
+  outline: 2px solid var(--cheri-primary, #74070e);
+  outline-offset: -2px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Hàng 1 – Thông tin đơn hàng (Mã, Ngày, Badge trạng thái)
+   ───────────────────────────────────────────────────────────── */
+.order-row-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.order-info-left {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.order-code {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #1a1a1a;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  transition: color 0.15s ease;
+}
+
+.order-card:hover .order-code {
+  color: var(--cheri-primary, #74070e);
+}
+
+.order-date {
+  font-size: 11px;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.order-info-right {
+  flex-shrink: 0;
+}
+
+/* Status Badges */
+.order-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  line-height: 1.35;
+  display: inline-block;
+}
+
+.status-pending {
+  background: #fdf2f3;
+  color: var(--cheri-primary, #74070e);
+  border: 1px solid #e9c9cc;
+}
+
+.status-processing {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.status-shipping {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.status-delivered {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.status-cancelled {
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Hàng 2 – Sản phẩm (Thumbnail 44px, Tên sản phẩm, Số lượng)
+   ───────────────────────────────────────────────────────────── */
+.order-row-product {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 2px 0;
+}
+
+.order-thumb-wrap {
+  width: 44px;
+  min-width: 44px;
+  height: 54px;
+  border-radius: 6px;
+  background: #f9f7f7;
+  overflow: hidden;
+  border: 1px solid #f0e6e7;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.order-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.2s ease;
+}
+
+.order-card:hover .order-thumb {
+  transform: scale(1.06);
+}
+
+.order-thumb-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--cheri-primary, #74070e);
+  background: #fdf2f3;
+}
+
+.order-product-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.order-product-title {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: #1a1a1a;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.15s ease;
+}
+
+.order-card:hover .order-product-title {
+  color: var(--cheri-primary, #74070e);
+}
+
+.order-items-count {
+  font-size: 11px;
+  color: #6b7280;
+  line-height: 1.2;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Hàng 3 – Thanh toán (Nhãn "Tổng thanh toán", Giá VNĐ)
+   ───────────────────────────────────────────────────────────── */
+.order-row-payment {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background: #faf8f8;
+  border-radius: 6px;
+  border: 1px solid #f3ecec;
+}
+
+.payment-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.payment-amount {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--cheri-primary, #74070e);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Hàng 4 – Hành động (Nút đỏ thương hiệu Chéri #74070E)
+   ───────────────────────────────────────────────────────────── */
+.order-row-action {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1px;
+}
+
+.order-track-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: var(--cheri-primary, #74070e);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.order-track-btn:hover {
+  background: var(--cheri-primary-hover, #5c050b);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(116, 7, 14, 0.25);
+}
+
+.order-track-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.order-track-btn svg {
+  stroke: currentColor;
+  transition: transform 0.15s ease;
+}
+
+.order-track-btn:hover svg {
+  transform: translateX(2px);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Expand / Collapse Button (Đồng bộ với chatbot-product-card)
+   ───────────────────────────────────────────────────────────── */
+.table-expand-btn {
+  width: 100%;
+  padding: 8px 12px;
+  background: #fdf2f3;
+  border: none;
+  border-top: 1px solid #e9c9cc;
+  color: var(--cheri-primary, #74070e);
+  font-size: 11.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.table-expand-btn:hover {
+  background: #f9e4e6;
+  color: var(--cheri-primary-hover, #5c050b);
+}
+
+.table-expand-btn svg {
+  stroke: currentColor;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Mobile responsiveness
+   ───────────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .order-card {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .order-code {
+    font-size: 12px;
+  }
+
+  .order-date {
+    font-size: 10px;
+  }
+
+  .order-thumb-wrap {
+    width: 40px;
+    min-width: 40px;
+    height: 48px;
+  }
+
+  .order-product-title {
+    font-size: 11.5px;
+  }
+
+  .order-track-btn {
+    width: 100%;
+    padding: 6px 10px;
+  }
+}

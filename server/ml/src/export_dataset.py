@@ -4,6 +4,7 @@ Extracts, validates, engineers features, generates reports, and writes UTF-8 CSV
 """
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, Optional
 import pandas as pd
@@ -26,9 +27,39 @@ from .validate_data import (
 )
 from .feature_engineering import build_user_product_feature_matrix
 from .build_dataset import (
-    generate_future_purchase_labels,
-    assign_time_based_splits,
+    build_snapshot_dataset,
+    assign_snapshot_time_splits,
+    summarize_snapshot_dataset,
 )
+
+DATASET_COLUMNS = [
+    "snapshot_id", "user_key", "product_id", "cutoff_timestamp", "label_window_end",
+    "user_total_views", "user_distinct_products_viewed", "user_product_views", "user_category_views",
+    "days_since_last_view", "user_total_orders_before", "user_previously_purchased",
+    "product_price", "product_variant_count", "product_in_stock", "product_visibility",
+    "product_category", "product_popularity_views", "label", "split",
+]
+
+
+def render_dataset_section(ds: Dict[str, Any], title: str) -> list:
+    """Markdown lines describing a labeled snapshot dataset."""
+    return [
+        f"## {title}",
+        "",
+        f"- **Nguồn dữ liệu**: `{ds.get('data_source')}` | **Synthetic**: `{ds.get('is_synthetic')}`",
+        f"- **Định nghĩa nhãn**: {ds.get('label_definition')}",
+        f"- **Chính sách trạng thái sản phẩm**: {ds.get('product_state_policy')}",
+        f"- **Khoảng thời gian sự kiện**: `{ds.get('events_time_range')}` | **Observation end**: `{ds.get('observation_end')}`",
+        f"- **Snapshot ứng viên**: {ds.get('candidate_snapshots_total')} (bước {ds.get('snapshot_step_days')} ngày, lookback {ds.get('candidate_lookback_days')} ngày)",
+        f"- **Snapshot bị loại vì chưa đủ {ds.get('window_days')} ngày theo dõi**: {ds.get('snapshots_excluded_insufficient_followup')} ({ds.get('rows_excluded_insufficient_followup')} cặp user-product)",
+        f"- **Snapshot/mẫu bị purge do embargo giữa các split**: {ds.get('snapshots_purged_by_embargo')} / {ds.get('rows_purged_by_embargo')}",
+        f"- **Snapshot trong dataset**: {ds.get('snapshots_in_dataset')} | **Khoảng T**: `{ds.get('snapshot_time_range')}`",
+        f"- **Số mẫu**: {ds.get('rows')} | **Users**: {ds.get('distinct_users')} | **Products**: {ds.get('distinct_products')}",
+        f"- **Phân bố nhãn**: `{ds.get('label_distribution')}` | **Tỷ lệ dương**: `{ds.get('positive_rate')}`",
+        f"- **Phân bố theo split**: `{ds.get('split_distribution')}`",
+        f"- **Snapshot sớm nhất có thể đủ follow-up**: `{ds.get('earliest_snapshot_with_full_followup_possible')}`",
+        "",
+    ]
 
 
 def generate_markdown_report(report_dict: Dict[str, Any]) -> str:
@@ -95,6 +126,9 @@ def generate_markdown_report(report_dict: Dict[str, Any]) -> str:
         "",
         "---",
         "",
+        *render_dataset_section(report_dict.get("purchase_dataset", {}), "3b. DATASET DỰ ĐOÁN MUA HÀNG 14 NGÀY (SNAPSHOT)"),
+        "---",
+        "",
         "## 4. KẾT LUẬN VÀ BƯỚC TIẾP THEO",
         "",
         "1. Pipeline chuẩn bị dữ liệu đã được hoàn thiện 100% và sẵn sàng hoạt động tự động.",
@@ -139,23 +173,28 @@ def run_pipeline(
     # Step 3: Reporting
     report = compile_data_quality_report(quality_metrics, products_df, orders_df)
 
-    # Step 4: Feature Engineering and Dataset Construction (if interactions exist)
-    if not clean_interactions_df.empty:
-        feature_matrix = build_user_product_feature_matrix(
-            clean_interactions_df=clean_interactions_df,
-            orders_df=orders_df,
-            products_df=products_df,
-        )
-        cutoff_now = clean_interactions_df["event_timestamp"].max()
-        labeled_df = generate_future_purchase_labels(
-            candidate_features_df=feature_matrix,
-            orders_df=orders_df,
-            cutoff_time=cutoff_now,
-            window_days=FUTURE_WINDOW_DAYS,
-        )
-        user_product_dataset = assign_time_based_splits(labeled_df)
-    else:
-        user_product_dataset = pd.DataFrame()
+    # Step 4: Snapshot dataset. Old behaviour used ONE cutoff = latest interaction, so the
+    # 14-day future window was never observed and every row became label=0. Now we build
+    # historical snapshots and keep only those whose [T, T+14d] window is fully observed.
+    observation_end = datetime.now(timezone.utc)  # orders are known up to extraction time
+    labeled_df, build_stats = build_snapshot_dataset(
+        clean_interactions_df=clean_interactions_df,
+        orders_df=orders_df,
+        products_df=products_df,
+        observation_end=observation_end,
+        window_days=FUTURE_WINDOW_DAYS,
+        target="purchase",
+    )
+    user_product_dataset, split_info = assign_snapshot_time_splits(labeled_df)
+    report["purchase_dataset"] = summarize_snapshot_dataset(
+        user_product_dataset, build_stats, split_info,
+        data_source="user_interactions + orders" + (" (+ synthetic user_interactions)" if include_synthetic else ""),
+        is_synthetic=include_synthetic,
+    )
+    label_classes = len(report["purchase_dataset"]["label_distribution"])
+    report["readiness_summary"]["is_training_ready"] = bool(
+        report["readiness_summary"]["is_training_ready"] and label_classes >= 2 and not include_synthetic
+    )
 
     # Step 5: Export Artifacts
     if export_files:
@@ -167,19 +206,14 @@ def run_pipeline(
         interactions_file = out_data / "interactions_clean.csv"
         clean_interactions_df.to_csv(interactions_file, index=False, encoding="utf-8")
 
-        # 3. User-Product Dataset (always write to reflect current state)
-        dataset_file = out_data / "user_product_dataset.csv"
+        # 3. User-Product Dataset (always write to reflect current state).
+        # Synthetic-contaminated runs never overwrite the production dataset file.
+        dataset_name = "user_product_dataset.with_synthetic.csv" if include_synthetic else "user_product_dataset.csv"
+        dataset_file = out_data / dataset_name
         if not user_product_dataset.empty:
             user_product_dataset.to_csv(dataset_file, index=False, encoding="utf-8")
         else:
-            empty_cols = [
-                "user_key", "product_id", "cutoff_timestamp",
-                "user_total_views", "user_distinct_products_viewed", "user_product_views", "user_category_views",
-                "days_since_last_view", "user_total_orders_before", "user_previously_purchased",
-                "product_price", "product_variant_count", "product_in_stock", "product_visibility",
-                "product_category", "product_popularity_views", "label", "split"
-            ]
-            pd.DataFrame(columns=empty_cols).to_csv(dataset_file, index=False, encoding="utf-8")
+            pd.DataFrame(columns=DATASET_COLUMNS).to_csv(dataset_file, index=False, encoding="utf-8")
 
 
         # 4. JSON Quality Report

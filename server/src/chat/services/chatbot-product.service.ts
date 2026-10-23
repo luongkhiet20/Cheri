@@ -502,4 +502,14 @@ export class ChatbotProductService {
       .split(/\s+/)
       .filter((w) => w.length > 1 && !stopWords.has(w));
   }
+
+  async getProductById(productId: string): Promise<any> {
+    try {
+      if (!productId || typeof this.productModel?.findById !== 'function') return null;
+      if (!Types.ObjectId.isValid(productId) && productId.length !== 24) return null;
+      return await this.productModel.findById(productId).lean();
+    } catch {
+      return null;
+    }
+  }
 }

@@ -8,3 +8,4 @@ export * from './components/chatbot-product-card/chatbot-product-card.component'
 export * from './components/chatbot-quick-replies/chatbot-quick-replies.component';
 export * from './components/chatbot-input/chatbot-input.component';
 export * from './components/chatbot-typing/chatbot-typing.component';
+export * from './components/chatbot-order-card/chatbot-order-card.component';

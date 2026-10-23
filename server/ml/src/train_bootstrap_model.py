@@ -1,274 +1,276 @@
 """
-Training and Evaluation Pipeline for Cheri ML Bootstrap Recommender Model.
-Reads bootstrap interaction data from MongoDB 'ml_bootstrap_interactions',
-engineers the strict 12-feature matrix, trains Random Forest Classifier with balanced weights,
-truthfully evaluates metrics on Test split, saves 'randomforest.bootstrap.joblib',
-and writes metadata tracking synthetic bootstrap lineage.
+Training and Evaluation Pipeline for the Cheri ML Bootstrap Recommender Model (v2).
+
+- Data: ONLY synthetic docs in 'ml_bootstrap_interactions' (generator v2 by default).
+- Target: the SAME purchase definition as production (successful synthetic order of the same
+  user-product in [T, T+14d]); snapshots without full follow-up are excluded.
+- Features: the 12-feature contract (FEATURE_COLUMNS), computed strictly before T.
+- Split: chronological by snapshot with embargo (no random shuffle).
+- Artifacts: randomforest.bootstrap.joblib + metadata with trained_on_synthetic=true,
+  is_production_ready=false. Metrics are SYNTHETIC sanity checks, NOT production results.
+
+Usage (from server/ml):
+  python -m src.train_bootstrap_model                       # read v2 bootstrap docs from MongoDB
+  python -m src.train_bootstrap_model --batch-id <id>       # restrict to one seeded batch
+  python -m src.train_bootstrap_model --include-legacy      # also include legacy v1 docs (not recommended)
 """
 
 import sys
 import json
+import argparse
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Optional
+
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except AttributeError:
+        pass
+
 import numpy as np
 import pandas as pd
 import joblib
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-    roc_auc_score,
-    average_precision_score,
+    accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, average_precision_score,
 )
 
-# Setup paths
 CURRENT_DIR = Path(__file__).resolve().parent
 ML_ROOT = CURRENT_DIR.parent
 if str(ML_ROOT) not in sys.path:
     sys.path.insert(0, str(ML_ROOT))
 
-from src.config import get_mongo_db, OUTPUT_DATA_DIR, OUTPUT_MODEL_DIR
-from src.extract_data import extract_products
+from src.config import (
+    get_mongo_db, OUTPUT_DATA_DIR, OUTPUT_MODEL_DIR, OUTPUT_REPORT_DIR, FUTURE_WINDOW_DAYS,
+    BOOTSTRAP_COLLECTION_NAME, BOOTSTRAP_GENERATOR_NAME, BOOTSTRAP_GENERATOR_VERSION,
+)
+from src.extract_data import extract_products, fetch_bootstrap_docs, bootstrap_docs_to_interactions_df, bootstrap_docs_to_orders_df
+from src.validate_data import validate_and_clean_interactions
+from src.build_dataset import build_snapshot_dataset, assign_snapshot_time_splits, summarize_snapshot_dataset
 from src.train_model import FEATURE_COLUMNS, TARGET_COLUMN
 
-
-def build_bootstrap_feature_dataset(db) -> pd.DataFrame:
-    """
-    Constructs the 12-feature training matrix directly from MongoDB:
-    - Products from 'products' collection
-    - Behavioral events from 'ml_bootstrap_interactions'
-    """
-    products_df = extract_products(db)
-    prod_map = {str(row["product_id"]): row for _, row in products_df.iterrows()}
-
-    interactions_cursor = db.ml_bootstrap_interactions.find({"datasetType": "bootstrap"})
-    events = list(interactions_cursor)
-
-    if not events:
-        raise ValueError("No bootstrap records found in collection 'ml_bootstrap_interactions'.")
-
-    # Aggregate user stats
-    user_events: Dict[str, list] = {}
-    prod_view_counts: Dict[str, int] = {}
-
-    for ev in events:
-        uid = ev["userId"]
-        pid = str(ev["productId"])
-        etype = ev.get("eventType", "VIEW")
-
-        if uid not in user_events:
-            user_events[uid] = []
-        user_events[uid].append(ev)
-
-        if etype == "VIEW":
-            prod_view_counts[pid] = prod_view_counts.get(pid, 0) + 1
-
-    # Build dataset rows
-    rows = []
-
-    for uid, u_evs in user_events.items():
-        total_views = sum(1 for e in u_evs if e.get("eventType") == "VIEW")
-        viewed_pids = {str(e["productId"]) for e in u_evs if e.get("eventType") == "VIEW"}
-        cart_pids = {str(e["productId"]) for e in u_evs if e.get("eventType") == "ADD_TO_CART"}
-        bought_pids = {str(e["productId"]) for e in u_evs if e.get("eventType") == "PURCHASE"}
-        total_orders = len(bought_pids)
-
-        # Count views per product for this user
-        u_p_views: Dict[str, int] = {}
-        u_cat_views: Dict[str, int] = {}
-        for e in u_evs:
-            if e.get("eventType") == "VIEW":
-                p = str(e["productId"])
-                u_p_views[p] = u_p_views.get(p, 0) + 1
-                cat = prod_map.get(p, {}).get("primary_category", "Khác")
-                u_cat_views[cat] = u_cat_views.get(cat, 0) + 1
-
-        # Evaluate candidate items for this user:
-        # 1. Products user interacted with
-        for pid in (viewed_pids | cart_pids | bought_pids):
-            p_data = prod_map.get(pid)
-            if p_data is None:
-                continue
-
-            views = u_p_views.get(pid, 0)
-            in_cart = pid in cart_pids
-            in_bought = pid in bought_pids
-            cat = p_data.get("primary_category", "Khác")
-
-            # Label logic: Positive interest if repeat views (>= 2), added to cart, or purchased
-            label = 1 if (views >= 2 or in_cart or in_bought) else 0
-
-            p_price = float(p_data.get("sale_price", 0) or p_data.get("regular_price", 0))
-            rows.append({
-                "user_key": uid,
-                "product_id": pid,
-                "user_total_views": float(total_views),
-                "user_distinct_products_viewed": float(len(viewed_pids)),
-                "user_product_views": float(views),
-                "user_category_views": float(u_cat_views.get(cat, 0)),
-                "days_since_last_view": 1.0,
-                "user_total_orders_before": float(total_orders),
-                "user_previously_purchased": 1.0 if in_bought else 0.0,
-                "product_price": p_price,
-                "product_variant_count": float(p_data.get("variant_count", 1)),
-                "product_in_stock": 1.0 if p_data.get("is_in_stock", True) else 0.0,
-                "product_visibility": 1.0 if p_data.get("visibility", True) else 0.0,
-                "product_popularity_views": float(prod_view_counts.get(pid, 1)),
-                "label": int(label),
-            })
-
-        # 2. Add unviewed negative controls (label = 0)
-        unviewed = [p for p in prod_map.keys() if p not in viewed_pids]
-        import random
-        rng = random.Random(hash(uid) % 100000)
-        sample_unviewed = rng.sample(unviewed, min(len(unviewed), 5))
-
-        for pid in sample_unviewed:
-            p_data = prod_map.get(pid)
-            if p_data is None:
-                continue
-            cat = p_data.get("primary_category", "Khác")
-            p_price = float(p_data.get("sale_price", 0) or p_data.get("regular_price", 0))
-            rows.append({
-                "user_key": uid,
-                "product_id": pid,
-                "user_total_views": float(total_views),
-                "user_distinct_products_viewed": float(len(viewed_pids)),
-                "user_product_views": 0.0,
-                "user_category_views": float(u_cat_views.get(cat, 0)),
-                "days_since_last_view": 999.0,
-                "user_total_orders_before": float(total_orders),
-                "user_previously_purchased": 0.0,
-                "product_price": p_price,
-                "product_variant_count": float(p_data.get("variant_count", 1)),
-                "product_in_stock": 1.0 if p_data.get("is_in_stock", True) else 0.0,
-                "product_visibility": 1.0 if p_data.get("visibility", True) else 0.0,
-                "product_popularity_views": float(prod_view_counts.get(pid, 0)),
-                "label": 0,
-            })
-
-    df = pd.DataFrame(rows)
-    return df
+SYNTHETIC_DISCLAIMER = (
+    "Các chỉ số dưới đây được đo trên dữ liệu SYNTHETIC bootstrap, chỉ để kiểm tra kỹ thuật pipeline; "
+    "KHÔNG phải kết quả đánh giá production và không được trích dẫn như hiệu năng thực tế."
+)
 
 
-def train_and_evaluate_bootstrap_model():
-    print("=" * 70)
-    print("CHERI MACHINE LEARNING - BOOTSTRAP MODEL TRAINING")
-    print("=" * 70)
+def _observation_end(docs) -> Optional[datetime]:
+    """Synthetic world ends at the generator windowEnd (latest across batches)."""
+    ends = [d.get("metadata", {}).get("windowEnd") for d in docs if d.get("metadata", {}).get("windowEnd")]
+    if ends:
+        return max(pd.Timestamp(e) for e in ends).to_pydatetime()
+    ts = [d.get("timestamp") for d in docs if d.get("timestamp")]
+    return max(pd.to_datetime(ts, utc=True)).to_pydatetime() if ts else None
 
-    db = get_mongo_db()
-    print(f"Connected to database: '{db.name}'")
 
-    print("\n1. Constructing 12-feature matrix from bootstrap collection...")
-    df = build_bootstrap_feature_dataset(db)
-    print(f"   Total observation pairs: {len(df)}")
-    label_counts = df["label"].value_counts().to_dict()
-    print(f"   Label distribution     : 0={label_counts.get(0, 0)}, 1={label_counts.get(1, 0)}")
+def build_bootstrap_purchase_dataset(docs, products_df: pd.DataFrame):
+    raw = bootstrap_docs_to_interactions_df(docs)
+    orders = bootstrap_docs_to_orders_df(docs)
+    clean, _ = validate_and_clean_interactions(raw, set(products_df["product_id"]), include_synthetic=True)
+    obs_end = _observation_end(docs)
+    ds, stats = build_snapshot_dataset(clean, orders, products_df, observation_end=obs_end, target="purchase")
+    ds, split = assign_snapshot_time_splits(ds)
+    summary = summarize_snapshot_dataset(ds, stats, split, f"{BOOTSTRAP_COLLECTION_NAME} (synthetic)", True)
+    interest, istats = build_snapshot_dataset(clean, orders, products_df, observation_end=obs_end, target="interest")
+    interest, isplit = assign_snapshot_time_splits(interest)
+    isummary = summarize_snapshot_dataset(interest, istats, isplit, f"{BOOTSTRAP_COLLECTION_NAME} (synthetic)", True, "interest_label")
+    return ds, summary, interest, isummary
 
-    # Stratified Train/Val/Test split (70 / 15 / 15)
-    train_val_df, test_df = train_test_split(
-        df, test_size=0.15, random_state=42, stratify=df["label"]
-    )
-    train_df, val_df = train_test_split(
-        train_val_df, test_size=0.1765, random_state=42, stratify=train_val_df["label"]
-    )
 
-    print(f"\n2. Data Partitioning:")
-    print(f"   Train set : {len(train_df)} samples")
-    print(f"   Val set   : {len(val_df)} samples")
-    print(f"   Test set  : {len(test_df)} samples")
+def _evaluate_split_with_baselines(model, split_df: pd.DataFrame, target_col: str = TARGET_COLUMN) -> Dict[str, Any]:
+    if split_df.empty:
+        return {"samples": 0, "status": "empty_split"}
 
-    X_train = train_df[FEATURE_COLUMNS]
-    y_train = train_df["label"]
-    X_test = test_df[FEATURE_COLUMNS]
-    y_test = test_df["label"]
+    X = split_df[FEATURE_COLUMNS]
+    y = split_df[target_col]
+    samples = int(len(y))
+    positives = int(y.sum())
+    negatives = samples - positives
+    base_rate = round(float(y.mean()), 4)
 
-    print("\n3. Training Random Forest Classifier...")
-    rf_model = RandomForestClassifier(
-        n_estimators=100,
-        max_depth=6,
-        class_weight="balanced",
-        random_state=42,
-    )
-    rf_model.fit(X_train, y_train)
+    preds = model.predict(X)
+    probs = model.predict_proba(X)[:, 1] if len(model.classes_) > 1 else np.zeros(samples)
+    has_two_classes = y.nunique() > 1
 
-    print("\n4. Evaluating Model on Held-out Test Set...")
-    preds = rf_model.predict(X_test)
-    probs = rf_model.predict_proba(X_test)[:, 1]
-
-    acc = float(accuracy_score(y_test, preds))
-    prec = float(precision_score(y_test, preds, zero_division=0))
-    rec = float(recall_score(y_test, preds, zero_division=0))
-    f1 = float(f1_score(y_test, preds, zero_division=0))
-    roc_auc = float(roc_auc_score(y_test, probs))
-    pr_auc = float(average_precision_score(y_test, probs))
-
-    metrics = {
-        "test_samples": len(test_df),
-        "accuracy": round(acc, 4),
-        "precision": round(prec, 4),
-        "recall": round(rec, 4),
-        "f1_score": round(f1, 4),
-        "roc_auc": round(roc_auc, 4),
-        "pr_auc": round(pr_auc, 4),
+    clf_metrics = {
+        "samples": samples,
+        "positives": positives,
+        "negatives": negatives,
+        "base_rate": base_rate,
+        "accuracy": round(float(accuracy_score(y, preds)), 4),
+        "precision": round(float(precision_score(y, preds, zero_division=0)), 4),
+        "recall": round(float(recall_score(y, preds, zero_division=0)), 4),
+        "f1_score": round(float(f1_score(y, preds, zero_division=0)), 4),
+        "roc_auc": round(float(roc_auc_score(y, probs)), 4) if has_two_classes else "N/A (1 class)",
+        "pr_auc": round(float(average_precision_score(y, probs)), 4) if has_two_classes else "N/A (1 class)",
     }
 
-    print("\n--- MODEL PERFORMANCE METRICS ---")
-    for k, v in metrics.items():
-        print(f"   {k.ljust(15)}: {v}")
+    # Recommender ranking metrics (Precision@K and Recall@K grouped by snapshot and user)
+    def calc_ranking(score_series, k_list=(5, 10)):
+        temp_df = split_df.copy()
+        temp_df["_score"] = score_series
+        precisions = {k: [] for k in k_list}
+        recalls = {k: [] for k in k_list}
+        for (_, _), group in temp_df.groupby(["cutoff_timestamp", "user_key"]):
+            n_pos = (group[target_col] == 1).sum()
+            sorted_group = group.sort_values(by="_score", ascending=False)
+            for k in k_list:
+                top_k = sorted_group.iloc[:k]
+                hits = (top_k[target_col] == 1).sum()
+                precisions[k].append(hits / min(k, len(sorted_group)))
+                if n_pos > 0:
+                    recalls[k].append(hits / n_pos)
+        res = {}
+        for k in k_list:
+            res[f"precision@{k}"] = round(float(np.mean(precisions[k])), 4) if precisions[k] else 0.0
+            res[f"recall@{k}"] = round(float(np.mean(recalls[k])), 4) if recalls[k] else 0.0
+        return res
 
-    # Feature Importance
-    importances = rf_model.feature_importances_
-    sorted_idx = np.argsort(importances)[::-1]
-    print("\n--- TOP FEATURE IMPORTANCE ---")
-    for i in range(min(5, len(FEATURE_COLUMNS))):
-        idx = sorted_idx[i]
-        print(f"   {FEATURE_COLUMNS[idx].ljust(30)}: {importances[idx]:.4f}")
+    clf_metrics.update(calc_ranking(probs))
 
-    print("\n5. Saving Artifacts and Lineage Metadata...")
+    # Baseline 1: Popularity Ranking (ranking candidates by product_popularity_views)
+    pop_scores = split_df["product_popularity_views"].values
+    pop_ranking = calc_ranking(pop_scores)
+    popularity_baseline = {
+        "baseline_name": "PopularityRanking",
+        "description": "Rank candidates by historical product popularity views strictly before T",
+        "roc_auc": round(float(roc_auc_score(y, pop_scores)), 4) if has_two_classes else "N/A (1 class)",
+        "pr_auc": round(float(average_precision_score(y, pop_scores)), 4) if has_two_classes else "N/A (1 class)",
+        **pop_ranking,
+    }
+
+    # Baseline 2: Prior Base Rate Predictor (predicting class prior)
+    prior_baseline = {
+        "baseline_name": "PriorPositiveRate",
+        "description": "Predict constant prior probability equal to positive rate",
+        "roc_auc": 0.5000,
+        "pr_auc": base_rate,
+    }
+
+    # Statistical significance / sample size assessment
+    is_sufficient = positives >= 30
+    reliability_assessment = {
+        "status": "ĐỦ DỮ LIỆU ĐÁNH GIÁ KỸ THUẬT" if is_sufficient else "CHƯA ĐỦ DỮ LIỆU ĐỂ KẾT LUẬN HIỆU NĂNG",
+        "is_statistically_reliable": is_sufficient,
+        "sample_size_warning": None if is_sufficient else (
+            f"Số mẫu positive ({positives}) < ngưỡng tối thiểu (30 mẫu). "
+            "Cỡ mẫu quá nhỏ để kết luận hiệu năng mô hình một cách đáng tin cậy. "
+            "Kết quả chỉ dùng để kiểm tra kỹ thuật (sanity check) của pipeline, không thể hiện hiệu năng production."
+        ),
+    }
+
+    return {
+        "model_performance": clf_metrics,
+        "baselines": {
+            "popularity": popularity_baseline,
+            "prior": prior_baseline,
+        },
+        "reliability_assessment": reliability_assessment,
+    }
+
+
+
+def train_and_evaluate_bootstrap_model(generator: Optional[str] = BOOTSTRAP_GENERATOR_NAME, batch_id: Optional[str] = None):
+    print("=" * 70)
+    print("CHERI MACHINE LEARNING - BOOTSTRAP MODEL TRAINING (SYNTHETIC, v2)")
+    print("=" * 70)
+    db = get_mongo_db()
+    print(f"Database: '{db.name}' | collection: '{BOOTSTRAP_COLLECTION_NAME}' | generator filter: {generator or 'ALL (incl. legacy)'}")
+
+    docs = fetch_bootstrap_docs(db, generator=generator, batch_id=batch_id)
+    if not docs:
+        raise SystemExit("No bootstrap docs found. Run: python -m src.seed_bootstrap_data (dry-run) then --commit.")
+    products_df = extract_products(db)
+
+    df, summary, interest_df, interest_summary = build_bootstrap_purchase_dataset(docs, products_df)
+    print(f"Docs: {len(docs)} | rows: {summary['rows']} | snapshots: {summary['snapshots_in_dataset']} | "
+          f"labels: {summary['label_distribution']} | splits: {summary['split_distribution']}")
+
+    train = df[df["split"] == "train"]
+    val = df[df["split"] == "val"]
+    test = df[df["split"] == "test"]
+    if train.empty or train[TARGET_COLUMN].nunique() < 2:
+        raise SystemExit("Train split lacks both classes; increase --users/--days in the seeder.")
+
+    model = RandomForestClassifier(n_estimators=100, max_depth=6, class_weight="balanced", random_state=42)
+    model.fit(train[FEATURE_COLUMNS], train[TARGET_COLUMN])
+
+    val_eval = _evaluate_split_with_baselines(model, val)
+    test_eval = _evaluate_split_with_baselines(model, test)
+
+    metrics = {
+        "evaluation_scope": "synthetic_bootstrap_only",
+        "disclaimer": SYNTHETIC_DISCLAIMER,
+        "validation": val_eval,
+        "test": test_eval,
+    }
+    importances = sorted(zip(FEATURE_COLUMNS, model.feature_importances_), key=lambda x: -x[1])
+
+    print(f"\n[SYNTHETIC] {SYNTHETIC_DISCLAIMER}")
+    print("\n--- VALIDATION SPLIT ---")
+    print(f"  Model       : {val_eval.get('model_performance')}")
+    print(f"  Reliability : {val_eval.get('reliability_assessment', {}).get('status')}")
+    if val_eval.get("reliability_assessment", {}).get("sample_size_warning"):
+        print(f"  Warning     : {val_eval['reliability_assessment']['sample_size_warning']}")
+
+    print("\n--- TEST SPLIT ---")
+    print(f"  Model       : {test_eval.get('model_performance')}")
+    print(f"  Popularity  : {test_eval.get('baselines', {}).get('popularity')}")
+    print(f"  Prior       : {test_eval.get('baselines', {}).get('prior')}")
+    print(f"  Reliability : {test_eval.get('reliability_assessment', {}).get('status')}")
+    if test_eval.get("reliability_assessment", {}).get("sample_size_warning"):
+        print(f"  Warning     : {test_eval['reliability_assessment']['sample_size_warning']}")
+
+    print("\n  Top features: " + ", ".join(f"{n}={v:.3f}" for n, v in importances[:5]))
+
+
     model_filename = "randomforest.bootstrap.joblib"
-    model_path = OUTPUT_MODEL_DIR / model_filename
-    joblib.dump(rf_model, model_path)
-    print(f"   Saved model artifact to: {model_path}")
-
+    joblib.dump(model, OUTPUT_MODEL_DIR / model_filename)
     metadata = {
         "model_name": "RandomForestBootstrap",
         "model_file": model_filename,
-        "version": "rf_bootstrap_v1",
+        "version": f"rf_bootstrap_v2_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "is_production_ready": False,
         "is_bootstrap": True,
         "trained_on_synthetic": True,
-        "dataset_source": "ml_bootstrap_interactions",
-        "description": "Trained on synthetic bootstrap interaction profiles anchored to real MongoDB products",
+        "dataset_source": BOOTSTRAP_COLLECTION_NAME,
+        "generator": generator,
+        "generator_version": BOOTSTRAP_GENERATOR_VERSION if generator else "mixed",
+        "batch_ids": sorted({d["metadata"].get("batchId") for d in docs if d.get("metadata", {}).get("batchId")}),
+        "target": "purchase_within_14_days",
+        "label_definition": summary["label_definition"],
+        "window_days": FUTURE_WINDOW_DAYS,
+        "split_strategy": summary.get("split_strategy"),
+        "description": "Trained on SYNTHETIC bootstrap timelines anchored to real product catalog. Not production evidence.",
         "feature_columns": FEATURE_COLUMNS,
+        "feature_importances": {n: round(float(v), 4) for n, v in importances},
+        "dataset_summary": summary,
         "metrics": metrics,
     }
+    for name in ("model_metadata.bootstrap.json", "model_metadata.json"):
+        with open(OUTPUT_MODEL_DIR / name, "w", encoding="utf-8") as f:
+            json.dump(metadata, f, indent=2, ensure_ascii=False, default=str)
 
-    # Save dedicated bootstrap metadata
-    bootstrap_meta_path = OUTPUT_MODEL_DIR / "model_metadata.bootstrap.json"
-    with open(bootstrap_meta_path, "w", encoding="utf-8") as f:
-        json.dump(metadata, f, indent=2, ensure_ascii=False)
-    print(f"   Saved bootstrap metadata to: {bootstrap_meta_path}")
+    df.to_csv(OUTPUT_DATA_DIR / "user_product_bootstrap_dataset.csv", index=False, encoding="utf-8")
+    # Interest dataset is exported separately for analysis only; it is NOT used as a purchase label.
+    interest_df.to_csv(OUTPUT_DATA_DIR / "user_product_bootstrap_interest_dataset.csv", index=False, encoding="utf-8")
+    with open(OUTPUT_REPORT_DIR / "bootstrap_dataset_report.json", "w", encoding="utf-8") as f:
+        json.dump({"purchase": summary, "interest": interest_summary, "disclaimer": SYNTHETIC_DISCLAIMER},
+                  f, indent=2, ensure_ascii=False, default=str)
+    print(f"\nSaved model + metadata to {OUTPUT_MODEL_DIR} (trained_on_synthetic=true, is_production_ready=false)")
+    return model, metadata
 
-    # Also update model_metadata.json pointing to this bootstrap model
-    main_meta_path = OUTPUT_MODEL_DIR / "model_metadata.json"
-    with open(main_meta_path, "w", encoding="utf-8") as f:
-        json.dump(metadata, f, indent=2, ensure_ascii=False)
-    print(f"   Updated active model_metadata.json: {main_meta_path}")
 
-    # Save dataset CSV
-    dataset_csv = OUTPUT_DATA_DIR / "user_product_bootstrap_dataset.csv"
-    df.to_csv(dataset_csv, index=False, encoding="utf-8")
-    print(f"   Saved dataset CSV to: {dataset_csv}")
-
-    print("\n[SUCCESS] Model training and artifact persistence complete.")
-    return rf_model, metadata
+def main(argv=None):
+    p = argparse.ArgumentParser(description="Train the synthetic bootstrap model (purchase target, snapshot split)")
+    p.add_argument("--batch-id", type=str, default=None)
+    p.add_argument("--include-legacy", action="store_true", help="Include legacy v1 bootstrap docs (no generator tag)")
+    a = p.parse_args(argv)
+    train_and_evaluate_bootstrap_model(generator=None if a.include_legacy else BOOTSTRAP_GENERATOR_NAME, batch_id=a.batch_id)
 
 
 if __name__ == "__main__":
-    train_and_evaluate_bootstrap_model()
+    main()

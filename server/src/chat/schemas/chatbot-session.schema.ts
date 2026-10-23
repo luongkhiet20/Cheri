@@ -11,6 +11,17 @@ export interface ChatbotMessageRecord {
   metadata?: Record<string, any>;
 }
 
+export interface SizingProfile {
+  height?: number;
+  weight?: number;
+  bust?: number;
+  waist?: number;
+  hips?: number;
+  fitPreference?: string;
+  targetProductId?: string;
+  targetProductTitle?: string;
+}
+
 export interface ChatbotConversationContext {
   lastProducts?: any[];
   lastMentionedProductId?: string;
@@ -21,6 +32,7 @@ export interface ChatbotConversationContext {
     occasion?: string;
     category?: string;
   };
+  sizingProfile?: SizingProfile;
   lastIntent?: string;
 }
 

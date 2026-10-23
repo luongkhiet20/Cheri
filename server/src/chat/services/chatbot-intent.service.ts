@@ -39,7 +39,30 @@ export class ChatbotIntentService {
       return 'order_tracking';
     }
 
-    // 4. Comparison
+    // 4. Return/Refund/Exchange Policy specific check (e.g. đổi size, đổi hàng, hoàn tiền)
+    if (/(đổi trả|đổi hàng|đổi size|hoàn tiền|trả hàng|đổi mẫu)/i.test(lower)) {
+      return 'policy_faq';
+    }
+
+    // 5. Size Consultation & Measurement Guidance
+    if (
+      /(hướng dẫn.*(?:chọn size|cỡ|bảng size)|cách chọn size|tư vấn.*(?:size|cỡ)|chọn size|bảng size|size chuẩn|chuẩn size|mặc size gì|size nào|vừa size nào|vừa size gì|mặc vừa không)/i.test(
+        lower,
+      ) ||
+      /(?:cao\s*\d|nặng\s*\d|1m\d{2}|\b\d{2}\s*kg\b|vòng\s*(?:eo|ngực|mông|1|2|3)|số đo|thích mặc\s*(?:ôm|rộng|vừa|thoải mái)|mặc hơi (?:rộng|ôm|vừa)|size\s*[a-z0-9]+\s*(?:và|với|hay)\s*size\s*[a-z0-9]+|khác nhau thế nào.*size|size.*khác nhau)/i.test(
+        lower,
+      ) ||
+      /(?:mẫu này|đầm này|váy này|cái này).*(?:có|còn)\s+size/i.test(
+        lower,
+      ) ||
+      /(?:có|còn)\s+size\s+[a-z0-9]+\s+(?:không|ko|hết|chứ)/i.test(
+        lower,
+      )
+    ) {
+      return 'size_consultation';
+    }
+
+    // 6. Comparison
     if (
       /(so sánh|khác nhau (?:thế nào|gì|ở điểm nào)|nên chọn.*hay|mẫu nào (?:rẻ|đẹp|tốt) hơn|giữa .* và |phân vân giữa)/i.test(
         lower,
@@ -48,18 +71,18 @@ export class ChatbotIntentService {
       return 'product_compare';
     }
 
-    // 5. Follow-up / Product Detail inquiry
+    // 7. Follow-up / Product Detail inquiry
     if (
-      /(mẫu thứ (?:1|2|3|4|hai|ba)|cái thứ (?:1|2|3|4)|mẫu này|cái này|chất liệu gì|làm bằng vải gì|còn size|có màu khác không|còn màu khác không|size m còn không|size s còn không)/i.test(
+      /(mẫu thứ (?:1|2|3|4|hai|ba)|cái thứ (?:1|2|3|4)|mẫu này|cái này|chất liệu gì|làm bằng vải gì|còn màu khác không|có màu khác không)/i.test(
         lower,
       )
     ) {
       return 'product_detail';
     }
 
-    // 6. Store policies & brand FAQ
+    // 8. Store policies & brand FAQ
     if (
-      /(chính sách|đổi trả|đổi hàng|bảo hành|hoàn tiền|phí ship|giao hàng|thời gian giao|bảng size|chọn size|hướng dẫn size|thanh toán|chéri là gì|giới thiệu shop|địa chỉ|cửa hàng|bao lâu nhận được)/i.test(
+      /(chính sách|bảo hành|hoàn tiền|phí ship|giao hàng|thời gian giao|thanh toán|chéri là gì|giới thiệu shop|địa chỉ|cửa hàng|bao lâu nhận được)/i.test(
         lower,
       )
     ) {

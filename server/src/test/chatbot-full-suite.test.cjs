@@ -157,8 +157,9 @@ describe('Chatbot AI Chéri - Phase 3, 4, 5 Complete Verification Suite', () => 
     const knowledgeService = new ChatbotKnowledgeService(mockPageModel);
     const result = await knowledgeService.findRelevantPolicy('Chính sách bảo hành như thế nào?');
     assert.equal(result.isAvailable, false, 'Policy with empty content must be marked isAvailable: false');
-    assert.equal(result.routeLink, '/vi/warranty-policy');
+    assert.equal(result.routeLink, '/vi/cheri/warranty-policy');
   });
+
 
   // Test 6: So sánh chỉ dùng dữ liệu có thật; ID sản phẩm giả bị loại
   test('6. Product comparison uses only real DB data and ignores fabricated IDs', async () => {
@@ -357,4 +358,220 @@ describe('Chatbot AI Chéri - Phase 3, 4, 5 Complete Verification Suite', () => 
     assert.equal(matchStage.$match.eventType, 'PURCHASE', 'Must only measure actual purchases, not views');
   });
 
+  // Test 13: Chính sách đổi trả dẫn đường link tương đối /vi/cheri/return-policy chuẩn xác, không domain, không link cũ
+  test('13. Return policy inquiry returns concise friendly relative link /vi/cheri/return-policy without domain or old path', async () => {
+    const mockKnowledgeService = {
+      findRelevantPolicy: async () => ({
+        title: 'Chính sách đổi trả',
+        url: 'return-policy',
+        content: 'Nội dung chi tiết quy định...',
+        routeLink: '/vi/cheri/return-policy',
+        isAvailable: true,
+      }),
+    };
+
+    const chatbotService = new ChatbotService(
+      {},
+      new ChatbotModerationService(),
+      new ChatbotIntentService(),
+      mockKnowledgeService,
+      {},
+      {
+        getOrCreateSession: async () => ({ sessionId: 'test_sess' }),
+        appendMessage: async () => {},
+      },
+      {
+        generateResponse: async () => '',
+      },
+    );
+
+    const res = await chatbotService.processMessage({ message: 'Chính sách đổi trả của Chéri như thế nào?' }, null);
+
+    assert.equal(res.intent, 'policy_faq');
+    assert.equal(
+      res.reply,
+      'Dạ, nàng xem chính sách đổi trả của Chéri tại đây nhé: [Xem chính sách đổi trả](/vi/cheri/return-policy)',
+    );
+    // Strict safety checks
+    assert.doesNotMatch(res.reply, /https?:\/\//i, 'Must not include protocol or domain');
+    assert.doesNotMatch(res.reply, /\/vi\/return-policy\b/, 'Must not use old path /vi/return-policy');
+  });
+
+  // Test 14: Order tracking flow: unauthenticated prompts login, authenticated returns full orders list, empty orders returns friendly prompt
+  test('14. Order tracking flow verifies auth, returns orders list or empty notice', async () => {
+    const ordersDb = [
+      {
+        orderId: 'CHERI-001',
+        _user: 'user_has_orders',
+        status: 'DELIVERED',
+        totalAmount: 1250000,
+        createdAt: new Date('2026-10-01T10:00:00Z'),
+        items: [{ productSnapshot: { name: 'Đầm Hoa Nhí', image: '/assets/dam-hoa.jpg' }, quantity: 1, unitPrice: 1250000 }],
+      },
+      {
+        orderId: 'CHERI-002',
+        _user: 'user_has_orders',
+        status: 'SHIPPING',
+        totalAmount: 850000,
+        createdAt: new Date('2026-10-15T15:30:00Z'),
+        items: [{ image: '/assets/dam-tiec.jpg', name: 'Đầm Dự Tiệc', quantity: 1, unitPrice: 850000 }],
+      },
+    ];
+
+    const mockOrderModel = {
+      find: (filter) => ({
+        sort: (sortObj) => ({
+          limit: (limitCount) => ({
+            lean: async () => {
+              const uId = filter.$or?.[0]?._user;
+              if (uId === 'user_has_orders') {
+                return [...ordersDb].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, limitCount);
+              }
+              return [];
+            },
+          }),
+        }),
+      }),
+    };
+
+    const chatbotService = new ChatbotService(
+      mockOrderModel,
+      new ChatbotModerationService(),
+      new ChatbotIntentService(),
+      {},
+      {},
+      {
+        getOrCreateSession: async () => ({ sessionId: 'test_sess' }),
+        appendMessage: async () => {},
+      },
+      {},
+    );
+
+    // 1. Unauthenticated guest
+    const guestRes = await chatbotService.processMessage(
+      { message: 'Kiểm tra tình trạng đơn hàng của mình' },
+      null,
+    );
+    assert.equal(guestRes.requiresAuth, true, 'Guest must require auth');
+    assert.equal(
+      guestRes.reply,
+      '✨Bạn vui lòng đăng nhập để xem và theo dõi đơn hàng của mình nhé!✨',
+    );
+    assert.equal(guestRes.orders, undefined);
+
+    // 2. Authenticated user without orders
+    const emptyUser = { _id: 'user_no_orders' };
+    const emptyRes = await chatbotService.processMessage(
+      { message: 'Kiểm tra tình trạng đơn hàng của mình' },
+      emptyUser,
+    );
+    assert.equal(emptyRes.requiresAuth, undefined);
+    assert.equal(
+      emptyRes.reply,
+      '✨Bạn chưa có đơn hàng nào tại Chéri. Cùng khám phá những sản phẩm xinh xắn nhé!✨',
+    );
+    assert.deepEqual(emptyRes.orders, []);
+
+    // 3. Authenticated user with orders
+    const authUser = { _id: 'user_has_orders' };
+    const ordersRes = await chatbotService.processMessage(
+      { message: 'Kiểm tra tình trạng đơn hàng của mình' },
+      authUser,
+    );
+    assert.equal(ordersRes.requiresAuth, undefined);
+    assert.equal(
+      ordersRes.reply,
+      '✨Đây là danh sách đơn hàng của bạn tại Chéri. Hãy chọn một đơn hàng để xem chi tiết và theo dõi tình trạng nhé!✨',
+    );
+    assert.equal(Array.isArray(ordersRes.orders), true);
+    assert.equal(ordersRes.orders.length, 2);
+    // Newest order should be first (CHERI-002 on 2026-10-15)
+    assert.equal(ordersRes.orders[0].orderId, 'CHERI-002');
+    assert.equal(ordersRes.orders[0].statusText, 'Đang giao hàng');
+    assert.equal(ordersRes.orders[0].thumbnailUrl, '/assets/dam-tiec.jpg');
+    assert.equal(ordersRes.orders[1].orderId, 'CHERI-001');
+    assert.equal(ordersRes.orders[1].statusText, 'Giao hàng thành công');
+    assert.equal(ordersRes.orders[1].thumbnailUrl, '/assets/dam-hoa.jpg');
+  });
+
+  // Test 15: Chức năng tư vấn size đa lượt và tra cứu size sản phẩm thực tế
+  test('15. Size consultation guides 3 body measurements, handles multi-turn sizing context and product size availability without hallucinating fake charts', async () => {
+    let sessionContext = {};
+
+    const mockSession = {
+      sessionId: 'sess_suite_size',
+      messages: [],
+      get context() {
+        return sessionContext;
+      },
+    };
+
+    const sessionService = {
+      getOrCreateSession: async () => mockSession,
+      appendMessage: async (sId, role, text, intent, updates) => {
+        if (updates?.sizingProfile) {
+          sessionContext.sizingProfile = {
+            ...(sessionContext.sizingProfile || {}),
+            ...updates.sizingProfile,
+          };
+        }
+      },
+      resolveFollowUpProduct: () => null,
+    };
+
+    const mockAiService = {
+      generateResponse: async () => '', // Deterministic fallback path
+    };
+
+    const chatbot = new ChatbotService(
+      {},
+      new ChatbotModerationService(),
+      new ChatbotIntentService(),
+      {},
+      {},
+      sessionService,
+      mockAiService,
+    );
+
+    // 1. General size guide
+    const res1 = await chatbot.processMessage({
+      message: 'Hướng dẫn mình cách chọn size đầm chuẩn',
+      sessionId: 'sess_suite_size',
+    });
+    assert.equal(res1.intent, 'size_consultation');
+    assert.ok(res1.reply && res1.reply.length > 50);
+    assert.match(res1.reply, /vòng (?:1|ngực)/i);
+    assert.match(res1.reply, /vòng (?:2|eo)/i);
+    assert.match(res1.reply, /vòng (?:3|mông)/i);
+
+    // 2. Multi-turn height & weight
+    const res2 = await chatbot.processMessage({
+      message: 'Mình cao 1m60, nặng 50kg thì mặc size gì?',
+      sessionId: 'sess_suite_size',
+    });
+    assert.equal(res2.intent, 'size_consultation');
+    assert.match(res2.reply, /size m/i);
+    assert.equal(sessionContext.sizingProfile?.height, 160);
+    assert.equal(sessionContext.sizingProfile?.weight, 50);
+
+    // 3. Multi-turn waist
+    const res3 = await chatbot.processMessage({
+      message: 'Vòng eo mình 68cm',
+      sessionId: 'sess_suite_size',
+    });
+    assert.equal(res3.intent, 'size_consultation');
+    assert.match(res3.reply, /size m/i);
+    assert.equal(sessionContext.sizingProfile?.waist, 68);
+
+    // 4. Size comparison
+    const res4 = await chatbot.processMessage({
+      message: 'Size M và L khác nhau thế nào?',
+      sessionId: 'sess_suite_size',
+    });
+    assert.equal(res4.intent, 'size_consultation');
+    assert.match(res4.reply, /size m/i);
+    assert.match(res4.reply, /size l/i);
+  });
+
 });
+

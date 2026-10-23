@@ -14,6 +14,8 @@ from .config import (
     SUCCESSFUL_PAYMENT_STATUSES,
     SUCCESSFUL_ORDER_STATUSES,
     EXCLUDED_ORDER_STATUSES,
+    BOOTSTRAP_COLLECTION_NAME,
+    BOOTSTRAP_GENERATOR_NAME,
 )
 
 
@@ -61,6 +63,126 @@ def extract_interactions(db: Optional[Database] = None) -> pd.DataFrame:
         return pd.DataFrame(columns=expected_columns)
 
     return pd.DataFrame(records)
+
+
+def _bootstrap_query(generator: Optional[str], extra: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """
+    Builds the Mongo filter for synthetic bootstrap documents.
+    - Always requires the synthetic flag (never touches non-synthetic docs).
+    - generator=None  -> every synthetic bootstrap doc (including legacy, pre-v2 docs).
+    - generator=<str> -> only docs produced by that generator (default: current seeder).
+    """
+    query: Dict[str, Any] = {
+        "$or": [{"isSynthetic": True}, {"is_synthetic": True}, {"metadata.isSynthetic": True}],
+        "datasetType": "bootstrap",
+    }
+    if generator:
+        query["metadata.generator"] = generator
+    if extra:
+        query.update(extra)
+    return query
+
+
+def bootstrap_docs_to_interactions_df(docs: List[Dict[str, Any]]) -> pd.DataFrame:
+    """
+    Converts bootstrap documents (from MongoDB or an in-memory dry-run) into the same
+    raw interaction schema produced by extract_interactions(). PURCHASE docs are kept as
+    events here but are ALSO exposed as synthetic orders via bootstrap_docs_to_orders_df().
+    """
+    expected_columns = [
+        "raw_id", "user_id", "session_id", "raw_product_id",
+        "event_type", "timestamp", "metadata", "is_synthetic",
+    ]
+    records: List[Dict[str, Any]] = []
+    for doc in docs:
+        meta = doc.get("metadata") or {}
+        records.append({
+            "raw_id": str(doc.get("_id") or meta.get("eventKey")),
+            "user_id": str(doc.get("userId")) if doc.get("userId") else None,
+            "session_id": str(doc.get("sessionId")) if doc.get("sessionId") else None,
+            "raw_product_id": str(doc.get("productId")) if doc.get("productId") else None,
+            "event_type": str(doc.get("eventType", "VIEW")).strip().upper(),
+            "timestamp": doc.get("timestamp") or doc.get("createdAt"),
+            "metadata": meta,
+            "is_synthetic": True,
+        })
+    if not records:
+        return pd.DataFrame(columns=expected_columns)
+    return pd.DataFrame(records)
+
+
+def bootstrap_docs_to_orders_df(docs: List[Dict[str, Any]]) -> pd.DataFrame:
+    """
+    Converts bootstrap PURCHASE events into the order-line schema of extract_orders().
+    These synthetic orders exist ONLY in 'ml_bootstrap_interactions'; nothing is written to 'orders'.
+    """
+    expected_cols = [
+        "order_id", "user_key", "is_guest", "product_id", "clean_product_id", "variant_id",
+        "quantity", "unit_price", "subtotal", "status", "payment_status",
+        "is_successful_conversion", "created_at",
+    ]
+    rows: List[Dict[str, Any]] = []
+    for doc in docs:
+        if str(doc.get("eventType", "")).upper() != "PURCHASE":
+            continue
+        meta = doc.get("metadata") or {}
+        raw_pid = doc.get("productId")
+        norm_key = normalize_product_key(raw_pid)
+        rows.append({
+            "order_id": str(meta.get("orderId") or f"syn_ord_{doc.get('_id')}"),
+            # Same hashing as validate_and_clean_interactions -> user keys line up
+            "user_key": anonymize_identifier(doc.get("userId"), prefix="usr"),
+            "is_guest": False,
+            "product_id": str(raw_pid) if raw_pid else "",
+            "clean_product_id": norm_key["clean_product_id"],
+            "variant_id": doc.get("variantId") or norm_key["variant_id"],
+            "quantity": int(meta.get("quantity", 1) or 1),
+            "unit_price": float(meta.get("unitPrice", 0) or 0),
+            "subtotal": float(meta.get("subtotal", 0) or 0),
+            "status": "SYNTHETIC_COMPLETED",
+            "payment_status": "SYNTHETIC_PAID",
+            "is_successful_conversion": True,
+            "created_at": doc.get("timestamp") or doc.get("createdAt"),
+        })
+    if not rows:
+        return pd.DataFrame(columns=expected_cols)
+    return pd.DataFrame(rows)
+
+
+def fetch_bootstrap_docs(
+    db: Optional[Database] = None,
+    generator: Optional[str] = BOOTSTRAP_GENERATOR_NAME,
+    batch_id: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Reads synthetic bootstrap docs from the dedicated bootstrap collection only."""
+    if db is None:
+        db = get_mongo_db()
+    if BOOTSTRAP_COLLECTION_NAME not in db.list_collection_names():
+        return []
+    extra = {"metadata.batchId": batch_id} if batch_id else None
+    return list(db[BOOTSTRAP_COLLECTION_NAME].find(_bootstrap_query(generator, extra)))
+
+
+def extract_bootstrap_interactions(
+    db: Optional[Database] = None,
+    generator: Optional[str] = BOOTSTRAP_GENERATOR_NAME,
+    batch_id: Optional[str] = None,
+) -> pd.DataFrame:
+    """
+    Extracts synthetic interactions exclusively from 'ml_bootstrap_interactions'.
+    Never reads 'user_interactions' -> bootstrap data can only enter the bootstrap flow.
+    """
+    return bootstrap_docs_to_interactions_df(fetch_bootstrap_docs(db, generator, batch_id))
+
+
+def extract_bootstrap_orders(
+    db: Optional[Database] = None,
+    generator: Optional[str] = BOOTSTRAP_GENERATOR_NAME,
+    batch_id: Optional[str] = None,
+) -> pd.DataFrame:
+    """Extracts synthetic PURCHASE events from the bootstrap collection as order lines."""
+    return bootstrap_docs_to_orders_df(fetch_bootstrap_docs(db, generator, batch_id))
+
 
 
 def extract_products(db: Optional[Database] = None) -> pd.DataFrame:

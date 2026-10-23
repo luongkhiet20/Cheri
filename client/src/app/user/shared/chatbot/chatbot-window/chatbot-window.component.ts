@@ -11,7 +11,7 @@ import { ChatbotMessageComponent } from '../components/chatbot-message/chatbot-m
 import { ChatbotTypingComponent } from '../components/chatbot-typing/chatbot-typing.component';
 import { ChatbotQuickRepliesComponent } from '../components/chatbot-quick-replies/chatbot-quick-replies.component';
 import { ChatbotInputComponent } from '../components/chatbot-input/chatbot-input.component';
-import { ChatMessage, ChatProductCard, ChatQuickReply } from '../models/chatbot.model';
+import { ChatMessage, ChatProductCard, ChatOrderCard, ChatQuickReply } from '../models/chatbot.model';
 
 @Component({
   selector: 'app-chatbot-window',
@@ -61,6 +61,13 @@ export class ChatbotWindowComponent implements AfterViewChecked {
   onProductClick(product: ChatProductCard): void {
     // If on mobile (screen <= 480px), close chatbot window so user sees product detail page immediately
     if (typeof window !== 'undefined' && window.innerWidth <= 480) {
+      this.state.close();
+    }
+  }
+
+  onOrderClick(order: ChatOrderCard): void {
+    // On mobile or smaller screens, close chatbot window so user sees the tracking view clearly
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
       this.state.close();
     }
   }

@@ -134,6 +134,9 @@ export class ChatbotSessionService {
         if (contextUpdates.criteria !== undefined) {
           updateOp.$set['context.criteria'] = contextUpdates.criteria;
         }
+        if (contextUpdates.sizingProfile !== undefined) {
+          updateOp.$set['context.sizingProfile'] = contextUpdates.sizingProfile;
+        }
         if (contextUpdates.lastIntent !== undefined) {
           updateOp.$set['context.lastIntent'] = contextUpdates.lastIntent;
         }
@@ -185,8 +188,8 @@ export class ChatbotSessionService {
       if (found) return found;
     }
 
-    // Default fallback to first product if user asks general follow up ("mẫu này", "chiếc này", "còn size không")
-    if (/(mẫu này|cái này|chiếc này|nó còn|còn size|mẫu đó)/i.test(lower)) {
+    // Default fallback to first product if user asks general follow up ("mẫu này", "đầm này", "còn size", etc.)
+    if (/(mẫu này|đầm này|váy này|cái này|chiếc này|sản phẩm này|nó còn|còn size|có size|mẫu đó)/i.test(lower)) {
       return products[0];
     }
 

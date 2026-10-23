@@ -29,8 +29,8 @@
 }
 
 .rating-score {
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 350;
   line-height: 1;
   color: var(--cheri-text, #2B2B2B);
   display: inline-block;

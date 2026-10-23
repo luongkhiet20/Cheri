@@ -23,6 +23,8 @@ export interface Product {
   onSale              : boolean;
   stock               : string;
   stockDate?          : string;
+  rating?             : number;
+  reviewCount?        : number;
   shipping?           : string;
   shippingCost?       : number;
   productType?        : string;

@@ -562,6 +562,8 @@ export class ProductsService {
       _user: user ? user._id : undefined,
       dateAdded: Date.now(),
       images: productReq.images || [],
+      rating: 5.0,
+      reviewCount: 0,
     });
 
     try {
@@ -629,6 +631,10 @@ export class ProductsService {
         updateSet[key] = value;
       }
     }
+
+    // Không ghi đè rating hoặc reviewCount khi chỉnh sửa thông tin sản phẩm thông thường
+    delete updateSet.rating;
+    delete updateSet.reviewCount;
 
     let found = await this.productModel.findOneAndUpdate(
       query,
@@ -720,6 +726,8 @@ export class ProductsService {
           _user: user ? user._id : undefined,
           dateAdded: Date.now(),
           images: productReq.images || [],
+          rating: typeof productReq.rating === 'number' ? productReq.rating : 5.0,
+          reviewCount: typeof productReq.reviewCount === 'number' ? productReq.reviewCount : 0,
         });
 
         const product = new this.productModel(newProduct);

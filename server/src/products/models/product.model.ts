@@ -26,6 +26,7 @@ export interface Product extends Document {
   sizes?: string[];
   hasClassification?: boolean;
   rating?: number;
+  reviewCount?: number;
   _user?: Types.ObjectId | string;
   dateAdded?: Date;
   createdAt?: Date;

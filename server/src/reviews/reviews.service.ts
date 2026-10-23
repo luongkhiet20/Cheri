@@ -331,11 +331,11 @@ export class ReviewsService {
 
   /**
    * Lấy tóm tắt điểm đánh giá trung bình và số lượng của 1 sản phẩm (Công khai)
-   * Nguồn: collection product_reviews với status = 'APPROVED'
+   * Nguồn: collection products (rating và reviewCount được đồng bộ tự động)
    */
   async getProductRatingSummary(productIdOrSlug: string): Promise<{
     productId: string;
-    averageRating: number | null;
+    averageRating: number;
     reviewCount: number;
   }> {
     let productObjectId: Types.ObjectId | null = null;
@@ -354,7 +354,7 @@ export class ReviewsService {
       } catch {
         return {
           productId: productIdOrSlug,
-          averageRating: null,
+          averageRating: 5.0,
           reviewCount: 0,
         };
       }
@@ -363,51 +363,47 @@ export class ReviewsService {
     if (!productObjectId) {
       return {
         productId: productIdOrSlug,
-        averageRating: null,
+        averageRating: 5.0,
         reviewCount: 0,
       };
     }
 
-    const result = await this.reviewModel.aggregate([
-      {
-        $match: {
-          productId: productObjectId,
-          status: ReviewStatus.APPROVED,
-        },
-      },
-      {
-        $group: {
-          _id: '$productId',
-          avgRating: { $avg: '$rating' },
-          reviewCount: { $sum: 1 },
-        },
-      },
-    ]);
+    // Đọc trực tiếp từ collection products
+    const product: any = await this.productModel
+      .findById(productObjectId)
+      .select('rating reviewCount')
+      .lean();
 
-    if (result && result.length > 0 && result[0].reviewCount > 0) {
-      const avg = Math.round(Number(result[0].avgRating) * 10) / 10;
+    if (product) {
+      const avg = typeof product.rating === 'number' && !isNaN(product.rating)
+        ? Math.round(product.rating * 10) / 10
+        : 5.0;
+      const count = typeof product.reviewCount === 'number' && !isNaN(product.reviewCount)
+        ? product.reviewCount
+        : 0;
+
       return {
         productId: resolvedId,
         averageRating: avg,
-        reviewCount: Number(result[0].reviewCount),
+        reviewCount: count,
       };
     }
 
     return {
       productId: resolvedId,
-      averageRating: null,
+      averageRating: 5.0,
       reviewCount: 0,
     };
   }
 
   /**
    * Lấy tóm tắt điểm đánh giá trung bình cho danh sách nhiều sản phẩm cùng lúc
-   * Tối ưu hóa cho product grid, hạn chế N+1 requests
+   * Đọc trực tiếp từ collection products, tối ưu hóa cho product grid
    */
   async getBatchRatingSummary(productIds: string[]): Promise<
     Array<{
       productId: string;
-      averageRating: number | null;
+      averageRating: number;
       reviewCount: number;
     }>
   > {
@@ -426,46 +422,34 @@ export class ReviewsService {
     if (objectIds.length === 0) {
       return productIds.map((id) => ({
         productId: id,
-        averageRating: null,
+        averageRating: 5.0,
         reviewCount: 0,
       }));
     }
 
-    const agg = await this.reviewModel.aggregate([
-      {
-        $match: {
-          productId: { $in: objectIds },
-          status: ReviewStatus.APPROVED,
-        },
-      },
-      {
-        $group: {
-          _id: '$productId',
-          avgRating: { $avg: '$rating' },
-          reviewCount: { $sum: 1 },
-        },
-      },
-    ]);
+    const products = await this.productModel
+      .find({ _id: { $in: objectIds } })
+      .select('_id id rating reviewCount')
+      .lean();
 
-    const statsMap = new Map<string, { averageRating: number; reviewCount: number }>();
-    for (const item of agg) {
-      const pIdStr = item._id ? item._id.toString() : '';
-      const count = Number(item.reviewCount) || 0;
-      const avg = count > 0 ? Math.round(Number(item.avgRating) * 10) / 10 : null;
-      if (pIdStr) {
-        statsMap.set(pIdStr, {
-          averageRating: avg,
-          reviewCount: count,
-        });
-      }
+    const productMap = new Map<string, { rating: number; reviewCount: number }>();
+    for (const p of products as any[]) {
+      const pid = p._id.toString();
+      const rating = typeof p.rating === 'number' && !isNaN(p.rating)
+        ? Math.round(p.rating * 10) / 10
+        : 5.0;
+      const reviewCount = typeof p.reviewCount === 'number' && !isNaN(p.reviewCount)
+        ? p.reviewCount
+        : 0;
+      productMap.set(pid, { rating, reviewCount });
     }
 
     return productIds.map((id) => {
-      const stat = statsMap.get(id);
+      const data = productMap.get(id);
       return {
         productId: id,
-        averageRating: stat ? stat.averageRating : null,
-        reviewCount: stat ? stat.reviewCount : 0,
+        averageRating: data ? data.rating : 5.0,
+        reviewCount: data ? data.reviewCount : 0,
       };
     });
   }
@@ -690,36 +674,63 @@ export class ReviewsService {
   }
 
   /**
-   * Tính lại rating trung bình và cập nhật vào collection products
+   * Tính lại rating trung bình và reviewCount và cập nhật vào collection products
+   * - Nếu có review APPROVED: rating = round(avg, 1), reviewCount = count
+   * - Nếu không còn review APPROVED: rating = 5.0, reviewCount = 0
    */
-  private async recalculateProductRating(productId: Types.ObjectId): Promise<void> {
+  async recalculateProductRating(
+    productIdOrSlug: string | Types.ObjectId,
+  ): Promise<{ rating: number; reviewCount: number }> {
     try {
+      let productObjectId: Types.ObjectId | null = null;
+      if (productIdOrSlug instanceof Types.ObjectId) {
+        productObjectId = productIdOrSlug;
+      } else if (isValidObjectId(productIdOrSlug)) {
+        productObjectId = new Types.ObjectId(productIdOrSlug);
+      } else {
+        const product = await this.resolveProduct(productIdOrSlug);
+        if (product && product._id) {
+          productObjectId = new Types.ObjectId(product._id);
+        }
+      }
+
+      if (!productObjectId) {
+        return { rating: 5.0, reviewCount: 0 };
+      }
+
       const result = await this.reviewModel.aggregate([
         {
           $match: {
-            productId,
+            productId: productObjectId,
             status: ReviewStatus.APPROVED,
           },
         },
         {
           $group: {
             _id: '$productId',
-            avgRating: { $sum: '$rating' },
+            totalRating: { $sum: '$rating' },
             count: { $sum: 1 },
           },
         },
       ]);
 
+      let rating = 5.0;
+      let reviewCount = 0;
+
       if (result && result.length > 0 && result[0].count > 0) {
-        const avg = Math.round((result[0].avgRating / result[0].count) * 10) / 10;
-        await this.productModel.updateOne({ _id: productId }, { rating: avg });
-      } else {
-        // Nếu không còn review nào, đặt về 5 mặc định
-        await this.productModel.updateOne({ _id: productId }, { rating: 5 });
+        rating = Math.round((Number(result[0].totalRating) / Number(result[0].count)) * 10) / 10;
+        reviewCount = Number(result[0].count);
       }
-    } catch (err) {
-      // Không để lỗi tính rating làm gián đoạn transaction chính
-      console.error('Lỗi khi tính lại rating sản phẩm:', err);
+
+      await this.productModel.updateOne(
+        { _id: productObjectId },
+        { $set: { rating, reviewCount } },
+      );
+
+      return { rating, reviewCount };
+    } catch (err: any) {
+      this.logger.error(`Lỗi khi tính lại rating sản phẩm (${productIdOrSlug}): ${err?.message}`);
+      return { rating: 5.0, reviewCount: 0 };
     }
   }
 

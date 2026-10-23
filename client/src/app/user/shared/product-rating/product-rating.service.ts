@@ -41,7 +41,7 @@ export class ProductRatingService implements OnDestroy {
    */
   getRatingSummary(productId: string): Observable<ProductRatingSummary> {
     if (!productId || typeof productId !== 'string' || !productId.trim()) {
-      return of({ productId: '', averageRating: null, reviewCount: 0 });
+      return of({ productId: '', averageRating: 5.0, reviewCount: 0 });
     }
 
     const cleanId = productId.trim();
@@ -125,7 +125,7 @@ export class ProductRatingService implements OnDestroy {
           for (const id of productIds) {
             const summary: ProductRatingSummary = resultMap.get(id) || {
               productId: id,
-              averageRating: null,
+              averageRating: 5.0,
               reviewCount: 0,
             };
 
@@ -149,7 +149,7 @@ export class ProductRatingService implements OnDestroy {
           for (const id of productIds) {
             const fallback: ProductRatingSummary = {
               productId: id,
-              averageRating: null,
+              averageRating: 5.0,
               reviewCount: 0,
             };
             const pending = this.pendingRequests.get(id);

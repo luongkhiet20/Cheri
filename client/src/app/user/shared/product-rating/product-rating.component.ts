@@ -66,19 +66,20 @@ export class ProductRatingComponent implements OnChanges, OnDestroy {
         this.isLoading = false;
         if (
           summary &&
-          summary.averageRating !== null &&
           typeof summary.averageRating === 'number' &&
-          summary.reviewCount > 0
+          !isNaN(summary.averageRating)
         ) {
           this.hasRating = true;
           // Làm tròn 1 chữ số thập phân, ví dụ 4.666 -> 4.7, 5 -> 5.0
           const rounded = Math.round(summary.averageRating * 10) / 10;
           this.displayScore = rounded.toFixed(1);
-          this.ariaLabel = `Đánh giá: ${this.displayScore} trên 5 sao`;
+          this.ariaLabel = summary.reviewCount > 0
+            ? `Đánh giá: ${this.displayScore} trên 5 sao (${summary.reviewCount} đánh giá)`
+            : `Điểm tiêu chuẩn: ${this.displayScore} trên 5 sao`;
         } else {
           this.hasRating = false;
           this.displayScore = '0.0';
-          this.ariaLabel = 'Chưa có đánh giá (0.0)';
+          this.ariaLabel = 'Chưa có thông tin đánh giá';
         }
         this.cdr.markForCheck();
       },

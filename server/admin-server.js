@@ -1933,6 +1933,8 @@ app.post('/api/products', async (req, res) => {
       },
       images: normalizedImgs.images.length > 0 ? normalizedImgs.images : (mainImageUrl ? [mainImageUrl] : []),
       tags: Array.isArray(body.tags) ? body.tags.map(t => String(t).trim()).filter(Boolean) : [],
+      rating: 5.0,
+      reviewCount: 0,
       dateAdded: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       visibility: visibility,

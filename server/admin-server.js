@@ -10949,6 +10949,236 @@ app.get('/api/admin/newsletter-subscribers', async (req, res) => {
   }
 });
 
+// 12.2b GET /api/admin/newsletter-subscribers/export (Admin - Protected)
+app.get('/api/admin/newsletter-subscribers/export', async (req, res) => {
+  try {
+    let userFromToken = null;
+    const authHeader = req.headers.authorization || '';
+    if (authHeader.startsWith('Bearer ')) {
+      const token = authHeader.slice(7).trim();
+      try {
+        userFromToken = jwt.verify(token, process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789');
+      } catch (_) {
+        try {
+          userFromToken = jwt.decode(token);
+        } catch (_) {}
+      }
+    }
+
+    const userRoles = userFromToken?.roles || userFromToken?.role || [];
+    const roles = Array.isArray(userRoles) ? userRoles : [userRoles];
+    const isAdmin = roles.some(
+      (r) => typeof r === 'string' && (r.toLowerCase() === 'admin' || r.toLowerCase() === 'superadmin' || r.toLowerCase() === 'super-admin')
+    );
+
+    if (!isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Truy cập bị từ chối: Yêu cầu quyền quản trị.',
+      });
+    }
+
+    const database = await connectToMongo();
+    const collection = database.collection('newsletter_subscribers');
+
+    const pipeline = [];
+
+    // Lookup người dùng từ collection `users` theo email
+    pipeline.push({
+      $lookup: {
+        from: 'users',
+        localField: 'email',
+        foreignField: 'email',
+        as: 'userMatch',
+      },
+    });
+
+    pipeline.push({
+      $addFields: {
+        matchedUser: { $arrayElemAt: ['$userMatch', 0] },
+      },
+    });
+
+    // Lọc theo trạng thái
+    const matchConditions = {};
+    if (req.query.status && req.query.status.trim() && req.query.status.toUpperCase() !== 'ALL') {
+      matchConditions.status = req.query.status.trim().toUpperCase();
+    }
+
+    // Tìm kiếm
+    if (req.query.search && req.query.search.trim()) {
+      const searchRegex = new RegExp(req.query.search.trim(), 'i');
+      matchConditions.$or = [
+        { email: searchRegex },
+        { 'matchedUser.name': searchRegex },
+        { 'matchedUser.fullName': searchRegex },
+      ];
+    }
+
+    if (Object.keys(matchConditions).length > 0) {
+      pipeline.push({ $match: matchConditions });
+    }
+
+    // Sắp xếp
+    const sortBy = req.query.sortBy || 'subscribedAt';
+    const sortDir = req.query.sortOrder === 'asc' ? 1 : -1;
+    const sortStage = {};
+    sortStage[sortBy] = sortDir;
+    pipeline.push({ $sort: sortStage });
+
+    // Project kết quả đầy đủ cho export
+    pipeline.push({
+      $project: {
+        _id: 1,
+        id: '$_id',
+        email: 1,
+        status: 1,
+        source: 1,
+        subscribedAt: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        customer: {
+          isGuest: { $eq: [{ $size: '$userMatch' }, 0] },
+          avatar: { $ifNull: ['$matchedUser.avatar', null] },
+          name: {
+            $cond: {
+              if: { $eq: [{ $size: '$userMatch' }, 0] },
+              then: 'Khách vãng lai',
+              else: {
+                $cond: {
+                  if: {
+                    $gt: [
+                      { $strLenCP: { $ifNull: ['$matchedUser.name', ''] } },
+                      0,
+                    ],
+                  },
+                  then: '$matchedUser.name',
+                  else: {
+                    $cond: {
+                      if: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$matchedUser.fullName', ''],
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                      then: '$matchedUser.fullName',
+                      else: 'Thành viên Chéri',
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    pipeline.push({ $limit: 50000 });
+
+    const items = await collection.aggregate(pipeline).toArray();
+
+    return res.json({
+      success: true,
+      data: items,
+      total: items.length,
+    });
+  } catch (err) {
+    console.error('Error in GET /api/admin/newsletter-subscribers/export:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi khi xuất danh sách người đăng ký nhận ưu đãi',
+    });
+  }
+});
+
+// 12.3 PATCH /api/admin/newsletter-subscribers/:id/status (Admin - Protected)
+app.patch('/api/admin/newsletter-subscribers/:id/status', async (req, res) => {
+  try {
+    let userFromToken = null;
+    const authHeader = req.headers.authorization || '';
+    if (authHeader.startsWith('Bearer ')) {
+      const token = authHeader.slice(7).trim();
+      try {
+        userFromToken = jwt.verify(token, process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789');
+      } catch (_) {
+        try {
+          userFromToken = jwt.decode(token);
+        } catch (_) {}
+      }
+    }
+
+    const userRoles = userFromToken?.roles || userFromToken?.role || [];
+    const roles = Array.isArray(userRoles) ? userRoles : [userRoles];
+    const isAdmin = roles.some(
+      (r) => typeof r === 'string' && (r.toLowerCase() === 'admin' || r.toLowerCase() === 'superadmin' || r.toLowerCase() === 'super-admin')
+    );
+
+    if (!isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Truy cập bị từ chối: Yêu cầu quyền quản trị.',
+      });
+    }
+
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!id || !ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Định dạng ID không hợp lệ',
+      });
+    }
+
+    if (!status || !['SUBSCRIBED', 'UNSUBSCRIBED'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Trạng thái không hợp lệ. Chỉ chấp nhận SUBSCRIBED hoặc UNSUBSCRIBED',
+      });
+    }
+
+    const database = await connectToMongo();
+    const collection = database.collection('newsletter_subscribers');
+
+    const result = await collection.findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      { $set: { status, updatedAt: new Date() } },
+      { returnDocument: 'after' }
+    );
+
+    const updated = result?.value || result;
+    if (!updated) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy người đăng ký nhận ưu đãi',
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Cập nhật trạng thái thành công!',
+      data: {
+        id: updated._id,
+        _id: updated._id,
+        email: updated.email,
+        status: updated.status,
+        subscribedAt: updated.subscribedAt,
+        updatedAt: updated.updatedAt,
+      },
+    });
+  } catch (err) {
+    console.error('Error in PATCH /api/admin/newsletter-subscribers/:id/status:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi khi cập nhật trạng thái người đăng ký',
+    });
+  }
+});
+
 // Start Server (Chỉ listen khi chạy trực tiếp file này bằng node server/admin-server.js)
 if (require.main === module) {
   connectToMongo().then(() => {

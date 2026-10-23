@@ -67,6 +67,7 @@ import { ChatPanelComponent } from './pages/messages/chat-panel/chat-panel.compo
 import { CustomerProfileComponent } from './pages/messages/customer-profile/customer-profile.component';
 import { ReviewsComponent } from './pages/reviews/reviews.component';
 import { NewsletterSubscribersComponent } from './pages/newsletter-subscribers/newsletter-subscribers.component';
+import { NewsletterExportCsvComponent } from './pages/newsletter-subscribers/newsletter-export-csv/newsletter-export-csv.component';
 
 const routes: Routes = [
   {
@@ -191,6 +192,7 @@ const routes: Routes = [
     CustomerProfileComponent,
     ReviewsComponent,
     NewsletterSubscribersComponent,
+    NewsletterExportCsvComponent,
   ],
   imports: [
     CommonModule,

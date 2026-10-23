@@ -1,9 +1,10 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ChatMessage, ChatProductCard, ChatOrderCard } from '../../models/chatbot.model';
 import { ChatbotProductCardComponent } from '../chatbot-product-card/chatbot-product-card.component';
 import { ChatbotOrderCardComponent } from '../chatbot-order-card/chatbot-order-card.component';
+import { ChatbotStateService } from '../../services/chatbot-state.service';
 
 export interface MessageSegment {
   isLink: boolean;
@@ -19,27 +20,49 @@ export interface MessageSegment {
   styleUrls: ['./chatbot-message.component.css'],
 })
 export class ChatbotMessageComponent {
+  readonly state = inject(ChatbotStateService, { optional: true });
+
   @Input({ required: true }) message!: ChatMessage;
   @Output() retry = new EventEmitter<ChatMessage>();
   @Output() authAction = new EventEmitter<void>();
   @Output() productClick = new EventEmitter<ChatProductCard>();
   @Output() orderClick = new EventEmitter<ChatOrderCard>();
+  @Output() undoCancel = new EventEmitter<void>();
 
   get isSystemMessage(): boolean {
     return this.message?.sender === 'system' || this.message?.senderType === 'SYSTEM';
   }
 
-  getSystemIconType(): 'clock' | 'headset' | 'exit' {
+  get isCancelRequested(): boolean {
+    return this.message?.systemEvent === 'CANCEL_REQUESTED';
+  }
+
+  get isCancelActionActive(): boolean {
+    return this.isCancelRequested && !!this.state?.isCancelPending();
+  }
+
+  getSystemIconType(): 'clock' | 'headset' | 'exit' | 'alert' | 'check' {
     const event = this.message?.systemEvent;
+    if (event === 'CANCEL_REQUESTED') return 'alert';
+    if (event === 'CANCEL_UNDONE') return 'check';
+    if (event === 'CANCEL_COMPLETED') return 'exit';
     if (event === 'SUPPORT_REQUESTED') return 'clock';
     if (event === 'ADMIN_JOINED') return 'headset';
     if (event === 'ADMIN_LEFT') return 'exit';
 
     const txt = (this.message?.text || '').toLowerCase();
+    if (txt.includes('yêu cầu hủy') || txt.includes('5 giây')) return 'alert';
+    if (txt.includes('hoàn tác')) return 'check';
+    if (txt.includes('đã hủy kết nối')) return 'exit';
     if (txt.includes('kết nối') || txt.includes('chờ')) return 'clock';
     if (txt.includes('tham gia') || txt.includes('sẵn sàng')) return 'headset';
     if (txt.includes('rời') || txt.includes('kết thúc')) return 'exit';
     return 'clock';
+  }
+
+  onUndoCancel(): void {
+    this.undoCancel.emit();
+    this.state?.undoCancelSupport();
   }
 
   get segments(): MessageSegment[] {

@@ -98,6 +98,48 @@
   transform: scale(1.05);
 }
 
+/* Nút Hủy hỗ trợ phong cách Chéri */
+.cancel-support-btn {
+  width: auto;
+  height: 30px;
+  padding: 0 10px;
+  gap: 5px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(116, 7, 14, 0.45);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
+}
+
+.cancel-support-btn:hover:not(:disabled) {
+  background: #ffffff;
+  color: var(--cheri-primary, #74070E);
+  border-color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.cancel-support-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.cancel-support-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cancel-btn-text {
+  letter-spacing: 0.2px;
+}
+
 /* Body with soft white to light red tint */
 .chatbot-body {
   flex: 1;

@@ -30,6 +30,11 @@ export interface AdminConversation {
   requestedAt?: string | Date;
   acceptedAt?: string | Date;
   closedAt?: string | Date;
+  cancelRequest?: {
+    requestedAt?: string | Date;
+    expiresAt?: string | Date;
+    status?: 'PENDING' | 'UNDONE' | 'COMPLETED';
+  } | null;
   createdAt?: string | Date;
 }
 
@@ -263,13 +268,17 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewChecked {
             // Keep selected conversation updated immutably
             const updated = this.conversations.find((c) => c._id === this.selectedConversation?._id);
             if (updated) {
+              const isWaiting = updated.status === 'WAITING_ADMIN';
+              const resolvedAssignedAdmin = isWaiting
+                ? null
+                : (updated.assignedAdminId !== undefined && updated.assignedAdminId !== null
+                    ? updated.assignedAdminId
+                    : this.selectedConversation.assignedAdminId);
+
               this.selectedConversation = {
                 ...this.selectedConversation,
                 ...updated,
-                // Bảo vệ: Nếu selectedConversation đã có assignedAdminId mà updated vô tình là null do lag, giữ nguyên
-                assignedAdminId: updated.assignedAdminId !== undefined && updated.assignedAdminId !== null
-                  ? updated.assignedAdminId
-                  : this.selectedConversation.assignedAdminId,
+                assignedAdminId: resolvedAssignedAdmin,
               };
             }
           }
@@ -352,6 +361,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   refreshDataSilently(): void {
+    // Không refresh ngầm khi popup hành động đang gọi API xử lý
+    if (this.actionDialog.isLoading) {
+      return;
+    }
+
     if (!this.selectedConversation) {
       this.loadConversations(false);
       return;
@@ -423,7 +437,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   acceptConversation(): void {
-    if (!this.selectedConversation || this.isAccepting) return;
+    if (!this.selectedConversation || this.isAccepting || this.actionDialog.isLoading || this.actionDialog.isOpen) return;
 
     // Chỉ cho phép tiếp nhận khi hội thoại chưa có admin phụ trách
     const hasAssigned = !!this.selectedConversation.assignedAdminId;
@@ -450,7 +464,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   returnConversation(): void {
-    if (!this.selectedConversation || this.isReturning) return;
+    if (!this.selectedConversation || this.isReturning || this.actionDialog.isLoading || this.actionDialog.isOpen) return;
 
     this.actionDialog = {
       isOpen: true,
@@ -471,7 +485,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   closeConversation(): void {
-    if (!this.selectedConversation || this.isClosing) return;
+    if (!this.selectedConversation || this.isClosing || this.actionDialog.isLoading || this.actionDialog.isOpen) return;
 
     this.actionDialog = {
       isOpen: true,
@@ -569,6 +583,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewChecked {
             return c;
           });
 
+          // Cập nhật số đếm cục bộ ngay lập tức
+          if (this.counts.waiting > 0) this.counts.waiting--;
+          this.counts.inProgress++;
+
           // Nếu đang ở tab "Chờ nhân viên", đổi sang tab "all" để hội thoại không biến mất
           if (this.activeFilter === 'WAITING_ADMIN') {
             this.activeFilter = 'all';
@@ -627,6 +645,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewChecked {
             return c;
           });
 
+          // Cập nhật số đếm cục bộ ngay lập tức
+          if (this.counts.inProgress > 0) this.counts.inProgress--;
+          this.counts.waiting++;
+
           this.loadMessages(convId);
           this.loadConversations(false);
         }
@@ -667,6 +689,22 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewChecked {
               closedAt: new Date().toISOString()
             };
           }
+
+          // Cập nhật mảng hội thoại cục bộ ngay lập tức
+          this.conversations = this.conversations.map((c) => {
+            if (c._id === convId) {
+              return {
+                ...c,
+                status: 'CLOSED',
+                closedAt: new Date().toISOString(),
+              };
+            }
+            return c;
+          });
+
+          // Cập nhật số đếm cục bộ ngay lập tức
+          if (this.counts.inProgress > 0) this.counts.inProgress--;
+
           this.loadMessages(convId);
           this.loadConversations(false);
         }

@@ -116,4 +116,37 @@ export class ChatbotService {
     }
     return of({ success: false });
   }
+
+  /**
+   * Request support cancellation with 5-second undo grace period
+   */
+  requestCancelSupport(conversationId: string, sessionId: string, guestId?: string): Observable<any> {
+    const url = `${this.getBaseUrl()}/api/chat/support/${conversationId}/cancel`;
+    if (this.http) {
+      return this.http.post(url, { sessionId, guestId });
+    }
+    return of({ success: false });
+  }
+
+  /**
+   * Undo support cancellation within 5 seconds
+   */
+  undoCancelSupport(conversationId: string, sessionId: string, guestId?: string): Observable<any> {
+    const url = `${this.getBaseUrl()}/api/chat/support/${conversationId}/cancel/undo`;
+    if (this.http) {
+      return this.http.post(url, { sessionId, guestId });
+    }
+    return of({ success: false });
+  }
+
+  /**
+   * Finalize support cancellation when 5s countdown expires
+   */
+  finalizeCancelSupport(conversationId: string, sessionId: string, guestId?: string): Observable<any> {
+    const url = `${this.getBaseUrl()}/api/chat/support/${conversationId}/cancel/finalize`;
+    if (this.http) {
+      return this.http.post(url, { sessionId, guestId });
+    }
+    return of({ success: false });
+  }
 }

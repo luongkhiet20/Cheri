@@ -73,6 +73,21 @@ export class Conversation {
 
   @Prop({ type: Date, required: false, default: null })
   closedAt?: Date;
+
+  @Prop({
+    type: {
+      requestedAt: { type: Date },
+      expiresAt: { type: Date },
+      status: { type: String, enum: ['PENDING', 'UNDONE', 'COMPLETED'] },
+    },
+    required: false,
+    default: null,
+  })
+  cancelRequest?: {
+    requestedAt?: Date;
+    expiresAt?: Date;
+    status?: 'PENDING' | 'UNDONE' | 'COMPLETED';
+  };
 }
 
 export const ConversationSchema = SchemaFactory.createForClass(Conversation);

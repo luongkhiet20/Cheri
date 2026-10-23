@@ -85,4 +85,9 @@ export class ChatbotWindowComponent implements AfterViewChecked {
   onClear(): void {
     this.state.clearMessages();
   }
+
+  onCancelSupport(): void {
+    this.shouldScroll = true;
+    this.state.cancelSupport();
+  }
 }

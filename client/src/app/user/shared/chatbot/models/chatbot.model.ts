@@ -34,7 +34,13 @@ export interface ChatOrderCard {
 }
 
 export type MessageSender = 'store' | 'user' | 'system';
-export type SupportSystemEvent = 'SUPPORT_REQUESTED' | 'ADMIN_JOINED' | 'ADMIN_LEFT';
+export type SupportSystemEvent =
+  | 'SUPPORT_REQUESTED'
+  | 'ADMIN_JOINED'
+  | 'ADMIN_LEFT'
+  | 'CANCEL_REQUESTED'
+  | 'CANCEL_UNDONE'
+  | 'CANCEL_COMPLETED';
 
 export interface ChatMessage {
   id: number;
@@ -48,6 +54,7 @@ export interface ChatMessage {
   failedText?: string;
   senderType?: 'CUSTOMER' | 'ADMIN' | 'SYSTEM';
   systemEvent?: SupportSystemEvent | string;
+  cancelExpiresAt?: Date;
 }
 
 export interface ChatbotResponse {
@@ -86,6 +93,11 @@ export interface SupportConversation {
   lastMessageAt?: Date;
   unreadAdminCount?: number;
   unreadCustomerCount?: number;
+  cancelRequest?: {
+    requestedAt?: Date;
+    expiresAt?: Date;
+    status?: 'PENDING' | 'UNDONE' | 'COMPLETED';
+  };
   createdAt?: Date;
   updatedAt?: Date;
 }

@@ -131,9 +131,40 @@ button.action-btn[id^="action-return-"]:hover:not(:disabled) {
   color: #5F060B;
 }
 
+.action-btn--status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cheri-text, #1F2937);
+  background: var(--cheri-white, #FFFFFF);
+  border-color: var(--cheri-border, #E2E8F0);
+  font-weight: 500;
+}
+
+.action-btn--status:hover:not(:disabled) {
+  background: #F8FAFC;
+  border-color: #CBD5E1;
+  color: var(--cheri-primary, #74070E);
+}
+
 @media (max-width: 768px) {
   .action-buttons {
     flex-wrap: wrap;
-    gap: 3px;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 640px) {
+  .action-btn--copy span,
+  .action-btn--status span {
+    display: none;
+  }
+  .action-btn--copy .action-btn-icon,
+  .action-btn--status .action-btn-icon {
+    margin-right: 0;
+  }
+  .action-btn--copy,
+  .action-btn--status {
+    padding: 6px 8px;
   }
 }

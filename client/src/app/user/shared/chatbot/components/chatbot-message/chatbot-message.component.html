@@ -1,26 +1,64 @@
 <ng-container *ngIf="isSystemMessage; else normalMessageTpl">
   <div class="support-system-message-row">
-    <div class="support-system-message" role="status" aria-live="polite">
-      <div class="system-message-icon" aria-hidden="true">
-        <!-- Icon Clock cho SUPPORT_REQUESTED -->
-        <svg *ngIf="getSystemIconType() === 'clock'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"></circle>
-          <polyline points="12 6 12 12 14 14"></polyline>
-        </svg>
-        <!-- Icon Headset cho ADMIN_JOINED -->
-        <svg *ngIf="getSystemIconType() === 'headset'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
-          <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
-        </svg>
-        <!-- Icon Exit cho ADMIN_LEFT -->
-        <svg *ngIf="getSystemIconType() === 'exit'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-          <polyline points="16 17 21 12 16 7"></polyline>
-          <line x1="21" y1="12" x2="9" y2="12"></line>
-        </svg>
+    <div class="support-system-message" [class.has-action]="isCancelActionActive" role="status" aria-live="polite">
+      <div class="system-message-main">
+        <div class="system-message-icon" aria-hidden="true">
+          <!-- Icon Alert cho CANCEL_REQUESTED -->
+          <svg *ngIf="getSystemIconType() === 'alert'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <!-- Icon Check cho CANCEL_UNDONE -->
+          <svg *ngIf="getSystemIconType() === 'check'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          <!-- Icon Clock cho SUPPORT_REQUESTED -->
+          <svg *ngIf="getSystemIconType() === 'clock'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 14 14"></polyline>
+          </svg>
+          <!-- Icon Headset cho ADMIN_JOINED -->
+          <svg *ngIf="getSystemIconType() === 'headset'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
+            <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+          </svg>
+          <!-- Icon Exit cho ADMIN_LEFT hoặc CANCEL_COMPLETED -->
+          <svg *ngIf="getSystemIconType() === 'exit'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+        </div>
+        <div class="system-message-text">
+          {{ message.text }}
+        </div>
       </div>
-      <div class="system-message-text">
-        {{ message.text }}
+
+      <!-- Khu vực bộ đếm 5 giây và nút Hoàn tác -->
+      <div class="cancel-action-bar" *ngIf="isCancelActionActive">
+        <div class="cancel-timer-row">
+          <svg class="timer-spin-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 14 14"></polyline>
+          </svg>
+          <span class="cancel-timer-text">
+            Chuyển về AI Assistant sau <strong>{{ state?.cancelCountdown() }}</strong> giây
+          </span>
+        </div>
+        <button
+          type="button"
+          class="btn-undo-cancel"
+          (click)="onUndoCancel()"
+          [disabled]="state?.isUndoing()"
+          aria-label="Hoàn tác yêu cầu hủy kết nối"
+          title="Hoàn tác yêu cầu hủy">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="1 4 1 10 7 10"></polyline>
+            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+          </svg>
+          <span>{{ state?.isUndoing() ? 'Đang hoàn tác...' : 'Hoàn tác' }}</span>
+        </button>
       </div>
     </div>
   </div>

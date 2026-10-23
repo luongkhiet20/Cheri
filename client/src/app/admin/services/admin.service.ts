@@ -604,5 +604,25 @@ export class AdminService {
     }
     return this.http.get(`${this.baseUrl}/admin/newsletter-subscribers`, { params: httpParams });
   }
+
+  updateNewsletterSubscriberStatus(id: string, status: string): Observable<any> {
+    return this.http.patch(`${this.baseUrl}/admin/newsletter-subscribers/${id}/status`, { status });
+  }
+
+  exportNewsletterSubscribers(params?: {
+    search?: string;
+    status?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  }): Observable<any> {
+    let httpParams = new HttpParams();
+    if (params) {
+      if (params.search) httpParams = httpParams.set('search', params.search);
+      if (params.status) httpParams = httpParams.set('status', params.status);
+      if (params.sortBy) httpParams = httpParams.set('sortBy', params.sortBy);
+      if (params.sortOrder) httpParams = httpParams.set('sortOrder', params.sortOrder);
+    }
+    return this.http.get(`${this.baseUrl}/admin/newsletter-subscribers/export`, { params: httpParams });
+  }
 }
 

@@ -37,6 +37,9 @@
             <span class="badge" [ngClass]="getStatusBadgeClass(selectedConversation.status)">
               {{ getStatusLabel(selectedConversation.status) }}
             </span>
+            <span class="badge badge-cancel-pending" *ngIf="selectedConversation.cancelRequest?.status === 'PENDING' && selectedConversation.status !== 'CLOSED'">
+              Đang chờ hủy (5s)
+            </span>
             <span class="badge badge-assignment" [ngClass]="getAssignmentBadgeClass(selectedConversation)">
               <svg *ngIf="isAssignedToMe(selectedConversation)" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <polyline points="20 6 9 17 4 12"></polyline>
@@ -114,6 +117,16 @@
         </button>
       </div>
     </header>
+
+    <!-- Banner khi khách hàng đang yêu cầu hủy kết nối -->
+    <div class="cancel-pending-banner" *ngIf="selectedConversation.cancelRequest?.status === 'PENDING' && selectedConversation.status !== 'CLOSED'">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" class="banner-icon">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+      <span>Khách hàng đã yêu cầu hủy kết nối hỗ trợ. Yêu cầu sẽ có hiệu lực sau 5 giây nếu khách không hoàn tác.</span>
+    </div>
 
     <!-- Banner trạng thái nếu chờ tiếp nhận hoặc chưa phân công -->
     <div class="waiting-banner" *ngIf="selectedConversation.status === 'WAITING_ADMIN' || (selectedConversation.status !== 'CLOSED' && !selectedConversation.assignedAdminId)">

@@ -77,8 +77,11 @@
     [isLoading]="actionDialog.isLoading"
     [errorMessage]="actionDialog.errorMessage"
     [autoCloseOnConfirm]="false"
+    (confirmed)="handleActionDialogConfirm()"
+    (cancelled)="handleActionDialogCancel()"
     (confirm)="handleActionDialogConfirm()"
-    (cancel)="handleActionDialogCancel()">
+    (cancel)="handleActionDialogCancel()"
+    (closed)="handleActionDialogCancel()">
   </app-confirm-dialog>
 </div>
 

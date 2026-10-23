@@ -202,6 +202,33 @@
   flex-shrink: 0;
 }
 
+.cancel-pending-banner {
+  background-color: #FEF2F2;
+  color: #991B1B;
+  padding: 9px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid #FECACA;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+.badge-cancel-pending {
+  background-color: #FEE2E2;
+  color: #991B1B;
+  border: 1px solid #FCA5A5;
+  font-weight: 600;
+  animation: pendingPulse 1.5s infinite alternate ease-in-out;
+}
+
+@keyframes pendingPulse {
+  0% { opacity: 0.75; }
+  100% { opacity: 1; }
+}
+
 /* Vùng cuộn tin nhắn độc lập */
 .chat-messages-container {
   flex: 1 1 auto;

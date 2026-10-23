@@ -35,7 +35,7 @@
         <h2 class="dialog-title">{{ title }}</h2>
       </div>
 
-      <button class="dialog-close" [disabled]="isLoading" (click)="onCancel()" aria-label="Đóng">
+      <button type="button" class="dialog-close" [disabled]="isLoading" (click)="onCancel()" aria-label="Đóng">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -57,8 +57,8 @@
     </div>
 
     <div class="dialog-footer">
-      <button class="btn btn-secondary" [disabled]="isLoading" (click)="onCancel()" id="dialog-cancel">{{ cancelLabel }}</button>
-      <button [ngClass]="confirmBtnClass" [disabled]="isLoading" (click)="onConfirm()" id="dialog-confirm">
+      <button type="button" class="btn btn-secondary" [disabled]="isLoading" (click)="onCancel()" id="dialog-cancel">{{ cancelLabel }}</button>
+      <button type="button" [ngClass]="confirmBtnClass" [disabled]="isLoading" (click)="onConfirm()" id="dialog-confirm">
         <span class="dialog-spinner" *ngIf="isLoading" aria-hidden="true"></span>
         <span>{{ isLoading ? 'Đang xử lý...' : confirmLabel }}</span>
       </button>

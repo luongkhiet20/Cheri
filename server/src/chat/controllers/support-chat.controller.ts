@@ -79,6 +79,36 @@ export class SupportChatController {
     return this.supportChatService.markCustomerRead(id, user, body?.guestId, body?.sessionId);
   }
 
+  @UseGuards(OptionalJwtAuthGuard)
+  @Post('chat/support/:id/cancel')
+  async requestCancelSupport(
+    @Param('id') id: string,
+    @GetUser() user: User | null,
+    @Body() body: { guestId?: string; sessionId?: string },
+  ) {
+    return this.supportChatService.requestCancelSupport(id, user, body?.guestId, body?.sessionId);
+  }
+
+  @UseGuards(OptionalJwtAuthGuard)
+  @Post('chat/support/:id/cancel/undo')
+  async undoCancelSupport(
+    @Param('id') id: string,
+    @GetUser() user: User | null,
+    @Body() body: { guestId?: string; sessionId?: string },
+  ) {
+    return this.supportChatService.undoCancelSupport(id, user, body?.guestId, body?.sessionId);
+  }
+
+  @UseGuards(OptionalJwtAuthGuard)
+  @Post('chat/support/:id/cancel/finalize')
+  async finalizeCancelSupport(
+    @Param('id') id: string,
+    @GetUser() user: User | null,
+    @Body() body: { guestId?: string; sessionId?: string },
+  ) {
+    return this.supportChatService.finalizeCancelSupport(id, user, body?.guestId, body?.sessionId);
+  }
+
   // ─────────────────────────────────────────────────────────────
   // ADMIN ENDPOINTS (/api/admin/conversations)
   // ─────────────────────────────────────────────────────────────

@@ -112,6 +112,9 @@
             <span class="badge" [ngClass]="getStatusBadgeClass(conv.status)">
               {{ getStatusLabel(conv.status) }}
             </span>
+            <span class="badge badge-cancel-list" *ngIf="conv.cancelRequest?.status === 'PENDING' && conv.status !== 'CLOSED'">
+              Đang chờ hủy
+            </span>
             <span class="badge-assign" [ngClass]="getAssignmentBadgeClass(conv)" [title]="getAssignmentLabel(conv)">
               <svg *ngIf="isAssignedToMe(conv)" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8">
                 <polyline points="20 6 9 17 4 12"></polyline>

@@ -124,7 +124,17 @@ export class SupportChatService {
         filter.guestId = identity.guestId;
       }
 
-      const conversation = await this.conversationModel.findOne(filter).exec();
+      let conversation = await this.conversationModel.findOne(filter).exec();
+      if (
+        conversation &&
+        conversation.cancelRequest?.status === 'PENDING' &&
+        conversation.cancelRequest.expiresAt &&
+        new Date() >= new Date(conversation.cancelRequest.expiresAt)
+      ) {
+        await this.finalizeCancelSupportInternal(conversation._id);
+        conversation = null;
+      }
+
       return {
         success: true,
         hasActiveSupport: !!conversation,
@@ -144,9 +154,22 @@ export class SupportChatService {
    */
   async getCustomerMessages(conversationId: string, user: User | null, guestId?: string, sessionId?: string) {
     const identity = this.resolveCustomerIdentity(user, guestId, sessionId);
-    const conv = await this.conversationModel.findById(conversationId).exec();
+    let conv = await this.conversationModel.findById(conversationId).exec();
     if (!conv) {
       throw new NotFoundException('Không tìm thấy cuộc hội thoại');
+    }
+
+    // Auto-finalize if 5s cancellation grace period expired
+    if (
+      conv.cancelRequest?.status === 'PENDING' &&
+      conv.cancelRequest.expiresAt &&
+      new Date() >= new Date(conv.cancelRequest.expiresAt)
+    ) {
+      await this.finalizeCancelSupportInternal(conv._id);
+      conv = await this.conversationModel.findById(conversationId).exec();
+      if (!conv) {
+        throw new NotFoundException('Không tìm thấy cuộc hội thoại');
+      }
     }
 
     // Verify ownership
@@ -405,19 +428,39 @@ export class SupportChatService {
   }
 
   async getAdminMessages(conversationId: string) {
-    const conv = await this.conversationModel
+    let conv = await this.conversationModel
       .findOne({ _id: new Types.ObjectId(conversationId), source: 'SUPPORT_BUTTON' })
       .exec();
     if (!conv) {
       throw new NotFoundException('Không tìm thấy cuộc hội thoại');
     }
 
-    const messages = await this.messageModel
+    if (
+      conv.cancelRequest?.status === 'PENDING' &&
+      conv.cancelRequest.expiresAt &&
+      new Date() >= new Date(conv.cancelRequest.expiresAt)
+    ) {
+      await this.finalizeCancelSupportInternal(conv._id);
+      conv = await this.conversationModel.findById(conv._id).exec();
+      if (!conv) {
+        throw new NotFoundException('Không tìm thấy cuộc hội thoại');
+      }
+    }
+
+    const rawMessages = await this.messageModel
       .find({ conversationId: new Types.ObjectId(conversationId) })
       .sort({ createdAt: 1 })
       .populate('senderId', 'fullName name avatar')
       .lean()
       .exec();
+
+    const messages = rawMessages.map((m: any) => {
+      const obj = { ...m };
+      if (obj.adminContent) {
+        obj.content = obj.adminContent;
+      }
+      return obj;
+    });
 
     // Mark messages as read by Admin
     if (conv.unreadAdminCount > 0) {
@@ -758,6 +801,9 @@ export class SupportChatService {
     conv.lastMessageAt = new Date();
     conv.lastMessagePreview = sysMsg.content;
     conv.unreadCustomerCount = (conv.unreadCustomerCount || 0) + 1;
+    if (conv.cancelRequest && conv.cancelRequest.status === 'PENDING') {
+      conv.cancelRequest.status = 'COMPLETED';
+    }
     await conv.save();
 
     return {
@@ -766,5 +812,242 @@ export class SupportChatService {
       message: 'Đã đóng cuộc hội thoại',
       systemMessage: sysMsg,
     };
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // CANCEL SUPPORT & 5-SECOND UNDO FLOW
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Internal helper to atomically finalize a pending cancel request
+   */
+  async finalizeCancelSupportInternal(conversationId: any) {
+    const convObjId = new Types.ObjectId(conversationId);
+    const now = new Date();
+
+    const conv = await this.conversationModel.findById(convObjId).exec();
+    if (!conv) return null;
+
+    if (conv.status === 'CLOSED') {
+      return { success: true, conversation: conv };
+    }
+
+    if (conv.cancelRequest?.status !== 'PENDING') {
+      return { success: true, conversation: conv };
+    }
+
+    // Atomic update to mark CLOSED and cancel status COMPLETED
+    const updatedConv = await this.conversationModel
+      .findOneAndUpdate(
+        {
+          _id: convObjId,
+          status: { $ne: 'CLOSED' },
+          'cancelRequest.status': 'PENDING',
+        },
+        {
+          $set: {
+            status: 'CLOSED',
+            closedAt: now,
+            assignedAdminId: null,
+            'cancelRequest.status': 'COMPLETED',
+          },
+        },
+        { new: true }
+      )
+      .populate('userId', 'fullName name email phoneNumber avatar createdAt')
+      .populate('assignedAdminId', 'fullName name avatar')
+      .exec();
+
+    if (!updatedConv) {
+      return { success: true, conversation: conv };
+    }
+
+    // System completion message
+    const sysMsg = await this.messageModel.create({
+      conversationId: updatedConv._id,
+      senderType: 'SYSTEM',
+      messageType: 'SYSTEM',
+      systemEvent: 'CANCEL_COMPLETED',
+      content: '✨ Đã hủy kết nối với nhân viên hỗ trợ, Chéri AI Assistant đã sẵn sàng hỗ trợ bạn! ✨',
+      adminContent: 'Khách hàng đã chủ động hủy kết nối với nhân viên hỗ trợ.',
+      createdAt: now,
+    });
+
+    updatedConv.lastMessageId = sysMsg._id as Types.ObjectId;
+    updatedConv.lastMessageAt = now;
+    updatedConv.lastMessagePreview = 'Khách hàng đã chủ động hủy kết nối với nhân viên hỗ trợ.';
+    await updatedConv.save();
+
+    return {
+      success: true,
+      conversation: updatedConv,
+      systemMessage: sysMsg,
+    };
+  }
+
+  /**
+   * Customer initiates cancellation with 5s undo grace period
+   */
+  async requestCancelSupport(conversationId: string, user: User | null, guestId?: string, sessionId?: string) {
+    const identity = this.resolveCustomerIdentity(user, guestId, sessionId);
+    const conv = await this.conversationModel.findById(conversationId).exec();
+    if (!conv) {
+      throw new NotFoundException('Không tìm thấy cuộc hội thoại');
+    }
+
+    // Ownership check
+    if (identity.userId) {
+      if (!conv.userId || conv.userId.toString() !== identity.userId.toString()) {
+        throw new ForbiddenException('Bạn không có quyền thực hiện thao tác này');
+      }
+    } else {
+      if (!conv.guestId || conv.guestId !== identity.guestId) {
+        throw new ForbiddenException('Bạn không có quyền thực hiện thao tác này');
+      }
+    }
+
+    if (conv.status === 'CLOSED') {
+      throw new BadRequestException('Cuộc hội thoại đã kết thúc trước đó');
+    }
+
+    const now = new Date();
+
+    // Idempotent: If cancel already pending and not expired, return existing
+    if (
+      conv.cancelRequest &&
+      conv.cancelRequest.status === 'PENDING' &&
+      conv.cancelRequest.expiresAt &&
+      new Date(conv.cancelRequest.expiresAt) > now
+    ) {
+      const remainingMs = new Date(conv.cancelRequest.expiresAt).getTime() - now.getTime();
+      return {
+        success: true,
+        conversation: conv,
+        expiresAt: conv.cancelRequest.expiresAt,
+        remainingSeconds: Math.max(1, Math.ceil(remainingMs / 1000)),
+      };
+    }
+
+    const expiresAt = new Date(now.getTime() + 5000);
+
+    conv.cancelRequest = {
+      requestedAt: now,
+      expiresAt,
+      status: 'PENDING',
+    };
+
+    const sysMsg = await this.messageModel.create({
+      conversationId: conv._id,
+      senderType: 'SYSTEM',
+      messageType: 'SYSTEM',
+      systemEvent: 'CANCEL_REQUESTED',
+      content: '✨ Bạn đã yêu cầu hủy kết nối với nhân viên hỗ trợ, Chéri sẽ chuyển bạn về AI Assistant sau 5 giây. ✨',
+      adminContent: 'Khách hàng đã yêu cầu hủy kết nối hỗ trợ. Yêu cầu sẽ có hiệu lực sau 5 giây nếu khách không hoàn tác.',
+      createdAt: now,
+    });
+
+    conv.lastMessageId = sysMsg._id as Types.ObjectId;
+    conv.lastMessageAt = now;
+    conv.lastMessagePreview = 'Khách hàng đã yêu cầu hủy kết nối hỗ trợ. Yêu cầu sẽ có hiệu lực sau 5 giây nếu khách không hoàn tác.';
+    conv.unreadAdminCount = (conv.unreadAdminCount || 0) + 1;
+    await conv.save();
+
+    // Reliable server-side fallback timer in case client disconnects/closes tab
+    setTimeout(() => {
+      this.finalizeCancelSupportInternal(conv._id).catch(() => {});
+    }, 5100);
+
+    return {
+      success: true,
+      conversation: conv,
+      systemMessage: sysMsg,
+      expiresAt,
+      remainingSeconds: 5,
+    };
+  }
+
+  /**
+   * Customer undoes cancellation within 5 seconds
+   */
+  async undoCancelSupport(conversationId: string, user: User | null, guestId?: string, sessionId?: string) {
+    const identity = this.resolveCustomerIdentity(user, guestId, sessionId);
+    const conv = await this.conversationModel.findById(conversationId).exec();
+    if (!conv) {
+      throw new NotFoundException('Không tìm thấy cuộc hội thoại');
+    }
+
+    // Ownership check
+    if (identity.userId) {
+      if (!conv.userId || conv.userId.toString() !== identity.userId.toString()) {
+        throw new ForbiddenException('Bạn không có quyền thực hiện thao tác này');
+      }
+    } else {
+      if (!conv.guestId || conv.guestId !== identity.guestId) {
+        throw new ForbiddenException('Bạn không có quyền thực hiện thao tác này');
+      }
+    }
+
+    if (conv.status === 'CLOSED') {
+      throw new BadRequestException('Cuộc hội thoại đã kết thúc, không thể hoàn tác');
+    }
+
+    if (!conv.cancelRequest || conv.cancelRequest.status !== 'PENDING') {
+      throw new BadRequestException('Không tìm thấy yêu cầu hủy đang chờ xử lý');
+    }
+
+    const now = new Date();
+    if (conv.cancelRequest.expiresAt && now > new Date(conv.cancelRequest.expiresAt)) {
+      await this.finalizeCancelSupportInternal(conv._id);
+      throw new BadRequestException('Thời hạn 5 giây để hoàn tác đã kết thúc');
+    }
+
+    conv.cancelRequest.status = 'UNDONE';
+
+    const sysMsg = await this.messageModel.create({
+      conversationId: conv._id,
+      senderType: 'SYSTEM',
+      messageType: 'SYSTEM',
+      systemEvent: 'CANCEL_UNDONE',
+      content: '✨ Đã hoàn tác yêu cầu hủy, Chéri sẽ tiếp tục kết nối bạn với nhân viên hỗ trợ nhé! ✨',
+      adminContent: 'Khách hàng đã hoàn tác yêu cầu hủy kết nối.',
+      createdAt: now,
+    });
+
+    conv.lastMessageId = sysMsg._id as Types.ObjectId;
+    conv.lastMessageAt = now;
+    conv.lastMessagePreview = 'Khách hàng đã hoàn tác yêu cầu hủy kết nối.';
+    conv.unreadAdminCount = (conv.unreadAdminCount || 0) + 1;
+    await conv.save();
+
+    return {
+      success: true,
+      conversation: conv,
+      systemMessage: sysMsg,
+      message: 'Đã hoàn tác yêu cầu hủy hỗ trợ',
+    };
+  }
+
+  /**
+   * Finalize cancellation once 5s grace period expires
+   */
+  async finalizeCancelSupport(conversationId: string, user: User | null, guestId?: string, sessionId?: string) {
+    const identity = this.resolveCustomerIdentity(user, guestId, sessionId);
+    const conv = await this.conversationModel.findById(conversationId).exec();
+    if (!conv) {
+      throw new NotFoundException('Không tìm thấy cuộc hội thoại');
+    }
+
+    // Ownership check
+    if (identity.userId) {
+      if (!conv.userId || conv.userId.toString() !== identity.userId.toString()) {
+        throw new ForbiddenException('Bạn không có quyền thực hiện thao tác này');
+      }
+    } else {
+      if (!conv.guestId || conv.guestId !== identity.guestId) {
+        throw new ForbiddenException('Bạn không có quyền thực hiện thao tác này');
+      }
+    }
+
+    return this.finalizeCancelSupportInternal(conv._id);
   }
 }

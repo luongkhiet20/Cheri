@@ -20,6 +20,13 @@ export class ChatbotStateService {
   private supportPollTimer: any = null;
   private knownSupportMessageIds = new Set<string>();
 
+  // Support cancellation states
+  readonly isCancelPending = signal(false);
+  readonly isCancelling = signal(false);
+  readonly isUndoing = signal(false);
+  readonly cancelCountdown = signal(5);
+  private cancelTimer: any = null;
+
   readonly quickReplies = signal<ChatQuickReply[]>([
     { id: '1', label: 'Đầm hot nhất', query: 'Gợi ý cho mình các mẫu đầm hot nhất đợt này', icon: 'sparkles' },
     { id: '2', label: 'Tra cứu đơn hàng', query: 'Kiểm tra tình trạng đơn hàng của mình', icon: 'package' },
@@ -70,6 +77,18 @@ export class ChatbotStateService {
             this.supportConversationId.set(res.conversation._id);
             this.supportStatus.set(res.conversation.status);
             this.chatMode.set('HUMAN_SUPPORT');
+
+            const cancelReq = res.conversation.cancelRequest;
+            if (cancelReq && cancelReq.status === 'PENDING') {
+              const remainingMs = new Date(cancelReq.expiresAt).getTime() - Date.now();
+              const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
+              if (remainingSec > 0) {
+                this.startCancelCountdown(remainingSec, new Date(cancelReq.expiresAt));
+              } else {
+                this.finalizeCancellation();
+              }
+            }
+
             this.startSupportPolling();
           }
         },
@@ -159,10 +178,145 @@ export class ChatbotStateService {
 
   private detectSystemEvent(content: string): string {
     const text = (content || '').toLowerCase();
+    if (text.includes('yêu cầu hủy') || text.includes('hủy kết nối với nhân viên')) return 'CANCEL_REQUESTED';
+    if (text.includes('hoàn tác')) return 'CANCEL_UNDONE';
+    if (text.includes('đã hủy kết nối')) return 'CANCEL_COMPLETED';
     if (text.includes('kết nối') || text.includes('chờ')) return 'SUPPORT_REQUESTED';
     if (text.includes('tham gia') || text.includes('sẵn sàng')) return 'ADMIN_JOINED';
     if (text.includes('rời') || text.includes('kết thúc')) return 'ADMIN_LEFT';
     return 'SUPPORT_REQUESTED';
+  }
+
+  stopCancelTimer(): void {
+    if (this.cancelTimer) {
+      clearInterval(this.cancelTimer);
+      this.cancelTimer = null;
+    }
+  }
+
+  startCancelCountdown(seconds: number, expiresAt?: Date): void {
+    this.stopCancelTimer();
+    this.isCancelPending.set(true);
+    this.cancelCountdown.set(seconds);
+
+    // Ensure CANCEL_REQUESTED message exists in list
+    const hasCancelMsg = this.messages().some(
+      (m) => m.systemEvent === 'CANCEL_REQUESTED'
+    );
+    if (!hasCancelMsg) {
+      const cancelMsg: ChatMessage = {
+        id: this.nextMessageId++,
+        sender: 'system',
+        senderType: 'SYSTEM',
+        systemEvent: 'CANCEL_REQUESTED',
+        text: '✨ Bạn đã yêu cầu hủy kết nối với nhân viên hỗ trợ, Chéri sẽ chuyển bạn về AI Assistant sau 5 giây. ✨',
+        timestamp: new Date(),
+        cancelExpiresAt: expiresAt,
+      };
+      this.messages.update((list) => [...list, cancelMsg]);
+    }
+
+    this.cancelTimer = setInterval(() => {
+      const cur = this.cancelCountdown();
+      if (cur > 1) {
+        this.cancelCountdown.set(cur - 1);
+      } else {
+        this.stopCancelTimer();
+        this.cancelCountdown.set(0);
+        this.finalizeCancellation();
+      }
+    }, 1000);
+  }
+
+  cancelSupport(): void {
+    if (this.isCancelling() || this.isCancelPending()) return;
+    const convId = this.supportConversationId();
+    if (!convId) return;
+
+    this.isCancelling.set(true);
+    this.chatbotService.requestCancelSupport(convId, this.sessionId(), this.getGuestId()).subscribe({
+      next: (res: any) => {
+        this.isCancelling.set(false);
+        if (res && res.success) {
+          const remaining = res.remainingSeconds ?? 5;
+          const expiresAt = res.expiresAt ? new Date(res.expiresAt) : new Date(Date.now() + remaining * 1000);
+          this.startCancelCountdown(remaining, expiresAt);
+        }
+      },
+      error: (err) => {
+        this.isCancelling.set(false);
+        console.error('[ChatbotStateService] Lỗi gửi yêu cầu hủy hỗ trợ:', err);
+      },
+    });
+  }
+
+  undoCancelSupport(): void {
+    if (this.isUndoing()) return;
+    const convId = this.supportConversationId();
+    if (!convId) return;
+
+    this.isUndoing.set(true);
+    this.chatbotService.undoCancelSupport(convId, this.sessionId(), this.getGuestId()).subscribe({
+      next: (res: any) => {
+        this.isUndoing.set(false);
+        if (res && res.success) {
+          this.stopCancelTimer();
+          this.isCancelPending.set(false);
+
+          const undoMsg: ChatMessage = {
+            id: this.nextMessageId++,
+            sender: 'system',
+            senderType: 'SYSTEM',
+            systemEvent: 'CANCEL_UNDONE',
+            text: '✨ Đã hoàn tác yêu cầu hủy, Chéri sẽ tiếp tục kết nối bạn với nhân viên hỗ trợ nhé! ✨',
+            timestamp: new Date(),
+          };
+          this.messages.update((list) => [...list, undoMsg]);
+        }
+      },
+      error: (err) => {
+        this.isUndoing.set(false);
+        console.error('[ChatbotStateService] Lỗi hoàn tác yêu cầu hủy:', err);
+      },
+    });
+  }
+
+  finalizeCancellation(): void {
+    this.stopCancelTimer();
+    this.isCancelPending.set(false);
+    const convId = this.supportConversationId();
+
+    if (convId) {
+      this.chatbotService.finalizeCancelSupport(convId, this.sessionId(), this.getGuestId()).subscribe({
+        next: () => {
+          this.completeCancelSession();
+        },
+        error: () => {
+          this.completeCancelSession();
+        },
+      });
+    } else {
+      this.completeCancelSession();
+    }
+  }
+
+  private completeCancelSession(): void {
+    // Add completion system message if not already present
+    const hasCompleteMsg = this.messages().some(
+      (m) => m.systemEvent === 'CANCEL_COMPLETED'
+    );
+    if (!hasCompleteMsg) {
+      const completeMsg: ChatMessage = {
+        id: this.nextMessageId++,
+        sender: 'system',
+        senderType: 'SYSTEM',
+        systemEvent: 'CANCEL_COMPLETED',
+        text: '✨ Đã hủy kết nối với nhân viên hỗ trợ, Chéri AI Assistant đã sẵn sàng hỗ trợ bạn! ✨',
+        timestamp: new Date(),
+      };
+      this.messages.update((list) => [...list, completeMsg]);
+    }
+    this.handleSupportClosed();
   }
 
   startSupportPolling(): void {
@@ -195,13 +349,14 @@ export class ChatbotStateService {
                   },
                 ]);
               } else if (m.senderType === 'SYSTEM') {
+                const sysEvt = m.systemEvent || this.detectSystemEvent(m.content);
                 this.messages.update((list) => [
                   ...list,
                   {
                     id: this.nextMessageId++,
                     sender: 'system',
                     senderType: 'SYSTEM',
-                    systemEvent: m.systemEvent || this.detectSystemEvent(m.content),
+                    systemEvent: sysEvt,
                     text: m.content,
                     timestamp: new Date(m.createdAt || Date.now()),
                   },
@@ -230,9 +385,30 @@ export class ChatbotStateService {
               this.chatbotService.markSupportRead(convId, this.sessionId(), this.getGuestId()).subscribe();
             }
 
-            // Đồng bộ xong tin nhắn mới kiểm tra trạng thái CLOSED để chuyển về AI
-            if (res.conversation && res.conversation.status === 'CLOSED') {
-              this.handleSupportClosed();
+            // Đồng bộ trạng thái cancelRequest từ Server nếu có
+            if (res.conversation) {
+              this.supportStatus.set(res.conversation.status);
+
+              const cancelReq = res.conversation.cancelRequest;
+              if (cancelReq && cancelReq.status === 'PENDING' && res.conversation.status !== 'CLOSED') {
+                if (!this.isCancelPending()) {
+                  const remainingMs = new Date(cancelReq.expiresAt).getTime() - Date.now();
+                  const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
+                  if (remainingSec > 0) {
+                    this.startCancelCountdown(remainingSec, new Date(cancelReq.expiresAt));
+                  } else {
+                    this.finalizeCancellation();
+                  }
+                }
+              } else if (cancelReq && cancelReq.status === 'UNDONE' && this.isCancelPending()) {
+                this.stopCancelTimer();
+                this.isCancelPending.set(false);
+              }
+
+              // Đồng bộ xong tin nhắn mới kiểm tra trạng thái CLOSED để chuyển về AI
+              if (res.conversation.status === 'CLOSED') {
+                this.handleSupportClosed();
+              }
             }
           }
         },
@@ -253,6 +429,8 @@ export class ChatbotStateService {
   }
 
   handleSupportClosed(): void {
+    this.stopCancelTimer();
+    this.isCancelPending.set(false);
     this.stopSupportPolling();
     this.chatMode.set('AI');
     this.supportConversationId.set(null);

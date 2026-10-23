@@ -5,7 +5,13 @@ export type ConversationMessageDocument = ConversationMessage & Document;
 
 export type MessageSenderType = 'CUSTOMER' | 'ADMIN' | 'SYSTEM';
 export type MessageType = 'TEXT' | 'IMAGE' | 'PRODUCT_CARD' | 'SYSTEM';
-export type SupportSystemEvent = 'SUPPORT_REQUESTED' | 'ADMIN_JOINED' | 'ADMIN_LEFT';
+export type SupportSystemEvent =
+  | 'SUPPORT_REQUESTED'
+  | 'ADMIN_JOINED'
+  | 'ADMIN_LEFT'
+  | 'CANCEL_REQUESTED'
+  | 'CANCEL_UNDONE'
+  | 'CANCEL_COMPLETED';
 
 @Schema({ timestamps: true, collection: 'conversation_messages' })
 export class ConversationMessage {
@@ -31,6 +37,9 @@ export class ConversationMessage {
 
   @Prop({ type: String, required: true })
   content: string;
+
+  @Prop({ type: String, required: false, default: null })
+  adminContent?: string;
 
   @Prop({ type: [Object], default: [] })
   attachments: any[];

@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, HostListener } from '@angular/core';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
 import { NotificationService } from '../../shared/notification/notification.service';
@@ -25,9 +25,15 @@ export class NewsletterSubscribersComponent implements OnInit {
 
   actions: RowAction[] = [
     {
+      key: 'status',
+      label: 'Cập nhật trạng thái',
+      icon: '',
+      tooltip: 'Cập nhật trạng thái'
+    },
+    {
       key: 'copy',
       label: 'Sao chép',
-      icon: 'copy',
+      icon: '',
       tooltip: 'Sao chép email'
     }
   ];
@@ -53,6 +59,17 @@ export class NewsletterSubscribersComponent implements OnInit {
   isLoading = false;
   errorMessage = '';
 
+  // Popup Cập nhật trạng thái
+  isStatusModalOpen: boolean = false;
+  selectedSubscriber: any = null;
+  newStatus: 'SUBSCRIBED' | 'UNSUBSCRIBED' = 'SUBSCRIBED';
+  isUpdatingStatus: boolean = false;
+
+  statusOptions = [
+    { value: 'SUBSCRIBED', label: 'Đang đăng ký' },
+    { value: 'UNSUBSCRIBED', label: 'Đã hủy' }
+  ];
+
   get displayTotal(): number {
     return this.pagination?.total ?? this.data.length;
   }
@@ -61,7 +78,7 @@ export class NewsletterSubscribersComponent implements OnInit {
     private adminService: AdminService,
     private notificationService: NotificationService,
     private cdr: ChangeDetectorRef
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.loadSubscribers();
@@ -93,12 +110,12 @@ export class NewsletterSubscribersComponent implements OnInit {
           const subDate = item.subscribedAt ? new Date(item.subscribedAt) : null;
           const subscribedAtFormatted = subDate
             ? subDate.toLocaleString('vi-VN', {
-                hour: '2-digit',
-                minute: '2-digit',
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
-              })
+              hour: '2-digit',
+              minute: '2-digit',
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric'
+            })
             : '—';
 
           return {
@@ -158,6 +175,11 @@ export class NewsletterSubscribersComponent implements OnInit {
   }
 
   onAction(event: ActionEvent): void {
+    if (event.action === 'status' || event.action === 'updateStatus') {
+      this.openStatusModal(event.row);
+      return;
+    }
+
     if (event.action === 'copy') {
       const email = event.row?.email;
       if (!email) {
@@ -167,6 +189,91 @@ export class NewsletterSubscribersComponent implements OnInit {
 
       this.copyToClipboard(email);
     }
+  }
+
+  openStatusModal(subscriber: any): void {
+    if (!subscriber) return;
+    this.selectedSubscriber = subscriber;
+    this.newStatus = subscriber.status === 'UNSUBSCRIBED' ? 'UNSUBSCRIBED' : 'SUBSCRIBED';
+    this.isStatusModalOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  closeStatusModal(): void {
+    if (this.isUpdatingStatus) return;
+    this.isStatusModalOpen = false;
+    this.selectedSubscriber = null;
+    this.cdr.markForCheck();
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapePress(): void {
+    if (this.isStatusModalOpen && !this.isUpdatingStatus) {
+      this.closeStatusModal();
+    }
+  }
+
+  get isStatusUnchanged(): boolean {
+    return !this.selectedSubscriber || this.newStatus === this.selectedSubscriber.status;
+  }
+
+  getStatusLabel(status?: string): string {
+    return status === 'SUBSCRIBED' ? 'Đang đăng ký' : 'Đã hủy';
+  }
+
+  saveStatusChange(): void {
+    if (!this.selectedSubscriber || this.isUpdatingStatus) return;
+
+    if (this.isStatusUnchanged) {
+      this.notificationService.error('Vui lòng chọn trạng thái khác với trạng thái hiện tại.');
+      return;
+    }
+
+    const subscriberId = this.selectedSubscriber.id || this.selectedSubscriber._id;
+    if (!subscriberId) {
+      this.notificationService.error('Không tìm thấy ID người đăng ký.');
+      return;
+    }
+
+    const targetStatus = this.newStatus;
+    this.isUpdatingStatus = true;
+    this.cdr.markForCheck();
+
+    this.adminService.updateNewsletterSubscriberStatus(subscriberId, targetStatus).subscribe({
+      next: (res: any) => {
+        this.isUpdatingStatus = false;
+        this.isStatusModalOpen = false;
+
+        // Cập nhật ngay bản ghi trong bảng
+        const isSubscribed = targetStatus === 'SUBSCRIBED';
+        const targetRow = this.data.find(d => (d.id || d._id) === subscriberId);
+        if (targetRow) {
+          targetRow.status = targetStatus;
+          targetRow.statusText = isSubscribed ? 'Đang đăng ký' : 'Đã hủy';
+          targetRow.statusTextVariant = isSubscribed ? 'success' : 'neutral';
+        }
+
+        // Thông báo thành công theo đúng yêu cầu prompt
+        if (targetStatus === 'SUBSCRIBED') {
+          this.notificationService.success('Cập nhật thành công! Email đã chuyển sang trạng thái Đang đăng ký.');
+        } else {
+          this.notificationService.success('Cập nhật thành công! Email đã chuyển sang trạng thái Đã hủy.');
+        }
+
+        // Đồng bộ bộ lọc, phân trang và số lượng bản ghi nếu trạng thái mới không còn thuộc bộ lọc đang chọn
+        if (this.currentStatus && this.currentStatus !== targetStatus) {
+          this.loadSubscribers();
+        } else {
+          this.cdr.markForCheck();
+        }
+      },
+      error: (err: any) => {
+        this.isUpdatingStatus = false;
+        const msg = err?.error?.message || 'Không thể cập nhật trạng thái. Vui lòng thử lại.';
+        this.notificationService.error(msg);
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   private copyToClipboard(text: string): void {

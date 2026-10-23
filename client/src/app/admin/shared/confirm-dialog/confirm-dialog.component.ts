@@ -19,8 +19,11 @@ export class ConfirmDialogComponent {
   @Input() autoCloseOnConfirm: boolean = true;
 
   @Output() confirmed = new EventEmitter<void>();
+  @Output() confirm = new EventEmitter<void>();
   @Output() cancelled = new EventEmitter<void>();
+  @Output() cancel = new EventEmitter<void>();
   @Output() closed = new EventEmitter<void>();
+  @Output() close = new EventEmitter<void>();
 
   get confirmBtnClass(): string {
     return this.variant === 'danger' ? 'btn btn-primary btn-danger-solid'
@@ -31,20 +34,26 @@ export class ConfirmDialogComponent {
   onConfirm(): void {
     if (this.isLoading) return;
     this.confirmed.emit();
+    this.confirm.emit();
     if (this.autoCloseOnConfirm) {
       this.closed.emit();
+      this.close.emit();
     }
   }
 
   onCancel(): void {
     if (this.isLoading) return;
     this.cancelled.emit();
+    this.cancel.emit();
     this.closed.emit();
+    this.close.emit();
   }
 
   onOverlayClick(): void {
     if (this.isLoading) return;
     this.cancelled.emit();
+    this.cancel.emit();
     this.closed.emit();
+    this.close.emit();
   }
 }

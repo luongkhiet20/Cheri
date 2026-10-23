@@ -174,9 +174,9 @@
 
 .support-system-message {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
 
   width: fit-content;
   max-width: 90%;
@@ -198,6 +198,14 @@
   box-shadow: 0 1px 3px rgba(131, 86, 0, 0.06);
 }
 
+.system-message-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
 .system-message-icon {
   display: flex;
   align-items: center;
@@ -208,6 +216,79 @@
 
 .system-message-text {
   flex: 1 1 auto;
+}
+
+/* Khu vực countdown và nút Hoàn tác */
+.cancel-action-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(242, 213, 133, 0.85);
+  width: 100%;
+}
+
+.cancel-timer-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #835600;
+}
+
+.timer-spin-icon {
+  color: var(--cheri-primary, #74070E);
+  flex-shrink: 0;
+  animation: timerPulse 1s infinite alternate ease-in-out;
+}
+
+@keyframes timerPulse {
+  0% { opacity: 0.6; transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1.05); }
+}
+
+.cancel-timer-text strong {
+  color: var(--cheri-primary, #74070E);
+  font-weight: 700;
+  font-size: 13.5px;
+  margin: 0 2px;
+}
+
+.btn-undo-cancel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 5px 16px;
+  background-color: var(--cheri-primary, #74070E);
+  color: #ffffff;
+  border: 1px solid var(--cheri-primary, #74070E);
+  border-radius: 18px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(116, 7, 14, 0.22);
+  transition: all 0.2s ease;
+}
+
+.btn-undo-cancel:hover:not(:disabled) {
+  background-color: var(--cheri-primary-hover, #5C050B);
+  border-color: var(--cheri-primary-hover, #5C050B);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(116, 7, 14, 0.32);
+}
+
+.btn-undo-cancel:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-undo-cancel:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 @media (max-width: 430px) {

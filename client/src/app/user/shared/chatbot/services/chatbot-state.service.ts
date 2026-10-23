@@ -194,16 +194,34 @@ export class ChatbotStateService {
     }
   }
 
-  startCancelCountdown(seconds: number, expiresAt?: Date): void {
+  startCancelCountdown(seconds: number, expiresAt?: Date, systemMsgId?: string): void {
     this.stopCancelTimer();
     this.isCancelPending.set(true);
     this.cancelCountdown.set(seconds);
 
-    // Ensure CANCEL_REQUESTED message exists in list
-    const hasCancelMsg = this.messages().some(
-      (m) => m.systemEvent === 'CANCEL_REQUESTED'
+    if (systemMsgId) {
+      this.knownSupportMessageIds.add(systemMsgId);
+    }
+
+    // Đảm bảo không trùng lặp tin nhắn CANCEL_REQUESTED trong danh sách
+    const existingIndex = this.messages().findIndex(
+      (m) =>
+        m.systemEvent === 'CANCEL_REQUESTED' ||
+        (m.sender === 'system' && (m.text || '').includes('hủy kết nối với nhân viên hỗ trợ'))
     );
-    if (!hasCancelMsg) {
+
+    if (existingIndex >= 0) {
+      // Cập nhật cancelExpiresAt cho tin nhắn đã có thay vì thêm mới
+      this.messages.update((list) => {
+        const copy = [...list];
+        copy[existingIndex] = {
+          ...copy[existingIndex],
+          systemEvent: 'CANCEL_REQUESTED',
+          cancelExpiresAt: expiresAt,
+        };
+        return copy;
+      });
+    } else {
       const cancelMsg: ChatMessage = {
         id: this.nextMessageId++,
         sender: 'system',
@@ -238,9 +256,13 @@ export class ChatbotStateService {
       next: (res: any) => {
         this.isCancelling.set(false);
         if (res && res.success) {
+          const sysId = res.systemMessage?._id ? res.systemMessage._id.toString() : '';
+          if (sysId) {
+            this.knownSupportMessageIds.add(sysId);
+          }
           const remaining = res.remainingSeconds ?? 5;
           const expiresAt = res.expiresAt ? new Date(res.expiresAt) : new Date(Date.now() + remaining * 1000);
-          this.startCancelCountdown(remaining, expiresAt);
+          this.startCancelCountdown(remaining, expiresAt, sysId);
         }
       },
       error: (err) => {
@@ -260,18 +282,29 @@ export class ChatbotStateService {
       next: (res: any) => {
         this.isUndoing.set(false);
         if (res && res.success) {
+          const sysId = res.systemMessage?._id ? res.systemMessage._id.toString() : '';
+          if (sysId) {
+            this.knownSupportMessageIds.add(sysId);
+          }
           this.stopCancelTimer();
           this.isCancelPending.set(false);
 
-          const undoMsg: ChatMessage = {
-            id: this.nextMessageId++,
-            sender: 'system',
-            senderType: 'SYSTEM',
-            systemEvent: 'CANCEL_UNDONE',
-            text: '✨ Đã hoàn tác yêu cầu hủy, Chéri sẽ tiếp tục kết nối bạn với nhân viên hỗ trợ nhé! ✨',
-            timestamp: new Date(),
-          };
-          this.messages.update((list) => [...list, undoMsg]);
+          const alreadyHasUndo = this.messages().some(
+            (m) =>
+              m.systemEvent === 'CANCEL_UNDONE' ||
+              (m.sender === 'system' && (m.text || '').includes('hoàn tác yêu cầu hủy'))
+          );
+          if (!alreadyHasUndo) {
+            const undoMsg: ChatMessage = {
+              id: this.nextMessageId++,
+              sender: 'system',
+              senderType: 'SYSTEM',
+              systemEvent: 'CANCEL_UNDONE',
+              text: '✨ Đã hoàn tác yêu cầu hủy, Chéri sẽ tiếp tục kết nối bạn với nhân viên hỗ trợ nhé! ✨',
+              timestamp: new Date(),
+            };
+            this.messages.update((list) => [...list, undoMsg]);
+          }
         }
       },
       error: (err) => {
@@ -303,7 +336,9 @@ export class ChatbotStateService {
   private completeCancelSession(): void {
     // Add completion system message if not already present
     const hasCompleteMsg = this.messages().some(
-      (m) => m.systemEvent === 'CANCEL_COMPLETED'
+      (m) =>
+        m.systemEvent === 'CANCEL_COMPLETED' ||
+        (m.sender === 'system' && (m.text || '').includes('đã hủy kết nối với nhân viên hỗ trợ'))
     );
     if (!hasCompleteMsg) {
       const completeMsg: ChatMessage = {
@@ -350,17 +385,49 @@ export class ChatbotStateService {
                 ]);
               } else if (m.senderType === 'SYSTEM') {
                 const sysEvt = m.systemEvent || this.detectSystemEvent(m.content);
-                this.messages.update((list) => [
-                  ...list,
-                  {
-                    id: this.nextMessageId++,
-                    sender: 'system',
-                    senderType: 'SYSTEM',
-                    systemEvent: sysEvt,
-                    text: m.content,
-                    timestamp: new Date(m.createdAt || Date.now()),
-                  },
-                ]);
+
+                // Chống trùng lặp tin nhắn hệ thống (đặc biệt khi client đã add optimistic hoặc nhận từ trước)
+                const existingIndex = this.messages().findIndex(
+                  (existing) =>
+                    (existing.systemEvent === sysEvt && ['CANCEL_REQUESTED', 'CANCEL_UNDONE', 'CANCEL_COMPLETED'].includes(sysEvt)) ||
+                    (existing.sender === 'system' && (existing.text || '').trim() === (m.content || '').trim())
+                );
+
+                if (existingIndex >= 0) {
+                  // Đã tồn tại, đồng bộ cancelExpiresAt nếu đây là CANCEL_REQUESTED
+                  if (sysEvt === 'CANCEL_REQUESTED') {
+                    const expiresAt = res.conversation?.cancelRequest?.expiresAt
+                      ? new Date(res.conversation.cancelRequest.expiresAt)
+                      : undefined;
+                    if (expiresAt && !this.messages()[existingIndex].cancelExpiresAt) {
+                      this.messages.update((list) => {
+                        const copy = [...list];
+                        copy[existingIndex] = {
+                          ...copy[existingIndex],
+                          systemEvent: 'CANCEL_REQUESTED',
+                          cancelExpiresAt: expiresAt,
+                        };
+                        return copy;
+                      });
+                    }
+                  }
+                } else {
+                  this.messages.update((list) => [
+                    ...list,
+                    {
+                      id: this.nextMessageId++,
+                      sender: 'system',
+                      senderType: 'SYSTEM',
+                      systemEvent: sysEvt,
+                      text: m.content,
+                      timestamp: new Date(m.createdAt || Date.now()),
+                      cancelExpiresAt:
+                        sysEvt === 'CANCEL_REQUESTED' && res.conversation?.cancelRequest?.expiresAt
+                          ? new Date(res.conversation.cancelRequest.expiresAt)
+                          : undefined,
+                    },
+                  ]);
+                }
               } else if (m.senderType === 'CUSTOMER') {
                 // Đảm bảo không trùng tin nhắn đã gửi trước đó
                 const alreadyExists = this.messages().some(

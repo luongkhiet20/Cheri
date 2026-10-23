@@ -1,15 +1,15 @@
 # CHERI MongoDB Schema
 
 > **Database**: `cheri`  
-> **Cập nhật**: 2026-10-21T07:43:36.418Z  
-> **Tổng số collection**: 29  
+> **Cập nhật**: 2026-10-23T13:22:05.664Z  
+> **Tổng số collection**: 34  
 
 ## Danh sách Collections
 
 | # | Collection | Docs | Fields | Mô tả |
 |---|-----------|------|--------|-------|
 | 1 | `users` | 31 | 40 | Tài khoản người dùng, giỏ hàng, thông tin cá nhân, phân quyền user/admin. |
-| 2 | `orders` | 50 | 378 | Đơn hàng (bao gồm khách vãng lai userId=null), cart, địa chỉ, thanh toán, coupon, trạng thái. |
+| 2 | `orders` | 50 | 378 | Đơn hàng (bao gồm khách vãng lai userId=null), cart, địa chỉ, thanh toán, coupon, trạng thái, yêu cầu trả hàng/hủy. |
 | 3 | `products` | 98 | 66 | Sản phẩm: thông tin, giá, tồn kho, hình ảnh, biến thể, danh mục. |
 | 4 | `categories` | 5 | 25 | Danh mục sản phẩm theo cây phân cấp (level1, level2). |
 | 5 | `coupons` | 2 | 15 | Mã giảm giá: loại, giá trị, điều kiện, thời hạn sử dụng. |
@@ -26,8 +26,8 @@
 | 16 | `pages` | 7 | 16 | Các trang tĩnh khác của website. |
 | 17 | `translations` | 1 | 102 | Dữ liệu đa ngôn ngữ cho giao diện. |
 | 18 | `product_reviews` | 3 | 13 | Đánh giá và nhận xét sản phẩm từ khách hàng (điểm số rating 1-5 sao, bình luận, hình ảnh thực tế, trạng thái duyệt). |
-| 19 | `user_interactions` | 338 | 20 | Nhật ký tương tác hành vi người dùng (view, add_to_cart, purchase, wishlist) phục vụ AI / Machine Learning gợi ý sản phẩm (Recommendation System). |
-| 20 | `ml_bootstrap_interactions` | 1446 | 15 | Dữ liệu tương tác mẫu (bootstrap/synthetic interaction) huấn luyện mô hình ML Recommendation khi hệ thống chưa đủ tương tác thực tế. |
+| 19 | `user_interactions` | 423 | 20 | Nhật ký tương tác hành vi người dùng (view, add_to_cart, purchase, wishlist) phục vụ AI / Machine Learning gợi ý sản phẩm (Recommendation System). |
+| 20 | `ml_bootstrap_interactions` | 3264 | 14 | Dữ liệu tương tác mẫu (bootstrap/synthetic interaction) huấn luyện mô hình ML Recommendation khi hệ thống chưa đủ tương tác thực tế. |
 | 21 | `passwordresets` | 1 | 11 | Token đặt lại mật khẩu (email, token, hết hạn). |
 | 22 | `configs` | 0 | 0 | Cấu hình hệ thống nội bộ (reserved). |
 | 23 | `themes` | 0 | 0 | Theme giao diện website (reserved). |
@@ -37,6 +37,11 @@
 | 27 | `orders_backup_fk_20261005` | 10 | 171 | Backup đơn hàng có foreign-key trước migration ngày 05/10/2026. |
 | 28 | `guest_carts` | 6 | 14 | Giỏ hàng tạm thời của khách vãng lai (lưu theo guestId, items, thông tin sản phẩm và phân loại). |
 | 29 | `payment_transactions` | 1 | 15 | Nhật ký giao dịch thanh toán trực tuyến / cổng thanh toán (mã giao dịch, trạng thái, số tiền, phương thức). |
+| 30 | `newsletter_subscribers` | 2 | 8 | Danh sách khách hàng và khách vãng lai đăng ký nhận bản tin ưu đãi (email, trạng thái SUBSCRIBED/UNSUBSCRIBED, nguồn đăng ký, thời gian). |
+| 31 | `conversations` | 12 | 28 | Phiên hội thoại hỗ trợ khách hàng với nhân viên (trạng thái WAITING_ADMIN, IN_PROGRESS, CLOSED, thông tin khách, phân công admin, yêu cầu hủy 5s). |
+| 32 | `conversation_messages` | 71 | 17 | Tin nhắn trong cuộc hội thoại hỗ trợ giữa khách hàng, nhân viên admin và hệ thống (CUSTOMER, ADMIN, SYSTEM, timestamp, systemEvent). |
+| 33 | `chatbot_sessions` | 121 | 50 | Phiên trò chuyện của người dùng với AI Assistant / Chatbot Chéri (lịch sử tin nhắn, sessionId, guestId, ngữ cảnh tư vấn). |
+| 34 | `chat_rate_limits` | 0 | 0 | Giới hạn tần suất gửi tin nhắn chat của người dùng / IP để chống spam và tấn công DoS. |
 
 ---
 
@@ -56,20 +61,20 @@
 | `avatar` | `String` | 26/31 |
 | `cart` | `Object` | 31/31 |
 | `cart.items` | `Array` | 31/31 |
-| `cart.items[]` | `Object` | 4/31 |
-| `cart.items[].id` | `String` | 1/31 |
+| `cart.items[]` | `Object` | 5/31 |
+| `cart.items[].id` | `Null | String` | 1/31 |
 | `cart.items[].isSelected` | `Boolean` | 1/31 |
-| `cart.items[].productId` | `ObjectId | String` | 4/31 |
+| `cart.items[].productId` | `ObjectId | String` | 5/31 |
 | `cart.items[].qty` | `Number` | 1/31 |
-| `cart.items[].quantity` | `Number` | 3/31 |
-| `cart.items[].selectedClassification` | `String` | 4/31 |
-| `cart.items[].selectedColor` | `String` | 4/31 |
-| `cart.items[].selectedSize` | `String` | 4/31 |
-| `cart.items[].variantId` | `String` | 4/31 |
+| `cart.items[].quantity` | `Number` | 4/31 |
+| `cart.items[].selectedClassification` | `Null | String` | 5/31 |
+| `cart.items[].selectedColor` | `Null | String` | 5/31 |
+| `cart.items[].selectedSize` | `Null | String` | 5/31 |
+| `cart.items[].variantId` | `Null | String` | 5/31 |
 | `cart.totalPrice` | `Number` | 1/31 |
 | `createdAt` | `Date | String` | 28/31 |
 | `dateAdded` | `Date | String` | 29/31 |
-| `dateOfBirth` | `String` | 26/31 |
+| `dateOfBirth` | `Null | String` | 26/31 |
 | `description` | `String` | 30/31 |
 | `email` | `String` | 31/31 |
 | `facebookId` | `String` | 1/31 |
@@ -88,12 +93,12 @@
 | `roles[]` | `String` | 31/31 |
 | `salt` | `String` | 28/31 |
 | `status` | `Boolean` | 31/31 |
-| `tokenRevokedAt` | `String` | 1/31 |
+| `tokenRevokedAt` | `Date | Null` | 5/31 |
 | `updatedAt` | `Date | String` | 31/31 |
 
 ## `orders`
 
-> Đơn hàng (bao gồm khách vãng lai userId=null), cart, địa chỉ, thanh toán, coupon, trạng thái.
+> Đơn hàng (bao gồm khách vãng lai userId=null), cart, địa chỉ, thanh toán, coupon, trạng thái, yêu cầu trả hàng/hủy.
 
 - **Documents**: 50  
 - **Sampled**: 50  
@@ -103,7 +108,7 @@
 |-------------|------|----------|
 | `__v` | `Number` | 24/50 |
 | `_id` | `ObjectId` | 50/50 |
-| `_user` | `ObjectId` | 50/50 |
+| `_user` | `Null | ObjectId` | 50/50 |
 | `actualCollectedAmount` | `Number` | 12/50 |
 | `addresses` | `Array` | 29/50 |
 | `addresses[]` | `Object` | 25/50 |
@@ -127,12 +132,12 @@
 | `addresses[].wardCode` | `String` | 19/50 |
 | `addresses[].wardName` | `String` | 19/50 |
 | `addresses[].zip` | `String` | 6/50 |
-| `amount` | `Number` | 36/50 |
-| `cancelledAt` | `Date` | 7/50 |
-| `cancelledBy` | `ObjectId` | 7/50 |
-| `cancelReason` | `String` | 7/50 |
-| `cancelReasonDetail` | `String` | 5/50 |
-| `cart` | `Object` | 25/50 |
+| `amount` | `Null | Number` | 36/50 |
+| `cancelReason` | `Null | String` | 7/50 |
+| `cancelReasonDetail` | `Null` | 5/50 |
+| `cancelledAt` | `Date | Null` | 7/50 |
+| `cancelledBy` | `Null | ObjectId` | 7/50 |
+| `cart` | `Null | Object` | 25/50 |
 | `cart.items` | `Array` | 6/50 |
 | `cart.items[]` | `Object` | 6/50 |
 | `cart.items[].id` | `String` | 6/50 |
@@ -188,7 +193,7 @@
 | `cart.shippingType` | `String` | 1/50 |
 | `cart.totalPrice` | `Number` | 6/50 |
 | `cart.totalQty` | `Number` | 6/50 |
-| `couponCode` | `String` | 43/50 |
+| `couponCode` | `Null | String` | 43/50 |
 | `couponDiscount` | `Number` | 43/50 |
 | `createdAt` | `Date` | 50/50 |
 | `currency` | `String` | 43/50 |
@@ -198,10 +203,10 @@
 | `customer.phone` | `String` | 42/50 |
 | `customerEmail` | `String` | 50/50 |
 | `customerPhone` | `String` | 49/50 |
-| `dateAdded` | `Date` | 25/50 |
-| `deliveredAt` | `String` | 25/50 |
+| `dateAdded` | `Date | Null` | 25/50 |
+| `deliveredAt` | `Null` | 25/50 |
 | `discountAmount` | `Number` | 43/50 |
-| `estimatedDeliveryDate` | `Date` | 25/50 |
+| `estimatedDeliveryDate` | `Date | Null` | 25/50 |
 | `isReviewed` | `Boolean` | 18/50 |
 | `items` | `Array` | 50/50 |
 | `items[]` | `Object` | 50/50 |
@@ -211,8 +216,8 @@
 | `items[].name` | `String` | 34/50 |
 | `items[].productId` | `ObjectId | String` | 50/50 |
 | `items[].productSnapshot` | `Object` | 50/50 |
-| `items[].productSnapshot.brand` | `String` | 10/50 |
-| `items[].productSnapshot.category` | `String` | 10/50 |
+| `items[].productSnapshot.brand` | `Null` | 10/50 |
+| `items[].productSnapshot.category` | `Null | String` | 10/50 |
 | `items[].productSnapshot.image` | `Object | String` | 50/50 |
 | `items[].productSnapshot.image.name` | `String` | 7/50 |
 | `items[].productSnapshot.image.url` | `String` | 7/50 |
@@ -228,32 +233,32 @@
 | `items[].sku` | `String` | 34/50 |
 | `items[].subtotal` | `Number` | 50/50 |
 | `items[].unitPrice` | `Number` | 50/50 |
-| `items[].variant` | `Object` | 34/50 |
+| `items[].variant` | `Null | Object` | 34/50 |
 | `items[].variant.classification` | `String` | 24/50 |
 | `items[].variant.color` | `String` | 30/50 |
 | `items[].variant.size` | `String` | 30/50 |
-| `items[].variantId` | `String` | 33/50 |
+| `items[].variantId` | `Null | String` | 33/50 |
 | `notes` | `String` | 43/50 |
 | `orderId` | `String` | 50/50 |
-| `outcome` | `Object` | 20/50 |
+| `outcome` | `Null | Object` | 20/50 |
 | `outcome.seller_message` | `String` | 1/50 |
-| `paidAt` | `Date` | 33/50 |
+| `paidAt` | `Date | Null` | 33/50 |
 | `payment` | `Object` | 49/50 |
 | `payment.actualCollectedAmount` | `Number` | 20/50 |
 | `payment.codCollected` | `Boolean` | 12/50 |
-| `payment.codCollectedAt` | `String` | 5/50 |
-| `payment.codReconciledAt` | `String` | 5/50 |
+| `payment.codCollectedAt` | `Null` | 5/50 |
+| `payment.codReconciledAt` | `Null` | 5/50 |
 | `payment.codReconciliationStatus` | `String` | 12/50 |
 | `payment.method` | `String` | 49/50 |
-| `payment.paidAt` | `Date` | 49/50 |
+| `payment.paidAt` | `Date | Null` | 49/50 |
 | `payment.provider` | `String` | 49/50 |
 | `payment.refundedAmount` | `Number` | 48/50 |
-| `payment.refundedAt` | `Date` | 44/50 |
+| `payment.refundedAt` | `Date | Null` | 44/50 |
 | `payment.status` | `String` | 49/50 |
-| `payment.transactionId` | `String` | 49/50 |
+| `payment.transactionId` | `Null | String` | 49/50 |
 | `paymentFee` | `Number` | 43/50 |
-| `paymentMethodId` | `ObjectId` | 39/50 |
-| `paymentMethodSnapshot` | `Object` | 39/50 |
+| `paymentMethodId` | `Null | ObjectId` | 39/50 |
+| `paymentMethodSnapshot` | `Null | Object` | 39/50 |
 | `paymentMethodSnapshot.code` | `String` | 38/50 |
 | `paymentMethodSnapshot.name` | `String` | 38/50 |
 | `paymentMethodSnapshot.paymentFee` | `Number` | 38/50 |
@@ -261,28 +266,28 @@
 | `paymentProvider` | `String` | 38/50 |
 | `paymentStatus` | `String` | 43/50 |
 | `refundedAmount` | `Number` | 39/50 |
-| `refundedAt` | `Date` | 37/50 |
-| `returnRequest` | `Object` | 18/50 |
-| `returnRequest.approvedAt` | `Date` | 2/50 |
+| `refundedAt` | `Date | Null` | 37/50 |
+| `returnRequest` | `Null | Object` | 18/50 |
 | `returnRequest.approveNote` | `String` | 1/50 |
+| `returnRequest.approvedAt` | `Date` | 2/50 |
 | `returnRequest.description` | `String` | 12/50 |
 | `returnRequest.history` | `Array` | 12/50 |
 | `returnRequest.history[]` | `Object` | 12/50 |
 | `returnRequest.history[].action` | `String` | 12/50 |
-| `returnRequest.history[].fromStatus` | `String` | 12/50 |
+| `returnRequest.history[].fromStatus` | `Null | String` | 12/50 |
 | `returnRequest.history[].note` | `String` | 12/50 |
 | `returnRequest.history[].toStatus` | `String` | 12/50 |
 | `returnRequest.history[].updatedAt` | `Date` | 12/50 |
-| `returnRequest.history[].updatedBy` | `ObjectId | String` | 7/50 |
+| `returnRequest.history[].updatedBy` | `Null | ObjectId | String` | 7/50 |
 | `returnRequest.images` | `Array` | 11/50 |
 | `returnRequest.images[]` | `Object` | 6/50 |
 | `returnRequest.images[].name` | `String` | 6/50 |
 | `returnRequest.images[].url` | `String` | 6/50 |
 | `returnRequest.inspection` | `Object` | 12/50 |
 | `returnRequest.inspection.conditionNotes` | `String` | 12/50 |
-| `returnRequest.inspection.inspectedAt` | `Date` | 12/50 |
-| `returnRequest.inspection.inspectedBy` | `ObjectId | String` | 12/50 |
-| `returnRequest.inspection.isEligible` | `Boolean` | 12/50 |
+| `returnRequest.inspection.inspectedAt` | `Date | Null` | 12/50 |
+| `returnRequest.inspection.inspectedBy` | `Null | ObjectId | String` | 12/50 |
+| `returnRequest.inspection.isEligible` | `Boolean | Null` | 12/50 |
 | `returnRequest.inspection.restocked` | `Boolean` | 12/50 |
 | `returnRequest.items` | `Array` | 12/50 |
 | `returnRequest.items[]` | `Object` | 12/50 |
@@ -291,12 +296,12 @@
 | `returnRequest.items[].damagedQuantity` | `Number` | 10/50 |
 | `returnRequest.items[].eligibleQuantity` | `Number` | 10/50 |
 | `returnRequest.items[].inspectedQuantity` | `Number` | 10/50 |
-| `returnRequest.items[].isEligible` | `Boolean` | 10/50 |
+| `returnRequest.items[].isEligible` | `Boolean | Null` | 10/50 |
 | `returnRequest.items[].productId` | `ObjectId | String` | 12/50 |
-| `returnRequest.items[].productName` | `String` | 1/50 |
+| `returnRequest.items[].productName` | `Null` | 1/50 |
 | `returnRequest.items[].productSnapshot` | `Object` | 11/50 |
-| `returnRequest.items[].productSnapshot.brand` | `String` | 4/50 |
-| `returnRequest.items[].productSnapshot.category` | `String` | 4/50 |
+| `returnRequest.items[].productSnapshot.brand` | `Null` | 4/50 |
+| `returnRequest.items[].productSnapshot.category` | `Null` | 4/50 |
 | `returnRequest.items[].productSnapshot.image` | `Object | String` | 11/50 |
 | `returnRequest.items[].productSnapshot.image.name` | `String` | 6/50 |
 | `returnRequest.items[].productSnapshot.image.url` | `String` | 6/50 |
@@ -312,7 +317,7 @@
 | `returnRequest.items[].reason` | `String` | 12/50 |
 | `returnRequest.items[].subtotal` | `Number` | 11/50 |
 | `returnRequest.items[].unitPrice` | `Number` | 11/50 |
-| `returnRequest.items[].variantId` | `String` | 11/50 |
+| `returnRequest.items[].variantId` | `Null` | 11/50 |
 | `returnRequest.orderId` | `String` | 1/50 |
 | `returnRequest.reason` | `String` | 12/50 |
 | `returnRequest.refund` | `Object` | 12/50 |
@@ -323,45 +328,45 @@
 | `returnRequest.refund.failureReason` | `String` | 11/50 |
 | `returnRequest.refund.notes` | `String` | 12/50 |
 | `returnRequest.refund.refundedAmount` | `Number` | 12/50 |
-| `returnRequest.refund.refundedAt` | `Date` | 12/50 |
+| `returnRequest.refund.refundedAt` | `Date | Null` | 12/50 |
 | `returnRequest.refund.requestedAmount` | `Number` | 12/50 |
 | `returnRequest.refund.status` | `String` | 12/50 |
 | `returnRequest.refund.transactionId` | `String` | 12/50 |
 | `returnRequest.refundMethod` | `String` | 12/50 |
 | `returnRequest.rejectionReason` | `String` | 11/50 |
-| `returnRequest.requestedAt` | `Date` | 12/50 |
 | `returnRequest.requestId` | `String` | 12/50 |
+| `returnRequest.requestedAt` | `Date` | 12/50 |
 | `returnRequest.returnShipping` | `Object` | 12/50 |
 | `returnRequest.returnShipping.carrier` | `String` | 12/50 |
 | `returnRequest.returnShipping.instructions` | `String` | 12/50 |
 | `returnRequest.returnShipping.notes` | `String` | 1/50 |
-| `returnRequest.returnShipping.receivedAt` | `Date` | 12/50 |
+| `returnRequest.returnShipping.receivedAt` | `Date | Null` | 12/50 |
 | `returnRequest.returnShipping.receivedNote` | `String` | 1/50 |
-| `returnRequest.returnShipping.shippedAt` | `Date` | 12/50 |
+| `returnRequest.returnShipping.shippedAt` | `Date | Null` | 12/50 |
 | `returnRequest.returnShipping.trackingCode` | `String` | 12/50 |
 | `returnRequest.status` | `String` | 12/50 |
 | `returnRequests` | `Array` | 20/50 |
 | `returnRequests[]` | `Object` | 12/50 |
-| `returnRequests[].approvedAt` | `Date` | 2/50 |
 | `returnRequests[].approveNote` | `String` | 1/50 |
+| `returnRequests[].approvedAt` | `Date` | 2/50 |
 | `returnRequests[].description` | `String` | 12/50 |
 | `returnRequests[].history` | `Array` | 12/50 |
 | `returnRequests[].history[]` | `Object` | 12/50 |
 | `returnRequests[].history[].action` | `String` | 12/50 |
-| `returnRequests[].history[].fromStatus` | `String` | 12/50 |
+| `returnRequests[].history[].fromStatus` | `Null | String` | 12/50 |
 | `returnRequests[].history[].note` | `String` | 12/50 |
 | `returnRequests[].history[].toStatus` | `String` | 12/50 |
 | `returnRequests[].history[].updatedAt` | `Date` | 12/50 |
-| `returnRequests[].history[].updatedBy` | `ObjectId | String` | 7/50 |
+| `returnRequests[].history[].updatedBy` | `Null | ObjectId | String` | 7/50 |
 | `returnRequests[].images` | `Array` | 11/50 |
 | `returnRequests[].images[]` | `Object` | 6/50 |
 | `returnRequests[].images[].name` | `String` | 6/50 |
 | `returnRequests[].images[].url` | `String` | 6/50 |
 | `returnRequests[].inspection` | `Object` | 12/50 |
 | `returnRequests[].inspection.conditionNotes` | `String` | 12/50 |
-| `returnRequests[].inspection.inspectedAt` | `Date` | 12/50 |
-| `returnRequests[].inspection.inspectedBy` | `ObjectId | String` | 12/50 |
-| `returnRequests[].inspection.isEligible` | `Boolean` | 12/50 |
+| `returnRequests[].inspection.inspectedAt` | `Date | Null` | 12/50 |
+| `returnRequests[].inspection.inspectedBy` | `Null | ObjectId | String` | 12/50 |
+| `returnRequests[].inspection.isEligible` | `Boolean | Null` | 12/50 |
 | `returnRequests[].inspection.restocked` | `Boolean` | 12/50 |
 | `returnRequests[].items` | `Array` | 12/50 |
 | `returnRequests[].items[]` | `Object` | 12/50 |
@@ -370,12 +375,12 @@
 | `returnRequests[].items[].damagedQuantity` | `Number` | 11/50 |
 | `returnRequests[].items[].eligibleQuantity` | `Number` | 11/50 |
 | `returnRequests[].items[].inspectedQuantity` | `Number` | 11/50 |
-| `returnRequests[].items[].isEligible` | `Boolean` | 11/50 |
+| `returnRequests[].items[].isEligible` | `Boolean | Null` | 11/50 |
 | `returnRequests[].items[].productId` | `ObjectId | String` | 12/50 |
-| `returnRequests[].items[].productName` | `String` | 1/50 |
+| `returnRequests[].items[].productName` | `Null` | 1/50 |
 | `returnRequests[].items[].productSnapshot` | `Object` | 11/50 |
-| `returnRequests[].items[].productSnapshot.brand` | `String` | 5/50 |
-| `returnRequests[].items[].productSnapshot.category` | `String` | 5/50 |
+| `returnRequests[].items[].productSnapshot.brand` | `Null` | 5/50 |
+| `returnRequests[].items[].productSnapshot.category` | `Null` | 5/50 |
 | `returnRequests[].items[].productSnapshot.image` | `Object | String` | 11/50 |
 | `returnRequests[].items[].productSnapshot.image.name` | `String` | 6/50 |
 | `returnRequests[].items[].productSnapshot.image.url` | `String` | 6/50 |
@@ -391,7 +396,7 @@
 | `returnRequests[].items[].reason` | `String` | 12/50 |
 | `returnRequests[].items[].subtotal` | `Number` | 11/50 |
 | `returnRequests[].items[].unitPrice` | `Number` | 11/50 |
-| `returnRequests[].items[].variantId` | `String` | 11/50 |
+| `returnRequests[].items[].variantId` | `Null` | 11/50 |
 | `returnRequests[].orderId` | `String` | 1/50 |
 | `returnRequests[].reason` | `String` | 12/50 |
 | `returnRequests[].refund` | `Object` | 12/50 |
@@ -402,33 +407,33 @@
 | `returnRequests[].refund.failureReason` | `String` | 11/50 |
 | `returnRequests[].refund.notes` | `String` | 12/50 |
 | `returnRequests[].refund.refundedAmount` | `Number` | 12/50 |
-| `returnRequests[].refund.refundedAt` | `Date` | 12/50 |
+| `returnRequests[].refund.refundedAt` | `Date | Null` | 12/50 |
 | `returnRequests[].refund.requestedAmount` | `Number` | 12/50 |
 | `returnRequests[].refund.status` | `String` | 12/50 |
 | `returnRequests[].refund.transactionId` | `String` | 12/50 |
 | `returnRequests[].refundMethod` | `String` | 12/50 |
 | `returnRequests[].rejectionReason` | `String` | 11/50 |
-| `returnRequests[].requestedAt` | `Date` | 12/50 |
 | `returnRequests[].requestId` | `String` | 12/50 |
+| `returnRequests[].requestedAt` | `Date` | 12/50 |
 | `returnRequests[].returnShipping` | `Object` | 12/50 |
 | `returnRequests[].returnShipping.carrier` | `String` | 12/50 |
 | `returnRequests[].returnShipping.instructions` | `String` | 12/50 |
 | `returnRequests[].returnShipping.notes` | `String` | 1/50 |
-| `returnRequests[].returnShipping.receivedAt` | `Date` | 12/50 |
+| `returnRequests[].returnShipping.receivedAt` | `Date | Null` | 12/50 |
 | `returnRequests[].returnShipping.receivedNote` | `String` | 1/50 |
-| `returnRequests[].returnShipping.shippedAt` | `Date` | 12/50 |
+| `returnRequests[].returnShipping.shippedAt` | `Date | Null` | 12/50 |
 | `returnRequests[].returnShipping.trackingCode` | `String` | 12/50 |
 | `returnRequests[].status` | `String` | 12/50 |
-| `reviewedAt` | `Date` | 6/50 |
-| `shippedAt` | `Date` | 25/50 |
+| `reviewedAt` | `Date | Null` | 6/50 |
+| `shippedAt` | `Date | Null` | 25/50 |
 | `shipping` | `Object` | 43/50 |
 | `shipping.carrier` | `String` | 5/50 |
-| `shipping.deliveredAt` | `Date` | 43/50 |
-| `shipping.estimatedDeliveryDate` | `Date` | 38/50 |
+| `shipping.deliveredAt` | `Date | Null` | 43/50 |
+| `shipping.estimatedDeliveryDate` | `Date | Null` | 38/50 |
 | `shipping.fee` | `Number` | 5/50 |
 | `shipping.method` | `String` | 43/50 |
 | `shipping.provider` | `String` | 42/50 |
-| `shipping.shippedAt` | `Date` | 38/50 |
+| `shipping.shippedAt` | `Date | Null` | 38/50 |
 | `shipping.trackingCode` | `String` | 5/50 |
 | `shipping.trackingNumber` | `String` | 42/50 |
 | `shippingAddress` | `Object` | 50/50 |
@@ -455,8 +460,8 @@
 | `shippingLogs[].location` | `String` | 2/50 |
 | `shippingLogs[].status` | `String` | 2/50 |
 | `shippingLogs[].timestamp` | `Date` | 2/50 |
-| `shippingMethodId` | `ObjectId` | 39/50 |
-| `shippingMethodSnapshot` | `Object` | 39/50 |
+| `shippingMethodId` | `Null | ObjectId` | 39/50 |
+| `shippingMethodSnapshot` | `Null | Object` | 39/50 |
 | `shippingMethodSnapshot.code` | `String` | 37/50 |
 | `shippingMethodSnapshot.estimatedDeliveryTime` | `String` | 37/50 |
 | `shippingMethodSnapshot.fee` | `Number` | 37/50 |
@@ -469,7 +474,7 @@
 | `statusHistory[].note` | `String` | 45/50 |
 | `statusHistory[].status` | `String` | 45/50 |
 | `statusHistory[].updatedAt` | `Date | String` | 44/50 |
-| `statusHistory[].updatedBy` | `ObjectId | String` | 40/50 |
+| `statusHistory[].updatedBy` | `Null | ObjectId | String` | 40/50 |
 | `subtotal` | `Number` | 50/50 |
 | `taxAmount` | `Number` | 43/50 |
 | `totalAmount` | `Number` | 50/50 |
@@ -478,7 +483,7 @@
 | `transactionId` | `String` | 38/50 |
 | `type` | `String` | 6/50 |
 | `updatedAt` | `Date | String` | 50/50 |
-| `userId` | `ObjectId` | 49/50 |
+| `userId` | `Null | ObjectId` | 49/50 |
 
 ## `products`
 
@@ -579,7 +584,7 @@
 | `mainImage` | `Object` | 5/5 |
 | `mainImage.name` | `String` | 5/5 |
 | `mainImage.url` | `String` | 5/5 |
-| `parentId` | `String` | 5/5 |
+| `parentId` | `Null` | 5/5 |
 | `sk` | `Object` | 5/5 |
 | `sk.visibility` | `Boolean` | 5/5 |
 | `subCategories` | `Array` | 5/5 |
@@ -742,7 +747,7 @@
 | `items[]` | `String` | 1/11 |
 | `level` | `String` | 11/11 |
 | `message` | `String` | 11/11 |
-| `readAt` | `Date` | 11/11 |
+| `readAt` | `Date | Null` | 11/11 |
 | `recipientId` | `String` | 11/11 |
 | `targetUrl` | `String` | 11/11 |
 | `time` | `Date` | 11/11 |
@@ -939,7 +944,7 @@
 | `projectData.styles[].style.text-transform` | `String` | 1/3 |
 | `projectData.symbols` | `Array` | 1/3 |
 | `projectData.type` | `String` | 2/3 |
-| `projectId` | `ObjectId` | 3/3 |
+| `projectId` | `Null | ObjectId` | 3/3 |
 | `projectName` | `String` | 3/3 |
 | `publishedAt` | `Date` | 3/3 |
 | `publishedBy` | `String` | 3/3 |
@@ -961,7 +966,7 @@
 | `_id` | `ObjectId` | 2/2 |
 | `createdAt` | `Date` | 2/2 |
 | `key` | `String` | 2/2 |
-| `publishedAt` | `Date` | 2/2 |
+| `publishedAt` | `Date | Null` | 2/2 |
 | `sections` | `Array` | 2/2 |
 | `sections[]` | `Object` | 2/2 |
 | `sections[].animation` | `Object` | 2/2 |
@@ -1178,7 +1183,7 @@
 | `sections[].media.desktop` | `Object` | 1/1 |
 | `sections[].media.desktop.alt` | `String` | 1/1 |
 | `sections[].media.desktop.url` | `String` | 1/1 |
-| `sections[].media.mobile` | `String` | 1/1 |
+| `sections[].media.mobile` | `Null` | 1/1 |
 | `sections[].media.overlayOpacity` | `Number` | 1/1 |
 | `sections[].motionPreset` | `String` | 1/1 |
 | `sections[].name` | `String` | 1/1 |
@@ -1293,17 +1298,18 @@
 |-------------|------|----------|
 | `_id` | `ObjectId` | 1/1 |
 | `keys` | `Object` | 1/1 |
+| `keys.ADDED_TO_CART` | `String` | 1/1 |
 | `keys.About_customer` | `String` | 1/1 |
 | `keys.Add` | `String` | 1/1 |
 | `keys.Add_page` | `String` | 1/1 |
 | `keys.Added` | `String` | 1/1 |
-| `keys.ADDED_TO_CART` | `String` | 1/1 |
 | `keys.Address` | `String` | 1/1 |
 | `keys.Again` | `String` | 1/1 |
 | `keys.All` | `String` | 1/1 |
 | `keys.Amount` | `String` | 1/1 |
 | `keys.Available_in_few_weeks` | `String` | 1/1 |
 | `keys.Back` | `String` | 1/1 |
+| `keys.CONTACT` | `String` | 1/1 |
 | `keys.Cart` | `String` | 1/1 |
 | `keys.Categories` | `String` | 1/1 |
 | `keys.Category` | `String` | 1/1 |
@@ -1311,18 +1317,17 @@
 | `keys.City` | `String` | 1/1 |
 | `keys.Config` | `String` | 1/1 |
 | `keys.Contact` | `String` | 1/1 |
-| `keys.CONTACT` | `String` | 1/1 |
 | `keys.Country` | `String` | 1/1 |
 | `keys.Created` | `String` | 1/1 |
 | `keys.Customer` | `String` | 1/1 |
 | `keys.Dashboard` | `String` | 1/1 |
 | `keys.Description` | `String` | 1/1 |
 | `keys.Detail` | `String` | 1/1 |
+| `keys.ESHOP_DESCRIPTION` | `String` | 1/1 |
+| `keys.ESHOP_TITLE` | `String` | 1/1 |
 | `keys.Edit` | `String` | 1/1 |
 | `keys.Email` | `String` | 1/1 |
-| `keys.ESHOP_DESCRIPTION` | `String` | 1/1 |
 | `keys.Eshop_subtitle` | `String` | 1/1 |
-| `keys.ESHOP_TITLE` | `String` | 1/1 |
 | `keys.Filter` | `String` | 1/1 |
 | `keys.Find` | `String` | 1/1 |
 | `keys.Free_shipping_limit` | `String` | 1/1 |
@@ -1331,9 +1336,9 @@
 | `keys.Home` | `String` | 1/1 |
 | `keys.Home_promo` | `String` | 1/1 |
 | `keys.Images` | `String` | 1/1 |
+| `keys.LINKS` | `String` | 1/1 |
 | `keys.Language_for_page` | `String` | 1/1 |
 | `keys.Language_for_product_detail` | `String` | 1/1 |
-| `keys.LINKS` | `String` | 1/1 |
 | `keys.Login` | `String` | 1/1 |
 | `keys.Logout` | `String` | 1/1 |
 | `keys.More` | `String` | 1/1 |
@@ -1351,17 +1356,18 @@
 | `keys.Pay` | `String` | 1/1 |
 | `keys.Prev` | `String` | 1/1 |
 | `keys.Price` | `String` | 1/1 |
-| `keys.Price_from` | `String` | 1/1 |
-| `keys.Price_to` | `String` | 1/1 |
 | `keys.Price-asc` | `String` | 1/1 |
 | `keys.Price-decs` | `String` | 1/1 |
 | `keys.PriceRange` | `String` | 1/1 |
+| `keys.Price_from` | `String` | 1/1 |
+| `keys.Price_to` | `String` | 1/1 |
 | `keys.Product` | `String` | 1/1 |
-| `keys.products` | `String` | 1/1 |
 | `keys.Products` | `String` | 1/1 |
 | `keys.Regular_price` | `String` | 1/1 |
 | `keys.Remove` | `String` | 1/1 |
 | `keys.Request_sended` | `String` | 1/1 |
+| `keys.SIGNIN_SUCCESS` | `String` | 1/1 |
+| `keys.SIGNUP_SUCCESS` | `String` | 1/1 |
 | `keys.Sale_price` | `String` | 1/1 |
 | `keys.Save` | `String` | 1/1 |
 | `keys.Search` | `String` | 1/1 |
@@ -1370,19 +1376,16 @@
 | `keys.Shipping_cost` | `String` | 1/1 |
 | `keys.Short_description` | `String` | 1/1 |
 | `keys.SignIn` | `String` | 1/1 |
-| `keys.SIGNIN_SUCCESS` | `String` | 1/1 |
 | `keys.SignUp` | `String` | 1/1 |
-| `keys.SIGNUP_SUCCESS` | `String` | 1/1 |
 | `keys.Sort_by` | `String` | 1/1 |
 | `keys.Sorting` | `String` | 1/1 |
 | `keys.Status` | `String` | 1/1 |
 | `keys.Stock` | `String` | 1/1 |
 | `keys.SuccessOrder` | `String` | 1/1 |
+| `keys.TO_CART` | `String` | 1/1 |
 | `keys.Tags` | `String` | 1/1 |
 | `keys.Theme` | `String` | 1/1 |
 | `keys.Title` | `String` | 1/1 |
-| `keys.to` | `String` | 1/1 |
-| `keys.TO_CART` | `String` | 1/1 |
 | `keys.Total_price` | `String` | 1/1 |
 | `keys.Total_quantity` | `String` | 1/1 |
 | `keys.Translations` | `String` | 1/1 |
@@ -1390,8 +1393,10 @@
 | `keys.Unavailable` | `String` | 1/1 |
 | `keys.Visibility` | `String` | 1/1 |
 | `keys.Visible` | `String` | 1/1 |
-| `keys.with` | `String` | 1/1 |
 | `keys.Zip` | `String` | 1/1 |
+| `keys.products` | `String` | 1/1 |
+| `keys.to` | `String` | 1/1 |
+| `keys.with` | `String` | 1/1 |
 | `lang` | `String` | 1/1 |
 
 ## `product_reviews`
@@ -1422,58 +1427,57 @@
 
 > Nhật ký tương tác hành vi người dùng (view, add_to_cart, purchase, wishlist) phục vụ AI / Machine Learning gợi ý sản phẩm (Recommendation System).
 
-- **Documents**: 338  
-- **Sampled**: 338  
+- **Documents**: 423  
+- **Sampled**: 423  
 - **Fields**: 20  
 
 | Field (path) | Type | Frequency |
 |-------------|------|----------|
-| `__v` | `Number` | 228/338 |
-| `_id` | `ObjectId` | 338/338 |
-| `datasetType` | `String` | 85/338 |
-| `eventType` | `String` | 338/338 |
-| `isSynthetic` | `Boolean` | 338/338 |
-| `metadata` | `Object` | 338/338 |
-| `metadata.generator` | `String` | 110/338 |
-| `metadata.isSynthetic` | `Boolean` | 338/338 |
-| `metadata.price` | `Number` | 9/338 |
-| `metadata.quantity` | `Number` | 9/338 |
-| `metadata.seed` | `Number` | 110/338 |
-| `metadata.simulatedAt` | `String` | 110/338 |
-| `metadata.source` | `String` | 228/338 |
-| `metadata.userAgent` | `String` | 219/338 |
-| `orderId` | `String` | 85/338 |
-| `productId` | `ObjectId` | 338/338 |
-| `sessionId` | `String` | 338/338 |
-| `timestamp` | `Date` | 338/338 |
-| `userId` | `ObjectId` | 338/338 |
-| `variantId` | `String` | 228/338 |
+| `__v` | `Number` | 313/423 |
+| `_id` | `ObjectId` | 423/423 |
+| `datasetType` | `String` | 170/423 |
+| `eventType` | `String` | 423/423 |
+| `isSynthetic` | `Boolean` | 423/423 |
+| `metadata` | `Object` | 423/423 |
+| `metadata.generator` | `String` | 110/423 |
+| `metadata.isSynthetic` | `Boolean` | 423/423 |
+| `metadata.price` | `Number` | 9/423 |
+| `metadata.quantity` | `Number` | 9/423 |
+| `metadata.seed` | `Number` | 110/423 |
+| `metadata.simulatedAt` | `String` | 110/423 |
+| `metadata.source` | `String` | 313/423 |
+| `metadata.userAgent` | `String` | 304/423 |
+| `orderId` | `Null | String` | 170/423 |
+| `productId` | `ObjectId` | 423/423 |
+| `sessionId` | `Null | String` | 423/423 |
+| `timestamp` | `Date` | 423/423 |
+| `userId` | `Null | ObjectId` | 423/423 |
+| `variantId` | `Null | String` | 313/423 |
 
 ## `ml_bootstrap_interactions`
 
 > Dữ liệu tương tác mẫu (bootstrap/synthetic interaction) huấn luyện mô hình ML Recommendation khi hệ thống chưa đủ tương tác thực tế.
 
-- **Documents**: 1446  
-- **Sampled**: 1446  
-- **Fields**: 15  
+- **Documents**: 3264  
+- **Sampled**: 500  
+- **Fields**: 14  
 
 | Field (path) | Type | Frequency |
 |-------------|------|----------|
-| `_id` | `ObjectId` | 1446/1446 |
-| `datasetType` | `String` | 1446/1446 |
-| `eventType` | `String` | 1446/1446 |
-| `isSynthetic` | `Boolean` | 1446/1446 |
-| `metadata` | `Object` | 1446/1446 |
-| `metadata.datasetType` | `String` | 1446/1446 |
-| `metadata.isSynthetic` | `Boolean` | 1446/1446 |
-| `metadata.persona` | `String` | 1446/1446 |
-| `metadata.price` | `Number` | 121/1446 |
-| `metadata.seed` | `Number` | 1446/1446 |
-| `metadata.viewIndex` | `Number` | 1125/1446 |
-| `productId` | `ObjectId` | 1446/1446 |
-| `sessionId` | `String` | 1446/1446 |
-| `timestamp` | `Date` | 1446/1446 |
-| `userId` | `String` | 1446/1446 |
+| `_id` | `ObjectId` | 500/500 |
+| `datasetType` | `String` | 500/500 |
+| `eventType` | `String` | 500/500 |
+| `isSynthetic` | `Boolean` | 500/500 |
+| `metadata` | `Object` | 500/500 |
+| `metadata.datasetType` | `String` | 500/500 |
+| `metadata.isSynthetic` | `Boolean` | 500/500 |
+| `metadata.persona` | `String` | 500/500 |
+| `metadata.seed` | `Number` | 500/500 |
+| `metadata.viewIndex` | `Number` | 500/500 |
+| `productId` | `ObjectId` | 500/500 |
+| `sessionId` | `String` | 500/500 |
+| `timestamp` | `Date` | 500/500 |
+| `userId` | `String` | 500/500 |
 
 ## `passwordresets`
 
@@ -1492,8 +1496,8 @@
 | `email` | `String` | 1/1 |
 | `expiresAt` | `Date` | 1/1 |
 | `otpHash` | `String` | 1/1 |
-| `resetTokenExpiresAt` | `String` | 1/1 |
-| `resetTokenHash` | `String` | 1/1 |
+| `resetTokenExpiresAt` | `Null` | 1/1 |
+| `resetTokenHash` | `Null` | 1/1 |
 | `updatedAt` | `Date` | 1/1 |
 | `verified` | `Boolean` | 1/1 |
 
@@ -1505,7 +1509,7 @@
 - **Sampled**: 0  
 - **Fields**: 0  
 
-*Collection hiện chưa có document nào.*
+*Collection hiện đang rỗng (chưa có tài liệu)*
 
 ## `themes`
 
@@ -1515,7 +1519,7 @@
 - **Sampled**: 0  
 - **Fields**: 0  
 
-*Collection hiện chưa có document nào.*
+*Collection hiện đang rỗng (chưa có tài liệu)*
 
 ## `product_variants`
 
@@ -1525,7 +1529,7 @@
 - **Sampled**: 0  
 - **Fields**: 0  
 
-*Collection hiện chưa có document nào.*
+*Collection hiện đang rỗng (chưa có tài liệu)*
 
 ## `shipping_methods`
 
@@ -1535,7 +1539,7 @@
 - **Sampled**: 0  
 - **Fields**: 0  
 
-*Collection hiện chưa có document nào.*
+*Collection hiện đang rỗng (chưa có tài liệu)*
 
 ## `orders_backup_20261005`
 
@@ -1549,7 +1553,7 @@
 |-------------|------|----------|
 | `__v` | `Number` | 1/10 |
 | `_id` | `ObjectId` | 10/10 |
-| `_user` | `ObjectId` | 9/10 |
+| `_user` | `Null | ObjectId` | 9/10 |
 | `addresses` | `Array` | 9/10 |
 | `addresses[]` | `Object` | 9/10 |
 | `addresses[].city` | `String` | 9/10 |
@@ -1623,9 +1627,9 @@
 | `customerEmail` | `String` | 10/10 |
 | `customerPhone` | `String` | 9/10 |
 | `dateAdded` | `Date` | 9/10 |
-| `deliveredAt` | `Date` | 9/10 |
+| `deliveredAt` | `Date | Null` | 9/10 |
 | `discountAmount` | `Number` | 9/10 |
-| `estimatedDeliveryDate` | `Date` | 9/10 |
+| `estimatedDeliveryDate` | `Date | Null` | 9/10 |
 | `items` | `Array` | 9/10 |
 | `items[]` | `Object` | 9/10 |
 | `items[].productId` | `ObjectId` | 9/10 |
@@ -1640,20 +1644,20 @@
 | `items[].quantity` | `Number` | 9/10 |
 | `items[].subtotal` | `Number` | 9/10 |
 | `items[].unitPrice` | `Number` | 9/10 |
-| `items[].variantId` | `String` | 9/10 |
+| `items[].variantId` | `Null` | 9/10 |
 | `notes` | `String` | 10/10 |
 | `orderId` | `String` | 10/10 |
 | `outcome` | `Object` | 1/10 |
 | `outcome.seller_message` | `String` | 1/10 |
-| `paidAt` | `String` | 1/10 |
+| `paidAt` | `Null` | 1/10 |
 | `paymentFee` | `Number` | 1/10 |
-| `paymentMethodId` | `String` | 1/10 |
-| `paymentMethodSnapshot` | `String` | 1/10 |
+| `paymentMethodId` | `Null` | 1/10 |
+| `paymentMethodSnapshot` | `Null` | 1/10 |
 | `paymentProvider` | `String` | 1/10 |
 | `paymentStatus` | `String` | 9/10 |
 | `refundedAmount` | `Number` | 1/10 |
-| `refundedAt` | `String` | 1/10 |
-| `shippedAt` | `Date` | 9/10 |
+| `refundedAt` | `Null` | 1/10 |
+| `shippedAt` | `Date | Null` | 9/10 |
 | `shippingAddress` | `Object` | 9/10 |
 | `shippingAddress.address` | `String` | 9/10 |
 | `shippingAddress.district` | `String` | 9/10 |
@@ -1668,8 +1672,8 @@
 | `shippingLogs[].location` | `String` | 4/10 |
 | `shippingLogs[].status` | `String` | 4/10 |
 | `shippingLogs[].timestamp` | `Date` | 4/10 |
-| `shippingMethodId` | `String` | 1/10 |
-| `shippingMethodSnapshot` | `String` | 1/10 |
+| `shippingMethodId` | `Null` | 1/10 |
+| `shippingMethodSnapshot` | `Null` | 1/10 |
 | `shippingProvider` | `String` | 9/10 |
 | `status` | `String` | 10/10 |
 | `statusHistory` | `Array` | 10/10 |
@@ -1677,7 +1681,7 @@
 | `statusHistory[].note` | `String` | 10/10 |
 | `statusHistory[].status` | `String` | 10/10 |
 | `statusHistory[].updatedAt` | `Date | String` | 10/10 |
-| `statusHistory[].updatedBy` | `ObjectId` | 2/10 |
+| `statusHistory[].updatedBy` | `Null | ObjectId` | 2/10 |
 | `subtotal` | `Number` | 9/10 |
 | `taxAmount` | `Number` | 9/10 |
 | `totalAmount` | `Number` | 9/10 |
@@ -1767,7 +1771,7 @@
 | `cart.shippingType` | `String` | 1/10 |
 | `cart.totalPrice` | `Number` | 9/10 |
 | `cart.totalQty` | `Number` | 9/10 |
-| `couponCode` | `String` | 10/10 |
+| `couponCode` | `Null | String` | 10/10 |
 | `couponDiscount` | `Number` | 10/10 |
 | `createdAt` | `Date` | 10/10 |
 | `currency` | `String` | 10/10 |
@@ -1778,17 +1782,17 @@
 | `customerEmail` | `String` | 10/10 |
 | `customerPhone` | `String` | 9/10 |
 | `dateAdded` | `Date` | 9/10 |
-| `deliveredAt` | `Date` | 9/10 |
+| `deliveredAt` | `Date | Null` | 9/10 |
 | `discountAmount` | `Number` | 10/10 |
-| `estimatedDeliveryDate` | `Date` | 9/10 |
+| `estimatedDeliveryDate` | `Date | Null` | 9/10 |
 | `items` | `Array` | 10/10 |
 | `items[]` | `Object` | 10/10 |
 | `items[].image` | `String` | 10/10 |
 | `items[].name` | `String` | 10/10 |
 | `items[].productId` | `String` | 10/10 |
 | `items[].productSnapshot` | `Object` | 10/10 |
-| `items[].productSnapshot.brand` | `String` | 9/10 |
-| `items[].productSnapshot.category` | `String` | 9/10 |
+| `items[].productSnapshot.brand` | `Null` | 9/10 |
+| `items[].productSnapshot.category` | `Null | String` | 9/10 |
 | `items[].productSnapshot.image` | `String` | 10/10 |
 | `items[].productSnapshot.name` | `String` | 9/10 |
 | `items[].productSnapshot.price` | `Number` | 9/10 |
@@ -1809,29 +1813,29 @@
 | `orderId` | `String` | 10/10 |
 | `outcome` | `Object` | 1/10 |
 | `outcome.seller_message` | `String` | 1/10 |
-| `paidAt` | `String` | 1/10 |
+| `paidAt` | `Null` | 1/10 |
 | `payment` | `Object` | 10/10 |
 | `payment.method` | `String` | 10/10 |
-| `payment.paidAt` | `Date | String` | 10/10 |
-| `payment.provider` | `String` | 10/10 |
+| `payment.paidAt` | `Date | Null | String` | 10/10 |
+| `payment.provider` | `Null | String` | 10/10 |
 | `payment.refundedAmount` | `Number` | 10/10 |
-| `payment.refundedAt` | `String` | 10/10 |
+| `payment.refundedAt` | `Null` | 10/10 |
 | `payment.status` | `String` | 10/10 |
-| `payment.transactionId` | `String` | 10/10 |
+| `payment.transactionId` | `Null` | 10/10 |
 | `paymentFee` | `Number` | 10/10 |
-| `paymentMethodId` | `String` | 1/10 |
-| `paymentMethodSnapshot` | `String` | 1/10 |
+| `paymentMethodId` | `Null` | 1/10 |
+| `paymentMethodSnapshot` | `Null` | 1/10 |
 | `paymentProvider` | `String` | 1/10 |
 | `paymentStatus` | `String` | 9/10 |
 | `refundedAmount` | `Number` | 1/10 |
-| `refundedAt` | `String` | 1/10 |
-| `shippedAt` | `Date` | 9/10 |
+| `refundedAt` | `Null` | 1/10 |
+| `shippedAt` | `Date | Null` | 9/10 |
 | `shipping` | `Object` | 10/10 |
-| `shipping.deliveredAt` | `Date | String` | 10/10 |
-| `shipping.estimatedDeliveryDate` | `String` | 10/10 |
+| `shipping.deliveredAt` | `Date | Null | String` | 10/10 |
+| `shipping.estimatedDeliveryDate` | `Null` | 10/10 |
 | `shipping.method` | `String` | 10/10 |
 | `shipping.provider` | `String` | 10/10 |
-| `shipping.shippedAt` | `Date | String` | 10/10 |
+| `shipping.shippedAt` | `Date | Null | String` | 10/10 |
 | `shipping.trackingNumber` | `String` | 10/10 |
 | `shippingAddress` | `Object` | 10/10 |
 | `shippingAddress.address` | `String` | 10/10 |
@@ -1850,8 +1854,8 @@
 | `shippingLogs[].location` | `String` | 4/10 |
 | `shippingLogs[].status` | `String` | 4/10 |
 | `shippingLogs[].timestamp` | `Date` | 4/10 |
-| `shippingMethodId` | `String` | 1/10 |
-| `shippingMethodSnapshot` | `String` | 1/10 |
+| `shippingMethodId` | `Null` | 1/10 |
+| `shippingMethodSnapshot` | `Null` | 1/10 |
 | `shippingProvider` | `String` | 9/10 |
 | `status` | `String` | 10/10 |
 | `statusHistory` | `Array` | 10/10 |
@@ -1859,7 +1863,7 @@
 | `statusHistory[].note` | `String` | 10/10 |
 | `statusHistory[].status` | `String` | 10/10 |
 | `statusHistory[].updatedAt` | `Date | String` | 10/10 |
-| `statusHistory[].updatedBy` | `ObjectId` | 2/10 |
+| `statusHistory[].updatedBy` | `Null | ObjectId` | 2/10 |
 | `subtotal` | `Number` | 10/10 |
 | `taxAmount` | `Number` | 10/10 |
 | `totalAmount` | `Number` | 10/10 |
@@ -1889,10 +1893,10 @@
 | `items[].isSelected` | `Boolean` | 5/6 |
 | `items[].productId` | `String` | 5/6 |
 | `items[].qty` | `Number` | 5/6 |
-| `items[].selectedClassification` | `String` | 5/6 |
-| `items[].selectedColor` | `String` | 5/6 |
-| `items[].selectedSize` | `String` | 5/6 |
-| `items[].variantId` | `String` | 5/6 |
+| `items[].selectedClassification` | `Null` | 5/6 |
+| `items[].selectedColor` | `Null` | 5/6 |
+| `items[].selectedSize` | `Null` | 5/6 |
+| `items[].variantId` | `Null` | 5/6 |
 | `updatedAt` | `Date` | 6/6 |
 
 ## `payment_transactions`
@@ -1914,10 +1918,167 @@
 | `method` | `String` | 1/1 |
 | `orderCode` | `String` | 1/1 |
 | `orderId` | `ObjectId` | 1/1 |
-| `paidAt` | `String` | 1/1 |
+| `paidAt` | `Null` | 1/1 |
 | `paymentLink` | `String` | 1/1 |
 | `provider` | `String` | 1/1 |
 | `providerTransactionId` | `String` | 1/1 |
 | `status` | `String` | 1/1 |
 | `updatedAt` | `Date` | 1/1 |
+
+## `newsletter_subscribers`
+
+> Danh sách khách hàng và khách vãng lai đăng ký nhận bản tin ưu đãi (email, trạng thái SUBSCRIBED/UNSUBSCRIBED, nguồn đăng ký, thời gian).
+
+- **Documents**: 2  
+- **Sampled**: 2  
+- **Fields**: 8  
+
+| Field (path) | Type | Frequency |
+|-------------|------|----------|
+| `__v` | `Number` | 2/2 |
+| `_id` | `ObjectId` | 2/2 |
+| `createdAt` | `Date` | 2/2 |
+| `email` | `String` | 2/2 |
+| `source` | `String` | 2/2 |
+| `status` | `String` | 2/2 |
+| `subscribedAt` | `Date` | 2/2 |
+| `updatedAt` | `Date` | 2/2 |
+
+## `conversations`
+
+> Phiên hội thoại hỗ trợ khách hàng với nhân viên (trạng thái WAITING_ADMIN, IN_PROGRESS, CLOSED, thông tin khách, phân công admin, yêu cầu hủy 5s).
+
+- **Documents**: 12  
+- **Sampled**: 12  
+- **Fields**: 28  
+
+| Field (path) | Type | Frequency |
+|-------------|------|----------|
+| `__v` | `Number` | 12/12 |
+| `_id` | `ObjectId` | 12/12 |
+| `acceptedAt` | `Date | Null` | 12/12 |
+| `adminLastReadAt` | `Date | Null` | 12/12 |
+| `assignedAdminId` | `Null | ObjectId` | 12/12 |
+| `cancelRequest` | `Object` | 6/12 |
+| `cancelRequest._id` | `ObjectId` | 6/12 |
+| `cancelRequest.expiresAt` | `Date` | 6/12 |
+| `cancelRequest.requestedAt` | `Date` | 6/12 |
+| `cancelRequest.status` | `String` | 6/12 |
+| `channel` | `String` | 12/12 |
+| `closedAt` | `Date | Null` | 12/12 |
+| `createdAt` | `Date` | 12/12 |
+| `customerLastReadAt` | `Date | Null` | 12/12 |
+| `guestId` | `Null | String` | 12/12 |
+| `internalNote` | `String` | 12/12 |
+| `internalNoteUpdatedAt` | `Date | Null` | 12/12 |
+| `internalNoteUpdatedBy` | `Null` | 12/12 |
+| `lastMessageAt` | `Date` | 12/12 |
+| `lastMessageId` | `ObjectId` | 12/12 |
+| `lastMessagePreview` | `String` | 12/12 |
+| `requestedAt` | `Date` | 12/12 |
+| `source` | `String` | 12/12 |
+| `status` | `String` | 12/12 |
+| `unreadAdminCount` | `Number` | 12/12 |
+| `unreadCustomerCount` | `Number` | 12/12 |
+| `updatedAt` | `Date` | 12/12 |
+| `userId` | `Null | ObjectId` | 12/12 |
+
+## `conversation_messages`
+
+> Tin nhắn trong cuộc hội thoại hỗ trợ giữa khách hàng, nhân viên admin và hệ thống (CUSTOMER, ADMIN, SYSTEM, timestamp, systemEvent).
+
+- **Documents**: 71  
+- **Sampled**: 71  
+- **Fields**: 17  
+
+| Field (path) | Type | Frequency |
+|-------------|------|----------|
+| `__v` | `Number` | 50/71 |
+| `_id` | `ObjectId` | 71/71 |
+| `adminContent` | `Null | String` | 24/71 |
+| `attachments` | `Array` | 50/71 |
+| `clientMessageId` | `Null | String` | 51/71 |
+| `content` | `String` | 71/71 |
+| `conversationId` | `ObjectId` | 71/71 |
+| `createdAt` | `Date` | 71/71 |
+| `messageType` | `String` | 71/71 |
+| `orderRefId` | `Null` | 50/71 |
+| `productReferences` | `Array` | 50/71 |
+| `readByAdminAt` | `Date | Null` | 50/71 |
+| `readByCustomerAt` | `Date | Null` | 51/71 |
+| `senderId` | `Null | ObjectId` | 51/71 |
+| `senderType` | `String` | 71/71 |
+| `systemEvent` | `Null | String` | 52/71 |
+| `updatedAt` | `Date` | 71/71 |
+
+## `chatbot_sessions`
+
+> Phiên trò chuyện của người dùng với AI Assistant / Chatbot Chéri (lịch sử tin nhắn, sessionId, guestId, ngữ cảnh tư vấn).
+
+- **Documents**: 121  
+- **Sampled**: 121  
+- **Fields**: 50  
+
+| Field (path) | Type | Frequency |
+|-------------|------|----------|
+| `__v` | `Number` | 121/121 |
+| `_id` | `ObjectId` | 121/121 |
+| `context` | `Object` | 121/121 |
+| `context.criteria` | `Object` | 5/121 |
+| `context.criteria.category` | `String` | 5/121 |
+| `context.criteria.onlyInStock` | `Boolean` | 5/121 |
+| `context.criteria.queryText` | `String` | 5/121 |
+| `context.criteria.size` | `String` | 1/121 |
+| `context.criteria.sortBy` | `String` | 2/121 |
+| `context.lastIntent` | `String` | 119/121 |
+| `context.lastMentionedProductId` | `String` | 43/121 |
+| `context.lastProducts` | `Array` | 121/121 |
+| `context.lastProducts[]` | `Object` | 43/121 |
+| `context.lastProducts[].availableColors` | `Array` | 43/121 |
+| `context.lastProducts[].availableColors[]` | `String` | 42/121 |
+| `context.lastProducts[].availableSizes` | `Array` | 43/121 |
+| `context.lastProducts[].availableSizes[]` | `String` | 42/121 |
+| `context.lastProducts[].category` | `String` | 43/121 |
+| `context.lastProducts[].colors` | `Array` | 43/121 |
+| `context.lastProducts[].colors[]` | `String` | 42/121 |
+| `context.lastProducts[].id` | `String` | 43/121 |
+| `context.lastProducts[].imageUrl` | `String` | 43/121 |
+| `context.lastProducts[].inStock` | `Boolean` | 43/121 |
+| `context.lastProducts[].onSale` | `Boolean` | 43/121 |
+| `context.lastProducts[].originalPrice` | `Null | Number` | 43/121 |
+| `context.lastProducts[].price` | `Number` | 43/121 |
+| `context.lastProducts[].sizes` | `Array` | 43/121 |
+| `context.lastProducts[].sizes[]` | `String` | 42/121 |
+| `context.lastProducts[].stockSummary` | `String` | 43/121 |
+| `context.lastProducts[].title` | `String` | 43/121 |
+| `context.lastProducts[].titleUrl` | `String` | 43/121 |
+| `context.sizingProfile` | `Object` | 15/121 |
+| `context.sizingProfile.fitPreference` | `String` | 1/121 |
+| `context.sizingProfile.height` | `Number` | 2/121 |
+| `context.sizingProfile.waist` | `Number` | 1/121 |
+| `context.sizingProfile.weight` | `Number` | 4/121 |
+| `createdAt` | `Date` | 121/121 |
+| `expiresAt` | `Date` | 121/121 |
+| `guestId` | `String` | 3/121 |
+| `isActive` | `Boolean` | 121/121 |
+| `messages` | `Array` | 121/121 |
+| `messages[]` | `Object` | 119/121 |
+| `messages[]._id` | `ObjectId` | 119/121 |
+| `messages[].content` | `String` | 119/121 |
+| `messages[].intent` | `String` | 119/121 |
+| `messages[].role` | `String` | 119/121 |
+| `messages[].timestamp` | `Date` | 119/121 |
+| `sessionId` | `String` | 121/121 |
+| `updatedAt` | `Date` | 121/121 |
+| `userId` | `ObjectId` | 92/121 |
+
+## `chat_rate_limits`
+
+> Giới hạn tần suất gửi tin nhắn chat của người dùng / IP để chống spam và tấn công DoS.
+
+- **Documents**: 0  
+- **Sampled**: 0  
+- **Fields**: 0  
+
+*Collection hiện đang rỗng (chưa có tài liệu)*
 

@@ -169,17 +169,24 @@
                             </button>
                           </div>
                         </div>
-                        <div class="home-product-info">
-                          @if (product.tags?.length) {
-                            <span class="home-product-category">{{ product.tags[0] }}</span>
-                          }
-                          <h4 class="home-product-name">{{ product.title }}</h4>
-                          <div class="home-product-prices">
-                            <span class="home-product-price">{{ (product.salePrice || product.regularPrice) | priceFormat }} {{ currency() }}</span>
-                            @if (product.onSale && product.salePrice) {
-                              <span class="home-product-original">{{ product.regularPrice | priceFormat }} {{ currency() }}</span>
+                        <div class="home-product-bottom">
+                          <div class="home-product-info">
+                            @if (product.tags?.length) {
+                              <span class="home-product-category">{{ product.tags[0] }}</span>
                             }
+                            <h4 class="home-product-name">{{ product.title }}</h4>
+                            <div class="home-product-prices">
+                              <span class="home-product-price">{{ (product.salePrice || product.regularPrice) | priceFormat }} {{ currency() }}</span>
+                              @if (product.onSale && product.salePrice) {
+                                <span class="home-product-original">{{ product.regularPrice | priceFormat }} {{ currency() }}</span>
+                              }
+                            </div>
                           </div>
+
+                          <app-product-rating
+                            class="home-product-rating"
+                            [productId]="product._id || product.id">
+                          </app-product-rating>
                         </div>
                       </div>
                     }
@@ -226,17 +233,24 @@
                             </button>
                           </div>
                         </div>
-                        <div class="home-product-info">
-                          @if (product.tags?.length) {
-                            <span class="home-product-category">{{ product.tags[0] }}</span>
-                          }
-                          <h4 class="home-product-name">{{ product.title }}</h4>
-                          <div class="home-product-prices">
-                            <span class="home-product-price">{{ (product.salePrice || product.regularPrice) | priceFormat }} {{ currency() }}</span>
-                            @if (product.onSale && product.salePrice) {
-                              <span class="home-product-original">{{ product.regularPrice | priceFormat }} {{ currency() }}</span>
+                        <div class="home-product-bottom">
+                          <div class="home-product-info">
+                            @if (product.tags?.length) {
+                              <span class="home-product-category">{{ product.tags[0] }}</span>
                             }
+                            <h4 class="home-product-name">{{ product.title }}</h4>
+                            <div class="home-product-prices">
+                              <span class="home-product-price">{{ (product.salePrice || product.regularPrice) | priceFormat }} {{ currency() }}</span>
+                              @if (product.onSale && product.salePrice) {
+                                <span class="home-product-original">{{ product.regularPrice | priceFormat }} {{ currency() }}</span>
+                              }
+                            </div>
                           </div>
+
+                          <app-product-rating
+                            class="home-product-rating"
+                            [productId]="product._id || product.id">
+                          </app-product-rating>
                         </div>
                       </div>
                     }
@@ -434,17 +448,24 @@
                   </button>
                 </div>
               </div>
-              <div class="home-product-info">
-                @if (product.tags?.length) {
-                <span class="home-product-category">{{ product.tags[0] }}</span>
-                }
-                <h4 class="home-product-name">{{ product.title }}</h4>
-                <div class="home-product-prices">
-                  <span class="home-product-price">{{ (product.salePrice || product.regularPrice) | priceFormat }} {{ currency() }}</span>
-                  @if (product.onSale && product.salePrice) {
-                  <span class="home-product-original">{{ product.regularPrice | priceFormat }} {{ currency() }}</span>
+              <div class="home-product-bottom">
+                <div class="home-product-info">
+                  @if (product.tags?.length) {
+                  <span class="home-product-category">{{ product.tags[0] }}</span>
                   }
+                  <h4 class="home-product-name">{{ product.title }}</h4>
+                  <div class="home-product-prices">
+                    <span class="home-product-price">{{ (product.salePrice || product.regularPrice) | priceFormat }} {{ currency() }}</span>
+                    @if (product.onSale && product.salePrice) {
+                    <span class="home-product-original">{{ product.regularPrice | priceFormat }} {{ currency() }}</span>
+                    }
+                  </div>
                 </div>
+
+                <app-product-rating
+                  class="home-product-rating"
+                  [productId]="product._id || product.id">
+                </app-product-rating>
               </div>
             </div>
             }

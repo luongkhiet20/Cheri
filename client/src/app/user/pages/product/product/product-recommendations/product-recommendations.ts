@@ -21,13 +21,14 @@ import { Product } from '../../../../shared/models';
 import { ApiService } from '../../../../../services/api.service';
 import { SignalStore } from '../../../../../store/signal.store';
 import { WishlistButtonComponent } from '../../../../shared/wishlist-button/wishlist-button.component';
+import { ProductRatingComponent } from '../../../../shared/product-rating/product-rating.component';
 import { NotificationService } from '../../../../shared/notification/notification.service';
 import { formatVND } from '../../../../../pipes/price.pipe';
 
 @Component({
   selector: 'app-product-recommendations',
   standalone: true,
-  imports: [CommonModule, RouterModule, WishlistButtonComponent],
+  imports: [CommonModule, RouterModule, WishlistButtonComponent, ProductRatingComponent],
   templateUrl: './product-recommendations.html',
   styleUrl: './product-recommendations.css',
   changeDetection: ChangeDetectionStrategy.OnPush

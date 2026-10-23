@@ -24,6 +24,7 @@ import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
 import { ThemeService } from '../../../../services/theme.service';
 import { PriceFormatPipe } from '../../../../pipes/price.pipe';
 import { WishlistButtonComponent } from '../../../shared/wishlist-button/wishlist-button.component';
+import { ProductRatingComponent } from '../../../shared/product-rating/product-rating.component';
 import {
   HomeSection,
   CarouselSlideItem,
@@ -50,6 +51,7 @@ import {
     TranslatePipe,
     PriceFormatPipe,
     WishlistButtonComponent,
+    ProductRatingComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })

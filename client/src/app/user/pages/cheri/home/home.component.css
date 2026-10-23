@@ -576,11 +576,31 @@
   transform: scale(1);
 }
 
+.home-product-bottom {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  width: 100%;
+  min-width: 0;
+  gap: 6px;
+  box-sizing: border-box;
+}
+
 .home-product-info {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding-right: 4px;
+  padding-right: 0;
+}
+
+.home-product-rating {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-self: flex-end;
+  white-space: nowrap;
+  margin-bottom: 1px;
 }
 
 .home-product-category {
@@ -608,7 +628,8 @@
 .home-product-prices {
   display: flex;
   align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 2px 8px;
 }
 
 .home-product-price {

@@ -694,15 +694,34 @@
   transform: scale(1.08);
 }
 
-/* ── Card Info ── */
+/* ── Card Info & Rating Row ── */
+.pcard-bottom-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  padding: 1px 2px 4px;
+  box-sizing: border-box;
+}
+
 .pcard-info {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 1px 2px 4px;
+  padding: 0;
   min-width: 0;
-  width: 100%;
+  flex: 1;
   box-sizing: border-box;
+}
+
+.pcard-rating {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-self: flex-end;
+  white-space: nowrap;
+  margin-bottom: 1px;
 }
 
 .pcard-tag {
@@ -739,7 +758,8 @@
 .pcard-prices {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 2px 6px;
   margin-top: 1px;
 }
 

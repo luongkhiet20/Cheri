@@ -9,12 +9,13 @@ import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
 import { Product } from '../../shared/models';
 import { WishlistService } from '../../../services/wishlist.service';
 import { WishlistButtonComponent } from '../../shared/wishlist-button/wishlist-button.component';
+import { ProductRatingComponent } from '../../shared/product-rating/product-rating.component';
 import { formatVND } from '../../../pipes/price.pipe';
 
 @Component({
   selector: 'app-wishlist',
   standalone: true,
-  imports: [CommonModule, RouterModule, WishlistButtonComponent],
+  imports: [CommonModule, RouterModule, WishlistButtonComponent, ProductRatingComponent],
   templateUrl: './wishlist.html',
   styleUrl: './wishlist.css'
 })

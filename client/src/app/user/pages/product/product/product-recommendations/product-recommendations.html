@@ -121,19 +121,26 @@
           </div>
         </div>
 
-        <!-- Info -->
-        <div class="pcard-info">
-          @if (product.tags?.length || product.categoryName) {
-          <span class="pcard-tag">{{ product.categoryName || product.tags[0] }}</span>
-          }
-          <h4 class="pcard-name">{{ product.name || product.title }}</h4>
-          <div class="pcard-prices">
-            <span class="pcard-price">{{ formatVND(hasDiscount(product) ? (product.salePrice || product.regularPrice) :
-              (product.salePrice || product.regularPrice || product.price || 0)) }}</span>
-            @if (hasDiscount(product)) {
-            <span class="pcard-original">{{ formatVND(product.regularPrice || product.salePrice) }}</span>
+        <!-- Info & Rating -->
+        <div class="pcard-bottom-row">
+          <div class="pcard-info">
+            @if (product.tags?.length || product.categoryName) {
+            <span class="pcard-tag">{{ product.categoryName || product.tags[0] }}</span>
             }
+            <h4 class="pcard-name">{{ product.name || product.title }}</h4>
+            <div class="pcard-prices">
+              <span class="pcard-price">{{ formatVND(hasDiscount(product) ? (product.salePrice || product.regularPrice) :
+                (product.salePrice || product.regularPrice || product.price || 0)) }}</span>
+              @if (hasDiscount(product)) {
+              <span class="pcard-original">{{ formatVND(product.regularPrice || product.salePrice) }}</span>
+              }
+            </div>
           </div>
+
+          <app-product-rating
+            class="pcard-rating"
+            [productId]="product._id || product.id">
+          </app-product-rating>
         </div>
 
       </div>

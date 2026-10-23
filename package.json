@@ -15,6 +15,7 @@
     "test:chat": "node --test server/src/test/chatbot-full-suite.test.cjs",
     "test:chatbot": "node --test server/src/test/chatbot-full-suite.test.cjs",
     "test:storefront-search": "node --test client/src/app/user/pages/product/products/products-search-flow.test.cjs server/src/test/products-keyword-search.test.cjs",
+    "test:newsletter": "node --test server/src/test/newsletter-subscribers.test.cjs",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node server/dist/main",
     "format": "prettier --write \"server/**/*.ts\"",

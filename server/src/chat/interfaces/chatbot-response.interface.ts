@@ -59,6 +59,8 @@ export interface ChatbotResponse {
   sessionId?: string;
   quickReplies?: string[];
   sizingProfile?: any;
+  currentCategory?: string;
+  criteria?: any;
 }
 
 export type ChatResponseDto = ChatbotResponse;

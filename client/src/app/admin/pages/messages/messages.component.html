@@ -1,0 +1,84 @@
+<div class="admin-messages-page-wrapper">
+  <div
+    class="admin-messages-page"
+    [class.view-list]="mobileView === 'list'"
+    [class.view-chat]="mobileView === 'chat'">
+
+    <!-- CỘT 1: DANH SÁCH HỘI THOẠI HỖ TRỢ -->
+    <app-conversation-list
+      [conversations]="conversations"
+      [selectedConversation]="selectedConversation"
+      [counts]="counts"
+      [activeFilter]="activeFilter"
+      [searchTerm]="searchTerm"
+      [isLoadingConversations]="isLoadingConversations"
+      [currentAdminId]="getCurrentAdminId()"
+      (conversationSelected)="selectConversation($event)"
+      (filterChanged)="setFilter($event)"
+      (searchChanged)="searchTerm = $event"
+      (searchSubmitted)="onSearch()">
+    </app-conversation-list>
+
+    <!-- CỘT 2: KHUNG TRÒ CHUYỆN TRỰC TIẾP -->
+    <app-chat-panel
+      #chatPanel
+      [selectedConversation]="selectedConversation"
+      [messages]="messages"
+      [newMessageText]="newMessageText"
+      [isLoadingMessages]="isLoadingMessages"
+      [isSendingMessage]="isSendingMessage"
+      [isAccepting]="isAccepting"
+      [isReturning]="isReturning"
+      [isClosing]="isClosing"
+      [currentAdminId]="getCurrentAdminId()"
+      [isSuperAdmin]="isSuperAdmin()"
+      [showCustomerInfoDrawer]="showCustomerInfoDrawer"
+      (messageTextChanged)="newMessageText = $event"
+      (sendMessageRequested)="sendMessage()"
+      (acceptRequested)="acceptConversation()"
+      (returnRequested)="returnConversation()"
+      (closeRequested)="closeConversation()"
+      (backRequested)="backToConversationsList()"
+      (profileToggleRequested)="toggleCustomerInfo()">
+    </app-chat-panel>
+
+    <!-- CỘT 3: THÔNG TIN KHÁCH HÀNG & CRM (Docked trên Desktop lớn / Drawer trên Laptop nhỏ, Tablet, Mobile) -->
+    <app-customer-profile
+      [selectedConversation]="selectedConversation"
+      [customerStats]="customerStats"
+      [internalNoteText]="internalNoteText"
+      [isSavingNote]="isSavingNote"
+      [noteSavedSuccess]="noteSavedSuccess"
+      [showCustomerInfoDrawer]="showCustomerInfoDrawer"
+      (noteTextChanged)="internalNoteText = $event"
+      (saveNoteRequested)="saveInternalNote()"
+      (closeProfileRequested)="closeCustomerInfo()">
+    </app-customer-profile>
+
+    <!-- Backdrop khi Drawer mở trên Tablet/Mobile/Laptop -->
+    <div
+      class="drawer-backdrop"
+      *ngIf="showCustomerInfoDrawer"
+      (click)="closeCustomerInfo()"
+      aria-hidden="true">
+    </div>
+
+  </div>
+
+  <!-- POPUP XÁC NHẬN CHUẨN HÓA CHO 3 NÚT (TIẾP NHẬN / TRẢ / KẾT THÚC) -->
+  <app-confirm-dialog
+    [isOpen]="actionDialog.isOpen"
+    [title]="actionDialog.config?.title || 'Xác nhận'"
+    [message]="actionDialog.config?.message || ''"
+    [confirmLabel]="actionDialog.config?.confirmLabel || 'Xác nhận'"
+    [cancelLabel]="actionDialog.config?.cancelLabel || 'Hủy'"
+    [variant]="actionDialog.config?.variant || 'default'"
+    [iconType]="actionDialog.config?.iconType || null"
+    [isLoading]="actionDialog.isLoading"
+    [errorMessage]="actionDialog.errorMessage"
+    [autoCloseOnConfirm]="false"
+    (confirm)="handleActionDialogConfirm()"
+    (cancel)="handleActionDialogCancel()">
+  </app-confirm-dialog>
+</div>
+

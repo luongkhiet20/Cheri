@@ -1,0 +1,227 @@
+<div class="page-content">
+
+  <!-- Page Header -->
+  <div class="page-top">
+    <div>
+      <app-admin-breadcrumb [items]="breadcrumbItems"></app-admin-breadcrumb>
+      <h1 class="page-title">Quản lý đánh giá</h1>
+    </div>
+  </div>
+
+  <!-- Error Alert Message -->
+  <div *ngIf="errorMessage" class="alert-box alert-error" role="alert">
+    <div class="alert-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+    </div>
+    <div class="alert-content">{{ errorMessage }}</div>
+  </div>
+
+  <!-- Reusable Toolbar: Checkbox + Search + Filter + Refresh + Delete Selected + Total -->
+  <app-admin-toolbar
+    searchPlaceholder="Tìm kiếm theo sản phẩm, khách hàng, mã đơn, nội dung..."
+    [filterFields]="filterFields"
+    [selectable]="true"
+    [allSelected]="allSelected"
+    [indeterminate]="isIndeterminate"
+    [selectedCount]="selectedCount"
+    [showDeleteSelected]="true"
+    [total]="displayTotal"
+    [isLoading]="isLoading"
+    (searchChange)="onSearch($event)"
+    (filterChange)="onFilter($event)"
+    (refresh)="onRefresh()"
+    (selectAllChange)="onToolbarSelectAll()"
+    (deleteSelected)="onDeleteSelected()">
+  </app-admin-toolbar>
+
+  <!-- Loading State -->
+  <app-loading-state *ngIf="isLoading" message="Đang tải dữ liệu đánh giá từ MongoDB Atlas..."></app-loading-state>
+
+  <!-- Empty State -->
+  <app-empty-state
+    *ngIf="!isLoading && (!data || data.length === 0)"
+    title="Không tìm thấy đánh giá nào"
+    description="Không có đánh giá nào khớp với điều kiện tìm kiếm hoặc chưa có khách hàng nào gửi đánh giá."
+    actionLabel="Làm mới"
+    (action)="loadReviews()">
+  </app-empty-state>
+
+  <!-- Data Table with row checkboxes -->
+  <app-admin-table
+    *ngIf="!isLoading && data && data.length > 0"
+    [columns]="columns"
+    [data]="data"
+    [actions]="actions"
+    [pagination]="pagination"
+    [selectable]="true"
+    [selectedIds]="selectedIds"
+    totalLabel="đánh giá"
+    (actionClick)="onAction($event)"
+    (selectionChange)="onSelectionChange($event)"
+    (pageChange)="onPageChange($event)"
+    (pageSizeChange)="onPageSizeChange($event)">
+  </app-admin-table>
+
+</div>
+
+<!-- Reusable Confirm Dialog (Delete Single & Bulk Delete) -->
+<app-confirm-dialog
+  [isOpen]="confirmOpen"
+  [title]="confirmTitle"
+  [message]="confirmMessage"
+  [confirmLabel]="confirmLabel"
+  [variant]="confirmVariant"
+  (confirmed)="onConfirmDialog()"
+  (cancelled)="onCancelDialog()">
+</app-confirm-dialog>
+
+<!-- Review Detail Modal -->
+<div class="dialog-overlay" *ngIf="isDetailModalOpen && selectedReview" (click)="closeDetailModal()" role="dialog" aria-modal="true" aria-label="Chi tiết đánh giá">
+  <div class="dialog-panel detail-dialog-panel" (click)="$event.stopPropagation()">
+    
+    <div class="dialog-header">
+      <div class="detail-header-left">
+        <h2 class="dialog-title">Chi tiết đánh giá</h2>
+        <span class="detail-id">#{{ selectedReview.id }}</span>
+      </div>
+      <button class="dialog-close" (click)="closeDetailModal()" aria-label="Đóng">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <div class="dialog-body detail-dialog-body">
+      
+      <!-- Product Card Info -->
+      <div class="detail-section">
+        <div class="section-label">Sản phẩm được đánh giá</div>
+        <div class="product-info-box">
+          <img
+            [src]="selectedReview.productImage || 'assets/images/placeholder.png'"
+            [alt]="selectedReview.productTitle"
+            class="product-thumb-detail"
+            onerror="this.src='https://placehold.co/80x100?text=S%E1%BA%A3n+ph%E1%BA%A9m'">
+          <div class="product-info-meta">
+            <h3 class="product-title-detail">{{ selectedReview.productTitle }}</h3>
+            <span class="product-sub-detail" *ngIf="selectedReview.productId">ID: {{ selectedReview.productId }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Customer Info & Rating Row -->
+      <div class="detail-row-grid">
+        <!-- Customer Info -->
+        <div class="detail-section">
+          <div class="section-label">Khách hàng</div>
+          <div class="customer-info-box">
+            <div class="customer-avatar-wrap">
+              <img
+                *ngIf="selectedReview.image || selectedReview.customerAvatar || selectedReview.userAvatar"
+                [src]="selectedReview.image || selectedReview.customerAvatar || selectedReview.userAvatar"
+                [alt]="selectedReview.customerName"
+                class="customer-avatar-detail"
+                onerror="this.style.display='none'">
+              <div class="customer-avatar-fallback">
+                {{ selectedReview.userInitial || getUserInitial(selectedReview.customerName) }}
+              </div>
+            </div>
+            <div class="customer-meta">
+              <span class="customer-name-detail">{{ selectedReview.customerName }}</span>
+              <span class="customer-email-detail" *ngIf="selectedReview.customerEmail">{{ selectedReview.customerEmail }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rating Box -->
+        <div class="detail-section">
+          <div class="section-label">Mức đánh giá</div>
+          <div class="rating-box-detail">
+            <div class="rating-stars-large">
+              <span class="stars-gold">{{ '★'.repeat(selectedReview.ratingNum) }}</span><span class="stars-gray">{{ '☆'.repeat(5 - selectedReview.ratingNum) }}</span>
+            </div>
+            <span class="rating-number-badge">{{ selectedReview.ratingNum }} / 5 sao</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Comment Content -->
+      <div class="detail-section">
+        <div class="section-label">Nội dung đánh giá của khách hàng</div>
+        <div class="comment-full-box">
+          <p class="comment-text-full">{{ selectedReview.comment || '(Khách hàng không để lại nhận xét bằng lời nói)' }}</p>
+        </div>
+      </div>
+
+      <!-- Order & Meta Details Grid -->
+      <div class="detail-meta-grid">
+        <div class="meta-item">
+          <span class="meta-item-label">Mã đơn hàng:</span>
+          <span class="meta-item-value highlight-order">{{ selectedReview.orderIdDisplay }}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-item-label">Xác minh mua hàng:</span>
+          <span class="meta-item-value">
+            <app-admin-status-badge
+              [label]="selectedReview.verifiedBadge"
+              [variant]="selectedReview.verifiedBadgeVariant">
+            </app-admin-status-badge>
+          </span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-item-label">Trạng thái hiển thị:</span>
+          <span class="meta-item-value">
+            <app-admin-status-badge
+              [label]="selectedReview.status"
+              [variant]="selectedReview.statusVariant">
+            </app-admin-status-badge>
+          </span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-item-label">Ngày gửi đánh giá:</span>
+          <span class="meta-item-value">{{ selectedReview.createdAt | date:'HH:mm - dd/MM/yyyy' }}</span>
+        </div>
+        <div class="meta-item" *ngIf="selectedReview.updatedAt">
+          <span class="meta-item-label">Cập nhật lần cuối:</span>
+          <span class="meta-item-value">{{ selectedReview.updatedAt | date:'HH:mm - dd/MM/yyyy' }}</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="dialog-footer">
+      <button
+        *ngIf="selectedReview.rawStatus === 'APPROVED'"
+        class="btn btn-outline btn-warning"
+        (click)="updateStatus(selectedReview, 'REJECTED')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+          <line x1="1" y1="1" x2="23" y2="23"></line>
+        </svg>
+        Tạm ẩn đánh giá
+      </button>
+
+      <button
+        *ngIf="selectedReview.rawStatus !== 'APPROVED'"
+        class="btn btn-outline"
+        (click)="updateStatus(selectedReview, 'APPROVED')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+        Hiển thị đánh giá
+      </button>
+
+      <button class="btn btn-secondary" (click)="closeDetailModal()">
+        Đóng
+      </button>
+    </div>
+
+  </div>
+</div>

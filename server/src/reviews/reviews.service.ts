@@ -26,6 +26,8 @@ export class ReviewsService {
     private readonly productModel: Model<any>,
     @InjectModel('Order')
     private readonly orderModel: Model<any>,
+    @InjectModel('User')
+    private readonly userModel: Model<any>,
   ) {}
 
   /**
@@ -578,5 +580,189 @@ export class ReviewsService {
       // Không để lỗi tính rating làm gián đoạn transaction chính
       console.error('Lỗi khi tính lại rating sản phẩm:', err);
     }
+  }
+
+  /**
+   * Lấy danh sách đánh giá cho Quản trị viên kèm lọc, tìm kiếm, phân trang
+   */
+  async getAdminReviews(query: {
+    page?: number;
+    pageSize?: number;
+    search?: string;
+    rating?: number;
+    status?: string;
+    isVerifiedPurchase?: any;
+    sortKey?: string;
+    sortDir?: string;
+  }) {
+    const page = Math.max(1, Number(query.page) || 1);
+    const pageSize = Math.max(1, Math.min(100, Number(query.pageSize) || 20));
+    const skip = (page - 1) * pageSize;
+
+    const filter: any = {};
+
+    if (query.rating) {
+      const r = Number(query.rating);
+      if (r >= 1 && r <= 5) filter.rating = r;
+    }
+
+    if (query.status && query.status !== 'all') {
+      filter.status = query.status;
+    }
+
+    if (query.isVerifiedPurchase === true || query.isVerifiedPurchase === 'true') {
+      filter.isVerifiedPurchase = true;
+    } else if (query.isVerifiedPurchase === false || query.isVerifiedPurchase === 'false') {
+      filter.isVerifiedPurchase = false;
+    }
+
+    if (query.search && query.search.trim()) {
+      const term = query.search.trim();
+
+      const matchedProducts = await this.productModel
+        .find({
+          $or: [
+            { 'vi.title': { $regex: term, $options: 'i' } },
+            { titleUrl: { $regex: term, $options: 'i' } },
+          ],
+        })
+        .select('_id')
+        .lean()
+        .exec();
+      const productIds = matchedProducts.map((p) => p._id);
+
+      const matchedUsers = await this.userModel
+        .find({
+          $or: [
+            { fullName: { $regex: term, $options: 'i' } },
+            { name: { $regex: term, $options: 'i' } },
+            { email: { $regex: term, $options: 'i' } },
+          ],
+        })
+        .select('_id')
+        .lean()
+        .exec();
+      const userIds = matchedUsers.map((u) => u._id);
+
+      filter.$or = [
+        { productId: { $in: productIds } },
+        { userId: { $in: userIds } },
+        { userName: { $regex: term, $options: 'i' } },
+        { comment: { $regex: term, $options: 'i' } },
+        { orderId: { $regex: term, $options: 'i' } },
+      ];
+    }
+
+    const sort: any = {};
+    const sortField = ['createdAt', 'rating', 'status', 'isVerifiedPurchase'].includes(query.sortKey || '')
+      ? query.sortKey!
+      : 'createdAt';
+    sort[sortField] = query.sortDir === 'asc' ? 1 : -1;
+
+    const [items, total] = await Promise.all([
+      this.reviewModel
+        .find(filter)
+        .sort(sort)
+        .skip(skip)
+        .limit(pageSize)
+        .populate('productId', 'vi.title mainImage.url titleUrl id')
+        .populate('userId', 'fullName name email avatar')
+        .lean()
+        .exec(),
+      this.reviewModel.countDocuments(filter).exec(),
+    ]);
+
+    const formattedData = items.map((r: any) => {
+      const prod = r.productId;
+      const user = r.userId;
+      const customerName = user?.fullName || user?.name || r.userName || 'Khách hàng';
+      const customerAvatar = user?.avatar || r.userAvatar || '';
+
+      return {
+        ...r,
+        id: r._id.toString(),
+        productTitle: prod?.vi?.title || 'Sản phẩm Chéri',
+        productImage: prod?.mainImage?.url || null,
+        productUrl: prod?.titleUrl || '',
+        customerName,
+        customerAvatar,
+        image: customerAvatar,
+        avatar: customerAvatar,
+        customerEmail: user?.email || '',
+      };
+    });
+
+    return {
+      success: true,
+      data: formattedData,
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+      },
+    };
+  }
+
+  /**
+   * Lấy chi tiết đánh giá cho Admin
+   */
+  async getReviewDetail(reviewId: string) {
+    if (!isValidObjectId(reviewId)) {
+      throw new BadRequestException('ID đánh giá không hợp lệ');
+    }
+
+    const review = await this.reviewModel
+      .findById(reviewId)
+      .populate('productId', 'vi.title mainImage.url titleUrl id')
+      .populate('userId', 'fullName name email avatar createdAt')
+      .lean()
+      .exec();
+
+    if (!review) {
+      throw new NotFoundException('Không tìm thấy đánh giá');
+    }
+
+    const user: any = review.userId;
+    const customerName = user?.fullName || user?.name || (review as any).userName || 'Khách hàng';
+    const customerAvatar = user?.avatar || (review as any).userAvatar || '';
+
+    return {
+      success: true,
+      data: {
+        ...review,
+        id: (review as any)._id.toString(),
+        customerName,
+        customerAvatar,
+        image: customerAvatar,
+        avatar: customerAvatar,
+        customerEmail: user?.email || '',
+      },
+    };
+  }
+
+  /**
+   * Xóa hàng loạt đánh giá bởi Quản trị viên
+   */
+  async bulkDeleteReviewsByAdmin(ids: string[]) {
+    if (!Array.isArray(ids) || ids.length === 0) {
+      throw new BadRequestException('Danh sách ID không hợp lệ');
+    }
+
+    const validIds = ids.filter((id) => isValidObjectId(id)).map((id) => new Types.ObjectId(id));
+    const reviews = await this.reviewModel.find({ _id: { $in: validIds } }).select('productId').lean().exec();
+    const productIds = [...new Set(reviews.map((r: any) => r.productId.toString()))];
+
+    const res = await this.reviewModel.deleteMany({ _id: { $in: validIds } }).exec();
+
+    for (const pid of productIds) {
+      await this.recalculateProductRating(new Types.ObjectId(pid));
+    }
+
+    return {
+      success: true,
+      deletedCount: res.deletedCount,
+      message: `Đã xóa ${res.deletedCount} đánh giá thành công`,
+    };
   }
 }

@@ -1,0 +1,205 @@
+<main class="chat-column">
+  <ng-container *ngIf="selectedConversation; else noConvSelectedTpl">
+    <!-- Chat Header -->
+    <header class="chat-header">
+      <div class="chat-header-user">
+        <!-- Nút quay lại danh sách trên Mobile -->
+        <button
+          type="button"
+          class="btn-back-to-list"
+          (click)="onBack()"
+          aria-label="Quay lại danh sách hội thoại"
+          title="Quay lại danh sách">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+
+        <div class="header-avatar-wrap">
+          <img
+            *ngIf="getCustomerAvatar(selectedConversation); else chatHeaderAvatar"
+            [src]="getCustomerAvatar(selectedConversation)!"
+            alt="Avatar"
+            class="chat-header-avatar"
+          />
+          <ng-template #chatHeaderAvatar>
+            <div class="conv-avatar-placeholder" [class.is-guest]="!selectedConversation.userId">
+              {{ (getCustomerDisplayName(selectedConversation) || 'K')[0].toUpperCase() }}
+            </div>
+          </ng-template>
+        </div>
+
+        <div class="header-name-meta">
+          <h3 class="chat-header-name" [title]="getCustomerDisplayName(selectedConversation)">
+            {{ getCustomerDisplayName(selectedConversation) }}
+          </h3>
+          <div class="chat-header-meta">
+            <span class="badge" [ngClass]="getStatusBadgeClass(selectedConversation.status)">
+              {{ getStatusLabel(selectedConversation.status) }}
+            </span>
+            <span class="badge badge-assignment" [ngClass]="getAssignmentBadgeClass(selectedConversation)">
+              <svg *ngIf="isAssignedToMe(selectedConversation)" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              {{ getAssignmentLabel(selectedConversation) }}
+            </span>
+            <span class="chat-meta-time" *ngIf="selectedConversation.requestedAt">
+              Yêu cầu: {{ selectedConversation.requestedAt | date:'HH:mm, dd/MM' }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Header Actions -->
+      <div class="chat-header-actions">
+        <button
+          type="button"
+          class="btn btn-accept"
+          *ngIf="selectedConversation.status === 'WAITING_ADMIN' || (selectedConversation.status !== 'CLOSED' && !selectedConversation.assignedAdminId)"
+          (click)="onAccept()"
+          [disabled]="isAccepting"
+          aria-label="Tiếp nhận hội thoại"
+          title="Tiếp nhận hội thoại">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          <span class="btn-text">{{ isAccepting ? 'Đang nhận...' : 'Tiếp nhận' }}</span>
+        </button>
+
+        <button
+          type="button"
+          class="btn btn-return"
+          *ngIf="(selectedConversation.status === 'IN_PROGRESS' || selectedConversation.status === 'REPLIED') && canManage(selectedConversation)"
+          (click)="onReturn()"
+          [disabled]="isReturning || isClosing"
+          aria-label="Trả hội thoại về hàng chờ"
+          title="Trả hội thoại về hàng chờ cho nhân viên khác tiếp nhận">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="1 4 1 10 7 10"></polyline>
+            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+          </svg>
+          <span class="btn-text">{{ isReturning ? 'Đang trả...' : 'Trả hội thoại' }}</span>
+        </button>
+
+        <button
+          type="button"
+          class="btn btn-close-session"
+          *ngIf="selectedConversation.status !== 'CLOSED' && canManage(selectedConversation)"
+          (click)="onClose()"
+          [disabled]="isClosing || isReturning"
+          aria-label="Kết thúc hội thoại"
+          title="Kết thúc hội thoại">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="15" y1="9" x2="9" y2="15"></line>
+            <line x1="9" y1="9" x2="15" y2="15"></line>
+          </svg>
+          <span class="btn-text">{{ isClosing ? 'Đang kết thúc...' : 'Kết thúc' }}</span>
+        </button>
+
+        <!-- Nút bật tắt Drawer Thông tin khách hàng trên Laptop/Tablet/Mobile -->
+        <button
+          type="button"
+          class="btn btn-toggle-info"
+          [class.is-active]="showCustomerInfoDrawer"
+          (click)="onToggleProfile()"
+          aria-label="Hồ sơ khách hàng"
+          title="Xem hồ sơ khách hàng & CRM">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <span class="btn-info-text">Hồ sơ</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Banner trạng thái nếu chờ tiếp nhận hoặc chưa phân công -->
+    <div class="waiting-banner" *ngIf="selectedConversation.status === 'WAITING_ADMIN' || (selectedConversation.status !== 'CLOSED' && !selectedConversation.assignedAdminId)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" class="banner-icon">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+      <span>Khách hàng đang chờ phản hồi. Bấm <strong>"Tiếp nhận"</strong> để bắt đầu tư vấn.</span>
+    </div>
+
+    <!-- Banner thông báo khi đã đóng -->
+    <div class="closed-banner" *ngIf="selectedConversation.status === 'CLOSED'">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2" class="banner-icon">
+        <circle cx="12" cy="12" r="10"></circle>
+        <polyline points="12 6 12 12 14 14"></polyline>
+      </svg>
+      <span>Phiên hỗ trợ này đã kết thúc. Khách hàng đã chuyển lại chế độ AI.</span>
+    </div>
+
+    <!-- Vùng tin nhắn cuộc hội thoại cuộn riêng -->
+    <div class="chat-messages-container" #messagesScroll>
+      <div class="messages-history">
+        <ng-container *ngFor="let msg of messages">
+          <!-- Tin nhắn SYSTEM -->
+          <div class="message-row message-row--system" *ngIf="msg.senderType === 'SYSTEM'">
+            <div class="message-system-pill">
+              {{ msg.content }}
+            </div>
+          </div>
+
+          <!-- Tin nhắn KHÁCH HÀNG (bên trái) -->
+          <div class="message-row message-row--customer" *ngIf="msg.senderType === 'CUSTOMER'">
+            <div class="message-bubble message-bubble--customer">
+              <div class="message-sender-tag">Khách hàng</div>
+              <div class="message-text">{{ msg.content }}</div>
+              <div class="message-timestamp">{{ msg.createdAt | date:'HH:mm' }}</div>
+            </div>
+          </div>
+
+          <!-- Tin nhắn ADMIN (bên phải) -->
+          <div class="message-row message-row--admin" *ngIf="msg.senderType === 'ADMIN'">
+            <div class="message-bubble message-bubble--admin">
+              <div class="message-sender-tag">Chéri Support</div>
+              <div class="message-text">{{ msg.content }}</div>
+              <div class="message-timestamp">{{ msg.createdAt | date:'HH:mm' }}</div>
+            </div>
+          </div>
+        </ng-container>
+      </div>
+    </div>
+
+    <!-- Khung soạn tin nhắn cố định ở chân khung chat -->
+    <footer class="chat-footer">
+      <form (ngSubmit)="onSendMessage()" class="chat-input-form">
+        <textarea
+          class="chat-input"
+          rows="2"
+          [placeholder]="getInputPlaceholder(selectedConversation)"
+          [ngModel]="newMessageText"
+          (ngModelChange)="onInputText($event)"
+          name="newMessage"
+          [disabled]="!canSendMessage(selectedConversation) || isSendingMessage"
+          (keydown.enter)="$event.preventDefault(); onSendMessage()"
+        ></textarea>
+        <button
+          type="submit"
+          class="btn btn-send"
+          [disabled]="!newMessageText.trim() || !canSendMessage(selectedConversation) || isSendingMessage">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+          <span>Gửi</span>
+        </button>
+      </form>
+    </footer>
+  </ng-container>
+
+  <ng-template #noConvSelectedTpl>
+    <div class="no-selection-state">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" stroke-width="1.5">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+      <h3>Chưa chọn cuộc hội thoại</h3>
+      <p>Vui lòng chọn một cuộc trò chuyện từ danh sách để xem nội dung và phản hồi khách hàng.</p>
+    </div>
+  </ng-template>
+</main>

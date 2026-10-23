@@ -1,0 +1,115 @@
+<!-- CỘT 3: THÔNG TIN KHÁCH HÀNG & CRM (Docked trên Desktop lớn / Drawer trên Laptop nhỏ, Tablet, Mobile) -->
+<aside
+  class="customer-info-column"
+  *ngIf="selectedConversation"
+  [class.is-drawer-open]="showCustomerInfoDrawer">
+  
+  <div class="column-header">
+    <div class="header-title-row">
+      <h3 class="column-title">Hồ sơ khách hàng</h3>
+      <button
+        type="button"
+        class="btn-close-drawer"
+        (click)="onCloseProfile()"
+        aria-label="Đóng hồ sơ khách hàng">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="customer-profile-card">
+    <div class="profile-avatar-row">
+      <img
+        *ngIf="getCustomerAvatar(selectedConversation); else profileAvatar"
+        [src]="getCustomerAvatar(selectedConversation)!"
+        alt="Avatar"
+        class="profile-avatar"
+        loading="lazy"
+      />
+      <ng-template #profileAvatar>
+        <div class="profile-avatar-placeholder" [class.is-guest]="!selectedConversation.userId">
+          {{ (getCustomerDisplayName(selectedConversation) || 'K')[0].toUpperCase() }}
+        </div>
+      </ng-template>
+      <div class="profile-names">
+        <h4 class="profile-name" [title]="getCustomerDisplayName(selectedConversation)">
+          {{ getCustomerDisplayName(selectedConversation) }}
+        </h4>
+        <span class="profile-type" *ngIf="selectedConversation.userId">Thành viên</span>
+        <span class="profile-type profile-type--guest" *ngIf="!selectedConversation.userId">Khách vãng lai</span>
+      </div>
+    </div>
+
+    <!-- Thông tin liên hệ -->
+    <div class="profile-info-list">
+      <div class="info-item">
+        <span class="info-label">Email:</span>
+        <span class="info-value" [title]="selectedConversation.userId?.email || ''">
+          {{ selectedConversation.userId?.email || 'Chưa cung cấp' }}
+        </span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Số điện thoại:</span>
+        <span class="info-value">
+          {{ selectedConversation.userId?.phoneNumber || 'Chưa cung cấp' }}
+        </span>
+      </div>
+      <div class="info-item" *ngIf="selectedConversation.userId?.createdAt">
+        <span class="info-label">Tham gia:</span>
+        <span class="info-value">{{ selectedConversation.userId?.createdAt | date:'dd/MM/yyyy' }}</span>
+      </div>
+    </div>
+
+    <!-- Thống kê CRM -->
+    <div class="crm-stats-grid" *ngIf="selectedConversation.userId">
+      <div class="crm-stat-box">
+        <span class="stat-number">{{ customerStats?.orderCount || 0 }}</span>
+        <span class="stat-label">Đơn hàng</span>
+      </div>
+      <div class="crm-stat-box">
+        <span class="stat-number">{{ (customerStats?.totalSpent || 0) | number:'1.0-0' }}đ</span>
+        <span class="stat-label">Tổng chi tiêu</span>
+      </div>
+    </div>
+
+    <!-- Đơn hàng gần đây -->
+    <div class="recent-orders-section" *ngIf="selectedConversation.userId && (customerStats?.recentOrders?.length || 0) > 0">
+      <h5 class="section-title">Đơn hàng gần nhất</h5>
+      <div class="order-mini-card" *ngFor="let order of customerStats?.recentOrders">
+        <div class="order-mini-header">
+          <span class="order-id">#{{ order.orderId || order._id | slice:0:8 }}</span>
+          <span class="order-status badge badge-neutral">{{ order.status }}</span>
+        </div>
+        <div class="order-mini-meta">
+          <span>{{ order.createdAt | date:'dd/MM/yyyy' }}</span>
+          <span class="order-amount">{{ (order.totalAmount || 0) | number:'1.0-0' }}đ</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ghi chú nội bộ dành cho nhân viên -->
+    <div class="internal-notes-section">
+      <div class="notes-header">
+        <h5 class="section-title">Ghi chú nội bộ</h5>
+        <span class="notes-success" *ngIf="noteSavedSuccess">Đã lưu!</span>
+      </div>
+      <textarea
+        class="notes-textarea"
+        rows="3"
+        placeholder="Ghi chú sở thích, size đầm, khiếu nại của khách..."
+        [ngModel]="internalNoteText"
+        (ngModelChange)="onNoteInput($event)"
+      ></textarea>
+      <button
+        type="button"
+        class="btn btn-save-note"
+        (click)="onSaveNote()"
+        [disabled]="isSavingNote">
+        {{ isSavingNote ? 'Đang lưu...' : 'Lưu ghi chú' }}
+      </button>
+    </div>
+  </div>
+</aside>

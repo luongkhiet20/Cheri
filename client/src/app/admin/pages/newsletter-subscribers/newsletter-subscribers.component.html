@@ -1,0 +1,38 @@
+<div class="page-content">
+
+  <!-- Page Header -->
+  <div class="page-top">
+    <div>
+      <app-admin-breadcrumb [items]="breadcrumbItems"></app-admin-breadcrumb>
+      <h1 class="page-title">Đăng ký nhận ưu đãi</h1>
+    </div>
+  </div>
+
+  <!-- Error alert box -->
+  <div *ngIf="errorMessage" class="alert-box alert-error">
+    <div class="alert-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+    </div>
+    <div class="alert-content">
+      {{ errorMessage }}
+    </div>
+  </div>
+
+  <!-- Reusable Toolbar -->
+  <app-admin-toolbar searchPlaceholder="Tìm kiếm theo email, tên khách hàng..." [searchValue]="currentSearch"
+    [filterFields]="filterFields" [total]="displayTotal" [isLoading]="isLoading" (searchChange)="onSearch($event)"
+    (filterChange)="onFilter($event)" (refresh)="onRefresh()">
+  </app-admin-toolbar>
+
+  <!-- Reusable Table -->
+  <app-admin-table [columns]="columns" [data]="data" [loading]="isLoading" [actions]="actions" [pagination]="pagination"
+    totalLabel="đăng ký" (actionClick)="onAction($event)" (pageChange)="onPageChange($event)"
+    (pageSizeChange)="onPageSizeChange($event)">
+  </app-admin-table>
+
+</div>

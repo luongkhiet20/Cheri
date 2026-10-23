@@ -172,6 +172,27 @@ export class AdminTableComponent implements OnChanges, AfterViewChecked {
     return col.type === 'status' || col.type === 'badge';
   }
 
+  isCustomerColumn(col: TableColumn): boolean {
+    return col.type === 'customer';
+  }
+
+  getCustomerName(row: any, col: TableColumn): string {
+    const val = this.getCellValue(row, col.key);
+    if (val && typeof val === 'object' && val.name) {
+      return val.name;
+    }
+    if (typeof val === 'string' && val.trim()) {
+      return val.trim();
+    }
+    if (row.customer?.name) {
+      return row.customer.name;
+    }
+    if (row.customer?.isGuest) {
+      return 'Khách vãng lai';
+    }
+    return row.customerName || row.fullName || row.name || 'Khách vãng lai';
+  }
+
   isImageColumn(col: TableColumn): boolean { return col.type === 'image' || col.type === 'avatar'; }
 
   isAvatarColumn(col: TableColumn, row?: any): boolean {
@@ -188,14 +209,24 @@ export class AdminTableComponent implements OnChanges, AfterViewChecked {
 
   getAvatarKey(row: any, col: TableColumn): string {
     const id = this.getRowId(row) || '';
-    const src = this.getCellValue(row, col.key) || row.avatar || '';
+    const src = this.getCellValue(row, col.key) || row.customer?.avatar || row.avatar || '';
     return `${id}_${src}`;
   }
 
   getAvatarUrl(row: any, col: TableColumn): string {
-    const val = this.getCellValue(row, col.key) || row.avatar || '';
-    if (typeof val === 'string' && val.trim() && !val.startsWith('data:image/svg+xml')) {
-      return val.trim();
+    const val = this.getCellValue(row, col.key);
+    let raw = '';
+    if (val && typeof val === 'object' && val.avatar) {
+      raw = val.avatar;
+    } else if (typeof val === 'string') {
+      raw = val;
+    } else if (row.customer?.avatar) {
+      raw = row.customer.avatar;
+    } else if (row.avatar) {
+      raw = row.avatar;
+    }
+    if (typeof raw === 'string' && raw.trim() && !raw.startsWith('data:image/svg+xml')) {
+      return raw.trim();
     }
     return '';
   }
@@ -214,15 +245,18 @@ export class AdminTableComponent implements OnChanges, AfterViewChecked {
   }
 
   getAvatarInitial(row: any, col?: TableColumn): string {
+    if (row.customer?.isGuest && row.email) {
+      return String(Array.from(row.email.trim())[0] || 'G').toUpperCase();
+    }
     if (row.initial) return String(row.initial).toUpperCase();
     if (row.userInitial) return String(row.userInitial).toUpperCase();
-    const raw = (row.fullName || row.name || row.email || '').trim();
+    const raw = (row.customer?.name || row.fullName || row.name || row.email || '').trim();
     if (!raw) return 'U';
     return String(Array.from(raw)[0] || 'U').toUpperCase();
   }
 
   getAvatarAlt(row: any, col?: TableColumn): string {
-    return (row.fullName || row.name || row.email || 'Ảnh đại diện').trim();
+    return (row.customer?.name || row.fullName || row.name || row.email || 'Ảnh đại diện').trim();
   }
 
   isSkuColumn(col: TableColumn): boolean {
@@ -289,7 +323,7 @@ export class AdminTableComponent implements OnChanges, AfterViewChecked {
 
   isSortable(col: TableColumn): boolean {
     if (!col) return false;
-    if (this.isImageColumn(col) || this.isAvatarColumn(col) || col.key === 'image' || col.key === 'avatar') {
+    if (this.isImageColumn(col) || this.isAvatarColumn(col) || this.isCustomerColumn(col) || col.key === 'image' || col.key === 'avatar') {
       return false;
     }
     return !!col.sortable;

@@ -58,5 +58,62 @@ export class ChatbotService {
     });
   }
 
-  // TODO: Add support for Server-Sent Events (SSE) streaming for real-time word-by-word typing
+  private getBaseUrl(): string {
+    return this.apiService?.apiUrl || '';
+  }
+
+  /**
+   * Request human staff connection - triggered ONLY on explicit button click
+   */
+  requestSupport(sessionId: string, guestId?: string): Observable<any> {
+    const url = `${this.getBaseUrl()}/api/chat/support/request`;
+    if (this.http) {
+      return this.http.post(url, { sessionId, guestId });
+    }
+    return of({ success: false });
+  }
+
+  /**
+   * Check if user/guest has an active open support session
+   */
+  getCurrentSupport(sessionId: string, guestId?: string): Observable<any> {
+    const url = `${this.getBaseUrl()}/api/chat/support/current?sessionId=${encodeURIComponent(sessionId)}&guestId=${encodeURIComponent(guestId || '')}`;
+    if (this.http) {
+      return this.http.get(url);
+    }
+    return of({ success: false, hasActiveSupport: false });
+  }
+
+  /**
+   * Get messages in support session
+   */
+  getSupportMessages(conversationId: string, sessionId: string, guestId?: string): Observable<any> {
+    const url = `${this.getBaseUrl()}/api/chat/support/${conversationId}/messages?sessionId=${encodeURIComponent(sessionId)}&guestId=${encodeURIComponent(guestId || '')}`;
+    if (this.http) {
+      return this.http.get(url);
+    }
+    return of({ success: false, messages: [] });
+  }
+
+  /**
+   * Send message to human staff
+   */
+  sendSupportMessage(conversationId: string, content: string, sessionId: string, guestId?: string): Observable<any> {
+    const url = `${this.getBaseUrl()}/api/chat/support/${conversationId}/messages`;
+    if (this.http) {
+      return this.http.post(url, { content, sessionId, guestId });
+    }
+    return of({ success: false });
+  }
+
+  /**
+   * Mark customer read
+   */
+  markSupportRead(conversationId: string, sessionId: string, guestId?: string): Observable<any> {
+    const url = `${this.getBaseUrl()}/api/chat/support/${conversationId}/read`;
+    if (this.http) {
+      return this.http.patch(url, { sessionId, guestId });
+    }
+    return of({ success: false });
+  }
 }

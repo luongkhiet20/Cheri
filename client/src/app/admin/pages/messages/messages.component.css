@@ -1,0 +1,117 @@
+/* ==========================================================================
+   CHÉRI ADMIN — QUẢN LÝ TIN NHẮN (PARENT COMPONENT)
+   Bố cục thích ứng linh hoạt:
+   - Desktop lớn: 3 cột đồng nhất (Danh sách, Chat trực tiếp, Hồ sơ CRM)
+   - Laptop 1366x768 & 1280x720: 2 cột chính (Danh sách + Chat) + Drawer Hồ sơ
+   - Tablet 768px-1024px: 2 cột (Danh sách + Chat) + Drawer Hồ sơ
+   - Mobile <= 768px: Luồng chuyển màn hình mượt mà (A: Danh sách -> B: Chat -> C: Drawer)
+   ========================================================================== */
+
+:host {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.admin-messages-page-wrapper {
+  container-type: inline-size;
+  container-name: messagesWrapper;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   CONTAINER CHÍNH
+   ───────────────────────────────────────────────────────────── */
+.admin-messages-page {
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  /* Chiều cao tính chuẩn theo Admin Layout: 100vh - header 60px - padding 24px*2 = 48px */
+  height: calc(100vh - 60px - 48px);
+  max-height: calc(100vh - 60px - 48px);
+  min-height: 500px;
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  border: 1px solid #ECECEC;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  box-sizing: border-box;
+  position: relative;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   BACKDROP CHO DRAWER
+   ───────────────────────────────────────────────────────────── */
+.drawer-backdrop {
+  display: none;
+}
+
+@keyframes backdropFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ==========================================================================
+   RESPONSIVE DESIGN RULES (CONTAINER & MEDIA QUERIES)
+   ========================================================================== */
+
+/* ── 1. Desktop lớn (>= 1240px container inline-size) ── */
+@container messagesWrapper (min-width: 1240px) {
+  .drawer-backdrop {
+    display: none !important;
+  }
+}
+
+/* ── 2. Laptop 1366x768 & 1280x720 hoặc container < 1240px ── */
+@container messagesWrapper (max-width: 1239px) {
+  .drawer-backdrop {
+    display: block;
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(1.5px);
+    z-index: 99;
+    animation: backdropFadeIn 0.15s ease;
+  }
+}
+
+/* ── Fallback Media Query cho Viewport (Tablet & Laptop) ── */
+@media (max-width: 1280px) {
+  .drawer-backdrop {
+    display: block;
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(1.5px);
+    z-index: 99;
+  }
+}
+
+/* ── 4. Mobile (Dưới 768px): Thiết kế theo luồng chuyển màn hình chuẩn Mobile ── */
+@media (max-width: 768px) {
+  .admin-messages-page {
+    /* Sử dụng dynamic viewport height dvh thích ứng với thanh trình duyệt di động */
+    height: calc(100vh - 60px - 32px);
+    height: calc(100dvh - 60px - 32px);
+    max-height: calc(100dvh - 60px - 32px);
+    min-height: 0;
+    border-radius: 8px;
+    border: 1px solid #E5E7EB;
+  }
+
+  /* Khi ở Màn hình A (Danh sách): Hiển thị Cột 1 full 100%, ẩn Cột 2 */
+  .admin-messages-page.view-list app-chat-panel {
+    display: none !important;
+  }
+
+  /* Khi ở Màn hình B (Nội dung chat): Hiển thị Cột 2 full 100%, ẩn Cột 1 */
+  .admin-messages-page.view-chat app-conversation-list {
+    display: none !important;
+  }
+}

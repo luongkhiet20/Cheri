@@ -178,6 +178,7 @@ async function connectToMongo() {
     await client.connect();
     db = client.db('cheri');
     console.log(' Successfully connected to MongoDB Database: cheri');
+    db.collection('newsletter_subscribers').createIndex({ email: 1 }, { unique: true }).catch(() => {});
     return db;
   } catch (err) {
     console.error(' MongoDB Connection Error:', err);
@@ -9395,6 +9396,1555 @@ app.post('/api/chat/message', async (req, res) => {
     return res.json({
       reply: 'Dạ Chéri đang gặp chút sự cố kết nối. Nàng vui lòng thử lại sau giây lát nhé!',
       intent: 'general',
+    });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// CHĂM SÓC KHÁCH HÀNG — CONVERSATIONS & SUPPORT APIS
+// ─────────────────────────────────────────────────────────────
+
+// 1. Customer: Yêu cầu hỗ trợ nhân viên (Chỉ tạo khi nhấn nút "Liên hệ nhân viên hỗ trợ")
+app.post('/api/chat/support/request', async (req, res) => {
+  try {
+    const database = await connectToMongo();
+    const { guestId, sessionId, userId } = req.body || {};
+
+    let userObjId = null;
+    if (userId) {
+      try { userObjId = new ObjectId(userId); } catch (_) {}
+    }
+
+    const resolvedGuest = (!userObjId && (guestId || sessionId)) ? String(guestId || sessionId).trim() : null;
+
+    // Tìm conversation đang mở (WAITING_ADMIN, IN_PROGRESS, REPLIED)
+    const openFilter = {
+      source: 'SUPPORT_BUTTON',
+      status: { $in: ['WAITING_ADMIN', 'IN_PROGRESS', 'REPLIED'] },
+    };
+    if (userObjId) {
+      openFilter.userId = userObjId;
+    } else if (resolvedGuest) {
+      openFilter.guestId = resolvedGuest;
+    }
+
+    let existing = await database.collection('conversations').findOne(openFilter);
+    if (existing) {
+      return res.json({
+        success: true,
+        isNew: false,
+        conversation: existing,
+        message: 'Khôi phục phiên hỗ trợ đang hoạt động',
+      });
+    }
+
+    // Tạo mới conversation với source = SUPPORT_BUTTON
+    const now = new Date();
+    const newConv = {
+      userId: userObjId,
+      guestId: resolvedGuest,
+      channel: 'WEB_CHAT',
+      source: 'SUPPORT_BUTTON',
+      status: 'WAITING_ADMIN',
+      requestedAt: now,
+      lastMessageAt: now,
+      lastMessagePreview: 'Khách hàng yêu cầu hỗ trợ từ nhân viên',
+      unreadAdminCount: 1,
+      unreadCustomerCount: 0,
+      internalNote: '',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const insertRes = await database.collection('conversations').insertOne(newConv);
+    newConv._id = insertRes.insertedId;
+
+    // Tạo tin nhắn SYSTEM ban đầu
+    const sysMsg = {
+      conversationId: newConv._id,
+      senderType: 'SYSTEM',
+      messageType: 'SYSTEM',
+      content: 'Khách hàng đã yêu cầu nhân viên hỗ trợ.',
+      createdAt: now,
+      updatedAt: now,
+    };
+    const sysRes = await database.collection('conversation_messages').insertOne(sysMsg);
+    sysMsg._id = sysRes.insertedId;
+
+    await database.collection('conversations').updateOne(
+      { _id: newConv._id },
+      { $set: { lastMessageId: sysMsg._id } }
+    );
+
+    return res.json({
+      success: true,
+      isNew: true,
+      conversation: newConv,
+      message: 'Tạo phiên hỗ trợ nhân viên thành công',
+    });
+  } catch (err) {
+    console.error('Error in POST /api/chat/support/request:', err);
+    res.status(500).json({ success: false, message: 'Lỗi xử lý yêu cầu hỗ trợ' });
+  }
+});
+
+// 2. Customer: Lấy phiên hỗ trợ hiện tại
+app.get('/api/chat/support/current', async (req, res) => {
+  try {
+    const database = await connectToMongo();
+    const { guestId, sessionId, userId } = req.query || {};
+
+    let userObjId = null;
+    if (userId) {
+      try { userObjId = new ObjectId(userId); } catch (_) {}
+    }
+    const resolvedGuest = (!userObjId && (guestId || sessionId)) ? String(guestId || sessionId).trim() : null;
+
+    const filter = {
+      source: 'SUPPORT_BUTTON',
+      status: { $in: ['WAITING_ADMIN', 'IN_PROGRESS', 'REPLIED'] },
+    };
+    if (userObjId) filter.userId = userObjId;
+    else if (resolvedGuest) filter.guestId = resolvedGuest;
+
+    const conv = await database.collection('conversations').findOne(filter);
+    return res.json({
+      success: true,
+      hasActiveSupport: !!conv,
+      conversation: conv || null,
+    });
+  } catch (err) {
+    res.json({ success: true, hasActiveSupport: false, conversation: null });
+  }
+});
+
+// 3. Customer: Lấy danh sách tin nhắn của phiên hỗ trợ
+app.get('/api/chat/support/:id/messages', async (req, res) => {
+  try {
+    const database = await connectToMongo();
+    const convId = new ObjectId(req.params.id);
+    const conv = await database.collection('conversations').findOne({ _id: convId });
+    if (!conv) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy cuộc hội thoại' });
+    }
+
+    const messages = await database.collection('conversation_messages')
+      .find({ conversationId: convId })
+      .sort({ createdAt: 1 })
+      .toArray();
+
+    return res.json({
+      success: true,
+      conversation: conv,
+      messages,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi tải tin nhắn' });
+  }
+});
+
+// 4. Customer: Gửi tin nhắn trong phiên hỗ trợ
+app.post('/api/chat/support/:id/messages', async (req, res) => {
+  try {
+    const database = await connectToMongo();
+    const convId = new ObjectId(req.params.id);
+    const { content, clientMessageId } = req.body || {};
+    const text = (content || '').trim();
+
+    if (!text) {
+      return res.status(400).json({ success: false, message: 'Nội dung tin nhắn không được rỗng' });
+    }
+
+    const conv = await database.collection('conversations').findOne({ _id: convId });
+    if (!conv) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy cuộc hội thoại' });
+    }
+
+    if (conv.status === 'CLOSED') {
+      return res.status(400).json({ success: false, message: 'Phiên hỗ trợ đã kết thúc' });
+    }
+
+    const now = new Date();
+    const msg = {
+      conversationId: convId,
+      senderType: 'CUSTOMER',
+      senderId: conv.userId || null,
+      messageType: 'TEXT',
+      content: text,
+      clientMessageId: clientMessageId || null,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const insertRes = await database.collection('conversation_messages').insertOne(msg);
+    msg._id = insertRes.insertedId;
+
+    const nextStatus = conv.status === 'REPLIED' ? 'IN_PROGRESS' : conv.status;
+    await database.collection('conversations').updateOne(
+      { _id: convId },
+      {
+        $set: {
+          lastMessageId: msg._id,
+          lastMessageAt: now,
+          lastMessagePreview: text,
+          status: nextStatus,
+          updatedAt: now,
+        },
+        $inc: { unreadAdminCount: 1 },
+      }
+    );
+
+    return res.json({ success: true, message: msg });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi gửi tin nhắn' });
+  }
+});
+
+// 5. Customer: Đánh dấu đã đọc
+app.patch('/api/chat/support/:id/read', async (req, res) => {
+  try {
+    const database = await connectToMongo();
+    const convId = new ObjectId(req.params.id);
+    const now = new Date();
+    await database.collection('conversations').updateOne(
+      { _id: convId },
+      { $set: { unreadCustomerCount: 0, customerLastReadAt: now, updatedAt: now } }
+    );
+    await database.collection('conversation_messages').updateMany(
+      { conversationId: convId, senderType: 'ADMIN', readByCustomerAt: null },
+      { $set: { readByCustomerAt: now } }
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false });
+  }
+});
+
+// ── ADMIN CONVERSATIONS ENDPOINTS ──
+
+// Helper xác thực admin từ JWT Bearer token
+function getAdminAuthFromReq(req) {
+  const authHeader = req.headers.authorization || '';
+  if (!authHeader.startsWith('Bearer ')) return null;
+  const token = authHeader.slice(7).trim();
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789');
+    const adminId = decoded.id || decoded._id || decoded.sub;
+    if (!adminId) return null;
+    const roles = Array.isArray(decoded.roles) ? decoded.roles : (decoded.role ? [decoded.role] : []);
+    const isSuperAdmin = roles.some((r) => typeof r === 'string' && r.toLowerCase() === 'super-admin');
+    return {
+      adminId: String(adminId),
+      email: decoded.email,
+      roles,
+      isSuperAdmin,
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+// Helper populate thông tin Admin vào conversation
+async function populateAdminsMap(database, adminIds) {
+  const map = {};
+  const validIds = (adminIds || [])
+    .filter((id) => id && ObjectId.isValid(id))
+    .map((id) => (id instanceof ObjectId ? id : new ObjectId(id)));
+  if (validIds.length > 0) {
+    const users = await database.collection('users')
+      .find({ _id: { $in: validIds } })
+      .project({ fullName: 1, name: 1, email: 1, avatar: 1 })
+      .toArray();
+    users.forEach((u) => {
+      map[u._id.toString()] = {
+        _id: u._id.toString(),
+        fullName: u.fullName || u.name || 'Nhân viên hỗ trợ',
+        name: u.name || u.fullName || 'Nhân viên',
+        avatar: u.avatar || null,
+      };
+    });
+  }
+  return map;
+}
+
+// 6. Admin: Lấy danh sách hội thoại hỗ trợ (CHỈ LẤY source = SUPPORT_BUTTON)
+app.get('/api/admin/conversations', async (req, res) => {
+  try {
+    const database = await connectToMongo();
+    const { status, search, page = 1, limit = 20 } = req.query;
+
+    const p = Math.max(1, parseInt(page, 10) || 1);
+    const l = Math.max(1, Math.min(100, parseInt(limit, 10) || 20));
+    const skip = (p - 1) * l;
+
+    // ĐIỀU KIỆN TIÊN QUYẾT: source PHẢI LÀ SUPPORT_BUTTON
+    const filter = { source: 'SUPPORT_BUTTON' };
+
+    if (status) {
+      if (status === 'unread') {
+        filter.unreadAdminCount = { $gt: 0 };
+      } else if (['WAITING_ADMIN', 'IN_PROGRESS', 'REPLIED', 'CLOSED'].includes(status)) {
+        filter.status = status;
+      }
+    }
+
+    if (search && search.trim()) {
+      const term = search.trim();
+      const userMatches = await database.collection('users')
+        .find({
+          $or: [
+            { fullName: { $regex: term, $options: 'i' } },
+            { name: { $regex: term, $options: 'i' } },
+            { email: { $regex: term, $options: 'i' } },
+            { phoneNumber: { $regex: term, $options: 'i' } },
+          ],
+        })
+        .project({ _id: 1 })
+        .toArray();
+
+      const matchedUserIds = userMatches.map((u) => u._id);
+      filter.$or = [
+        { userId: { $in: matchedUserIds } },
+        { guestId: { $regex: term, $options: 'i' } },
+        { lastMessagePreview: { $regex: term, $options: 'i' } },
+      ];
+    }
+
+    const [items, total, countWaiting, countInProgress, countUnread, countAll] = await Promise.all([
+      database.collection('conversations')
+        .find(filter)
+        .sort({ lastMessageAt: -1 })
+        .skip(skip)
+        .limit(l)
+        .toArray(),
+      database.collection('conversations').countDocuments(filter),
+      database.collection('conversations').countDocuments({ source: 'SUPPORT_BUTTON', status: 'WAITING_ADMIN' }),
+      database.collection('conversations').countDocuments({ source: 'SUPPORT_BUTTON', status: 'IN_PROGRESS' }),
+      database.collection('conversations').countDocuments({ source: 'SUPPORT_BUTTON', unreadAdminCount: { $gt: 0 } }),
+      database.collection('conversations').countDocuments({ source: 'SUPPORT_BUTTON' }),
+    ]);
+
+    // Populate user info & assigned admin info
+    const userIdsToFetch = items
+      .map((item) => item.userId)
+      .filter((id) => id && ObjectId.isValid(id))
+      .map((id) => (id instanceof ObjectId ? id : new ObjectId(id)));
+
+    const adminIdsToFetch = items
+      .map((item) => item.assignedAdminId)
+      .filter((id) => id && ObjectId.isValid(id))
+      .map((id) => (id instanceof ObjectId ? id : new ObjectId(id)));
+
+    const [usersMap, adminsMap] = await Promise.all([
+      (async () => {
+        const map = {};
+        if (userIdsToFetch.length > 0) {
+          const users = await database.collection('users')
+            .find({ _id: { $in: userIdsToFetch } })
+            .project({ fullName: 1, name: 1, email: 1, phoneNumber: 1, avatar: 1, createdAt: 1 })
+            .toArray();
+          users.forEach((u) => {
+            map[u._id.toString()] = u;
+          });
+        }
+        return map;
+      })(),
+      populateAdminsMap(database, adminIdsToFetch),
+    ]);
+
+    const populatedItems = items.map((item) => {
+      let populatedAdmin = null;
+      if (item.assignedAdminId) {
+        const aIdStr = item.assignedAdminId.toString();
+        populatedAdmin = adminsMap[aIdStr] || {
+          _id: aIdStr,
+          fullName: 'Nhân viên hỗ trợ',
+          name: 'Nhân viên',
+        };
+      }
+      return {
+        ...item,
+        userId: item.userId ? usersMap[item.userId.toString()] || null : null,
+        assignedAdminId: populatedAdmin,
+      };
+    });
+
+    return res.json({
+      success: true,
+      data: populatedItems,
+      meta: {
+        page: p,
+        limit: l,
+        total,
+        totalPages: Math.ceil(total / l),
+        counts: {
+          waiting: countWaiting,
+          inProgress: countInProgress,
+          unread: countUnread,
+          all: countAll,
+        },
+      },
+    });
+  } catch (err) {
+    console.error('Error in GET /api/admin/conversations:', err);
+    res.status(500).json({ success: false, message: 'Lỗi tải danh sách hội thoại' });
+  }
+});
+
+// 7. Admin: Chi tiết hội thoại + CRM Khách hàng
+app.get('/api/admin/conversations/:id', async (req, res) => {
+  try {
+    const database = await connectToMongo();
+    const convId = new ObjectId(req.params.id);
+
+    const conv = await database.collection('conversations').findOne({
+      _id: convId,
+      source: 'SUPPORT_BUTTON',
+    });
+
+    if (!conv) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy cuộc hội thoại' });
+    }
+
+    let customerUser = null;
+    let customerStats = {
+      orderCount: 0,
+      totalSpent: 0,
+      recentOrders: [],
+    };
+
+    if (conv.userId) {
+      const uid = conv.userId instanceof ObjectId ? conv.userId : new ObjectId(conv.userId);
+      customerUser = await database.collection('users').findOne(
+        { _id: uid },
+        { projection: { fullName: 1, name: 1, email: 1, phoneNumber: 1, avatar: 1, createdAt: 1 } }
+      );
+
+      const [orderCount, totalAgg, recentOrders] = await Promise.all([
+        database.collection('orders').countDocuments({ userId: uid }),
+        database.collection('orders').aggregate([
+          { $match: { userId: uid } },
+          { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+        ]).toArray(),
+        database.collection('orders')
+          .find({ userId: uid })
+          .sort({ createdAt: -1 })
+          .limit(5)
+          .project({ orderId: 1, totalAmount: 1, status: 1, createdAt: 1, items: 1 })
+          .toArray(),
+      ]);
+
+      customerStats = {
+        orderCount,
+        totalSpent: totalAgg[0]?.total || 0,
+        recentOrders,
+      };
+    }
+
+    let populatedAdmin = null;
+    if (conv.assignedAdminId) {
+      const adminsMap = await populateAdminsMap(database, [conv.assignedAdminId]);
+      populatedAdmin = adminsMap[conv.assignedAdminId.toString()] || {
+        _id: conv.assignedAdminId.toString(),
+        fullName: 'Nhân viên hỗ trợ',
+        name: 'Nhân viên',
+      };
+    }
+
+    return res.json({
+      success: true,
+      conversation: {
+        ...conv,
+        userId: customerUser,
+        assignedAdminId: populatedAdmin,
+      },
+      customerStats,
+    });
+  } catch (err) {
+    console.error('Error in GET /api/admin/conversations/:id:', err);
+    res.status(500).json({ success: false, message: 'Lỗi tải chi tiết hội thoại' });
+  }
+});
+
+// 8. Admin: Danh sách tin nhắn trong hội thoại
+app.get('/api/admin/conversations/:id/messages', async (req, res) => {
+  try {
+    const database = await connectToMongo();
+    const convId = new ObjectId(req.params.id);
+
+    const conv = await database.collection('conversations').findOne({
+      _id: convId,
+      source: 'SUPPORT_BUTTON',
+    });
+    if (!conv) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy cuộc hội thoại' });
+    }
+
+    const messages = await database.collection('conversation_messages')
+      .find({ conversationId: convId })
+      .sort({ createdAt: 1 })
+      .toArray();
+
+    // Đánh dấu Admin đã đọc
+    if (conv.unreadAdminCount > 0) {
+      const now = new Date();
+      await database.collection('conversations').updateOne(
+        { _id: convId },
+        { $set: { unreadAdminCount: 0, adminLastReadAt: now, updatedAt: now } }
+      );
+      await database.collection('conversation_messages').updateMany(
+        { conversationId: convId, senderType: 'CUSTOMER', readByAdminAt: null },
+        { $set: { readByAdminAt: now } }
+      );
+    }
+
+    return res.json({ success: true, messages });
+  } catch (err) {
+    console.error('Error in GET /api/admin/conversations/:id/messages:', err);
+    res.status(500).json({ success: false, message: 'Lỗi tải tin nhắn' });
+  }
+});
+
+// 9. Admin: Tiếp nhận hỗ trợ
+app.post('/api/admin/conversations/:id/accept', async (req, res) => {
+  try {
+    const database = await connectToMongo();
+    const convId = new ObjectId(req.params.id);
+    const now = new Date();
+
+    const adminAuth = getAdminAuthFromReq(req);
+    if (!adminAuth) {
+      return res.status(401).json({ success: false, message: 'Yêu cầu đăng nhập tài khoản quản trị' });
+    }
+    const adminObjId = new ObjectId(adminAuth.adminId);
+
+    // Atomic update: Tiếp nhận hội thoại khi đang WAITING_ADMIN hoặc hội thoại chưa có admin phụ trách
+    const updateRes = await database.collection('conversations').findOneAndUpdate(
+      {
+        _id: convId,
+        source: 'SUPPORT_BUTTON',
+        $or: [
+          { status: 'WAITING_ADMIN' },
+          { status: { $in: ['IN_PROGRESS', 'REPLIED'] }, assignedAdminId: null },
+        ],
+      },
+      {
+        $set: {
+          status: 'IN_PROGRESS',
+          assignedAdminId: adminObjId,
+          acceptedAt: now,
+          unreadAdminCount: 0,
+          adminLastReadAt: now,
+          updatedAt: now,
+        },
+      },
+      { returnDocument: 'after' }
+    );
+
+    let updatedConv = (updateRes && updateRes._id) ? updateRes : (updateRes?.value || null);
+
+    if (!updatedConv) {
+      const existing = await database.collection('conversations').findOne({ _id: convId });
+      if (!existing) {
+        return res.status(404).json({ success: false, message: 'Không tìm thấy cuộc hội thoại' });
+      }
+      // Idempotent: Nếu chính admin này đã tiếp nhận trước đó
+      if (existing.status === 'IN_PROGRESS' && existing.assignedAdminId && existing.assignedAdminId.toString() === adminObjId.toString()) {
+        const adminsMap = await populateAdminsMap(database, [adminObjId]);
+        existing.assignedAdminId = adminsMap[adminObjId.toString()] || { _id: adminObjId.toString(), fullName: 'Bạn' };
+        return res.json({
+          success: true,
+          conversation: existing,
+          message: 'Cuộc trò chuyện đã được tiếp nhận trước đó',
+        });
+      }
+      if (existing.status === 'IN_PROGRESS' && existing.assignedAdminId) {
+        return res.status(400).json({ success: false, message: 'Cuộc trò chuyện đã được một nhân viên khác tiếp nhận' });
+      }
+      if (existing.status === 'CLOSED') {
+        return res.status(400).json({ success: false, message: 'Cuộc trò chuyện này đã kết thúc' });
+      }
+      return res.status(400).json({ success: false, message: 'Không thể tiếp nhận cuộc trò chuyện ở trạng thái hiện tại' });
+    }
+
+    // Thêm tin nhắn SYSTEM
+    const sysMsg = {
+      conversationId: convId,
+      senderType: 'SYSTEM',
+      messageType: 'SYSTEM',
+      systemEvent: 'ADMIN_JOINED',
+      content: 'Nhân viên Chéri đã tham gia cuộc trò chuyện và sẵn sàng hỗ trợ nàng! ✨',
+      createdAt: now,
+      updatedAt: now,
+    };
+    const insertRes = await database.collection('conversation_messages').insertOne(sysMsg);
+    sysMsg._id = insertRes.insertedId;
+
+    await database.collection('conversations').updateOne(
+      { _id: convId },
+      {
+        $set: {
+          lastMessageId: sysMsg._id,
+          lastMessageAt: now,
+          lastMessagePreview: sysMsg.content,
+        },
+        $inc: { unreadCustomerCount: 1 },
+      }
+    );
+
+    // Populate assignedAdminId object để frontend hiển thị đúng tên ngay lập tức
+    const adminsMap = await populateAdminsMap(database, [adminObjId]);
+    updatedConv.assignedAdminId = adminsMap[adminObjId.toString()] || {
+      _id: adminObjId.toString(),
+      fullName: 'Bạn',
+      name: 'Bạn',
+    };
+
+    return res.json({
+      success: true,
+      conversation: updatedConv,
+      systemMessage: sysMsg,
+      message: 'Tiếp nhận hỗ trợ thành công',
+    });
+  } catch (err) {
+    console.error('Error in POST /api/admin/conversations/:id/accept:', err);
+    res.status(500).json({ success: false, message: 'Lỗi khi tiếp nhận hội thoại' });
+  }
+});
+
+// 9b. Admin: Trả cuộc trò chuyện về hàng chờ
+app.post('/api/admin/conversations/:id/return', async (req, res) => {
+  try {
+    const database = await connectToMongo();
+    const convId = new ObjectId(req.params.id);
+    const now = new Date();
+
+    const adminAuth = getAdminAuthFromReq(req);
+    if (!adminAuth) {
+      return res.status(401).json({ success: false, message: 'Yêu cầu đăng nhập tài khoản quản trị' });
+    }
+    const adminObjId = new ObjectId(adminAuth.adminId);
+
+    // Atomic update: Chỉ admin phụ trách (hoặc super-admin) mới được trả hội thoại
+    const queryFilter = {
+      _id: convId,
+      source: 'SUPPORT_BUTTON',
+      status: { $in: ['IN_PROGRESS', 'REPLIED'] },
+    };
+    if (!adminAuth.isSuperAdmin) {
+      queryFilter.assignedAdminId = adminObjId;
+    }
+
+    const updateRes = await database.collection('conversations').findOneAndUpdate(
+      queryFilter,
+      {
+        $set: {
+          status: 'WAITING_ADMIN',
+          assignedAdminId: null,
+          unreadAdminCount: 1,
+          updatedAt: now,
+        },
+      },
+      { returnDocument: 'after' }
+    );
+
+    let updatedConv = (updateRes && updateRes._id) ? updateRes : (updateRes?.value || null);
+
+    if (!updatedConv) {
+      const existing = await database.collection('conversations').findOne({ _id: convId });
+      if (!existing) {
+        return res.status(404).json({ success: false, message: 'Không tìm thấy cuộc hội thoại' });
+      }
+      if (existing.status === 'WAITING_ADMIN') {
+        return res.json({
+          success: true,
+          conversation: existing,
+          message: 'Cuộc trò chuyện đã ở hàng chờ',
+        });
+      }
+      if (
+        existing.assignedAdminId &&
+        existing.assignedAdminId.toString() !== adminObjId.toString() &&
+        !adminAuth.isSuperAdmin
+      ) {
+        return res.status(403).json({
+          success: false,
+          message: 'Bạn không có quyền trả cuộc trò chuyện do nhân viên khác phụ trách',
+        });
+      }
+      return res.status(400).json({ success: false, message: 'Không thể trả hội thoại ở trạng thái hiện tại' });
+    }
+
+    // Thêm tin nhắn SYSTEM
+    const sysMsg = {
+      conversationId: convId,
+      senderType: 'SYSTEM',
+      messageType: 'SYSTEM',
+      systemEvent: 'SUPPORT_REQUESTED',
+      content: 'Đang kết nối với nhân viên hỗ trợ. Nàng vui lòng chờ trong giây lát nhé! 💛',
+      createdAt: now,
+      updatedAt: now,
+    };
+    const insertRes = await database.collection('conversation_messages').insertOne(sysMsg);
+    sysMsg._id = insertRes.insertedId;
+
+    await database.collection('conversations').updateOne(
+      { _id: convId },
+      {
+        $set: {
+          lastMessageId: sysMsg._id,
+          lastMessageAt: now,
+          lastMessagePreview: sysMsg.content,
+        },
+      }
+    );
+
+    updatedConv.assignedAdminId = null;
+
+    return res.json({
+      success: true,
+      conversation: updatedConv,
+      systemMessage: sysMsg,
+      message: 'Đã trả cuộc trò chuyện về hàng chờ',
+    });
+  } catch (err) {
+    console.error('Error in POST /api/admin/conversations/:id/return:', err);
+    res.status(500).json({ success: false, message: 'Lỗi khi trả hội thoại về hàng chờ' });
+  }
+});
+
+// 10. Admin: Gửi tin nhắn phản hồi
+app.post('/api/admin/conversations/:id/messages', async (req, res) => {
+  try {
+    const database = await connectToMongo();
+    const convId = new ObjectId(req.params.id);
+    const { content, clientMessageId } = req.body || {};
+    const text = (content || '').trim();
+
+    if (!text) {
+      return res.status(400).json({ success: false, message: 'Nội dung tin nhắn không được rỗng' });
+    }
+
+    const adminAuth = getAdminAuthFromReq(req);
+    if (!adminAuth) {
+      return res.status(401).json({ success: false, message: 'Yêu cầu đăng nhập tài khoản quản trị' });
+    }
+    const adminObjId = new ObjectId(adminAuth.adminId);
+
+    const conv = await database.collection('conversations').findOne({
+      _id: convId,
+      source: 'SUPPORT_BUTTON',
+    });
+    if (!conv) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy cuộc hội thoại' });
+    }
+
+    if (conv.status === 'CLOSED') {
+      return res.status(400).json({ success: false, message: 'Cuộc hội thoại đã đóng, không thể gửi tin nhắn.' });
+    }
+
+    if (conv.status === 'WAITING_ADMIN' || !conv.assignedAdminId) {
+      return res.status(400).json({ success: false, message: 'Cuộc trò chuyện đang ở hàng chờ, vui lòng tiếp nhận trước khi gửi tin nhắn.' });
+    }
+
+    const isAssigned = conv.assignedAdminId.toString() === adminObjId.toString();
+    if (!isAssigned && !adminAuth.isSuperAdmin) {
+      return res.status(403).json({ success: false, message: 'Bạn không phải nhân viên phụ trách cuộc hội thoại này' });
+    }
+
+    // Idempotency check if clientMessageId provided
+    if (clientMessageId) {
+      const existing = await database.collection('conversation_messages').findOne({ clientMessageId });
+      if (existing) {
+        return res.json({ success: true, message: existing });
+      }
+    }
+
+    const now = new Date();
+    const newMsg = {
+      conversationId: convId,
+      senderType: 'ADMIN',
+      senderId: adminObjId,
+      messageType: 'TEXT',
+      content: text,
+      clientMessageId: clientMessageId || null,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const insertRes = await database.collection('conversation_messages').insertOne(newMsg);
+    newMsg._id = insertRes.insertedId;
+
+    await database.collection('conversations').updateOne(
+      { _id: convId },
+      {
+        $set: {
+          status: 'REPLIED',
+          lastMessageId: newMsg._id,
+          lastMessageAt: now,
+          lastMessagePreview: text,
+          adminLastReadAt: now,
+          updatedAt: now,
+        },
+        $inc: { unreadCustomerCount: 1 },
+      }
+    );
+
+    return res.json({ success: true, message: newMsg });
+  } catch (err) {
+    console.error('Error in POST /api/admin/conversations/:id/messages:', err);
+    res.status(500).json({ success: false, message: 'Lỗi gửi tin nhắn' });
+  }
+});
+
+// 11. Admin: Cập nhật trạng thái
+app.patch('/api/admin/conversations/:id/status', async (req, res) => {
+  try {
+    const database = await connectToMongo();
+    const convId = new ObjectId(req.params.id);
+    const { status } = req.body || {};
+
+    if (!['WAITING_ADMIN', 'IN_PROGRESS', 'REPLIED', 'CLOSED'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Trạng thái không hợp lệ' });
+    }
+
+    const updateDoc = { status, updatedAt: new Date() };
+    if (status === 'CLOSED') {
+      updateDoc.closedAt = new Date();
+    }
+
+    await database.collection('conversations').updateOne(
+      { _id: convId, source: 'SUPPORT_BUTTON' },
+      { $set: updateDoc }
+    );
+
+    return res.json({ success: true, status });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi cập nhật trạng thái' });
+  }
+});
+
+// 12. Admin: Cập nhật ghi chú nội bộ
+app.patch('/api/admin/conversations/:id/notes', async (req, res) => {
+  try {
+    const database = await connectToMongo();
+    const convId = new ObjectId(req.params.id);
+    const { internalNote } = req.body || {};
+    const now = new Date();
+
+    await database.collection('conversations').updateOne(
+      { _id: convId, source: 'SUPPORT_BUTTON' },
+      {
+        $set: {
+          internalNote: internalNote || '',
+          internalNoteUpdatedAt: now,
+          updatedAt: now,
+        },
+      }
+    );
+
+    return res.json({ success: true, internalNote });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi lưu ghi chú' });
+  }
+});
+
+// 13. Admin: Kết thúc hỗ trợ
+app.post('/api/admin/conversations/:id/close', async (req, res) => {
+  try {
+    const database = await connectToMongo();
+    const convId = new ObjectId(req.params.id);
+    const now = new Date();
+
+    const adminAuth = getAdminAuthFromReq(req);
+    if (!adminAuth) {
+      return res.status(401).json({ success: false, message: 'Yêu cầu đăng nhập tài khoản quản trị' });
+    }
+    const adminObjId = new ObjectId(adminAuth.adminId);
+
+    const conv = await database.collection('conversations').findOne({
+      _id: convId,
+      source: 'SUPPORT_BUTTON',
+    });
+    if (!conv) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy cuộc hội thoại' });
+    }
+
+    const isAssigned = conv.assignedAdminId && conv.assignedAdminId.toString() === adminObjId.toString();
+    if (!isAssigned && !adminAuth.isSuperAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Bạn không có quyền đóng cuộc trò chuyện do nhân viên khác phụ trách',
+      });
+    }
+
+    await database.collection('conversations').updateOne(
+      { _id: convId, source: 'SUPPORT_BUTTON' },
+      {
+        $set: {
+          status: 'CLOSED',
+          closedAt: now,
+          updatedAt: now,
+        },
+      }
+    );
+
+    // Thêm tin nhắn SYSTEM kết thúc
+    await database.collection('conversation_messages').insertOne({
+      conversationId: convId,
+      senderType: 'SYSTEM',
+      messageType: 'SYSTEM',
+      content: 'Phiên hỗ trợ nhân viên đã kết thúc.',
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return res.json({ success: true, message: 'Đã đóng cuộc hội thoại thành công' });
+  } catch (err) {
+    console.error('Error in POST /api/admin/conversations/:id/close:', err);
+    res.status(500).json({ success: false, message: 'Lỗi kết thúc hỗ trợ' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// QUẢN LÝ ĐÁNH GIÁ — REVIEWS APIS
+// ─────────────────────────────────────────────────────────────
+
+// Hàm tính lại điểm rating trung bình cho sản phẩm sau khi ẩn/hiện/xóa đánh giá
+async function recalculateProductRatingDb(database, productId) {
+  try {
+    if (!productId) return;
+    const prodId = productId instanceof ObjectId ? productId : new ObjectId(productId);
+    const agg = await database.collection('product_reviews').aggregate([
+      { $match: { productId: prodId, status: 'APPROVED' } },
+      {
+        $group: {
+          _id: '$productId',
+          avgRating: { $sum: '$rating' },
+          count: { $sum: 1 },
+        },
+      },
+    ]).toArray();
+
+    if (agg.length > 0 && agg[0].count > 0) {
+      const avg = Math.round((agg[0].avgRating / agg[0].count) * 10) / 10;
+      await database.collection('products').updateOne({ _id: prodId }, { $set: { rating: avg } });
+    } else {
+      await database.collection('products').updateOne({ _id: prodId }, { $set: { rating: 5 } });
+    }
+  } catch (err) {
+    console.error('Lỗi tính lại rating sản phẩm:', err);
+  }
+}
+
+// 1. Lấy danh sách đánh giá kèm phân trang, tìm kiếm, bộ lọc
+app.get(['/api/reviews', '/api/admin/reviews'], async (req, res) => {
+  try {
+    const database = await connectToMongo();
+    const {
+      page = 1,
+      pageSize = 20,
+      search,
+      rating,
+      status,
+      isVerifiedPurchase,
+      sortKey = 'createdAt',
+      sortDir = 'desc',
+    } = req.query;
+
+    const p = Math.max(1, parseInt(page, 10) || 1);
+    const ps = Math.max(1, Math.min(100, parseInt(pageSize, 10) || 20));
+    const skip = (p - 1) * ps;
+
+    const filter = {};
+
+    if (rating) {
+      const rNum = parseInt(rating, 10);
+      if (!isNaN(rNum) && rNum >= 1 && rNum <= 5) {
+        filter.rating = rNum;
+      }
+    }
+
+    if (status && status !== 'all') {
+      filter.status = status;
+    }
+
+    if (isVerifiedPurchase === 'true' || isVerifiedPurchase === true) {
+      filter.isVerifiedPurchase = true;
+    } else if (isVerifiedPurchase === 'false' || isVerifiedPurchase === false) {
+      filter.isVerifiedPurchase = false;
+    }
+
+    if (search && search.trim()) {
+      const term = search.trim();
+
+      // Tìm sản phẩm khớp tên
+      const matchedProducts = await database.collection('products')
+        .find({
+          $or: [
+            { 'vi.title': { $regex: term, $options: 'i' } },
+            { titleUrl: { $regex: term, $options: 'i' } },
+          ],
+        })
+        .project({ _id: 1 })
+        .toArray();
+      const productIds = matchedProducts.map((pr) => pr._id);
+
+      // Tìm user khớp tên/email
+      const matchedUsers = await database.collection('users')
+        .find({
+          $or: [
+            { fullName: { $regex: term, $options: 'i' } },
+            { name: { $regex: term, $options: 'i' } },
+            { email: { $regex: term, $options: 'i' } },
+          ],
+        })
+        .project({ _id: 1 })
+        .toArray();
+      const userIds = matchedUsers.map((u) => u._id);
+
+      filter.$or = [
+        { productId: { $in: productIds } },
+        { userId: { $in: userIds } },
+        { userName: { $regex: term, $options: 'i' } },
+        { comment: { $regex: term, $options: 'i' } },
+        { orderId: { $regex: term, $options: 'i' } },
+      ];
+    }
+
+    const sort = {};
+    const validSortKeys = ['createdAt', 'rating', 'status', 'isVerifiedPurchase', 'customerName'];
+    const resolvedSortKey = validSortKeys.includes(sortKey) ? (sortKey === 'customerName' ? 'userName' : sortKey) : 'createdAt';
+    sort[resolvedSortKey] = sortDir === 'asc' ? 1 : -1;
+
+    const [items, total] = await Promise.all([
+      database.collection('product_reviews')
+        .find(filter)
+        .sort(sort)
+        .skip(skip)
+        .limit(ps)
+        .toArray(),
+      database.collection('product_reviews').countDocuments(filter),
+    ]);
+
+    // Populate products info
+    const productIdsToFetch = items
+      .map((item) => item.productId)
+      .filter((id) => id && ObjectId.isValid(id))
+      .map((id) => (id instanceof ObjectId ? id : new ObjectId(id)));
+
+    const productsMap = {};
+    if (productIdsToFetch.length > 0) {
+      const products = await database.collection('products')
+        .find({ _id: { $in: productIdsToFetch } })
+        .project({ 'vi.title': 1, 'mainImage.url': 1, titleUrl: 1, id: 1 })
+        .toArray();
+      products.forEach((pr) => {
+        productsMap[pr._id.toString()] = pr;
+      });
+    }
+
+    // Populate users info
+    const userIdsToFetch = items
+      .map((item) => item.userId)
+      .filter((id) => id && ObjectId.isValid(id))
+      .map((id) => (id instanceof ObjectId ? id : new ObjectId(id)));
+
+    const usersMap = {};
+    if (userIdsToFetch.length > 0) {
+      const users = await database.collection('users')
+        .find({ _id: { $in: userIdsToFetch } })
+        .project({ fullName: 1, name: 1, email: 1, avatar: 1 })
+        .toArray();
+      users.forEach((u) => {
+        usersMap[u._id.toString()] = u;
+      });
+    }
+
+    const populatedItems = items.map((item) => {
+      const pr = item.productId ? productsMap[item.productId.toString()] : null;
+      const u = item.userId ? usersMap[item.userId.toString()] : null;
+
+      // Priority: users.fullName -> users.name -> product_reviews.userName -> 'Khách hàng'
+      const customerName = u?.fullName || u?.name || item.userName || 'Khách hàng';
+
+      // Priority: users.avatar -> product_reviews.userAvatar -> ''
+      const customerAvatar = u?.avatar || item.userAvatar || '';
+
+      return {
+        ...item,
+        id: item._id.toString(),
+        productTitle: pr?.vi?.title || 'Sản phẩm Chéri',
+        productImage: pr?.mainImage?.url || null,
+        productUrl: pr?.titleUrl || '',
+        customerName,
+        customerAvatar,
+        image: customerAvatar,
+        avatar: customerAvatar,
+        customerEmail: u?.email || '',
+        user: u ? {
+          _id: u._id.toString(),
+          fullName: u.fullName,
+          name: u.name,
+          email: u.email,
+          avatar: u.avatar
+        } : null,
+      };
+    });
+
+    return res.json({
+      success: true,
+      data: populatedItems,
+      pagination: {
+        page: p,
+        pageSize: ps,
+        total,
+        totalPages: Math.ceil(total / ps),
+      },
+    });
+  } catch (err) {
+    console.error('Error in GET /api/admin/reviews:', err);
+    res.status(500).json({ success: false, message: 'Lỗi tải danh sách đánh giá' });
+  }
+});
+
+// 2. Chi tiết 1 đánh giá
+app.get('/api/admin/reviews/:id', async (req, res) => {
+  try {
+    const database = await connectToMongo();
+    const reviewId = new ObjectId(req.params.id);
+    const review = await database.collection('product_reviews').findOne({ _id: reviewId });
+
+    if (!review) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đánh giá' });
+    }
+
+    let product = null;
+    if (review.productId) {
+      const pid = review.productId instanceof ObjectId ? review.productId : new ObjectId(review.productId);
+      product = await database.collection('products').findOne(
+        { _id: pid },
+        { projection: { 'vi.title': 1, 'mainImage.url': 1, titleUrl: 1, id: 1 } }
+      );
+    }
+
+    let user = null;
+    if (review.userId) {
+      const uid = review.userId instanceof ObjectId ? review.userId : new ObjectId(review.userId);
+      user = await database.collection('users').findOne(
+        { _id: uid },
+        { projection: { fullName: 1, name: 1, email: 1, avatar: 1, createdAt: 1 } }
+      );
+    }
+
+    const customerName = user?.fullName || user?.name || review.userName || 'Khách hàng';
+    const customerAvatar = user?.avatar || review.userAvatar || '';
+
+    return res.json({
+      success: true,
+      data: {
+        ...review,
+        id: review._id.toString(),
+        product,
+        user,
+        customerName,
+        customerAvatar,
+        image: customerAvatar,
+        avatar: customerAvatar,
+        customerEmail: user?.email || '',
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi tải chi tiết đánh giá' });
+  }
+});
+
+// 3. Cập nhật trạng thái đánh giá (Ẩn / Hiện / Chờ duyệt)
+app.patch(['/api/admin/reviews/:id/status', '/api/reviews/admin/:id/status'], async (req, res) => {
+  try {
+    const database = await connectToMongo();
+    const reviewId = new ObjectId(req.params.id);
+    const { status } = req.body || {};
+
+    if (!['APPROVED', 'REJECTED', 'PENDING'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Trạng thái không hợp lệ' });
+    }
+
+    const review = await database.collection('product_reviews').findOne({ _id: reviewId });
+    if (!review) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đánh giá' });
+    }
+
+    const now = new Date();
+    await database.collection('product_reviews').updateOne(
+      { _id: reviewId },
+      { $set: { status, updatedAt: now } }
+    );
+
+    // Tính lại rating trung bình cho sản phẩm
+    await recalculateProductRatingDb(database, review.productId);
+
+    return res.json({
+      success: true,
+      status,
+      message: status === 'APPROVED' ? 'Đã hiển thị đánh giá thành công' : 'Đã ẩn đánh giá thành công',
+    });
+  } catch (err) {
+    console.error('Error in PATCH /api/admin/reviews/:id/status:', err);
+    res.status(500).json({ success: false, message: 'Lỗi cập nhật trạng thái đánh giá' });
+  }
+});
+
+// 4. Xóa 1 đánh giá
+app.delete(['/api/admin/reviews/:id', '/api/reviews/:id'], async (req, res) => {
+  try {
+    const database = await connectToMongo();
+    const reviewId = new ObjectId(req.params.id);
+
+    const review = await database.collection('product_reviews').findOne({ _id: reviewId });
+    if (!review) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đánh giá' });
+    }
+
+    await database.collection('product_reviews').deleteOne({ _id: reviewId });
+    await recalculateProductRatingDb(database, review.productId);
+
+    return res.json({
+      success: true,
+      message: 'Đã xóa đánh giá thành công',
+    });
+  } catch (err) {
+    console.error('Error in DELETE /api/admin/reviews/:id:', err);
+    res.status(500).json({ success: false, message: 'Lỗi xóa đánh giá' });
+  }
+});
+
+// 5. Xóa hàng loạt đánh giá đã chọn
+app.post('/api/admin/reviews/bulk-delete', async (req, res) => {
+  try {
+    const database = await connectToMongo();
+    const { ids } = req.body || {};
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'Danh sách ID không hợp lệ' });
+    }
+
+    const objIds = ids
+      .filter((id) => id && ObjectId.isValid(id))
+      .map((id) => (id instanceof ObjectId ? id : new ObjectId(id)));
+
+    // Lấy các sản phẩm bị ảnh hưởng để cập nhật lại rating
+    const reviews = await database.collection('product_reviews')
+      .find({ _id: { $in: objIds } })
+      .project({ productId: 1 })
+      .toArray();
+
+    const productIds = [...new Set(reviews.map((r) => r.productId.toString()))];
+
+    const delRes = await database.collection('product_reviews').deleteMany({
+      _id: { $in: objIds },
+    });
+
+    for (const pid of productIds) {
+      await recalculateProductRatingDb(database, pid);
+    }
+
+    return res.json({
+      success: true,
+      deletedCount: delRes.deletedCount,
+      message: `Đã xóa ${delRes.deletedCount} đánh giá thành công`,
+    });
+  } catch (err) {
+    console.error('Error in POST /api/admin/reviews/bulk-delete:', err);
+    res.status(500).json({ success: false, message: 'Lỗi xóa hàng loạt đánh giá' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// 12. NEWSLETTER SUBSCRIBERS API (ĐĂNG KÝ NHẬN ƯU ĐÃI)
+// ─────────────────────────────────────────────────────────────
+
+// Anti-spam in-memory rate limiting map: ip -> array of timestamps
+const newsletterRateLimitMap = new Map();
+function checkNewsletterRateLimit(ip) {
+  const now = Date.now();
+  const windowMs = 60 * 1000; // 1 minute
+  const maxRequests = 15;
+  const timestamps = (newsletterRateLimitMap.get(ip) || []).filter((t) => now - t < windowMs);
+  if (timestamps.length >= maxRequests) {
+    return false;
+  }
+  timestamps.push(now);
+  newsletterRateLimitMap.set(ip, timestamps);
+  return true;
+}
+
+// 12.1 POST /api/newsletter/subscribe (Public)
+app.post('/api/newsletter/subscribe', async (req, res) => {
+  try {
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkNewsletterRateLimit(clientIp)) {
+      return res.status(429).json({
+        success: false,
+        message: 'Bạn thao tác quá nhanh. Vui lòng thử lại sau giây lát.',
+      });
+    }
+
+    const { email, source } = req.body || {};
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Vui lòng cung cấp địa chỉ email.',
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Định dạng email không hợp lệ. Vui lòng kiểm tra lại.',
+      });
+    }
+
+    const database = await connectToMongo();
+    const collection = database.collection('newsletter_subscribers');
+
+    const existing = await collection.findOne({ email: normalizedEmail });
+
+    if (existing) {
+      if (existing.status === 'SUBSCRIBED') {
+        return res.json({
+          success: true,
+          message: 'Email này đã được đăng ký nhận ưu đãi trước đó.',
+          data: {
+            id: existing._id,
+            email: existing.email,
+            status: existing.status,
+            subscribedAt: existing.subscribedAt,
+          },
+        });
+      }
+
+      // Đã từng hủy đăng ký -> kích hoạt lại
+      const now = new Date();
+      await collection.updateOne(
+        { _id: existing._id },
+        {
+          $set: {
+            status: 'SUBSCRIBED',
+            source: source || existing.source || 'FOOTER',
+            subscribedAt: now,
+            updatedAt: now,
+          },
+        }
+      );
+
+      return res.json({
+        success: true,
+        message: 'Chào mừng bạn quay lại! Đăng ký nhận ưu đãi thành công.',
+        data: {
+          id: existing._id,
+          email: existing.email,
+          status: 'SUBSCRIBED',
+          subscribedAt: now,
+        },
+      });
+    }
+
+    const now = new Date();
+    const newDoc = {
+      email: normalizedEmail,
+      status: 'SUBSCRIBED',
+      source: source || 'FOOTER',
+      subscribedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const insertResult = await collection.insertOne(newDoc);
+
+    return res.status(201).json({
+      success: true,
+      message: 'Đăng ký nhận ưu đãi thành công!',
+      data: {
+        id: insertResult.insertedId,
+        email: normalizedEmail,
+        status: 'SUBSCRIBED',
+        subscribedAt: now,
+      },
+    });
+  } catch (err) {
+    console.error('Error in POST /api/newsletter/subscribe:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Có lỗi xảy ra trong quá trình đăng ký. Vui lòng thử lại sau.',
+    });
+  }
+});
+
+// 12.2 GET /api/admin/newsletter-subscribers (Admin - Protected)
+app.get('/api/admin/newsletter-subscribers', async (req, res) => {
+  try {
+    // Xác thực quyền Admin
+    let userFromToken = null;
+    const authHeader = req.headers.authorization || '';
+    if (authHeader.startsWith('Bearer ')) {
+      const token = authHeader.slice(7).trim();
+      try {
+        userFromToken = jwt.verify(token, process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789');
+      } catch (_) {
+        try {
+          userFromToken = jwt.decode(token);
+        } catch (_) {}
+      }
+    }
+
+    const userRoles = userFromToken?.roles || userFromToken?.role || [];
+    const roles = Array.isArray(userRoles) ? userRoles : [userRoles];
+    const isAdmin = roles.some(
+      (r) => typeof r === 'string' && (r.toLowerCase() === 'admin' || r.toLowerCase() === 'superadmin' || r.toLowerCase() === 'super-admin')
+    );
+
+    if (!isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Truy cập bị từ chối: Yêu cầu quyền quản trị.',
+      });
+    }
+
+    const database = await connectToMongo();
+    const collection = database.collection('newsletter_subscribers');
+
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const pageSize = Math.max(1, Math.min(100, parseInt(req.query.pageSize, 10) || 20));
+    const skip = (page - 1) * pageSize;
+
+    const pipeline = [];
+
+    // Lookup người dùng từ collection `users` theo email
+    pipeline.push({
+      $lookup: {
+        from: 'users',
+        localField: 'email',
+        foreignField: 'email',
+        as: 'userMatch',
+      },
+    });
+
+    pipeline.push({
+      $addFields: {
+        matchedUser: { $arrayElemAt: ['$userMatch', 0] },
+      },
+    });
+
+    const matchConditions = {};
+
+    // Lọc theo trạng thái
+    if (req.query.status && req.query.status.trim() && req.query.status.toUpperCase() !== 'ALL') {
+      matchConditions.status = req.query.status.trim().toUpperCase();
+    }
+
+    // Tìm kiếm không phân biệt chữ hoa/thường theo email hoặc tên tài khoản
+    if (req.query.search && req.query.search.trim()) {
+      const searchRegex = new RegExp(req.query.search.trim(), 'i');
+      matchConditions.$or = [
+        { email: searchRegex },
+        { 'matchedUser.name': searchRegex },
+        { 'matchedUser.fullName': searchRegex },
+      ];
+    }
+
+    if (Object.keys(matchConditions).length > 0) {
+      pipeline.push({ $match: matchConditions });
+    }
+
+    // Sắp xếp
+    const sortBy = req.query.sortBy || 'subscribedAt';
+    const sortDir = req.query.sortOrder === 'asc' ? 1 : -1;
+    const sortStage = {};
+    sortStage[sortBy] = sortDir;
+
+    // Phân trang và project kết quả bảo mật
+    pipeline.push({
+      $facet: {
+        metadata: [{ $count: 'total' }],
+        data: [
+          { $sort: sortStage },
+          { $skip: skip },
+          { $limit: pageSize },
+          {
+            $project: {
+              _id: 1,
+              id: '$_id',
+              email: 1,
+              status: 1,
+              source: 1,
+              subscribedAt: 1,
+              createdAt: 1,
+              updatedAt: 1,
+              customer: {
+                isGuest: { $eq: [{ $size: '$userMatch' }, 0] },
+                avatar: { $ifNull: ['$matchedUser.avatar', null] },
+                name: {
+                  $cond: {
+                    if: { $eq: [{ $size: '$userMatch' }, 0] },
+                    then: 'Khách vãng lai',
+                    else: {
+                      $cond: {
+                        if: {
+                          $gt: [
+                            { $strLenCP: { $ifNull: ['$matchedUser.name', ''] } },
+                            0,
+                          ],
+                        },
+                        then: '$matchedUser.name',
+                        else: {
+                          $cond: {
+                            if: {
+                              $gt: [
+                                {
+                                  $strLenCP: {
+                                    $ifNull: ['$matchedUser.fullName', ''],
+                                  },
+                                },
+                                0,
+                              ],
+                            },
+                            then: '$matchedUser.fullName',
+                            else: 'Thành viên Chéri',
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    const result = await collection.aggregate(pipeline).toArray();
+    const total = result[0]?.metadata[0]?.total || 0;
+    const items = result[0]?.data || [];
+
+    return res.json({
+      success: true,
+      data: items,
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize) || 1,
+      },
+    });
+  } catch (err) {
+    console.error('Error in GET /api/admin/newsletter-subscribers:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi khi tải danh sách người đăng ký nhận ưu đãi',
     });
   }
 });

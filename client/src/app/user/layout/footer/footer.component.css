@@ -125,6 +125,18 @@
   transform: translateY(1px);
 }
 
+.footer-subscribe-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.footer-subscribe-input:disabled {
+  background-color: #f9fafb;
+  cursor: not-allowed;
+}
+
 .footer-contact-info {
   display: flex;
   flex-direction: column;

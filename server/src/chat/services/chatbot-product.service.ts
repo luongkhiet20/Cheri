@@ -8,17 +8,35 @@ import { ProductVariantDocument } from '../../products/models/product-variant.mo
 
 export interface ProductSearchFilter {
   queryText?: string;
-  maxPrice?: number;
+  category?: 'đầm' | 'áo' | 'quần' | 'chân váy' | 'set' | string;
   minPrice?: number;
+  maxPrice?: number;
   color?: string;
   size?: string;
-  category?: string;
+  sortBy?: 'newest' | 'price_asc' | 'price_desc' | 'relevance';
   onlyInStock?: boolean;
 }
 
 @Injectable()
 export class ChatbotProductService {
   private readonly logger = new Logger(ChatbotProductService.name);
+
+  // Color alias dictionary for robust bilingual & synonym normalization
+  private readonly colorMap: Record<string, string[]> = {
+    đỏ: ['đỏ', 'red', 'scarlet', 'crimson', 'ruby'],
+    đen: ['đen', 'black'],
+    trắng: ['trắng', 'white', 'ivory', 'kem'],
+    be: ['be', 'beige'],
+    hồng: ['hồng', 'pink', 'rose'],
+    vàng: ['vàng', 'yellow', 'gold'],
+    xanh: ['xanh', 'blue', 'navy', 'xanh navy', 'xanh dương', 'xanh lá', 'green'],
+    xám: ['xám', 'ghi', 'grey', 'gray'],
+    nâu: ['nâu', 'brown', 'caramel'],
+    tím: ['tím', 'purple', 'violet', 'lavender'],
+    cam: ['cam', 'orange'],
+    'chấm bi': ['chấm bi', 'polka dot', 'polka'],
+    'rằn ri': ['rằn ri', 'camo', 'camouflage'],
+  };
 
   constructor(
     @InjectModel('Product') private productModel: Model<any>,
@@ -29,7 +47,8 @@ export class ChatbotProductService {
   ) {}
 
   /**
-   * Search active, visible products with detailed criteria (color, size, price, stock)
+   * Search active, visible products with detailed criteria (category, color, size, price, stock)
+   * Evaluates effectivePrice and sort order across the candidate pool before limiting.
    */
   async searchProductsWithCriteria(
     criteria: ProductSearchFilter,
@@ -41,84 +60,162 @@ export class ChatbotProductService {
       { 'vi.visibility': { $ne: false } },
     ];
 
-    // 2. Keyword & category filtering (searching root, vi locale, descriptions, tags)
-    const keywords = this.extractKeywords(criteria.queryText || '');
-    if (keywords.length > 0) {
-      const keywordRegex = keywords.join('|');
-      andClauses.push({
-        $or: [
-          { title: { $regex: keywordRegex, $options: 'i' } },
-          { 'vi.title': { $regex: keywordRegex, $options: 'i' } },
-          { description: { $regex: keywordRegex, $options: 'i' } },
-          { 'vi.description': { $regex: keywordRegex, $options: 'i' } },
-          { descriptionFull: { $regex: keywordRegex, $options: 'i' } },
-          { 'vi.descriptionFull': { $regex: keywordRegex, $options: 'i' } },
-          { tags: { $in: keywords.map((k) => new RegExp(k, 'i')) } },
-          { categoryLevel1: { $in: keywords.map((k) => new RegExp(k, 'i')) } },
-          { 'vi.categoryLevel1': { $in: keywords.map((k) => new RegExp(k, 'i')) } },
-          { 'vi.categoryLevel2': { $in: keywords.map((k) => new RegExp(k, 'i')) } },
-        ],
-      });
-    }
-
-    // 3. Garment category filter
+    // 2. Strict category filtering based on MongoDB actual structure
     if (criteria.category) {
-      andClauses.push({
-        $or: [
-          { title: { $regex: criteria.category, $options: 'i' } },
-          { 'vi.title': { $regex: criteria.category, $options: 'i' } },
-          { categoryLevel1: { $regex: criteria.category, $options: 'i' } },
-          { 'vi.categoryLevel1': { $regex: criteria.category, $options: 'i' } },
-          { 'vi.categoryLevel2': { $regex: criteria.category, $options: 'i' } },
-          { 'vi.classifications': { $regex: criteria.category, $options: 'i' } },
-          { tags: { $regex: criteria.category, $options: 'i' } },
-        ],
-      });
+      const cat = criteria.category.toLowerCase().trim();
+
+      if (cat === 'chân váy') {
+        // Skirts only
+        andClauses.push({
+          $and: [
+            {
+              $or: [
+                { 'vi.categoryLevel2': /chân váy/i },
+                { 'variants.classification': /chân váy/i },
+                { 'vi.title': /chân váy|skirt/i },
+                { title: /chân váy|skirt/i },
+              ],
+            },
+            { 'vi.categoryLevel2': { $nin: ['Áo nữ', 'Quần nữ', 'Set trang phục', 'Phụ kiện'] } },
+          ],
+        });
+      } else if (cat === 'đầm' || cat === 'váy') {
+        // Dresses only: exclude sets, corsets, standalone pants, and skirts
+        andClauses.push({
+          $and: [
+            {
+              $or: [
+                { 'vi.categoryLevel2': 'Đầm & Váy' },
+                { 'vi.categoryLevel2': /đầm & váy/i },
+                { 'variants.classification': { $in: ['Đầm & Váy', 'Váy'] } },
+                {
+                  $and: [
+                    { 'vi.categoryLevel2': 'Thời trang nữ' },
+                    {
+                      $or: [
+                        { 'vi.title': /đầm|dress/i },
+                        { title: /đầm|dress/i },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              'vi.categoryLevel2': {
+                $nin: ['Set trang phục', 'Áo nữ', 'Quần nữ', 'Phụ kiện', 'Chân váy'],
+              },
+            },
+            { 'vi.title': { $not: /^(set|áo corset|quần\b)/i } },
+            { title: { $not: /^(set|áo corset|quần\b)/i } },
+          ],
+        });
+      } else if (cat === 'quần') {
+        // Pants / Jeans only
+        andClauses.push({
+          $and: [
+            {
+              $or: [
+                { 'vi.categoryLevel2': 'Quần nữ' },
+                { 'vi.categoryLevel2': /quần/i },
+                { 'variants.classification': /quần/i },
+                { 'vi.title': /quần|pant|jean/i },
+                { title: /quần|pant|jean/i },
+              ],
+            },
+            {
+              'vi.categoryLevel2': {
+                $nin: ['Đầm & Váy', 'Set trang phục', 'Áo nữ', 'Chân váy', 'Phụ kiện'],
+              },
+            },
+          ],
+        });
+      } else if (cat === 'áo') {
+        // Tops / Shirts only
+        andClauses.push({
+          $and: [
+            {
+              $or: [
+                { 'vi.categoryLevel2': 'Áo nữ' },
+                { 'vi.categoryLevel2': /áo nữ/i },
+                { 'variants.classification': /áo/i },
+                { 'vi.title': /\b(áo|top|corset|blazer|hoodie|sơ mi|croptop)\b/i },
+                { title: /\b(áo|top|corset|blazer|hoodie|sơ mi|croptop)\b/i },
+              ],
+            },
+            {
+              'vi.categoryLevel2': {
+                $nin: ['Đầm & Váy', 'Quần nữ', 'Chân váy', 'Phụ kiện'],
+              },
+            },
+          ],
+        });
+      } else if (cat === 'set' || cat === 'set đồ' || cat === 'bộ') {
+        // Sets / Outfits
+        andClauses.push({
+          $or: [
+            { 'vi.categoryLevel2': /set trang phục/i },
+            { 'variants.classification': /set trang phục|full set/i },
+            { 'vi.title': /\b(set|bộ trang phục|bộ đồ)\b/i },
+            { title: /\b(set|bộ trang phục|bộ đồ)\b/i },
+          ],
+        });
+      }
     }
 
-    // 4. Color filter
+    // 3. Color filtering with alias expansion
     if (criteria.color) {
+      const colorAliases = this.getColorAliases(criteria.color);
+      const colorRegex = colorAliases.join('|');
       andClauses.push({
         $or: [
-          { 'colors.name': { $regex: criteria.color, $options: 'i' } },
-          { 'vi.colors.name': { $regex: criteria.color, $options: 'i' } },
-          { 'attributes.colors.name': { $regex: criteria.color, $options: 'i' } },
-          { 'variants.color': { $regex: criteria.color, $options: 'i' } },
-          { title: { $regex: criteria.color, $options: 'i' } },
-          { 'vi.title': { $regex: criteria.color, $options: 'i' } },
+          { 'colors.name': { $regex: colorRegex, $options: 'i' } },
+          { 'vi.colors.name': { $regex: colorRegex, $options: 'i' } },
+          { 'attributes.colors.name': { $regex: colorRegex, $options: 'i' } },
+          { 'variants.color': { $regex: colorRegex, $options: 'i' } },
+          { title: { $regex: colorRegex, $options: 'i' } },
+          { 'vi.title': { $regex: colorRegex, $options: 'i' } },
         ],
       });
     }
 
-    // 5. Size filter
+    // 4. Size filtering
     if (criteria.size) {
+      const sizePattern = `^${criteria.size}$`;
       andClauses.push({
         $or: [
-          { sizes: { $regex: `^${criteria.size}$`, $options: 'i' } },
-          { 'vi.sizes': { $regex: `^${criteria.size}$`, $options: 'i' } },
-          { 'attributes.sizes': { $regex: `^${criteria.size}$`, $options: 'i' } },
-          { 'variants.size': { $regex: `^${criteria.size}$`, $options: 'i' } },
+          { sizes: { $regex: sizePattern, $options: 'i' } },
+          { 'vi.sizes': { $regex: sizePattern, $options: 'i' } },
+          { 'attributes.sizes': { $regex: sizePattern, $options: 'i' } },
+          { 'variants.size': { $regex: sizePattern, $options: 'i' } },
         ],
       });
     }
 
     try {
+      // Fetch matching candidate set (up to 150 items to evaluate effectivePrice and sort properly)
+      const sortObj: any = criteria.sortBy === 'newest'
+        ? { createdAt: -1, dateAdded: -1 }
+        : { createdAt: -1 };
+
       const rawProducts = await this.productModel
         .find({ $and: andClauses })
-        .sort({ createdAt: -1 })
-        .limit(20)
+        .sort(sortObj)
+        .limit(150)
         .lean();
-
-      const cards: ChatProductCard[] = [];
+      const candidateCards: ChatProductCard[] = [];
 
       for (const prod of rawProducts) {
+        // Enforce visibility
+        if (prod.visibility === false || prod.vi?.visibility === false) continue;
+
         const card = await this.buildVerifiedProductCard(prod, criteria.color, criteria.size);
 
-        // Price filtering strictly on effective price from DB
-        if (criteria.maxPrice && card.price > criteria.maxPrice) {
+        // Price filtering strictly on effectivePrice
+        if (criteria.maxPrice !== undefined && card.price > criteria.maxPrice) {
           continue;
         }
-        if (criteria.minPrice && card.price < criteria.minPrice) {
+        if (criteria.minPrice !== undefined && card.price < criteria.minPrice) {
           continue;
         }
 
@@ -127,11 +224,19 @@ export class ChatbotProductService {
           continue;
         }
 
-        cards.push(card);
-        if (cards.length >= limit) break;
+        candidateCards.push(card);
       }
 
-      return cards;
+      // Sort candidate cards across the ENTIRE matched dataset
+      if (criteria.sortBy === 'price_asc') {
+        candidateCards.sort((a, b) => a.price - b.price);
+      } else if (criteria.sortBy === 'price_desc') {
+        candidateCards.sort((a, b) => b.price - a.price);
+      } else if (criteria.sortBy === 'newest') {
+        // If cards already sorted by createdAt, maintain or sort by ID/date
+      }
+
+      return candidateCards.slice(0, limit);
     } catch (err) {
       this.logger.error(`Error searching products with criteria: ${err.message}`, err.stack);
       return [];
@@ -192,8 +297,11 @@ export class ChatbotProductService {
 
         // If specific color and/or size requested, check that specific variant
         if (color || size) {
+          const colorAliases = color ? this.getColorAliases(color) : [];
+          const colorRegex = colorAliases.length > 0 ? new RegExp(colorAliases.join('|'), 'i') : null;
+
           const matched = variants.find((v) => {
-            const matchColor = !color || (v.color && new RegExp(color, 'i').test(v.color));
+            const matchColor = !colorRegex || (v.color && colorRegex.test(v.color));
             const matchSize = !size || (v.size && new RegExp(`^${size}$`, 'i').test(v.size));
             return matchColor && matchSize;
           });
@@ -389,6 +497,20 @@ export class ChatbotProductService {
   /**
    * Build server-verified ChatProductCard from Product document
    */
+  getColorAliases(color: string): string[] {
+    if (!color) return [];
+    const lower = color.toLowerCase().trim();
+    for (const [key, aliases] of Object.entries(this.colorMap)) {
+      if (key === lower || aliases.includes(lower)) {
+        return aliases;
+      }
+    }
+    return [lower];
+  }
+
+  /**
+   * Build server-verified ChatProductCard from Product document
+   */
   async buildVerifiedProductCard(
     prod: any,
     targetColor?: string,
@@ -423,9 +545,13 @@ export class ChatbotProductService {
       ? prod.categoryLevel1.join(', ')
       : prod.vi?.categoryLevel2 || prod.vi?.categoryLevel1 || prod.categoryLevel1 || '';
 
+    // Strip "Sale " prefix from title if present
+    const rawTitle = prod.vi?.title || prod.title || '';
+    const cleanTitle = rawTitle.replace(/^Sale\s+/i, '').trim();
+
     return {
       id: prod._id ? prod._id.toString() : '',
-      title: prod.vi?.title || prod.title || '',
+      title: cleanTitle,
       titleUrl: prod.titleUrl || '',
       price: effectivePrice,
       originalPrice,
@@ -442,49 +568,121 @@ export class ChatbotProductService {
   }
 
   /**
-   * Parse multi-criteria search filters from user query
+   * Parse multi-criteria search filters from user query with conversation context awareness
    */
-  parseCriteriaFromText(text: string): ProductSearchFilter {
-    const lower = (text || '').toLowerCase();
+  parseCriteriaFromText(text: string, context?: any): ProductSearchFilter {
+    const lower = (text || '').toLowerCase().trim();
     const criteria: ProductSearchFilter = { queryText: text, onlyInStock: true };
 
-    // 1. Price extraction: "dưới 500k", "dưới 1 triệu", "< 800.000", "tầm 1tr"
-    const underKMatch = lower.match(/dưới\s*(\d+)\s*(?:k|nghìn|ngàn)/i);
-    const underTrieuMatch = lower.match(/dưới\s*(\d+(?:\.\d+)?)\s*(?:triệu|tr)/i);
-    const underNumberMatch = lower.match(/(?:dưới|<)\s*(\d{1,3}(?:\.\d{3})+)/i);
-
-    if (underKMatch) {
-      criteria.maxPrice = parseInt(underKMatch[1], 10) * 1000;
-    } else if (underTrieuMatch) {
-      criteria.maxPrice = parseFloat(underTrieuMatch[1]) * 1000000;
-    } else if (underNumberMatch) {
-      criteria.maxPrice = parseInt(underNumberMatch[1].replace(/\./g, ''), 10);
+    // 1. Sort order parsing: rẻ nhất, giá thấp nhất, đắt nhất, mới nhất
+    if (/(?:rẻ nhất|giá rẻ nhất|giá thấp nhất|giá rẻ|thấp nhất|rẻ)/i.test(lower)) {
+      criteria.sortBy = 'price_asc';
+    } else if (/(?:đắt nhất|cao nhất|giá cao nhất)/i.test(lower)) {
+      criteria.sortBy = 'price_desc';
+    } else if (/(?:mới nhất|mới về|hàng mới|sản phẩm mới)/i.test(lower)) {
+      criteria.sortBy = 'newest';
     }
 
-    // 2. Color extraction
-    const colorsList = ['đen', 'trắng', 'đỏ', 'hồng', 'be', 'vàng', 'xanh', 'nâu', 'tím', 'cam', 'chấm bi'];
-    for (const c of colorsList) {
-      if (new RegExp(`\\b${c}\\b`, 'i').test(lower)) {
-        criteria.color = c;
-        break;
+    // Helper: Parse currency string like "500k", "1tr", "1.5 triệu", "1tr5", "800.000"
+    const parseAmount = (str: string): number | null => {
+      if (!str) return null;
+      const s = str.trim().toLowerCase();
+      // "1tr5" or "1 triệu 5"
+      const trSplit = s.match(/^(\d+)\s*(?:tr|triệu)\s*(\d+)$/);
+      if (trSplit) {
+        return parseInt(trSplit[1], 10) * 1000000 + parseInt(trSplit[2], 10) * 100000;
+      }
+      // "1.5tr", "1,5 triệu"
+      const trDecimal = s.match(/^(\d+(?:[.,]\d+)?)\s*(?:tr|triệu)$/);
+      if (trDecimal) {
+        return Math.round(parseFloat(trDecimal[1].replace(',', '.')) * 1000000);
+      }
+      // "500k", "500 nghìn", "500 ngàn"
+      const kMatch = s.match(/^(\d+)\s*(?:k|nghìn|ngàn)$/);
+      if (kMatch) {
+        return parseInt(kMatch[1], 10) * 1000;
+      }
+      // "500.000", "1.000.000"
+      const dotNumber = s.match(/^(\d{1,3}(?:\.\d{3})+)$/);
+      if (dotNumber) {
+        return parseInt(dotNumber[1].replace(/\./g, ''), 10);
+      }
+      // raw number like "500000"
+      const rawNum = s.match(/^(\d{5,8})$/);
+      if (rawNum) {
+        return parseInt(rawNum[1], 10);
+      }
+      return null;
+    };
+
+    // 2. Price range parsing: "từ 500k đến 1 triệu", "500k - 1tr", "khoảng 500k đến 1 triệu"
+    const rangeMatch =
+      lower.match(/(?:từ|khoảng)\s*([0-9.,k\snghìngàntriệutr]+?)\s*(?:đến|tới|-)\s*([0-9.,k\snghìngàntriệutr]+)/i) ||
+      lower.match(/(\d+\s*(?:k|nghìn|ngàn|tr|triệu))\s*-\s*(\d+\s*(?:k|nghìn|ngàn|tr|triệu))/i);
+
+    if (rangeMatch) {
+      const minVal = parseAmount(rangeMatch[1]);
+      const maxVal = parseAmount(rangeMatch[2]);
+      if (minVal !== null) criteria.minPrice = minVal;
+      if (maxVal !== null) criteria.maxPrice = maxVal;
+    } else {
+      // Upper bound price parsing: "dưới 500k", "tối đa 1 triệu", "không quá 1tr", "<= 1tr", "< 800.000"
+      const underMatch = lower.match(
+        /(?:dưới|tối đa|không quá|<=|<)\s*([0-9.,]+(?:\s*(?:k|nghìn|ngàn|triệu|tr))?|\d{1,3}(?:\.\d{3})+)/i,
+      );
+      if (underMatch) {
+        const parsed = parseAmount(underMatch[1]);
+        if (parsed !== null) criteria.maxPrice = parsed;
+      }
+
+      // Lower bound price parsing: "trên 500k", "tối thiểu 500k", "từ 500k trở lên"
+      const aboveMatch = lower.match(
+        /(?:trên|tối thiểu|từ|>=|>)\s*([0-9.,]+(?:\s*(?:k|nghìn|ngàn|triệu|tr))?|\d{1,3}(?:\.\d{3})+)(?:\s*(?:trở lên))?/i,
+      );
+      if (aboveMatch && !rangeMatch) {
+        const parsed = parseAmount(aboveMatch[1]);
+        if (parsed !== null) criteria.minPrice = parsed;
       }
     }
 
-    // 3. Size extraction
-    const sizeMatch = lower.match(/\b(?:size|cỡ)\s*([sml]|xl|xxl)\b/i) || lower.match(/\b([sml]|xl|xxl)\b/i);
-    if (sizeMatch) {
-      criteria.size = sizeMatch[1].toUpperCase();
+    // 3. Color extraction with alias dictionary and Unicode word boundaries
+    for (const [normColor, aliases] of Object.entries(this.colorMap)) {
+      for (const alias of aliases) {
+        if (new RegExp(`(?<!\\p{L})${alias}(?!\\p{L})`, 'iu').test(lower)) {
+          criteria.color = normColor;
+          break;
+        }
+      }
+      if (criteria.color) break;
     }
 
-    // 4. Garment category extraction
-    if (lower.includes('đầm') || lower.includes('váy')) {
-      criteria.category = 'đầm';
-    } else if (lower.includes('áo')) {
-      criteria.category = 'áo';
-    } else if (lower.includes('chân váy')) {
+    // 4. Size extraction with Unicode word boundaries
+    const sizeMatch =
+      lower.match(/(?:size|cỡ)\s*([sml]|xl|xxl)(?!\p{L})/iu) ||
+      lower.match(/(?<!\p{L})(xl|xxl)(?!\p{L})/iu) ||
+      lower.match(/(?<=\s)([sml])(?=\s*(?:còn|hết|ko|không|\?|$))/iu);
+
+    if (sizeMatch) {
+      const s = sizeMatch[1].replace(/size\s*/i, '').toUpperCase();
+      if (['S', 'M', 'L', 'XL', 'XXL'].includes(s)) {
+        criteria.size = s;
+      }
+    }
+
+    // 5. Garment category extraction (Order of precedence: Chân váy -> Set -> Quần -> Áo -> Đầm/Váy)
+    if (lower.includes('chân váy') || lower.includes('skirt')) {
       criteria.category = 'chân váy';
     } else if (lower.includes('set') || lower.includes('bộ')) {
       criteria.category = 'set';
+    } else if (/(?:quần|jeans|jean|bottom|trousers|pants)\b/i.test(lower)) {
+      criteria.category = 'quần';
+    } else if (/(?:áo|croptop|top|corset|blazer|sơ mi|hoodie)\b/i.test(lower)) {
+      criteria.category = 'áo';
+    } else if (lower.includes('đầm') || lower.includes('váy') || lower.includes('dress')) {
+      criteria.category = 'đầm';
+    } else if (context?.currentCategory) {
+      // Inherit context category if user asks follow-up (e.g. "Có mẫu nào dưới 1 triệu không?")
+      criteria.category = context.currentCategory;
     }
 
     return criteria;

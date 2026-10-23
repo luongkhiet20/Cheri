@@ -573,5 +573,575 @@ describe('Chatbot AI Chéri - Phase 3, 4, 5 Complete Verification Suite', () => 
     assert.match(res4.reply, /size l/i);
   });
 
+  // Test 16: Sequential conversation chain & plain text compliance (Requirement 8)
+  test('16. Sequential conversation chain: "Hướng dẫn chọn size" -> "60kg mặc size gì?" -> "1m60" -> "Size L được không?"', async () => {
+    let sessionContext = {};
+    const sessionMessages = [];
+
+    const mockSession = {
+      sessionId: 'sess_chain_seq',
+      get messages() {
+        return sessionMessages;
+      },
+      get context() {
+        return sessionContext;
+      },
+    };
+
+    const sessionService = {
+      getOrCreateSession: async () => mockSession,
+      appendMessage: async (sId, role, text, intent, updates) => {
+        sessionMessages.push({ role, content: text, intent });
+        if (updates) {
+          if (updates.sizingProfile) {
+            sessionContext.sizingProfile = {
+              ...(sessionContext.sizingProfile || {}),
+              ...updates.sizingProfile,
+            };
+          }
+          if (updates.lastIntent) {
+            sessionContext.lastIntent = updates.lastIntent;
+          }
+        }
+      },
+      resolveFollowUpProduct: () => null,
+    };
+
+    const mockAiService = {
+      generateResponse: async () => '', // Deterministic fallback path
+    };
+
+    const chatbot = new ChatbotService(
+      {},
+      new ChatbotModerationService(),
+      new ChatbotIntentService(),
+      {},
+      {},
+      sessionService,
+      mockAiService,
+    );
+
+    // Step 1: "Hướng dẫn mình cách chọn size đầm chuẩn"
+    const step1 = await chatbot.processMessage({
+      message: 'Hướng dẫn mình cách chọn size đầm chuẩn',
+      sessionId: 'sess_chain_seq',
+    });
+    assert.equal(step1.intent, 'size_consultation');
+    assert.doesNotMatch(step1.reply, /\*\*|###/, 'Must not contain markdown ** or ###');
+    assert.match(step1.reply, /vòng ngực/i);
+    assert.match(step1.reply, /vòng eo/i);
+    assert.match(step1.reply, /vòng mông/i);
+
+    // Step 2: "60kg mặc size gì?"
+    const step2 = await chatbot.processMessage({
+      message: '60kg mặc size gì?',
+      sessionId: 'sess_chain_seq',
+    });
+    assert.equal(step2.intent, 'size_consultation');
+    assert.equal(sessionContext.sizingProfile?.weight, 60, 'Session must retain weight 60kg');
+    // Must ask for height, not repeat 3-measurements explanation
+    assert.match(step2.reply, /chiều cao/i, 'Must ask for height');
+    assert.doesNotMatch(step2.reply, /vòng ngực|vòng mông/i, 'Must NOT repeat measuring instructions');
+    assert.doesNotMatch(step2.reply, /\*\*/, 'Must not contain markdown **');
+
+    // Step 3: "1m60"
+    const step3 = await chatbot.processMessage({
+      message: '1m60',
+      sessionId: 'sess_chain_seq',
+    });
+    assert.equal(step3.intent, 'size_consultation', '"1m60" must be recognized as size consultation follow-up');
+    assert.equal(sessionContext.sizingProfile?.height, 160, 'Session must retain height 160cm');
+    assert.equal(sessionContext.sizingProfile?.weight, 60, 'Session must still retain weight 60kg');
+    assert.match(step3.reply, /1m60/i, 'Must acknowledge height 1m60');
+    assert.match(step3.reply, /60kg/i, 'Must acknowledge weight 60kg');
+    assert.match(step3.reply, /mẫu đầm/i, 'Must ask for the dress model of interest');
+    assert.doesNotMatch(step3.reply, /\*\*/, 'Must not contain markdown **');
+
+    // Step 4: "Size L được không?"
+    const step4 = await chatbot.processMessage({
+      message: 'Size L được không?',
+      sessionId: 'sess_chain_seq',
+    });
+    assert.equal(step4.intent, 'size_consultation', '"Size L được không?" must stay in size consultation');
+    assert.match(step4.reply, /size l/i);
+    assert.doesNotMatch(step4.reply, /\*\*/, 'Must not contain markdown **');
+    assert.doesNotMatch(step4.reply, /tôn dáng nhất|hoàn hảo nhất|nở nang nhất/i, 'Must not contain cliché phrases');
+  });
+
+  // =========================================================================
+  // SECTION 9: MANDATORY 12 TESTS FOR SMART PRODUCT SEARCH & RECOMMENDATION
+  // =========================================================================
+
+  const mockDbProducts = [
+    {
+      _id: 'prod_zoey',
+      title: 'Đầm Zoey Dress',
+      titleUrl: 'dam-zoey-dress',
+      visibility: true,
+      categoryLevel2: 'Đầm & Váy',
+      vi: {
+        title: 'Đầm Zoey Dress',
+        categoryLevel2: 'Đầm & Váy',
+        regularPrice: 650000,
+        salePrice: 450000,
+        onSale: true,
+        visibility: true,
+      },
+      variants: [
+        { color: 'Chấm Bi', size: 'M', stock: 10 },
+        { color: 'Đen', size: 'L', stock: 5 }, // Notice: Đen is size L, not size M!
+      ],
+      createdAt: new Date('2026-03-01'),
+    },
+    {
+      _id: 'prod_ling',
+      title: 'Đầm Ling Dress',
+      titleUrl: 'dam-ling-dress',
+      visibility: true,
+      categoryLevel2: 'Đầm & Váy',
+      vi: {
+        title: 'Đầm Ling Dress',
+        categoryLevel2: 'Đầm & Váy',
+        regularPrice: 850000,
+        salePrice: 0,
+        onSale: false,
+        visibility: true,
+      },
+      variants: [
+        { color: 'Đỏ', size: 'S', stock: 8 },
+        { color: 'Trắng', size: 'M', stock: 4 },
+      ],
+      createdAt: new Date('2026-03-10'),
+    },
+    {
+      _id: 'prod_weaty',
+      title: 'Đầm Weaty Dress',
+      titleUrl: 'dam-weaty-dress',
+      visibility: true,
+      categoryLevel2: 'Đầm & Váy',
+      vi: {
+        title: 'Đầm Weaty Dress',
+        categoryLevel2: 'Đầm & Váy',
+        regularPrice: 1200000,
+        salePrice: 950000,
+        onSale: true,
+        visibility: true,
+      },
+      variants: [
+        { color: 'Đỏ', size: 'M', stock: 6 },
+      ],
+      createdAt: new Date('2026-03-15'),
+    },
+    {
+      _id: 'prod_luxury',
+      title: 'Đầm Dạ Hội Luxury Dress',
+      titleUrl: 'dam-da-hoi-luxury',
+      visibility: true,
+      categoryLevel2: 'Đầm & Váy',
+      vi: {
+        title: 'Đầm Dạ Hội Luxury Dress',
+        categoryLevel2: 'Đầm & Váy',
+        regularPrice: 2200000,
+        salePrice: 0,
+        onSale: false,
+        visibility: true,
+      },
+      variants: [
+        { color: 'Đen', size: 'M', stock: 2 },
+      ],
+      createdAt: new Date('2026-03-20'),
+    },
+    {
+      _id: 'prod_corset_set',
+      title: 'Áo Corset + Chân Váy Nỉ',
+      titleUrl: 'ao-corset-chan-vay-ni',
+      visibility: true,
+      categoryLevel2: 'Set trang phục',
+      vi: {
+        title: 'Áo Corset + Chân Váy Nỉ',
+        categoryLevel2: 'Set trang phục',
+        regularPrice: 890000,
+        salePrice: 0,
+        onSale: false,
+        visibility: true,
+      },
+      variants: [
+        { color: 'Trắng', size: 'M', stock: 5 },
+      ],
+      createdAt: new Date('2026-03-05'),
+    },
+    {
+      _id: 'prod_yaan',
+      title: 'Quần Jeans Nữ Yaan',
+      titleUrl: 'quan-jeans-nu-yaan',
+      visibility: true,
+      categoryLevel2: 'Quần nữ',
+      vi: {
+        title: 'Quần Jeans Nữ Yaan',
+        categoryLevel2: 'Quần nữ',
+        regularPrice: 550000,
+        salePrice: 0,
+        onSale: false,
+        visibility: true,
+      },
+      variants: [
+        { color: 'Xanh', size: 'M', stock: 12 },
+        { color: 'Đen', size: 'M', stock: 8 },
+      ],
+      createdAt: new Date('2026-03-12'),
+    },
+    {
+      _id: 'prod_hilton',
+      title: 'Quần Ống Loe Hilton',
+      titleUrl: 'quan-ong-loe-hilton',
+      visibility: true,
+      categoryLevel2: 'Quần nữ',
+      vi: {
+        title: 'Quần Ống Loe Hilton',
+        categoryLevel2: 'Quần nữ',
+        regularPrice: 750000,
+        salePrice: 0,
+        onSale: false,
+        visibility: true,
+      },
+      variants: [
+        { color: 'Đen', size: 'L', stock: 5 },
+      ],
+      createdAt: new Date('2026-03-18'),
+    },
+    {
+      _id: 'prod_mos',
+      title: 'Chân Váy Mini Da Mos Skirt',
+      titleUrl: 'chan-vay-mini-da-mos',
+      visibility: true,
+      categoryLevel2: 'Chân váy',
+      vi: {
+        title: 'Chân Váy Mini Da Mos Skirt',
+        categoryLevel2: 'Chân váy',
+        regularPrice: 390000,
+        salePrice: 0,
+        onSale: false,
+        visibility: true,
+      },
+      variants: [
+        { color: 'Đen', size: 'S', stock: 10 },
+      ],
+      createdAt: new Date('2026-03-02'),
+    },
+  ];
+
+  function createSmartMockProductModel() {
+    return {
+      find: (filter) => {
+        let items = [...mockDbProducts];
+
+        // Evaluate $and clauses
+        if (filter?.$and) {
+          for (const clause of filter.$and) {
+            if (clause.visibility) {
+              items = items.filter((p) => p.visibility !== false);
+            }
+            if (clause['vi.visibility']) {
+              items = items.filter((p) => p.vi?.visibility !== false);
+            }
+            if (clause.$and) {
+              for (const sub of clause.$and) {
+                if (sub['vi.categoryLevel2']?.$nin) {
+                  const nin = sub['vi.categoryLevel2'].$nin;
+                  items = items.filter((p) => !nin.includes(p.vi?.categoryLevel2));
+                }
+                if (sub['vi.title']?.$not) {
+                  items = items.filter((p) => !sub['vi.title'].$not.test(p.vi?.title || ''));
+                }
+                if (sub.$or) {
+                  items = items.filter((p) => {
+                    return sub.$or.some((branch) => {
+                      if (branch['vi.categoryLevel2']) {
+                        if (typeof branch['vi.categoryLevel2'] === 'string') {
+                          return p.vi?.categoryLevel2 === branch['vi.categoryLevel2'];
+                        }
+                        if (branch['vi.categoryLevel2'].test) {
+                          return branch['vi.categoryLevel2'].test(p.vi?.categoryLevel2 || '');
+                        }
+                      }
+                      if (branch['variants.classification']) {
+                        if (branch['variants.classification'].$in) {
+                          return branch['variants.classification'].$in.includes(p.vi?.categoryLevel2);
+                        }
+                        if (branch['variants.classification'].test) {
+                          return branch['variants.classification'].test(p.vi?.categoryLevel2 || '');
+                        }
+                      }
+                      if (branch['vi.title']?.test) {
+                        return branch['vi.title'].test(p.vi?.title || '');
+                      }
+                      return false;
+                    });
+                  });
+                }
+              }
+            }
+            if (clause.$or) {
+              // Color or size matching
+              items = items.filter((p) => {
+                return clause.$or.some((branch) => {
+                  if (branch['variants.color']?.$regex) {
+                    const r = new RegExp(branch['variants.color'].$regex, 'i');
+                    return (p.variants || []).some((v) => r.test(v.color));
+                  }
+                  if (branch['variants.size']?.$regex) {
+                    const r = new RegExp(branch['variants.size'].$regex, 'i');
+                    return (p.variants || []).some((v) => r.test(v.size));
+                  }
+                  return false;
+                });
+              });
+            }
+          }
+        }
+
+        return {
+          sort: (sortObj) => {
+            if (sortObj?.createdAt === -1) {
+              items.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+            }
+            return {
+              limit: (limitNum) => ({
+                lean: async () => items.slice(0, limitNum),
+              }),
+            };
+          },
+        };
+      },
+      findById: (id) => ({
+        lean: async () => mockDbProducts.find((p) => p._id === id) || null,
+      }),
+    };
+  }
+
+  function setupSmartChatbot() {
+    const mockModel = createSmartMockProductModel();
+    const productService = new ChatbotProductService(
+      mockModel,
+      { find: () => ({ lean: async () => [] }) },
+      {},
+      {},
+      {},
+    );
+
+    const sessionState = {
+      context: {},
+      messages: [],
+    };
+
+    const sessionService = {
+      getOrCreateSession: async (sId) => ({ sessionId: sId, ...sessionState }),
+      appendMessage: async (sId, sender, text, intent, updates) => {
+        if (updates) {
+          sessionState.context = {
+            ...(sessionState.context || {}),
+            ...updates,
+          };
+        }
+      },
+      resolveFollowUpProduct: (msg, ctx) => {
+        const last = ctx?.lastProducts || [];
+        if (last.length === 0) return null;
+        if (/mẫu đầu tiên|thứ nhất|mẫu 1/i.test(msg)) return last[0];
+        if (/mẫu thứ 2|thứ hai|mẫu 2/i.test(msg)) return last[1] || null;
+        return last[0];
+      },
+    };
+
+    const mockAiService = {
+      generateResponse: async () => '', // Deterministic consultant fallback
+    };
+
+    const chatbot = new ChatbotService(
+      {},
+      new ChatbotModerationService(),
+      new ChatbotIntentService(),
+      {},
+      productService,
+      sessionService,
+      mockAiService,
+    );
+
+    return { chatbot, sessionState, productService };
+  }
+
+  // Test 1: "Gợi ý mẫu đầm" -> Chỉ trả về đầm, tuyệt đối không có Áo Corset / Chân váy
+  test('17. "Gợi ý mẫu đầm" strictly returns dress products only (excludes Corset, Chân váy, Quần, Set)', async () => {
+    const { chatbot, sessionState } = setupSmartChatbot();
+    const res = await chatbot.processMessage({ message: 'Gợi ý mẫu đầm', sessionId: 'sess_test_17' });
+
+    assert.equal(res.intent, 'product_search');
+    assert.ok(res.products && res.products.length > 0, 'Must return dress products');
+    for (const p of res.products) {
+      assert.match(p.title, /đầm|dress/i, `Product "${p.title}" must be a dress`);
+      assert.doesNotMatch(p.title, /áo corset|quần|chân váy/i, `Product "${p.title}" must not be non-dress`);
+    }
+    assert.equal(sessionState.context.currentCategory, 'đầm');
+  });
+
+  // Test 2: "Sản phẩm nào rẻ nhất?" -> Chọn đúng sản phẩm rẻ nhất trong danh sách vừa gợi ý
+  test('18. "Sản phẩm nào rẻ nhất?" selects the cheapest product strictly from context.lastProducts', async () => {
+    const { chatbot, sessionState } = setupSmartChatbot();
+    // Step 1: Suggest dresses
+    const step1 = await chatbot.processMessage({ message: 'Gợi ý mẫu đầm', sessionId: 'sess_test_18' });
+    assert.ok(step1.products.length >= 2, 'Should have multiple dresses in context');
+
+    // Step 2: Ask for cheapest
+    const step2 = await chatbot.processMessage({ message: 'Sản phẩm nào rẻ nhất?', sessionId: 'sess_test_18' });
+    assert.equal(step2.intent, 'product_search');
+    assert.equal(step2.products.length, 1, 'Must return only the single cheapest product');
+    assert.equal(step2.products[0].id, 'prod_zoey', 'Đầm Zoey Dress (450k) is the cheapest in context');
+    assert.match(step2.reply, /Trong những mẫu vừa gợi ý, Đầm Zoey Dress có giá thấp nhất là 450\.000đ/i);
+  });
+
+  // Test 3: "Đầm mới nhất" -> Sắp xếp createdAt giảm dần
+  test('19. "Đầm mới nhất" sorts matching dresses by createdAt desc', async () => {
+    const { chatbot } = setupSmartChatbot();
+    const res = await chatbot.processMessage({ message: 'Đầm mới nhất', sessionId: 'sess_test_19' });
+
+    assert.equal(res.intent, 'product_search');
+    assert.ok(res.products.length > 1);
+    assert.equal(res.products[0].id, 'prod_luxury', 'Newest dress must be Luxury Dress (2026-03-20)');
+    assert.match(res.reply, /mới được cập nhật/i);
+  });
+
+  // Test 4: "Đầm giá thấp nhất" -> Sắp xếp effectivePrice tăng dần
+  test('20. "Đầm giá thấp nhất" sorts dresses by effectivePrice ascending', async () => {
+    const { chatbot } = setupSmartChatbot();
+    const res = await chatbot.processMessage({ message: 'Đầm giá thấp nhất', sessionId: 'sess_test_20' });
+
+    assert.equal(res.intent, 'product_search');
+    assert.ok(res.products.length > 1);
+    for (let i = 0; i < res.products.length - 1; i++) {
+      assert.ok(res.products[i].price <= res.products[i + 1].price, 'Prices must be ascending');
+    }
+    assert.equal(res.products[0].id, 'prod_zoey', 'Cheapest dress must be first');
+  });
+
+  // Test 5: "Đầm dưới 500k" -> effectivePrice <= 500000
+  test('21. "Đầm dưới 500k" strictly enforces effectivePrice <= 500,000 VND', async () => {
+    const { chatbot } = setupSmartChatbot();
+    const res = await chatbot.processMessage({ message: 'Đầm dưới 500k', sessionId: 'sess_test_21' });
+
+    assert.equal(res.intent, 'product_search');
+    assert.ok(res.products.length > 0);
+    for (const p of res.products) {
+      assert.ok(p.price <= 500000, `Product ${p.title} with price ${p.price} must be <= 500000`);
+    }
+  });
+
+  // Test 6: "Đầm từ 500k đến 1 triệu" -> 500000 <= effectivePrice <= 1000000
+  test('22. "Đầm từ 500k đến 1 triệu" enforces 500,000 <= effectivePrice <= 1,000,000 VND', async () => {
+    const { chatbot } = setupSmartChatbot();
+    const res = await chatbot.processMessage({ message: 'Đầm từ 500k đến 1 triệu', sessionId: 'sess_test_22' });
+
+    assert.equal(res.intent, 'product_search');
+    assert.ok(res.products.length > 0);
+    for (const p of res.products) {
+      assert.ok(p.price >= 500000 && p.price <= 1000000, `Product ${p.title} (${p.price}) must be between 500k and 1M`);
+    }
+  });
+
+  // Test 7: "Shop có bán quần không?" -> Trả về danh mục quần thực tế trong MongoDB
+  test('23. "Shop có bán quần không?" queries and returns actual pants from MongoDB', async () => {
+    const { chatbot } = setupSmartChatbot();
+    const res = await chatbot.processMessage({ message: 'Shop có bán quần không?', sessionId: 'sess_test_23' });
+
+    assert.equal(res.intent, 'product_search');
+    assert.ok(res.products.length > 0, 'Must return real pants');
+    for (const p of res.products) {
+      assert.match(p.title, /quần/i, `Product ${p.title} must be pants`);
+    }
+    assert.match(res.reply, /quần/i);
+  });
+
+  // Test 8: "Đầm màu đỏ" -> Chỉ trả về đầm có biến thể màu đỏ
+  test('24. "Đầm màu đỏ" only returns dresses with red color variant', async () => {
+    const { chatbot } = setupSmartChatbot();
+    const res = await chatbot.processMessage({ message: 'Đầm màu đỏ', sessionId: 'sess_test_24' });
+
+    assert.equal(res.intent, 'product_search');
+    assert.ok(res.products.length > 0);
+    for (const p of res.products) {
+      assert.match(p.title, /Ling|Weaty/i, 'Only Ling Dress and Weaty Dress have red variant');
+      assert.doesNotMatch(p.title, /Zoey/i, 'Zoey Dress has no red variant');
+    }
+  });
+
+  // Test 9: "Đầm đen size M" -> Biến thể vừa có màu đen vừa có size M và stock > 0
+  test('25. "Đầm đen size M" matches on the exact same variant (color Black AND size M and stock > 0)', async () => {
+    const { chatbot } = setupSmartChatbot();
+    const res = await chatbot.processMessage({ message: 'Đầm đen size M', sessionId: 'sess_test_25' });
+
+    assert.equal(res.intent, 'product_search');
+    assert.ok(res.products.length > 0);
+    // Luxury Dress has Black/M; Zoey Dress has Black/L (not M!)
+    assert.equal(res.products[0].id, 'prod_luxury');
+    for (const p of res.products) {
+      assert.notEqual(p.id, 'prod_zoey', 'Zoey Dress only has Black in size L, not size M');
+    }
+  });
+
+  // Test 10: "Quần mới nhất dưới 1 triệu" -> Đúng danh mục quần, giá <= 1.000.000, mới nhất
+  test('26. "Quần mới nhất dưới 1 triệu" combines category, price bound and newest sorting', async () => {
+    const { chatbot } = setupSmartChatbot();
+    const res = await chatbot.processMessage({ message: 'Quần mới nhất dưới 1 triệu', sessionId: 'sess_test_26' });
+
+    assert.equal(res.intent, 'product_search');
+    assert.ok(res.products.length > 0);
+    assert.equal(res.products[0].id, 'prod_hilton', 'Hilton Pants (2026-03-18) is newest under 1M');
+    for (const p of res.products) {
+      assert.match(p.title, /quần/i);
+      assert.ok(p.price <= 1000000);
+    }
+  });
+
+  // Test 11: "Có mẫu nào rẻ hơn không?" -> So sánh với giá thấp nhất trong ngữ cảnh hiện tại
+  test('27. "Có mẫu nào rẻ hơn không?" compares against lowest price in current context', async () => {
+    const { chatbot, sessionState } = setupSmartChatbot();
+    // Step 1: Customer viewed higher-priced dresses in context (min price is 950k)
+    sessionState.context = {
+      currentCategory: 'đầm',
+      lastProducts: [
+        { id: 'prod_luxury', title: 'Đầm Dạ Hội Luxury Dress', price: 2200000 },
+        { id: 'prod_weaty', title: 'Đầm Weaty Dress', price: 950000 },
+      ],
+    };
+
+    // Step 2: "Có mẫu nào rẻ hơn không?" -> searches store for dresses cheaper than 950k (e.g. Ling Dress 850k, Zoey Dress 450k)
+    const res = await chatbot.processMessage({ message: 'Có mẫu nào rẻ hơn không?', sessionId: 'sess_test_27' });
+    assert.equal(res.intent, 'product_search');
+    assert.ok(res.products.length > 0);
+    assert.match(res.reply, /tiết kiệm hơn/i);
+    for (const p of res.products) {
+      assert.ok(p.price < 950000, `Product ${p.title} (${p.price}) must be cheaper than 950k`);
+    }
+  });
+
+  // Test 12: "Mẫu đầu tiên còn size L không?" -> Nhận diện đúng sản phẩm theo thứ tự đã hiển thị
+  test('28. "Mẫu đầu tiên còn size L không?" accurately resolves first product and checks stock', async () => {
+    const { chatbot, sessionState } = setupSmartChatbot();
+    // Step 1: Session has Zoey Dress as first product (has Black size L stock 5)
+    sessionState.context = {
+      currentCategory: 'đầm',
+      lastProducts: [
+        { id: 'prod_zoey', title: 'Đầm Zoey Dress', price: 450000 },
+        { id: 'prod_luxury', title: 'Đầm Dạ Hội Luxury Dress', price: 2200000 },
+      ],
+    };
+
+    // Step 2: Ask about first product size L
+    const res = await chatbot.processMessage({ message: 'Mẫu đầu tiên còn size L không?', sessionId: 'sess_test_28' });
+    assert.equal(res.intent, 'product_detail');
+    assert.match(res.reply, /đang còn hàng/i);
+    assert.match(res.reply, /size l/i);
+  });
+
 });
+
 

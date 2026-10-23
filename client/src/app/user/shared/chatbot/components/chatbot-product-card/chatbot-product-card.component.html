@@ -24,17 +24,18 @@
               <img
                 *ngIf="p.imageUrl"
                 [src]="p.imageUrl"
-                [alt]="p.title"
+                [alt]="cleanTitle(p.title)"
                 class="table-thumb"
                 loading="lazy"
+                (error)="onImageError($event)"
               />
               <div *ngIf="!p.imageUrl" class="table-thumb-placeholder">
                 <span>C</span>
               </div>
               <span *ngIf="p.onSale" class="table-sale-badge">Sale</span>
             </div>
-            <span class="table-product-title" [title]="p.title">
-              {{ p.title }}
+            <span class="table-product-title" [title]="cleanTitle(p.title)">
+              {{ cleanTitle(p.title) }}
             </span>
           </div>
         </td>

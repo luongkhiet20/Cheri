@@ -1,9 +1,15 @@
 <div class="action-buttons" role="group" aria-label="Thao tác">
   <ng-container *ngFor="let action of actions">
     <button *ngIf="isVisible(action)" [ngClass]="getButtonClass(action)" [disabled]="action.disabled"
-      (click)="onClick(action)" [id]="'action-' + action.key + '-' + (row?.id || 0)" [attr.aria-label]="action.label"
+      (click)="onClick(action)" [id]="'action-' + action.key + '-' + (row?.id || row?._id || 0)"
+      [attr.aria-label]="action.tooltip || action.label"
+      [title]="action.tooltip || action.label"
       type="button">
-      {{ action.label }}
+      <svg *ngIf="action.icon === 'copy'" class="action-btn-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+      </svg>
+      <span>{{ action.label }}</span>
     </button>
   </ng-container>
 </div>

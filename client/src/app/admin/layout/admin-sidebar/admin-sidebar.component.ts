@@ -33,20 +33,28 @@ export class AdminSidebarComponent implements OnInit, OnDestroy {
   isMobileOpen = false;
   private routerSub: Subscription | null = null;
 
-  // 9 mục cơ bản giữ nguyên cho backward compatibility
+  // Danh sách các mục cơ bản cho backward compatibility
   navItems: NavItem[] = [
     { label: 'Dashboard',                     route: '/admin',                    exact: true, icon: 'dashboard' },
     { label: 'Quản lý sản phẩm',              route: '/admin/products',           icon: 'products' },
     { label: 'Quản lý danh mục',              route: '/admin/categories',         icon: 'categories' },
     { label: 'Quản lý đơn hàng',              route: '/admin/orders',             icon: 'orders' },
     { label: 'Mã giảm giá',                   route: '/admin/pages/coupons',      icon: 'coupons' },
+    { label: 'Đăng ký nhận ưu đãi',           route: '/admin/marketing/subscribers', icon: 'subscribers' },
     { label: 'Phương thức thanh toán',         route: '/admin/payment-methods',    icon: 'payment-methods' },
     { label: 'Đơn vị vận chuyển',             route: '/admin/shipping-methods',   icon: 'shipping-methods' },
     { label: 'Quản lý tài khoản',             route: '/admin/users',              icon: 'users' },
     { label: 'Quản lý tồn kho',               route: '/admin/inventory',          icon: 'inventory' },
+    { label: 'Quản lý tin nhắn',              route: '/admin/messages',           icon: 'messages' },
+    { label: 'Quản lý đánh giá',              route: '/admin/reviews',            icon: 'reviews' },
+    { label: 'Trang chủ',                     route: ADMIN_PAGES_URLS.HOME,       exact: true, icon: 'home' },
+    { label: 'Giới thiệu',                    route: ADMIN_PAGES_URLS.ABOUT,      exact: true, icon: 'about' },
+    { label: 'Chính sách',                    route: ADMIN_PAGES_URLS.POLICIES,   exact: false, icon: 'policies' },
   ];
 
-  // Phân nhóm menu theo 3 nhóm đầu: TỔNG QUAN, KINH DOANH, VẬN HÀNH
+  readonly adminPagesUrls = ADMIN_PAGES_URLS;
+
+  // Phân nhóm menu chuẩn hóa: TỔNG QUAN, KINH DOANH, MARKETING, VẬN HÀNH, CHĂM SÓC KHÁCH HÀNG, CMS
   navGroups: NavGroup[] = [
     {
       title: 'TỔNG QUAN',
@@ -59,8 +67,14 @@ export class AdminSidebarComponent implements OnInit, OnDestroy {
       items: [
         { label: 'Quản lý sản phẩm', route: '/admin/products', icon: 'products' },
         { label: 'Quản lý danh mục', route: '/admin/categories', icon: 'categories' },
-        { label: 'Quản lý đơn hàng', route: '/admin/orders', icon: 'orders' },
-        { label: 'Mã giảm giá', route: '/admin/pages/coupons', icon: 'coupons' }
+        { label: 'Quản lý đơn hàng', route: '/admin/orders', icon: 'orders' }
+      ]
+    },
+    {
+      title: 'MARKETING',
+      items: [
+        { label: 'Mã giảm giá', route: '/admin/pages/coupons', icon: 'coupons' },
+        { label: 'Đăng ký nhận ưu đãi', route: '/admin/marketing/subscribers', icon: 'subscribers' }
       ]
     },
     {
@@ -71,21 +85,23 @@ export class AdminSidebarComponent implements OnInit, OnDestroy {
         { label: 'Quản lý tài khoản', route: '/admin/users', icon: 'users' },
         { label: 'Quản lý tồn kho', route: '/admin/inventory', icon: 'inventory' }
       ]
+    },
+    {
+      title: 'CHĂM SÓC KHÁCH HÀNG',
+      items: [
+        { label: 'Quản lý tin nhắn', route: '/admin/messages', icon: 'messages' },
+        { label: 'Quản lý đánh giá', route: '/admin/reviews', icon: 'reviews' }
+      ]
+    },
+    {
+      title: 'CMS',
+      items: [
+        { label: 'Trang chủ', route: ADMIN_PAGES_URLS.HOME, exact: true, icon: 'home' },
+        { label: 'Giới thiệu', route: ADMIN_PAGES_URLS.ABOUT, exact: true, icon: 'about' },
+        { label: 'Chính sách', route: ADMIN_PAGES_URLS.POLICIES, exact: false, icon: 'policies' }
+      ]
     }
   ];
-
-  readonly adminPagesUrls = ADMIN_PAGES_URLS;
-
-  // 3 mục con của Quản lý trang (Nhóm HỆ THỐNG)
-  pageSubItems: PageSubItem[] = [
-    { label: 'Trang chủ', route: ADMIN_PAGES_URLS.HOME },
-    { label: 'Giới thiệu', route: ADMIN_PAGES_URLS.ABOUT },
-    { label: 'Chính sách', route: ADMIN_PAGES_URLS.POLICIES }
-  ];
-
-  isPagesOpen = false;
-  isPagesHovered = false;
-  isPagesExplicitlyClosed = false;
 
   constructor(private router: Router) {}
 
@@ -95,19 +111,11 @@ export class AdminSidebarComponent implements OnInit, OnDestroy {
       this.collapsedChange.emit(this.isCollapsed);
     }
 
-    // Mặc định mở nếu đang ở 1 trong các trang con
-    if (this.isPagesActive()) {
-      this.isPagesOpen = true;
-    }
-
-    // Tự động đóng mobile sidebar khi điều hướng hoàn tất và cập nhật trạng thái menu
+    // Tự động đóng mobile sidebar khi điều hướng hoàn tất
     this.routerSub = this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
     ).subscribe(() => {
       this.closeMobile();
-      if (this.isPagesActive() && !this.isPagesExplicitlyClosed) {
-        this.isPagesOpen = true;
-      }
     });
   }
 
@@ -128,43 +136,6 @@ export class AdminSidebarComponent implements OnInit, OnDestroy {
 
   isPagesActive(): boolean {
     return isPagesAdminUrl(this.router.url);
-  }
-
-  get isPagesSubmenuOpen(): boolean {
-    if (this.isPagesExplicitlyClosed && !this.isPagesHovered) {
-      return false;
-    }
-    return this.isPagesOpen || this.isPagesHovered || (this.isPagesActive() && !this.isPagesExplicitlyClosed);
-  }
-
-  togglePagesMenu(event: MouseEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-    if (this.isPagesSubmenuOpen) {
-      this.isPagesOpen = false;
-      this.isPagesExplicitlyClosed = true;
-    } else {
-      this.isPagesOpen = true;
-      this.isPagesExplicitlyClosed = false;
-    }
-  }
-
-  onPagesHover(hovering: boolean): void {
-    this.isPagesHovered = hovering;
-    if (hovering) {
-      this.isPagesExplicitlyClosed = false;
-    }
-  }
-
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(event: MouseEvent): void {
-    const target = event.target as HTMLElement;
-    if (!target.closest('.admin-sidebar__item--pages')) {
-      if (!this.isPagesActive()) {
-        this.isPagesOpen = false;
-        this.isPagesHovered = false;
-      }
-    }
   }
 
   toggleCollapse(): void {

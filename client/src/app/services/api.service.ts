@@ -1234,6 +1234,11 @@ export class ApiService {
     return this.http.post(url, payload, this.getRequestOptions());
   }
 
+  subscribeNewsletter(email: string, source: string = 'FOOTER'): Observable<any> {
+    const url = `${this.apiUrl}/api/newsletter/subscribe`;
+    return this.http.post(url, { email, source });
+  }
+
   private initAuthTracking() {
     const selectors = inject(SignalStoreSelectors);
     combineLatest([toObservable(selectors.appLang), toObservable(selectors.user)]).subscribe(([lang, user]) => {

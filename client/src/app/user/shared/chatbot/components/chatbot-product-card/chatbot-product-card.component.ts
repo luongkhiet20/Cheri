@@ -41,6 +41,22 @@ export class ChatbotProductCardComponent {
     this.isExpanded = !this.isExpanded;
   }
 
+  cleanTitle(title?: string): string {
+    if (!title) return '';
+    return title.replace(/^Sale\s+/i, '').trim();
+  }
+
+  onImageError(event: Event): void {
+    const target = event.target as HTMLImageElement;
+    if (target) {
+      target.style.display = 'none';
+      const placeholder = target.nextElementSibling as HTMLElement;
+      if (placeholder) {
+        placeholder.style.display = 'flex';
+      }
+    }
+  }
+
   onCardClick(p: ChatProductCard, event?: MouseEvent | Event): void {
     if (event) {
       event.stopPropagation();

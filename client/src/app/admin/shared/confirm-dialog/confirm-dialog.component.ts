@@ -13,6 +13,10 @@ export class ConfirmDialogComponent {
   @Input() confirmLabel: string = 'Xác nhận';
   @Input() cancelLabel: string = 'Hủy';
   @Input() variant: 'danger' | 'warning' | 'default' = 'default';
+  @Input() iconType: 'accept' | 'return' | 'close' | 'danger' | 'warning' | 'info' | null = null;
+  @Input() isLoading: boolean = false;
+  @Input() errorMessage: string | null = null;
+  @Input() autoCloseOnConfirm: boolean = true;
 
   @Output() confirmed = new EventEmitter<void>();
   @Output() cancelled = new EventEmitter<void>();
@@ -24,7 +28,23 @@ export class ConfirmDialogComponent {
          : 'btn btn-primary';
   }
 
-  onConfirm(): void { this.confirmed.emit(); this.closed.emit(); }
-  onCancel(): void  { this.cancelled.emit(); this.closed.emit(); }
-  onOverlayClick(): void { this.cancelled.emit(); this.closed.emit(); }
+  onConfirm(): void {
+    if (this.isLoading) return;
+    this.confirmed.emit();
+    if (this.autoCloseOnConfirm) {
+      this.closed.emit();
+    }
+  }
+
+  onCancel(): void {
+    if (this.isLoading) return;
+    this.cancelled.emit();
+    this.closed.emit();
+  }
+
+  onOverlayClick(): void {
+    if (this.isLoading) return;
+    this.cancelled.emit();
+    this.closed.emit();
+  }
 }

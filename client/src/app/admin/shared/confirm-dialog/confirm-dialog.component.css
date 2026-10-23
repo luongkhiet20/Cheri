@@ -45,6 +45,81 @@
   border-top: 1px solid var(--cheri-divider);
 }
 
+.dialog-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dialog-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dialog-icon--accept {
+  background-color: #F8E9EB;
+  color: #74070E;
+}
+
+.dialog-icon--return,
+.dialog-icon--warning {
+  background-color: #FEF3C7;
+  color: #D97706;
+}
+
+.dialog-icon--close,
+.dialog-icon--danger {
+  background-color: #FEE2E2;
+  color: #DC2626;
+}
+
+.dialog-icon--info {
+  background-color: #EFF6FF;
+  color: #2563EB;
+}
+
+.dialog-error {
+  margin-top: 14px;
+  padding: 10px 14px;
+  background-color: #FEF2F2;
+  border: 1px solid #FCA5A5;
+  border-radius: 8px;
+  color: #B91C1C;
+  font-size: 13.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.4;
+  animation: errorShake 0.2s ease;
+}
+
+@keyframes errorShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.dialog-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #FFFFFF;
+  border-radius: 50%;
+  animation: dialogSpin 0.6s linear infinite;
+  display: inline-block;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+@keyframes dialogSpin {
+  to { transform: rotate(360deg); }
+}
+
 /* Danger variant override */
 .btn-danger-solid {
   background-color: var(--cheri-danger) !important;

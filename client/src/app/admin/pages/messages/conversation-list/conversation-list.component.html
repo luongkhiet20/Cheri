@@ -1,0 +1,148 @@
+<aside class="conversations-column">
+  <div class="column-header">
+    <div class="header-title-row">
+      <h2 class="column-title">Chăm sóc khách hàng</h2>
+      <span class="badge badge-primary" *ngIf="counts.waiting > 0">
+        {{ counts.waiting }} yêu cầu
+      </span>
+    </div>
+    <p class="column-subtitle">Khách nhấn "Liên hệ nhân viên hỗ trợ"</p>
+
+    <!-- Tìm kiếm -->
+    <div class="search-box">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input
+        type="text"
+        placeholder="Tìm theo tên, email, tin nhắn..."
+        [ngModel]="searchTerm"
+        (ngModelChange)="onSearchInput($event)"
+        (keyup.enter)="onSearchSubmit()"
+      />
+    </div>
+
+    <!-- Tabs bộ lọc dạng chip cuộn ngang mượt mà -->
+    <div class="filter-tabs" role="tablist">
+      <button
+        type="button"
+        class="filter-tab"
+        [class.active]="activeFilter === 'all'"
+        (click)="onSetFilter('all')">
+        Tất cả ({{ counts.total }})
+      </button>
+      <button
+        type="button"
+        class="filter-tab"
+        [class.active]="activeFilter === 'unread'"
+        (click)="onSetFilter('unread')">
+        Chưa đọc <span class="tab-badge" *ngIf="counts.unread > 0">{{ counts.unread }}</span>
+      </button>
+      <button
+        type="button"
+        class="filter-tab"
+        [class.active]="activeFilter === 'WAITING_ADMIN'"
+        (click)="onSetFilter('WAITING_ADMIN')">
+        Chờ tiếp nhận <span class="tab-badge tab-badge--warning" *ngIf="counts.waiting > 0">{{ counts.waiting }}</span>
+      </button>
+      <button
+        type="button"
+        class="filter-tab"
+        [class.active]="activeFilter === 'IN_PROGRESS'"
+        (click)="onSetFilter('IN_PROGRESS')">
+        Đang hỗ trợ ({{ counts.inProgress }})
+      </button>
+      <button
+        type="button"
+        class="filter-tab"
+        [class.active]="activeFilter === 'CLOSED'"
+        (click)="onSetFilter('CLOSED')">
+        Đã đóng
+      </button>
+    </div>
+  </div>
+
+  <!-- Danh sách hội thoại cuộn độc lập -->
+  <div class="conversations-list" *ngIf="!isLoadingConversations; else loadingListTpl">
+    <div
+      *ngFor="let conv of conversations"
+      class="conversation-card"
+      [class.is-selected]="selectedConversation?._id === conv._id"
+      [class.has-unread]="(conv.unreadAdminCount || 0) > 0"
+      (click)="onSelectConversation(conv)">
+      
+      <div class="conv-avatar-wrap">
+        <img
+          *ngIf="getCustomerAvatar(conv); else defaultAvatar"
+          [src]="getCustomerAvatar(conv)!"
+          alt="Avatar"
+          class="conv-avatar"
+          loading="lazy"
+        />
+        <ng-template #defaultAvatar>
+          <div class="conv-avatar-placeholder" [class.is-guest]="!conv.userId">
+            {{ (getCustomerDisplayName(conv) || 'K')[0].toUpperCase() }}
+          </div>
+        </ng-template>
+        <span class="online-indicator"></span>
+      </div>
+
+      <div class="conv-details">
+        <div class="conv-top-row">
+          <h4 class="conv-name" [title]="getCustomerDisplayName(conv)">
+            {{ getCustomerDisplayName(conv) }}
+          </h4>
+          <span class="conv-time">
+            {{ conv.lastMessageAt | date:'HH:mm dd/MM' }}
+          </span>
+        </div>
+
+        <div class="conv-mid-row">
+          <p class="conv-preview">
+            {{ conv.lastMessagePreview || 'Yêu cầu hỗ trợ từ khách hàng' }}
+          </p>
+          <span class="unread-pill" *ngIf="(conv.unreadAdminCount || 0) > 0">
+            {{ conv.unreadAdminCount }}
+          </span>
+        </div>
+
+        <div class="conv-bottom-row">
+          <div class="conv-badges-group">
+            <span class="badge" [ngClass]="getStatusBadgeClass(conv.status)">
+              {{ getStatusLabel(conv.status) }}
+            </span>
+            <span class="badge-assign" [ngClass]="getAssignmentBadgeClass(conv)" [title]="getAssignmentLabel(conv)">
+              <svg *ngIf="isAssignedToMe(conv)" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              {{ getAssignmentLabel(conv) }}
+            </span>
+          </div>
+          <span class="badge-source">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
+              <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+            </svg>
+            Hỗ trợ trực tiếp
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="empty-list" *ngIf="conversations.length === 0">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" stroke-width="1.5">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+      <p class="empty-title">Không có cuộc hội thoại nào</p>
+      <p class="empty-sub">Chỉ những khách hàng nhấn nút "Liên hệ nhân viên hỗ trợ" mới xuất hiện tại đây.</p>
+    </div>
+  </div>
+
+  <ng-template #loadingListTpl>
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Đang tải danh sách...</p>
+    </div>
+  </ng-template>
+</aside>

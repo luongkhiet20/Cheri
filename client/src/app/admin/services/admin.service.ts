@@ -496,5 +496,113 @@ export class AdminService {
   changeAccountPassword(data: { currentPassword: string; newPassword: string; confirmPassword: string }): Observable<any> {
     return this.http.patch(`${this.baseUrl}/account/me/password`, data);
   }
+
+  // ── Chăm sóc khách hàng — Quản lý tin nhắn ─────────────────
+  getConversations(params?: { status?: string; search?: string; page?: number; limit?: number }): Observable<any> {
+    let httpParams = new HttpParams();
+    if (params) {
+      if (params.status) httpParams = httpParams.set('status', params.status);
+      if (params.search) httpParams = httpParams.set('search', params.search);
+      if (params.page) httpParams = httpParams.set('page', params.page.toString());
+      if (params.limit) httpParams = httpParams.set('limit', params.limit.toString());
+    }
+    return this.http.get(`${this.baseUrl}/admin/conversations`, { params: httpParams });
+  }
+
+  getConversationDetail(id: string): Observable<any> {
+    return this.http.get(`${this.baseUrl}/admin/conversations/${id}`);
+  }
+
+  getConversationMessages(id: string): Observable<any> {
+    return this.http.get(`${this.baseUrl}/admin/conversations/${id}/messages`);
+  }
+
+  acceptConversation(id: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}/admin/conversations/${id}/accept`, {});
+  }
+
+  returnConversation(id: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}/admin/conversations/${id}/return`, {});
+  }
+
+  sendConversationMessage(id: string, content: string, clientMessageId?: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}/admin/conversations/${id}/messages`, { content, clientMessageId });
+  }
+
+  updateConversationStatus(id: string, status: string): Observable<any> {
+    return this.http.patch(`${this.baseUrl}/admin/conversations/${id}/status`, { status });
+  }
+
+  updateConversationNotes(id: string, internalNote: string): Observable<any> {
+    return this.http.patch(`${this.baseUrl}/admin/conversations/${id}/notes`, { internalNote });
+  }
+
+  closeConversation(id: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}/admin/conversations/${id}/close`, {});
+  }
+
+  // ── Chăm sóc khách hàng — Quản lý đánh giá ──────────────────
+  getReviews(params?: {
+    page?: number;
+    pageSize?: number;
+    search?: string;
+    rating?: number;
+    status?: string;
+    isVerifiedPurchase?: boolean;
+    sortKey?: string;
+    sortDir?: string;
+  }): Observable<any> {
+    let httpParams = new HttpParams();
+    if (params) {
+      if (params.page) httpParams = httpParams.set('page', params.page.toString());
+      if (params.pageSize) httpParams = httpParams.set('pageSize', params.pageSize.toString());
+      if (params.search) httpParams = httpParams.set('search', params.search);
+      if (params.rating) httpParams = httpParams.set('rating', params.rating.toString());
+      if (params.status) httpParams = httpParams.set('status', params.status);
+      if (params.isVerifiedPurchase !== undefined) {
+        httpParams = httpParams.set('isVerifiedPurchase', params.isVerifiedPurchase ? 'true' : 'false');
+      }
+      if (params.sortKey) httpParams = httpParams.set('sortKey', params.sortKey);
+      if (params.sortDir) httpParams = httpParams.set('sortDir', params.sortDir);
+    }
+    return this.http.get(`${this.baseUrl}/admin/reviews`, { params: httpParams });
+  }
+
+  getReviewDetail(id: string): Observable<any> {
+    return this.http.get(`${this.baseUrl}/admin/reviews/${id}`);
+  }
+
+  updateReviewStatus(id: string, status: string): Observable<any> {
+    return this.http.patch(`${this.baseUrl}/admin/reviews/${id}/status`, { status });
+  }
+
+  deleteReview(id: string): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/admin/reviews/${id}`);
+  }
+
+  bulkDeleteReviews(ids: string[]): Observable<any> {
+    return this.http.post(`${this.baseUrl}/admin/reviews/bulk-delete`, { ids });
+  }
+
+  // ── Newsletter Subscribers ───────────────────
+  getNewsletterSubscribers(params?: {
+    page?: number;
+    pageSize?: number;
+    search?: string;
+    status?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  }): Observable<any> {
+    let httpParams = new HttpParams();
+    if (params) {
+      if (params.page) httpParams = httpParams.set('page', params.page.toString());
+      if (params.pageSize) httpParams = httpParams.set('pageSize', params.pageSize.toString());
+      if (params.search) httpParams = httpParams.set('search', params.search);
+      if (params.status) httpParams = httpParams.set('status', params.status);
+      if (params.sortBy) httpParams = httpParams.set('sortBy', params.sortBy);
+      if (params.sortOrder) httpParams = httpParams.set('sortOrder', params.sortOrder);
+    }
+    return this.http.get(`${this.baseUrl}/admin/newsletter-subscribers`, { params: httpParams });
+  }
 }
 

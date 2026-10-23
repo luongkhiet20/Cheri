@@ -108,6 +108,29 @@ button.action-btn[id^="action-return-"]:hover:not(:disabled) {
   color: #5F060B;
 }
 
+.action-btn-icon {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 5px;
+  flex-shrink: 0;
+}
+
+.action-btn--copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cheri-primary, #74070E);
+  background: #FFF1F2;
+  border-color: #FECDD3;
+  font-weight: 600;
+}
+
+.action-btn--copy:hover:not(:disabled) {
+  background: #FFE4E6;
+  border-color: #FDA4AF;
+  color: #5F060B;
+}
+
 @media (max-width: 768px) {
   .action-buttons {
     flex-wrap: wrap;

@@ -70,6 +70,33 @@ export class ReviewsController {
   }
 
   /**
+   * Lấy danh sách đánh giá cho Quản trị viên kèm lọc, tìm kiếm, phân trang
+   */
+  @Get('admin')
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  async getAdminReviews(@Query() query: any) {
+    return this.reviewsService.getAdminReviews(query);
+  }
+
+  /**
+   * Lấy chi tiết đánh giá cho Quản trị viên
+   */
+  @Get('admin/:id')
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  async getAdminReviewDetail(@Param('id') id: string) {
+    return this.reviewsService.getReviewDetail(id);
+  }
+
+  /**
+   * Xóa hàng loạt đánh giá bởi Quản trị viên
+   */
+  @Post('admin/bulk-delete')
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  async bulkDeleteReviewsByAdmin(@Body('ids') ids: string[]) {
+    return this.reviewsService.bulkDeleteReviewsByAdmin(ids);
+  }
+
+  /**
    * Lấy chi tiết một đánh giá theo ID (Yêu cầu đăng nhập, chỉ chủ nhân hoặc quản trị viên)
    */
   @Get(':id')

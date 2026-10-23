@@ -25,6 +25,23 @@ export class ChatbotMessageComponent {
   @Output() productClick = new EventEmitter<ChatProductCard>();
   @Output() orderClick = new EventEmitter<ChatOrderCard>();
 
+  get isSystemMessage(): boolean {
+    return this.message?.sender === 'system' || this.message?.senderType === 'SYSTEM';
+  }
+
+  getSystemIconType(): 'clock' | 'headset' | 'exit' {
+    const event = this.message?.systemEvent;
+    if (event === 'SUPPORT_REQUESTED') return 'clock';
+    if (event === 'ADMIN_JOINED') return 'headset';
+    if (event === 'ADMIN_LEFT') return 'exit';
+
+    const txt = (this.message?.text || '').toLowerCase();
+    if (txt.includes('kết nối') || txt.includes('chờ')) return 'clock';
+    if (txt.includes('tham gia') || txt.includes('sẵn sàng')) return 'headset';
+    if (txt.includes('rời') || txt.includes('kết thúc')) return 'exit';
+    return 'clock';
+  }
+
   get segments(): MessageSegment[] {
     const raw = this.message?.text || '';
     if (!raw) return [];
@@ -38,7 +55,7 @@ export class ChatbotMessageComponent {
       if (match.index > lastIndex) {
         result.push({
           isLink: false,
-          text: raw.substring(lastIndex, match.index),
+          text: this.cleanMarkdownText(raw.substring(lastIndex, match.index)),
         });
       }
       result.push({
@@ -52,11 +69,26 @@ export class ChatbotMessageComponent {
     if (lastIndex < raw.length) {
       result.push({
         isLink: false,
-        text: raw.substring(lastIndex),
+        text: this.cleanMarkdownText(raw.substring(lastIndex)),
       });
     }
 
     return result;
+  }
+
+  /**
+   * Sanitizes Markdown formatting characters (**, ***, #, *) from plain text segments
+   * while preserving bullet points and newlines.
+   */
+  private cleanMarkdownText(str: string): string {
+    if (!str) return '';
+    return str
+      .replace(/\*\*\*([^*]+)\*\*\*/g, '$1')
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '$1')
+      .replace(/_{1,3}([^_]+)_{1,3}/g, '$1')
+      .replace(/^#{1,6}\s+/gm, '')
+      .replace(/^\s*[\*\-]\s+/gm, '• ');
   }
 
   onRetry(): void {

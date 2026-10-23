@@ -11,6 +11,7 @@ import { InteractionsModule } from './interactions/interactions.module';
 import { RecommendationsModule } from './recommendations/recommendations.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { ChatModule } from './chat/chat.module';
+import { NewsletterModule } from './newsletter/newsletter.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 // import { join } from 'path';
 // import { ServeStaticModule } from '@nestjs/serve-static';
@@ -45,6 +46,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     RecommendationsModule,
     ReviewsModule,
     ChatModule,
+    NewsletterModule,
 
     // ServeStaticModule.forRoot({
     //   rootPath: staticFile,

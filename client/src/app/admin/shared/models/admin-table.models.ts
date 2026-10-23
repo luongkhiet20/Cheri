@@ -6,7 +6,7 @@
 export interface TableColumn {
   key: string;
   label: string;
-  type?: 'text' | 'number' | 'currency' | 'date' | 'image' | 'avatar' | 'status' | 'badge' | 'sku-list';
+  type?: 'text' | 'number' | 'currency' | 'date' | 'image' | 'avatar' | 'customer' | 'status' | 'badge' | 'sku-list';
   width?: string;
   sortable?: boolean;
   align?: 'left' | 'center' | 'right';
@@ -21,6 +21,8 @@ export interface RowAction {
   label: string;
   variant?: 'default' | 'danger' | 'warning' | 'primary';
   disabled?: boolean;
+  icon?: string;
+  tooltip?: string;
   /** Optional predicate: receives the row and returns true if action should show */
   showWhen?: (row: any) => boolean;
 }

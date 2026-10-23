@@ -6,11 +6,13 @@
     <div class="footer-col footer-col--contact">
       <div class="footer-subscribe">
         <h4 class="footer-col-title footer-subscribe-title">Đăng ký để nhận ưu đãi</h4>
-        <form class="footer-subscribe-form" (submit)="$event.preventDefault()">
+        <form class="footer-subscribe-form" (submit)="onSubscribe($event)">
           <input type="email" class="footer-subscribe-input" placeholder="Nhập email của bạn"
-            aria-label="Nhập email của bạn" />
-          <button type="submit" class="footer-subscribe-btn">
-            Đăng ký
+            aria-label="Nhập email của bạn" [(ngModel)]="subscribeEmail" name="email"
+            [disabled]="isSubscribing" required />
+          <button type="submit" class="footer-subscribe-btn" [disabled]="isSubscribing">
+            <span *ngIf="!isSubscribing">Đăng ký</span>
+            <span *ngIf="isSubscribing">Đang gửi...</span>
           </button>
         </form>
       </div>

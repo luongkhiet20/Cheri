@@ -33,9 +33,12 @@ export interface ChatOrderCard {
   trackingNumber?: string;
 }
 
+export type MessageSender = 'store' | 'user' | 'system';
+export type SupportSystemEvent = 'SUPPORT_REQUESTED' | 'ADMIN_JOINED' | 'ADMIN_LEFT';
+
 export interface ChatMessage {
   id: number;
-  sender: 'store' | 'user';
+  sender: MessageSender;
   text: string;
   timestamp?: Date;
   products?: ChatProductCard[];
@@ -43,6 +46,8 @@ export interface ChatMessage {
   requiresAuth?: boolean;
   isError?: boolean;
   failedText?: string;
+  senderType?: 'CUSTOMER' | 'ADMIN' | 'SYSTEM';
+  systemEvent?: SupportSystemEvent | string;
 }
 
 export interface ChatbotResponse {
@@ -67,3 +72,21 @@ export interface ChatbotResponse {
   requiresAuth?: boolean;
   sessionId?: string;
 }
+
+export type ChatMode = 'AI' | 'HUMAN_SUPPORT';
+
+export interface SupportConversation {
+  _id: string;
+  source: 'SUPPORT_BUTTON';
+  status: 'WAITING_ADMIN' | 'IN_PROGRESS' | 'REPLIED' | 'CLOSED';
+  channel: string;
+  userId?: any;
+  guestId?: string;
+  lastMessagePreview?: string;
+  lastMessageAt?: Date;
+  unreadAdminCount?: number;
+  unreadCustomerCount?: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+

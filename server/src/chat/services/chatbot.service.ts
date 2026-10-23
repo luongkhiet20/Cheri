@@ -57,7 +57,7 @@ export class ChatbotService {
 
     // 2. Session Initialization & Strict Ownership Check
     const session = await this.sessionService.getOrCreateSession(dto.sessionId, user, dto.guestCartId);
-    const activeSessionId = session.sessionId;
+    const activeSessionId = session.sessionId || dto.sessionId || 'anonymous';
 
     // 3. Rate Limiting Check (per IP or Session)
     const rateLimitKey = clientIp || activeSessionId;
@@ -103,7 +103,7 @@ export class ChatbotService {
     if (isExplicitCheckMyOrders) {
       intent = 'order_tracking';
     } else {
-      intent = this.intentService.classifyIntent(rawMessage);
+      intent = this.intentService.classifyIntent(rawMessage, session.context);
     }
 
     let response: ChatbotResponse;
@@ -125,11 +125,11 @@ export class ChatbotService {
           break;
 
         case 'size_consultation':
-          response = await this.handleSizeConsultation(rawMessage, session.context);
+          response = await this.handleSizeConsultation(rawMessage, session.context, session.messages || []);
           break;
 
         case 'policy_faq':
-        case 'policy':
+          case 'policy':
           response = await this.handlePolicy(rawMessage);
           break;
 
@@ -138,12 +138,12 @@ export class ChatbotService {
           break;
 
         case 'recommendation':
-          response = await this.handleRecommendation(user, dto.guestCartId);
+          response = await this.handleRecommendation(rawMessage, session.context, user, dto.guestCartId);
           break;
 
         case 'product_search':
         case 'search':
-          response = await this.handleSearch(rawMessage);
+          response = await this.handleSearch(rawMessage, session.context);
           break;
 
         case 'greetings':
@@ -162,9 +162,11 @@ export class ChatbotService {
       };
     }
 
+    // Clean reply to guarantee plain text, no raw markdown **, and at most 1 emoji
+    response.reply = this.formatCleanResponse(response.reply);
     response.sessionId = activeSessionId;
 
-    // Update session context with newly returned products
+    // Update session context with newly returned products and criteria
     const contextUpdates: any = {};
     if (response.products && response.products.length > 0) {
       contextUpdates.lastProducts = response.products;
@@ -172,6 +174,12 @@ export class ChatbotService {
     }
     if (response.sizingProfile) {
       contextUpdates.sizingProfile = response.sizingProfile;
+    }
+    if (response.currentCategory) {
+      contextUpdates.currentCategory = response.currentCategory;
+    }
+    if (response.criteria) {
+      contextUpdates.criteria = response.criteria;
     }
     contextUpdates.lastIntent = intent;
 
@@ -307,7 +315,7 @@ export class ChatbotService {
         'GIUP', 'BAN', 'CAC', 'MOI', 'DAT', 'CHUA', 'DANG', 'O', 'DAU', 'NAO',
         'TOI', 'KHI', 'LAM', 'SAO', 'DUOC', 'SHOP', 'CHERI', 'XIN', 'CHAO'
       ]);
-      potentialCodes = words.filter(w => {
+      potentialCodes = words.filter((w: string) => {
         const up = w.toUpperCase();
         if (ignoredWords.has(up)) return false;
         const isPrefixed = /^(?:CHERI|ORD|DH|TEST)[A-Za-z0-9_-]*/i.test(w);
@@ -495,21 +503,28 @@ export class ChatbotService {
 
   /**
    * Dedicated Size Consultation Handler
-   * Guides 3 body measurements, asks height/weight/fit preferences,
-   * inspects MongoDB products/variants for specific garments,
-   * and provides natural Gemini AI recommendations with robust deterministic fallback.
+  /**
+   * Dedicated Size Consultation Handler
+   * Distinguishes general guidance vs specific height/weight/product inquiries,
+   * maintains multi-turn context across turns without repeating measurements,
+   * and provides natural fashion consultant replies in plain text (no markdown **).
    */
-  private async handleSizeConsultation(message: string, context?: any): Promise<ChatbotResponse> {
+  private async handleSizeConsultation(
+    message: string,
+    context?: any,
+    history: any[] = [],
+  ): Promise<ChatbotResponse> {
     const lower = (message || '').toLowerCase();
 
     // 1. Context parsing & multi-turn profile maintenance
     const currentProfile: any = { ...(context?.sizingProfile || {}) };
 
-    // Height parsing: "1m60", "1m58", "cao 1m65", "160cm", "cao 160", "mình cao 1m60"
+    // Height parsing: "1m60", "1m58", "cao 1m65", "160cm", "cao 160", "mình cao 1m60", or "160"
     const heightMatch =
       lower.match(/(?:cao|chiều cao)[^0-9]{0,15}(\d{1,2}[m\.,]\d{1,2}|\d{3})\s*(?:cm)?/i) ||
       lower.match(/\b(1[m\.,]\d{2})\b/i) ||
       lower.match(/\b(\d{3})\s*cm\b/i);
+
     if (heightMatch) {
       const rawH = heightMatch[1].replace(',', '.');
       if (rawH.includes('m')) {
@@ -521,14 +536,27 @@ export class ChatbotService {
         const val = parseFloat(rawH);
         currentProfile.height = val < 3 ? Math.round(val * 100) : Math.round(val);
       }
+    } else {
+      // Standalone 3-digit height: e.g. "160" or "cao 160"
+      const standaloneH = lower.match(/\b(1[4-9]\d)\b/);
+      if (standaloneH) {
+        currentProfile.height = parseInt(standaloneH[1], 10);
+      }
     }
 
-    // Weight parsing: "50kg", "50 ký", "nặng 50kg", "50 kg", "mình nặng 50kg"
+    // Weight parsing: "50kg", "50 ký", "nặng 50kg", "50 kg", "mình nặng 50kg", "60kg"
     const weightMatch =
       lower.match(/(?:nặng|cân nặng)[^0-9]{0,15}(\d{2}(?:\.\d+)?)\s*(?:kg|ký)?/i) ||
       lower.match(/\b(\d{2}(?:\.\d+)?)\s*(?:kg|ký)\b/i);
+
     if (weightMatch) {
       currentProfile.weight = parseFloat(weightMatch[1]);
+    } else if (!heightMatch && /^\s*(\d{2})\s*$/.test(lower)) {
+      // Standalone 2-digit number (e.g. user replies "60" after being asked for weight)
+      const num = parseInt(lower.trim(), 10);
+      if (num >= 35 && num <= 95) {
+        currentProfile.weight = num;
+      }
     }
 
     // Waist (Vòng eo) parsing: "vòng eo 68cm", "vòng eo mình 68cm", "eo 68", "v2 68"
@@ -561,7 +589,7 @@ export class ChatbotService {
     }
 
     // Fit preference:
-    if (/(ôm sát|bó sát|ôm dáng|body|tôn dáng|ôm body)/i.test(lower)) {
+    if (/(ôm sát|bó sát|ôm dáng|body|ôm body)/i.test(lower)) {
       currentProfile.fitPreference = 'ôm sát';
     } else if (/(rộng rãi|thoải mái|hơi rộng|dáng suông|rộng)/i.test(lower)) {
       currentProfile.fitPreference = 'rộng thoải mái';
@@ -591,17 +619,41 @@ export class ChatbotService {
       lower.match(/\b(?:size|cỡ)\s*([sml]|xl|xxl)\b/i) || lower.match(/\b([sml]|xl|xxl)\b/i);
     const inquiredSize = sizeInquiredMatch ? sizeInquiredMatch[1].toUpperCase() : null;
 
+    // Helper format height string "1m60"
+    const formatH = (h: number): string => {
+      if (!h) return '';
+      if (h >= 100 && h < 250) {
+        const m = Math.floor(h / 100);
+        const cm = h % 100;
+        return `${m}m${cm < 10 ? '0' + cm : cm}`;
+      }
+      return `${h}cm`;
+    };
+
+    // Query classification
+    const isGeneralGuide =
+      /(hướng dẫn.*(?:chọn size|cách chọn|bảng size)|cách chọn size|size chuẩn|chuẩn size|cách đo)/i.test(lower) &&
+      !heightMatch &&
+      !weightMatch &&
+      !waistMatch;
+    const isSizeComparison =
+      /(khác nhau.*size|size.*khác nhau)/i.test(lower) ||
+      (lower.includes('size m') && lower.includes('size l'));
+    const isFitInquiry =
+      /(mặc ôm.*(?:chật|không)|có bị (?:chật|rộng|kích)|bị chật không|chật không|rộng không)/i.test(lower);
+    const isSpecificSizeCheck =
+      inquiredSize && /(được không|được ko|vừa không|vừa ko|hợp không|ổn không|nhỉ)/i.test(lower);
+    const isStockAvailability =
+      inquiredSize && /(có size|còn size|còn hàng|hết hàng)/i.test(lower);
+
     // 3. Assemble verified facts
     const factsList: string[] = [];
-    factsList.push('HƯỚNG DẪN SIZE CHUẨN CỦA CHÉRI:');
-    factsList.push(
-      '- Cách đo 3 vòng: Vòng 1 (ngực - đo qua đỉnh ngực), Vòng 2 (eo - điểm nhỏ nhất trên rốn 2-3cm), Vòng 3 (mông - điểm nở nang nhất). Thước dây vừa chạm sát cơ thể, không siết chặt.',
-    );
+    factsList.push('HƯỚNG DẪN SIZE CHUẨN CỦA CHÉRI (Văn bản thuần, không dùng markdown **):');
     factsList.push('- Bảng size tham khảo Chéri:');
-    factsList.push('  + Size S: Chiều cao 1m50 - 1m60 | Cân nặng 40 - 47kg | Eo 62 - 66cm | Ngực 80 - 85cm');
-    factsList.push('  + Size M: Chiều cao 1m55 - 1m65 | Cân nặng 48 - 53kg | Eo 66 - 70cm | Ngực 86 - 90cm');
-    factsList.push('  + Size L: Chiều cao 1m58 - 1m68 | Cân nặng 54 - 58kg | Eo 70 - 75cm | Ngực 90 - 95cm');
-    factsList.push('  + Size XL: Chiều cao 1m60 - 1m70 | Cân nặng 59 - 65kg | Eo 75 - 80cm | Ngực 95 - 100cm');
+    factsList.push('  • Size S: Chiều cao 1m50 - 1m60 | Cân nặng 40 - 47kg | Eo 62 - 66cm | Ngực 80 - 85cm');
+    factsList.push('  • Size M: Chiều cao 1m55 - 1m65 | Cân nặng 48 - 53kg | Eo 66 - 70cm | Ngực 86 - 90cm');
+    factsList.push('  • Size L: Chiều cao 1m58 - 1m68 | Cân nặng 54 - 58kg | Eo 70 - 75cm | Ngực 90 - 95cm');
+    factsList.push('  • Size XL: Chiều cao 1m60 - 1m70 | Cân nặng 59 - 65kg | Eo 75 - 80cm | Ngực 95 - 100cm');
 
     if (
       currentProfile.height ||
@@ -611,13 +663,13 @@ export class ChatbotService {
       currentProfile.hips ||
       currentProfile.fitPreference
     ) {
-      factsList.push('\nTHÔNG TIN KHÁCH ĐÃ CUNG CẤP TRONG CUỘC HỘI THOẠI:');
-      if (currentProfile.height) factsList.push(`- Chiều cao: ${currentProfile.height}cm`);
-      if (currentProfile.weight) factsList.push(`- Cân nặng: ${currentProfile.weight}kg`);
-      if (currentProfile.waist) factsList.push(`- Vòng eo: ${currentProfile.waist}cm`);
-      if (currentProfile.bust) factsList.push(`- Vòng ngực: ${currentProfile.bust}cm`);
-      if (currentProfile.hips) factsList.push(`- Vòng mông: ${currentProfile.hips}cm`);
-      if (currentProfile.fitPreference) factsList.push(`- Sở thích mặc: ${currentProfile.fitPreference}`);
+      factsList.push('\nTHÔNG TIN KHÁCH ĐÃ CUNG CẤP TRONG HỘI THOẠI:');
+      if (currentProfile.height) factsList.push(`• Chiều cao: ${formatH(currentProfile.height)}`);
+      if (currentProfile.weight) factsList.push(`• Cân nặng: ${currentProfile.weight}kg`);
+      if (currentProfile.waist) factsList.push(`• Vòng eo: ${currentProfile.waist}cm`);
+      if (currentProfile.bust) factsList.push(`• Vòng ngực: ${currentProfile.bust}cm`);
+      if (currentProfile.hips) factsList.push(`• Vòng mông: ${currentProfile.hips}cm`);
+      if (currentProfile.fitPreference) factsList.push(`• Sở thích mặc: ${currentProfile.fitPreference}`);
     }
 
     if (targetProductCard && targetProductDoc) {
@@ -627,52 +679,73 @@ export class ChatbotService {
         inquiredSize || undefined,
       );
       factsList.push(`\nSẢN PHẨM KHÁCH QUAN TÂM: "${targetProductCard.title}"`);
-      factsList.push(`- Các size thực tế hiện có trong kho: ${(stockInfo.availableSizes || []).join(', ') || 'Đang cập nhật'}`);
+      factsList.push(`• Các size thực tế hiện có trong kho: ${(stockInfo.availableSizes || []).join(', ') || 'Đang cập nhật'}`);
       if (inquiredSize) {
         factsList.push(
-          `- Size ${inquiredSize}: ${stockInfo.inStock ? `Đang CÒN HÀNG (còn ${stockInfo.availableStock} sản phẩm)` : 'ĐÃ TẠM HẾT HÀNG'}`,
+          `• Size ${inquiredSize}: ${stockInfo.inStock ? `Đang CÒN HÀNG (còn ${stockInfo.availableStock} sản phẩm)` : 'ĐÃ TẠM HẾT HÀNG'}`,
         );
       }
-      factsList.push('- Lưu ý: Sản phẩm không có bảng thông số chi tiết cm riêng trong cơ sở dữ liệu, tư vấn dựa trên bảng size chuẩn và độ co giãn của phom đầm.');
     }
 
-    // 4. Call Gemini AI with verified context
+    // 4. Call Gemini AI with verified context and conversation history
     let aiReply = '';
     try {
       aiReply = await this.aiService.generateResponse(
         message,
         factsList.join('\n'),
         CHERI_SYSTEM_PROMPTS.sizeConsultation,
+        history,
       );
     } catch (err) {
       this.logger.warn(`Gemini error in handleSizeConsultation: ${err.message}`);
     }
 
-    // 5. High-quality Deterministic Fallback (if Gemini fails or is empty)
+    // 5. Deterministic Fallback if Gemini fails or returns empty
     let fallbackReply = '';
 
-    // Case A: Specific product size inquiry (e.g. "Mẫu đầm này có size M không?")
-    if (targetProductCard && inquiredSize) {
+    // Case 1: General sizing guide (e.g. "Hướng dẫn mình cách chọn size đầm chuẩn")
+    if (isGeneralGuide) {
+      fallbackReply = `Để chọn size đầm phù hợp, nàng nên dựa vào 3 số đo chính:\n\n• Vòng ngực: Đo tại vị trí lớn nhất.\n• Vòng eo: Đo tại vị trí nhỏ nhất.\n• Vòng mông: Đo tại vị trí lớn nhất.\n\nNàng có thể gửi chiều cao, cân nặng hoặc số đo 3 vòng để Chéri tư vấn size phù hợp nhé! ❤️`;
+    }
+    // Case 2: Specific product stock inquiry (e.g. "Đầm này có size L không?")
+    else if (targetProductCard && (isStockAvailability || (inquiredSize && !isSpecificSizeCheck))) {
       const stockInfo = await this.productService.checkProductStock(targetProductCard.id, undefined, inquiredSize);
       if (stockInfo.inStock) {
-        fallbackReply = `Dạ mẫu "${targetProductCard.title}" hiện ĐANG CÒN size ${inquiredSize} (còn ${stockInfo.availableStock} sản phẩm) sẵn sàng gửi đến nàng ạ! ✨\n\nNàng có thể nhấn vào thẻ sản phẩm bên dưới để xem chi tiết và đặt hàng ngay, hoặc chia sẻ thêm chiều cao, cân nặng để Chéri kiểm tra xem size ${inquiredSize} có vừa vặn nhất với nàng không nhé! ❤️`;
+        fallbackReply = `Mẫu "${targetProductCard.title}" hiện đang còn size ${inquiredSize} (còn ${stockInfo.availableStock} sản phẩm). Nàng có thể nhấn vào thẻ sản phẩm bên dưới để xem chi tiết và đặt hàng nhé! ❤️`;
       } else {
         const otherSizes = (stockInfo.availableSizes || []).filter((s) => s.toUpperCase() !== inquiredSize);
-        fallbackReply = `Dạ mẫu "${targetProductCard.title}" hiện size ${inquiredSize} ĐÃ TẠM HẾT HÀNG rồi ạ. Mẫu này hiện còn các size: ${otherSizes.join(', ') || 'Liên hệ Chéri để đặt may thêm'} ạ. Nàng có thể tham khảo các size còn lại hoặc xem thêm các mẫu đầm xinh khác nhé! ❤️`;
+        fallbackReply = `Mẫu "${targetProductCard.title}" hiện size ${inquiredSize} đã tạm hết hàng. Mẫu này hiện còn các size: ${otherSizes.join(', ') || 'liên hệ Chéri'}. Nàng có thể tham khảo các size còn lại nhé! ❤️`;
       }
     }
-    // Case B: Size comparison inquiry (e.g. "Size M và L khác nhau thế nào?")
-    else if (
-      /(khác nhau.*size|size.*khác nhau)/i.test(lower) ||
-      (lower.includes('size m') && lower.includes('size l'))
-    ) {
-      fallbackReply = `✨ Tại Chéri, các size đầm được thiết kế chuẩn phom tôn dáng với sự khác biệt chính như sau ạ:\n\n• **Size M:** Thường phù hợp cho nàng cao khoảng 1m55 - 1m65, cân nặng 48 - 53kg, số đo vòng eo khoảng 66 - 70cm.\n• **Size L:** Thường dành cho nàng cao 1m58 - 1m68, cân nặng 54 - 58kg, số đo vòng eo khoảng 70 - 75cm.\n\nSự chênh lệch giữa hai size thường là khoảng 2 - 4cm ở vòng ngực và vòng eo. Nếu nàng đang phân vân giữa hai size, hãy cho Chéri biết số đo vòng eo hoặc cân nặng của nàng, Chéri sẽ tư vấn size chuẩn xác nhất nhé! ❤️`;
+    // Case 3: Size comparison inquiry (e.g. "Size M và L khác nhau sao?")
+    else if (isSizeComparison) {
+      fallbackReply = `Tại Chéri, sự khác biệt giữa hai size như sau:\n\n• Size M: Phù hợp chiều cao 1m55 - 1m65, cân nặng 48 - 53kg, vòng eo 66 - 70cm, vòng ngực 86 - 90cm.\n• Size L: Phù hợp chiều cao 1m58 - 1m68, cân nặng 54 - 58kg, vòng eo 70 - 75cm, vòng ngực 90 - 95cm.\n\nHai size chênh lệch khoảng 4 - 5cm ở vòng ngực và vòng eo. Nàng có thể gửi số đo vòng eo hoặc cân nặng để Chéri tư vấn size phù hợp nhé! ❤️`;
     }
-    // Case C: Customer provided height and weight (e.g. "Mình cao 1m60, nặng 50kg thì mặc size gì?")
+    // Case 4: Specific size check given height & weight (e.g. "Size L được không?")
+    else if (isSpecificSizeCheck && currentProfile.height && currentProfile.weight) {
+      const targetSize = inquiredSize || 'L';
+      const isL = targetSize === 'L';
+      if (isL && currentProfile.weight >= 59) {
+        fallbackReply = `Với chiều cao ${formatH(currentProfile.height)} và cân nặng ${currentProfile.weight}kg, nàng mặc size L có thể hơi ôm vừa người. Nếu nàng thích mặc thoải mái hoặc mẫu đầm ít co giãn thì size XL sẽ dễ chịu hơn nhé. Nàng cho Chéri biết mẫu đầm đang chọn để mình kiểm tra chất liệu và độ co giãn cụ thể nhé! ❤️`;
+      } else if (isL && currentProfile.weight <= 53) {
+        fallbackReply = `Với chiều cao ${formatH(currentProfile.height)} và cân nặng ${currentProfile.weight}kg, nàng mặc size M sẽ vừa vặn hơn size L nhé. Nàng cho Chéri biết mẫu đầm đang chọn để mình tư vấn chính xác phom dáng nhé! ❤️`;
+      } else {
+        fallbackReply = `Với chiều cao ${formatH(currentProfile.height)} và cân nặng ${currentProfile.weight}kg, nàng mặc size ${targetSize} của Chéri là vừa vặn nhé. Nàng có thể cho Chéri biết mẫu đầm đang chọn để mình kiểm tra độ co giãn và bảng size chi tiết nhé! ❤️`;
+      }
+    }
+    // Case 5: Customer provided only weight (e.g. "60kg mặc size gì?")
+    else if (currentProfile.weight && !currentProfile.height && !currentProfile.waist) {
+      fallbackReply = `Nàng ${currentProfile.weight}kg thì cho Chéri biết thêm chiều cao nhé! Vì cùng cân nặng nhưng chiều cao và dáng người khác nhau sẽ phù hợp với size khác nhau ạ. ❤️`;
+    }
+    // Case 6: Customer provided only height (and no weight)
+    else if (currentProfile.height && !currentProfile.weight && !currentProfile.waist) {
+      fallbackReply = `Nàng cao ${formatH(currentProfile.height)} thì cho Chéri biết thêm cân nặng để tư vấn size phù hợp nhé! ❤️`;
+    }
+    // Case 7: Customer provided both height and weight (e.g. "Mình cao 1m60" when 60kg already known, or "1m60 50kg thì mặc size gì")
     else if (currentProfile.height && currentProfile.weight && !currentProfile.waist) {
       let suggestedSize = 'M';
       if (currentProfile.weight < 48) suggestedSize = 'S';
-      else if (currentProfile.weight > 58) suggestedSize = 'XL';
+      else if (currentProfile.weight >= 59) suggestedSize = 'XL';
       else if (currentProfile.weight >= 54) suggestedSize = 'L';
 
       const altSize =
@@ -682,9 +755,15 @@ export class ChatbotService {
           ? 'L'
           : null;
 
-      fallbackReply = `✨ Với chiều cao ${currentProfile.height}cm và cân nặng ${currentProfile.weight}kg, nàng mặc **size ${suggestedSize}** của Chéri là vừa vặn và tôn dáng nhất nhé!${altSize ? ` Nếu nàng thích mặc ${currentProfile.fitPreference}, nàng có thể cân nhắc chọn size ${altSize} ạ.` : ''}\n\nĐể chiếc đầm chuẩn phom tuyệt đối, nàng có thể đo thêm vòng eo (trên rốn khoảng 2-3cm). Nếu vòng eo từ 66-70cm thì size M là lựa chọn hoàn hảo ạ! Nàng đang ưng ý mẫu đầm nào của Chéri để mình kiểm tra size cho nàng nhé? ❤️`;
+      if (targetProductCard) {
+        fallbackReply = `Với chiều cao ${formatH(currentProfile.height)} và cân nặng ${currentProfile.weight}kg, mẫu "${targetProductCard.title}" nàng mặc size ${suggestedSize} sẽ vừa vặn nhé! Nàng có thể nhấn vào thẻ sản phẩm bên dưới để xem chi tiết và đặt hàng nhé. ❤️`;
+      } else if (/(mặc size gì|size nào|vừa size nào|thì mặc size)/i.test(lower)) {
+        fallbackReply = `Với chiều cao ${formatH(currentProfile.height)} và cân nặng ${currentProfile.weight}kg, nàng mặc size ${suggestedSize} của Chéri sẽ vừa vặn nhé!${altSize ? ` Nếu nàng thích mặc ${currentProfile.fitPreference}, nàng có thể cân nhắc chọn size ${altSize} ạ.` : ''} Nàng đang quan tâm mẫu đầm nào để Chéri kiểm tra bảng size chi tiết của sản phẩm nhé? ❤️`;
+      } else {
+        fallbackReply = `Với chiều cao ${formatH(currentProfile.height)} và cân nặng ${currentProfile.weight}kg, Chéri cần biết thêm mẫu đầm nàng đang quan tâm để tư vấn size chính xác theo bảng size của sản phẩm nhé! ❤️`;
+      }
     }
-    // Case D: Customer provided waist or added waist (e.g. "Vòng eo mình 68cm")
+    // Case 8: Customer provided waist (e.g. "Vòng eo mình 68cm")
     else if (currentProfile.waist) {
       let sizeByWaist = 'M';
       if (currentProfile.waist <= 66) sizeByWaist = 'S';
@@ -693,19 +772,23 @@ export class ChatbotService {
       else sizeByWaist = 'XL';
 
       const infoSummary: string[] = [];
-      if (currentProfile.height) infoSummary.push(`chiều cao ${currentProfile.height}cm`);
+      if (currentProfile.height) infoSummary.push(`chiều cao ${formatH(currentProfile.height)}`);
       if (currentProfile.weight) infoSummary.push(`cân nặng ${currentProfile.weight}kg`);
       infoSummary.push(`vòng eo ${currentProfile.waist}cm`);
 
-      fallbackReply = `✨ Với ${infoSummary.join(', ')}, nàng diện **size ${sizeByWaist}** của Chéri sẽ rất xinh và chuẩn phom nhé! Vòng eo ${currentProfile.waist}cm nằm trọn vẹn trong khoảng chuẩn của size ${sizeByWaist}.\n\nNàng thích mặc ôm sát tôn vòng 2 hay thích phom vừa vặn, hơi rộng một chút để di chuyển thoải mái ạ? Hãy nói cho Chéri biết nhé! ❤️`;
+      fallbackReply = `Với ${infoSummary.join(', ')}, nàng mặc size ${sizeByWaist} của Chéri sẽ vừa vặn nhé! Nàng thích mặc ôm hay vừa vặn thoải mái, hoặc đang quan tâm mẫu đầm nào để Chéri tư vấn chi tiết hơn ạ? ❤️`;
     }
-    // Case E: Customer provided fit preference (e.g. "Mình thích mặc hơi rộng")
-    else if (currentProfile.fitPreference && (currentProfile.height || currentProfile.weight || currentProfile.waist)) {
-      fallbackReply = `✨ Dạ Chéri đã ghi nhận gu mặc **${currentProfile.fitPreference}** của nàng rồi ạ! Nếu thích form rộng rãi thoải mái khi di chuyển hoặc tiệc tùng, nàng có thể chọn tăng lên 1 size (ví dụ từ M lên L) hoặc chọn các thiết kế đầm dáng xòe A hoặc suông nhẹ nhé.\n\nNàng muốn Chéri gợi ý những mẫu đầm thiết kế form suông xòe xinh xắn đang có sẵn không ạ? ❤️`;
+    // Case 9: Fit or tightness question ("Mặc ôm có bị chật không?")
+    else if (isFitInquiry) {
+      fallbackReply = `Để biết đầm mặc ôm có bị chật không, Chéri cần biết thêm mẫu đầm nàng đang quan tâm hoặc số đo vòng eo của nàng nhé, vì mỗi thiết kế và chất liệu vải sẽ có độ co giãn khác nhau ạ. ❤️`;
     }
-    // Case F: General sizing guide (e.g. "Hướng dẫn mình cách chọn size đầm chuẩn")
+    // Case 10: Fit preference
+    else if (currentProfile.fitPreference) {
+      fallbackReply = `Chéri đã ghi nhận sở thích mặc ${currentProfile.fitPreference} của nàng rồi ạ! Nếu thích thoải mái, nàng có thể chọn tăng lên 1 size hoặc chọn các mẫu đầm dáng xòe hay suông nhẹ nhé. Nàng đang quan tâm mẫu đầm nào của Chéri để mình tư vấn cụ thể ạ? ❤️`;
+    }
+    // Case 11: General fallback
     else {
-      fallbackReply = `✨ Để chọn được chiếc đầm vừa vặn và tôn dáng nhất, nàng nên chú ý đo ba số đo chính bằng thước dây mềm nhé:\n\n• **Vòng 1 (Ngực):** Đo quanh đỉnh ngực lớn nhất, giữ thước dây vừa chạm sát cơ thể.\n• **Vòng 2 (Eo):** Đo tại điểm thắt nhỏ nhất phía trên rốn 2-3cm. Đây là số đo quan trọng nhất khi chọn đầm xòe hoặc đầm ôm Chéri.\n• **Vòng 3 (Mông):** Đo ngang điểm nở nang nhất của vòng 3.\n\nSau khi có số đo, nàng đối chiếu với bảng size của mẫu đầm mình thích nhé! Nếu nàng chưa rõ nên chọn size nào, hãy cho Chéri biết **chiều cao, cân nặng và số đo** (nếu có), Chéri sẽ tư vấn size phù hợp nhất cho nàng ạ! ❤️`;
+      fallbackReply = `Để chọn size đầm phù hợp, nàng nên dựa vào 3 số đo chính:\n\n• Vòng ngực: Đo tại vị trí lớn nhất.\n• Vòng eo: Đo tại vị trí nhỏ nhất.\n• Vòng mông: Đo tại vị trí lớn nhất.\n\nNàng có thể gửi chiều cao, cân nặng hoặc số đo 3 vòng để Chéri tư vấn size phù hợp nhé! ❤️`;
     }
 
     return {
@@ -719,67 +802,266 @@ export class ChatbotService {
   /**
    * Recommendations: Exclude isSynthetic: true. No fake best-seller claims.
    */
-  private async handleRecommendation(user?: any, guestCartId?: string): Promise<ChatbotResponse> {
+  /**
+   * Recommendations: Exclude isSynthetic: true. No fake best-seller claims.
+   * If user query specifies criteria or category, delegates immediately to handleSearch.
+   */
+  private async handleRecommendation(
+    message?: string,
+    context?: any,
+    user?: any,
+    guestCartId?: string,
+  ): Promise<ChatbotResponse> {
+    const lower = (message || '').toLowerCase();
+    // If user message contains category, price, color, or filters, route to search
+    if (
+      message &&
+      /(?:đầm|váy|áo|quần|chân váy|set|bộ|size|màu|giá|rẻ|mới|dưới|trên|k\b|triệu|tr\b)/i.test(lower)
+    ) {
+      return this.handleSearch(message, context);
+    }
+
     const products = await this.productService.getRecommendations(user, guestCartId, 4);
 
     if (products.length === 0) {
       return {
-        reply: 'Chào nàng, Chéri đang cập nhật các bộ sưu tập mới nhất. Nàng vui lòng quay lại sau ít phút hoặc xem tại trang chủ nhé!',
+        reply: 'Chào nàng, Chéri đang cập nhật các bộ sưu tập mới nhất. Nàng vui lòng quay lại sau ít phút hoặc xem tại trang chủ nhé! ❤️',
         intent: 'recommendation',
       };
     }
 
     const titles = products.map((p) => `"${p.title}"`).join(', ');
-    const verifiedFacts = `Các mẫu đầm thiết kế phù hợp đang có sẵn: ${titles}`;
-    const aiReply = await this.aiService.generateResponse(
-      'Gợi ý đầm cho khách',
-      verifiedFacts,
-      CHERI_SYSTEM_PROMPTS.productSearch,
-    );
+    const verifiedFacts = `Các mẫu thiết kế phù hợp đang có sẵn: ${titles}`;
+    let aiReply = '';
+    try {
+      aiReply = await this.aiService.generateResponse(
+        'Gợi ý sản phẩm cho khách',
+        verifiedFacts,
+        CHERI_SYSTEM_PROMPTS.productSearch,
+      );
+    } catch {
+      // safe fallback
+    }
 
     return {
       reply:
         aiReply ||
-        'Dạ Chéri xin gợi ý một số mẫu thiết kế phù hợp và thanh lịch dành riêng cho nàng. Nàng nhấn vào từng mẫu bên dưới để xem chi tiết nhé!',
+        'Dạ Chéri xin gợi ý một số mẫu thiết kế phù hợp và thanh lịch dành riêng cho nàng. Nàng nhấn vào từng mẫu bên dưới để xem chi tiết nhé! ❤️',
       intent: 'recommendation',
       products,
+      currentCategory: 'đầm',
     };
   }
 
   /**
-   * Multi-criteria Search: Price, color, size, garment type. Filter out hidden/out-of-stock.
+   * Multi-criteria Search & Context-Aware Follow-ups:
+   * Handles:
+   * 1. Contextual comparisons ("mẫu nào rẻ nhất", "sản phẩm nào rẻ nhất", "mẫu nào đắt nhất")
+   * 2. Contextual attribute checks ("có màu đen không", "còn size M không")
+   * 3. Contextual relative price checks ("có mẫu nào rẻ hơn không")
+   * 4. Multi-turn category retention & switching ("thế còn quần")
+   * 5. Multi-criteria AND filtering (Category + Color + Size + Price + In-stock)
    */
-  private async handleSearch(message: string): Promise<ChatbotResponse> {
-    const criteria = this.productService.parseCriteriaFromText(message);
+  private async handleSearch(message: string, context?: any): Promise<ChatbotResponse> {
+    const lower = (message || '').toLowerCase().trim();
+
+    // 1. Contextual Follow-Up: "Mẫu nào rẻ nhất?" or "Sản phẩm nào rẻ nhất?"
+    if (
+      /(?:mẫu nào|sản phẩm nào|cái nào).*(?:rẻ nhất|thấp nhất|giá rẻ nhất)/i.test(lower) ||
+      /^(?:mẫu|sản phẩm)?\s*rẻ nhất(?:\s*ạ|\s*nhỉ|\?)?$/i.test(lower)
+    ) {
+      if (context?.lastProducts && context.lastProducts.length > 0) {
+        const sorted = [...context.lastProducts].sort((a, b) => a.price - b.price);
+        const cheapest = sorted[0];
+        return {
+          reply: `Trong những mẫu vừa gợi ý, ${cheapest.title} có giá thấp nhất là ${cheapest.price.toLocaleString('vi-VN')}đ ạ. ❤️`,
+          intent: 'product_search',
+          products: [cheapest],
+          currentCategory: context?.currentCategory || 'đầm',
+          criteria: { ...context?.criteria, sortBy: 'price_asc' },
+        };
+      }
+    }
+
+    // 2. Contextual Follow-Up: "Mẫu nào đắt nhất?" or "Sản phẩm nào đắt nhất?"
+    if (
+      /(?:mẫu nào|sản phẩm nào|cái nào).*(?:đắt nhất|cao nhất|giá cao nhất)/i.test(lower) ||
+      /^(?:mẫu|sản phẩm)?\s*đắt nhất(?:\s*ạ|\s*nhỉ|\?)?$/i.test(lower)
+    ) {
+      if (context?.lastProducts && context.lastProducts.length > 0) {
+        const sorted = [...context.lastProducts].sort((a, b) => b.price - a.price);
+        const priciest = sorted[0];
+        return {
+          reply: `Trong những mẫu vừa gợi ý, ${priciest.title} có giá cao nhất là ${priciest.price.toLocaleString('vi-VN')}đ ạ. ❤️`,
+          intent: 'product_search',
+          products: [priciest],
+          currentCategory: context?.currentCategory || 'đầm',
+          criteria: { ...context?.criteria, sortBy: 'price_desc' },
+        };
+      }
+    }
+
+    // 3. Contextual Follow-Up: "Có màu [màu] không?"
+    const parsedForColor = this.productService.parseCriteriaFromText(message, context);
+    const hasColorWord = /(?:có|mẫu nào có)\s+màu\s+/i.test(lower) || (parsedForColor.color && !parsedForColor.category);
+
+    if (hasColorWord && context?.lastProducts && context.lastProducts.length > 0 && parsedForColor.color) {
+      const colorAliases = this.productService.getColorAliases(parsedForColor.color);
+      const colorRegex = new RegExp(colorAliases.join('|'), 'i');
+
+      const matchedInCurrent = context.lastProducts.filter((p: any) => {
+        const colors = [...(p.colors || []), ...(p.availableColors || [])];
+        return colors.some((c: string) => colorRegex.test(c)) || colorRegex.test(p.title);
+      });
+
+      if (matchedInCurrent.length > 0) {
+        const names = matchedInCurrent.map((p: any) => `"${p.title}"`).join(', ');
+        return {
+          reply: `Trong các mẫu nàng vừa xem, mẫu ${names} có phiên bản màu ${parsedForColor.color} nhé! ❤️`,
+          intent: 'product_search',
+          products: matchedInCurrent,
+          currentCategory: context?.currentCategory || 'đầm',
+          criteria: { ...context?.criteria, color: parsedForColor.color },
+        };
+      }
+
+      // If not in current, check store for this color in currentCategory
+      const cat = context?.currentCategory || 'đầm';
+      const storeItems = await this.productService.searchProductsWithCriteria(
+        { category: cat, color: parsedForColor.color, onlyInStock: true },
+        4,
+      );
+      if (storeItems.length > 0) {
+        return {
+          reply: `Các mẫu vừa rồi chưa có màu ${parsedForColor.color}, nhưng Chéri tìm thấy các mẫu ${cat} màu ${parsedForColor.color} khác của shop cho nàng đây nhé! ❤️`,
+          intent: 'product_search',
+          products: storeItems,
+          currentCategory: cat,
+          criteria: { category: cat, color: parsedForColor.color },
+        };
+      } else {
+        return {
+          reply: `Hiện Chéri chưa tìm thấy mẫu ${cat} màu ${parsedForColor.color} nào còn hàng ạ. Nàng có muốn tham khảo các gam màu khác như trắng, be hay đỏ không? ❤️`,
+          intent: 'product_search',
+          products: [],
+          currentCategory: cat,
+        };
+      }
+    }
+
+    // 4. Contextual Follow-Up: "Có mẫu nào rẻ hơn không?"
+    if (/(?:có mẫu nào|có cái nào)?\s*rẻ hơn\s*(?:không|ko|\?)?/i.test(lower)) {
+      if (context?.lastProducts && context.lastProducts.length > 0) {
+        const minPriceSeen = Math.min(...context.lastProducts.map((p: any) => p.price));
+        const category = context?.currentCategory || 'đầm';
+        const cheaperProducts = await this.productService.searchProductsWithCriteria(
+          { category, maxPrice: minPriceSeen - 1, sortBy: 'price_asc', onlyInStock: true },
+          4,
+        );
+        if (cheaperProducts.length > 0) {
+          return {
+            reply: `Chéri tìm thấy các mẫu ${category} có mức giá tiết kiệm hơn cho nàng đây nhé! ❤️`,
+            intent: 'product_search',
+            products: cheaperProducts,
+            currentCategory: category,
+            criteria: { category, maxPrice: minPriceSeen - 1, sortBy: 'price_asc' },
+          };
+        } else {
+          return {
+            reply: `Dạ trong danh mục ${category}, các mẫu vừa gợi ý đã là mức giá tốt nhất tại Chéri rồi ạ. Nàng có thể tham khảo thêm các thiết kế xinh xắn này nhé! ❤️`,
+            intent: 'product_search',
+            products: context.lastProducts,
+            currentCategory: category,
+          };
+        }
+      }
+    }
+
+    // 5. Contextual Follow-Up: "Mẫu đầu tiên còn size L không?" / "Mẫu thứ 2 còn hàng không?"
+    if (/(?:mẫu đầu tiên|mẫu thứ|mẫu số|mẫu 1|mẫu 2|mẫu 3).*(?:size|còn|hết)/i.test(lower)) {
+      const targetProduct = this.sessionService.resolveFollowUpProduct(message, context);
+      if (targetProduct) {
+        const stockInfo = await this.productService.checkProductStock(
+          targetProduct.id,
+          parsedForColor.color,
+          parsedForColor.size,
+        );
+        let reply = '';
+        if (parsedForColor.size) {
+          reply = stockInfo.inStock
+            ? `Mẫu "${targetProduct.title}" hiện ĐANG CÒN HÀNG size ${parsedForColor.size} (còn ${stockInfo.availableStock} sản phẩm). Nàng nhấn vào thẻ để xem chi tiết nhé! ❤️`
+            : `Mẫu "${targetProduct.title}" hiện size ${parsedForColor.size} đã tạm hết hàng. Mẫu này hiện còn các size: ${stockInfo.availableSizes.join(', ') || 'liên hệ shop'} ạ. ❤️`;
+        } else {
+          reply = stockInfo.inStock
+            ? `Mẫu "${targetProduct.title}" hiện đang sẵn hàng phục vụ nàng nhé! ❤️`
+            : `Mẫu "${targetProduct.title}" hiện đã tạm hết hàng ạ. ❤️`;
+        }
+        return {
+          reply,
+          intent: 'product_detail',
+          products: [targetProduct],
+          currentCategory: context?.currentCategory,
+        };
+      }
+    }
+
+    // 6. Category switching ("Thế còn quần?" -> switches category to quần and clears old filters)
+    const isCategorySwitch = /(?:thế còn|còn|sang|chuyển sang)\s+(quần|áo|đầm|váy|chân váy|set)/i.test(lower);
+    const effectiveContext = isCategorySwitch ? {} : context;
+    const criteria = this.productService.parseCriteriaFromText(message, effectiveContext);
+
+    // Default to 'đầm' if asking for recommendations or designs without explicit category
+    if (!criteria.category && /(?:gợi ý|mới nhất|giá rẻ|dưới\s*\d|bán chạy|xem mẫu)/i.test(lower)) {
+      criteria.category = context?.currentCategory || 'đầm';
+    }
+
     const products = await this.productService.searchProductsWithCriteria(criteria, 4);
 
+    // If no products match all strict criteria, inform the customer clearly (no fake fallback)
     if (products.length === 0) {
-      // Fallback: offer available in-stock designs
-      const recs = await this.productService.getRecommendations(undefined, undefined, 3);
+      let noMatchMsg = `Hiện Chéri chưa tìm thấy mẫu ${criteria.category || 'sản phẩm'}`;
+      if (criteria.color) noMatchMsg += ` màu ${criteria.color}`;
+      if (criteria.size) noMatchMsg += ` size ${criteria.size}`;
+      if (criteria.maxPrice) noMatchMsg += ` dưới ${criteria.maxPrice.toLocaleString('vi-VN')}đ`;
+      if (criteria.minPrice && !criteria.maxPrice) {
+        noMatchMsg += ` từ ${criteria.minPrice.toLocaleString('vi-VN')}đ trở lên`;
+      }
+      noMatchMsg += ' phù hợp trong kho. Nàng muốn xem thử mức giá khác hoặc điều chỉnh tiêu chí không ạ? ❤️';
+
       return {
-        reply:
-          'Dạ Chéri chưa tìm thấy mẫu đầm nào hoàn toàn trùng khớp với tiêu chí của nàng. Nàng có thể tham khảo một số mẫu thiết kế sẵn có bên dưới hoặc điều chỉnh lại yêu cầu nhé!',
+        reply: noMatchMsg,
         intent: 'product_search',
-        products: recs,
+        products: [],
+        currentCategory: criteria.category || context?.currentCategory,
+        criteria,
       };
     }
 
-    const verifiedFacts = products
-      .map((p) => `"${p.title}" - Giá ${p.price.toLocaleString('vi-VN')}đ (Còn ${p.stockSummary})`)
-      .join(', ');
-
-    const aiReply = await this.aiService.generateResponse(
-      message,
-      `Các mẫu tìm thấy: ${verifiedFacts}`,
-      CHERI_SYSTEM_PROMPTS.productSearch,
-    );
+    // Products found -> Build verified reply
+    const catName = criteria.category || 'thiết kế';
+    let defaultReply = '';
+    if (criteria.sortBy === 'newest') {
+      defaultReply = `Chéri gửi nàng những mẫu ${catName} mới được cập nhật tại shop nhé! ❤️`;
+    } else if (criteria.sortBy === 'price_asc') {
+      defaultReply = `Chéri gửi nàng các mẫu ${catName} có giá tốt nhất của shop nhé! ❤️`;
+    } else if (criteria.color && criteria.maxPrice) {
+      defaultReply = `Chéri tìm được các mẫu ${catName} màu ${criteria.color} trong ngân sách ${criteria.maxPrice.toLocaleString('vi-VN')}đ của nàng nhé! ❤️`;
+    } else if (criteria.color) {
+      defaultReply = `Chéri gửi nàng các mẫu ${catName} màu ${criteria.color} xinh xắn của shop nhé! ❤️`;
+    } else if (criteria.maxPrice) {
+      defaultReply = `Chéri tìm được các mẫu ${catName} trong ngân sách ${criteria.maxPrice.toLocaleString('vi-VN')}đ của nàng nhé! ❤️`;
+    } else if (/(?:có bán quần không|có quần không|shop có quần)/i.test(lower)) {
+      defaultReply = `Chéri có các mẫu quần nữ thiết kế thanh lịch và tôn dáng cho nàng nhé! ❤️`;
+    } else {
+      defaultReply = `Chéri gửi nàng những mẫu ${catName} phù hợp với mong muốn của nàng đây ạ! ❤️`;
+    }
 
     return {
-      reply:
-        aiReply ||
-        `Dạ Chéri đã tìm thấy các mẫu đầm phù hợp với mong muốn của nàng đây ạ. Nàng hãy chọn mẫu yêu thích để ngắm chi tiết nhé!`,
+      reply: defaultReply,
       intent: 'product_search',
       products,
+      currentCategory: criteria.category || context?.currentCategory,
+      criteria,
     };
   }
 
@@ -847,5 +1129,76 @@ export class ChatbotService {
     recent.push(now);
     this.rateLimits.set(key, recent);
     return false;
+  }
+
+  /**
+   * Universal output sanitizer guaranteeing plain text responses,
+   * stripping raw markdown asterisks/headings while preserving Markdown links,
+   * removing fluffy marketing phrases, and capping emojis to at most 1.
+   */
+  private formatCleanResponse(reply: string): string {
+    if (!reply) return '';
+
+    let cleaned = reply;
+
+    // Strip markdown tables (e.g. | Sản phẩm | Giá | or |--|--|)
+    cleaned = cleaned.replace(/^\|.*\|$/gm, '');
+    cleaned = cleaned.replace(/(?:^|\n)\|[^\n]+\|(?:\n|$)/g, '\n');
+    cleaned = cleaned.replace(/\|/g, '');
+
+    // Strip bold and italic markdown while preserving inner text
+    cleaned = cleaned.replace(/\*\*\*([^*]+)\*\*\*/g, '$1');
+    cleaned = cleaned.replace(/\*\*([^*]+)\*\*/g, '$1');
+    cleaned = cleaned.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '$1');
+    cleaned = cleaned.replace(/_{1,3}([^_]+)_{1,3}/g, '$1');
+
+    // Strip heading markdown (#, ##, ###)
+    cleaned = cleaned.replace(/^#{1,6}\s+/gm, '');
+
+    // Convert asterisk or dash list markers to standard bullet "• "
+    cleaned = cleaned.replace(/^\s*[\*\-]\s+/gm, '• ');
+
+    // Strip cliché/fluffy marketing phrases
+    cleaned = cleaned.replace(/\b(chiếc đầm hoàn hảo nhất|tôn dáng nhất|mông nở nang nhất|thước dây chỉ nên chạm sát da|thước dây vừa chạm sát da|đo nhẹ nhàng qua đỉnh ngực)\b/gi, '');
+
+    // Strip "Sale " prefix if mistakenly stuck to product names in response text
+    cleaned = cleaned.replace(/\bSale\s+([A-ZÀ-Ỹ])/g, '$1');
+
+    // Limit emojis to at most 1 emoji, preserving exact system/auth order messages
+    const isOrderExact =
+      reply.includes('Bạn vui lòng đăng nhập') ||
+      reply.includes('Bạn chưa có đơn hàng') ||
+      reply.includes('Đây là danh sách đơn hàng');
+
+    if (!isOrderExact) {
+      cleaned = this.limitEmojisToOne(cleaned);
+    }
+
+    return cleaned.trim();
+  }
+
+  /**
+   * Enforces at most 1 emoji per message
+   */
+  private limitEmojisToOne(text: string): string {
+    const emojiRegex = /\p{Extended_Pictographic}/gu;
+    const matches = Array.from(text.matchAll(emojiRegex));
+    if (matches.length <= 1) {
+      return text;
+    }
+
+    // Keep the last emoji, remove all preceding emojis
+    let result = '';
+    let lastIndex = 0;
+
+    for (let i = 0; i < matches.length - 1; i++) {
+      const m = matches[i];
+      const matchIndex = m.index ?? 0;
+      result += text.substring(lastIndex, matchIndex);
+      lastIndex = matchIndex + m[0].length;
+    }
+
+    result += text.substring(lastIndex);
+    return result.replace(/  +/g, ' ');
   }
 }

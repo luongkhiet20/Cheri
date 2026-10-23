@@ -111,6 +111,28 @@
               </div>
             </div>
 
+            <!-- Customer (Avatar + Name) cell -->
+            <div *ngIf="isCustomerColumn(col)" class="customer-cell-wrapper">
+              <div class="user-avatar user-avatar--sm">
+                <img
+                  *ngIf="hasValidAvatar(row, col)"
+                  [src]="getAvatarUrl(row, col)"
+                  [alt]="getAvatarAlt(row, col)"
+                  class="user-avatar-img"
+                  loading="lazy"
+                  (error)="onAvatarError(row, col)" />
+                <div
+                  *ngIf="!hasValidAvatar(row, col)"
+                  class="user-avatar-initial"
+                  [attr.aria-label]="getAvatarAlt(row, col)">
+                  {{ getAvatarInitial(row, col) }}
+                </div>
+              </div>
+              <span class="customer-name" [title]="getCustomerName(row, col)">
+                {{ getCustomerName(row, col) }}
+              </span>
+            </div>
+
             <!-- SKU list cell -->
             <div *ngIf="isSkuColumn(col)" class="sku-list">
               <ng-container *ngIf="getSkuList(row, col).length > 0; else noSku">
@@ -131,7 +153,7 @@
             </div>
 
             <!-- Default text / Clickable element -->
-            <ng-container *ngIf="!isStatusColumn(col) && !isImageColumn(col) && !isSkuColumn(col)">
+            <ng-container *ngIf="!isStatusColumn(col) && !isImageColumn(col) && !isSkuColumn(col) && !isCustomerColumn(col)">
               <button
                 *ngIf="col.clickable"
                 type="button"

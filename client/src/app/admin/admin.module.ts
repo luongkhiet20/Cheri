@@ -61,6 +61,12 @@ import { SettingsComponent } from './pages/settings/settings.component';
 import { CouponsComponent } from './pages/coupons/coupons.component';
 import { CouponFormComponent } from './pages/coupons/coupon-form/coupon-form.component';
 import { CouponDetailComponent } from './pages/coupons/coupon-detail/coupon-detail.component';
+import { MessagesComponent } from './pages/messages/messages.component';
+import { ConversationListComponent } from './pages/messages/conversation-list/conversation-list.component';
+import { ChatPanelComponent } from './pages/messages/chat-panel/chat-panel.component';
+import { CustomerProfileComponent } from './pages/messages/customer-profile/customer-profile.component';
+import { ReviewsComponent } from './pages/reviews/reviews.component';
+import { NewsletterSubscribersComponent } from './pages/newsletter-subscribers/newsletter-subscribers.component';
 
 const routes: Routes = [
   {
@@ -89,6 +95,10 @@ const routes: Routes = [
       { path: 'coupons/new', redirectTo: 'pages/coupons/new', pathMatch: 'full' },
       { path: 'coupons/:id', redirectTo: 'pages/coupons/:id', pathMatch: 'full' },
       { path: 'coupons/:id/edit', redirectTo: 'pages/coupons/:id/edit', pathMatch: 'full' },
+      { path: 'marketing/subscribers', component: NewsletterSubscribersComponent },
+      { path: 'newsletter-subscribers', component: NewsletterSubscribersComponent },
+      { path: 'pages/subscribers', component: NewsletterSubscribersComponent },
+      { path: 'subscribers', redirectTo: 'marketing/subscribers', pathMatch: 'full' },
       { path: 'payment-methods', component: PaymentMethodsComponent },
       { path: 'payment-methods/add', component: PaymentMethodFormComponent },
       { path: 'payment-methods/:id', component: PaymentMethodDetailComponent },
@@ -114,6 +124,8 @@ const routes: Routes = [
       }),
       { path: 'account', component: AccountComponent },
       { path: 'settings', component: SettingsComponent },
+      { path: 'messages', component: MessagesComponent },
+      { path: 'reviews', component: ReviewsComponent },
     ]
   }
 ];
@@ -173,6 +185,12 @@ const routes: Routes = [
     AboutComponent,
     AccountComponent,
     SettingsComponent,
+    MessagesComponent,
+    ConversationListComponent,
+    ChatPanelComponent,
+    CustomerProfileComponent,
+    ReviewsComponent,
+    NewsletterSubscribersComponent,
   ],
   imports: [
     CommonModule,

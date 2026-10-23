@@ -257,18 +257,25 @@
                   </div>
                 </div>
 
-                <!-- Info -->
-                <div class="pcard-info">
-                  @if (product.tags?.length) {
-                  <span class="pcard-tag">{{ product.tags[0] }}</span>
-                  }
-                  <h4 class="pcard-name">{{ product.title }}</h4>
-                  <div class="pcard-prices">
-                    <span class="pcard-price">{{ getDisplayPrice(product) | priceFormat }} {{ currency() }}</span>
-                    @if (hasDiscount(product)) {
-                    <span class="pcard-original">{{ getOriginalPrice(product) | priceFormat }} {{ currency() }}</span>
+                <!-- Info & Rating Row -->
+                <div class="pcard-bottom-row">
+                  <div class="pcard-info">
+                    @if (product.tags?.length) {
+                    <span class="pcard-tag">{{ product.tags[0] }}</span>
                     }
+                    <h4 class="pcard-name">{{ product.title }}</h4>
+                    <div class="pcard-prices">
+                      <span class="pcard-price">{{ getDisplayPrice(product) | priceFormat }} {{ currency() }}</span>
+                      @if (hasDiscount(product)) {
+                      <span class="pcard-original">{{ getOriginalPrice(product) | priceFormat }} {{ currency() }}</span>
+                      }
+                    </div>
                   </div>
+
+                  <app-product-rating
+                    class="pcard-rating"
+                    [productId]="product._id || product.id">
+                  </app-product-rating>
                 </div>
 
               </div>

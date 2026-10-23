@@ -1120,6 +1120,16 @@ export class ApiService {
     return this.http.get(url);
   }
 
+  getProductRatingSummary(productId: string): Observable<any> {
+    const url = `${this.apiUrl}/api/reviews/product/${encodeURIComponent(productId)}/rating-summary`;
+    return this.http.get(url);
+  }
+
+  getBatchProductRatingSummary(productIds: string[]): Observable<any> {
+    const url = `${this.apiUrl}/api/reviews/batch-rating-summary`;
+    return this.http.post(url, { productIds });
+  }
+
   getProductReviews(
     productId: string,
     query?: { page?: number; limit?: number; rating?: number; sortBy?: string },

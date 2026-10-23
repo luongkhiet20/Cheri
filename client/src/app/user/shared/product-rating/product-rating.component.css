@@ -1,0 +1,42 @@
+:host {
+  display: inline-flex;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+.cheri-product-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  width: fit-content;
+  max-width: 100%;
+  white-space: nowrap;
+  line-height: 1;
+  user-select: none;
+  padding: 0;
+  margin: 0;
+}
+
+.rating-star {
+  font-size: 14px;
+  line-height: 1;
+  color: #F5B301;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.rating-score {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--cheri-text, #2B2B2B);
+  display: inline-block;
+  letter-spacing: -0.01em;
+}
+
+.empty-rating .rating-star {
+  color: #F5B301;
+}

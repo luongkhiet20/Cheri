@@ -330,6 +330,147 @@ export class ReviewsService {
   }
 
   /**
+   * Lấy tóm tắt điểm đánh giá trung bình và số lượng của 1 sản phẩm (Công khai)
+   * Nguồn: collection product_reviews với status = 'APPROVED'
+   */
+  async getProductRatingSummary(productIdOrSlug: string): Promise<{
+    productId: string;
+    averageRating: number | null;
+    reviewCount: number;
+  }> {
+    let productObjectId: Types.ObjectId | null = null;
+    let resolvedId = productIdOrSlug;
+
+    if (isValidObjectId(productIdOrSlug)) {
+      productObjectId = new Types.ObjectId(productIdOrSlug);
+      resolvedId = productObjectId.toString();
+    } else {
+      try {
+        const product = await this.resolveProduct(productIdOrSlug);
+        if (product && product._id) {
+          productObjectId = new Types.ObjectId(product._id);
+          resolvedId = product._id.toString();
+        }
+      } catch {
+        return {
+          productId: productIdOrSlug,
+          averageRating: null,
+          reviewCount: 0,
+        };
+      }
+    }
+
+    if (!productObjectId) {
+      return {
+        productId: productIdOrSlug,
+        averageRating: null,
+        reviewCount: 0,
+      };
+    }
+
+    const result = await this.reviewModel.aggregate([
+      {
+        $match: {
+          productId: productObjectId,
+          status: ReviewStatus.APPROVED,
+        },
+      },
+      {
+        $group: {
+          _id: '$productId',
+          avgRating: { $avg: '$rating' },
+          reviewCount: { $sum: 1 },
+        },
+      },
+    ]);
+
+    if (result && result.length > 0 && result[0].reviewCount > 0) {
+      const avg = Math.round(Number(result[0].avgRating) * 10) / 10;
+      return {
+        productId: resolvedId,
+        averageRating: avg,
+        reviewCount: Number(result[0].reviewCount),
+      };
+    }
+
+    return {
+      productId: resolvedId,
+      averageRating: null,
+      reviewCount: 0,
+    };
+  }
+
+  /**
+   * Lấy tóm tắt điểm đánh giá trung bình cho danh sách nhiều sản phẩm cùng lúc
+   * Tối ưu hóa cho product grid, hạn chế N+1 requests
+   */
+  async getBatchRatingSummary(productIds: string[]): Promise<
+    Array<{
+      productId: string;
+      averageRating: number | null;
+      reviewCount: number;
+    }>
+  > {
+    if (!Array.isArray(productIds) || productIds.length === 0) {
+      return [];
+    }
+
+    const validMap = new Map<string, Types.ObjectId>();
+    for (const rawId of productIds) {
+      if (rawId && typeof rawId === 'string' && isValidObjectId(rawId)) {
+        validMap.set(rawId, new Types.ObjectId(rawId));
+      }
+    }
+
+    const objectIds = Array.from(validMap.values());
+    if (objectIds.length === 0) {
+      return productIds.map((id) => ({
+        productId: id,
+        averageRating: null,
+        reviewCount: 0,
+      }));
+    }
+
+    const agg = await this.reviewModel.aggregate([
+      {
+        $match: {
+          productId: { $in: objectIds },
+          status: ReviewStatus.APPROVED,
+        },
+      },
+      {
+        $group: {
+          _id: '$productId',
+          avgRating: { $avg: '$rating' },
+          reviewCount: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const statsMap = new Map<string, { averageRating: number; reviewCount: number }>();
+    for (const item of agg) {
+      const pIdStr = item._id ? item._id.toString() : '';
+      const count = Number(item.reviewCount) || 0;
+      const avg = count > 0 ? Math.round(Number(item.avgRating) * 10) / 10 : null;
+      if (pIdStr) {
+        statsMap.set(pIdStr, {
+          averageRating: avg,
+          reviewCount: count,
+        });
+      }
+    }
+
+    return productIds.map((id) => {
+      const stat = statsMap.get(id);
+      return {
+        productId: id,
+        averageRating: stat ? stat.averageRating : null,
+        reviewCount: stat ? stat.reviewCount : 0,
+      };
+    });
+  }
+
+  /**
    * Kiểm tra điều kiện đánh giá của người dùng hiện tại đối với sản phẩm
    */
   /**

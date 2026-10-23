@@ -1,0 +1,10 @@
+<span
+  class="cheri-product-rating"
+  [class.has-rating]="hasRating"
+  [class.empty-rating]="!hasRating"
+  [attr.aria-label]="ariaLabel"
+  role="status"
+>
+  <span class="rating-star" aria-hidden="true">{{ hasRating ? '★' : '☆' }}</span>
+  <span class="rating-score">{{ displayScore }}</span>
+</span>

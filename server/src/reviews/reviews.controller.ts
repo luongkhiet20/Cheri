@@ -56,6 +56,28 @@ export class ReviewsController {
   }
 
   /**
+   * Điểm đánh giá trung bình rút gọn theo sản phẩm (cho ProductRatingComponent)
+   */
+  @Get('product/:productId/rating-summary')
+  async getProductRatingSummary(@Param('productId') productId: string) {
+    return this.reviewsService.getProductRatingSummary(productId);
+  }
+
+  /**
+   * Điểm đánh giá trung bình hàng loạt (batch) cho nhiều sản phẩm cùng lúc
+   */
+  @Post('batch-rating-summary')
+  async getBatchRatingSummaryPost(@Body('productIds') productIds: string[]) {
+    return this.reviewsService.getBatchRatingSummary(productIds || []);
+  }
+
+  @Get('batch-rating-summary')
+  async getBatchRatingSummaryGet(@Query('productIds') productIds?: string) {
+    const ids = productIds ? productIds.split(',').map((id) => id.trim()).filter(Boolean) : [];
+    return this.reviewsService.getBatchRatingSummary(ids);
+  }
+
+  /**
    * Kiểm tra người dùng có đủ điều kiện đánh giá sản phẩm hay không (Yêu cầu đăng nhập)
    */
   @Get('check-eligible/:productId')

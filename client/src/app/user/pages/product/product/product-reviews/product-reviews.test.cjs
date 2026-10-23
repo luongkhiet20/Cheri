@@ -300,3 +300,14 @@ test('reviewCreated$ triggers reload and updates review counts', () => {
   assert.equal(comp.getStarCount(5), 2);
 });
 
+test('onAvatarError marks avatarLoadFailed to true and triggers change detection', () => {
+  let marked = false;
+  const comp = createComponent();
+  comp.cdr = { markForCheck: () => { marked = true; } };
+  const mockReview = { _id: 'r1', userAvatar: 'https://bad-url.com/avatar.jpg', userName: 'Linh' };
+  comp.onAvatarError(mockReview);
+
+  assert.equal(mockReview.avatarLoadFailed, true);
+  assert.equal(marked, true);
+});
+

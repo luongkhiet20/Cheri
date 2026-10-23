@@ -250,12 +250,47 @@ export class ReviewsService {
     }
 
     const [reviews, total] = await Promise.all([
-      this.reviewModel.find(filter).sort(sort).skip(skip).limit(limit).lean(),
+      this.reviewModel
+        .find(filter)
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .populate('userId', 'fullName name avatar')
+        .lean(),
       this.reviewModel.countDocuments(filter),
     ]);
 
+    const formattedReviews = (reviews as any[]).map((r: any) => {
+      const u = r.userId;
+      // Ưu tiên avatar mới nhất từ users.avatar, fallback về r.userAvatar
+      const userAvatar =
+        u && typeof u === 'object' && u.avatar
+          ? u.avatar
+          : r.userAvatar || '';
+
+      // Ưu tiên tên người dùng từ users, fallback về r.userName
+      const userName =
+        u && typeof u === 'object' && (u.fullName || u.name)
+          ? u.fullName || u.name
+          : r.userName || 'Khách hàng Chéri';
+
+      const userId =
+        u && typeof u === 'object' && u._id
+          ? u._id.toString()
+          : r.userId
+          ? r.userId.toString()
+          : '';
+
+      return {
+        ...r,
+        userId,
+        userName,
+        userAvatar,
+      };
+    });
+
     return {
-      reviews: reviews as any,
+      reviews: formattedReviews as any,
       pagination: {
         total,
         page,

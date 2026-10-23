@@ -341,6 +341,13 @@ export class ProductReviewsComponent implements OnInit, OnChanges, OnDestroy {
       return '';
     }
   }
+
+  onAvatarError(review: any): void {
+    if (review) {
+      review.avatarLoadFailed = true;
+      this.cdr.markForCheck();
+    }
+  }
 }
 
 export { ProductReviewsComponent as ProductReviews };

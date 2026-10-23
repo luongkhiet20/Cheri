@@ -104,7 +104,16 @@
         <div class="review-item-header">
           <div class="user-meta">
             <div class="user-avatar-circle">
+              @if (rev.userAvatar && !rev.avatarLoadFailed) {
+              <img
+                [src]="rev.userAvatar"
+                [alt]="rev.userName || 'Khách hàng Chéri'"
+                loading="lazy"
+                (error)="onAvatarError(rev)"
+              />
+              } @else {
               {{ (rev.userName || 'K').charAt(0).toUpperCase() }}
+              }
             </div>
             <div class="user-info">
               <div class="user-name-line">

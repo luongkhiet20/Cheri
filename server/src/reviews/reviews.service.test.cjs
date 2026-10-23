@@ -262,6 +262,7 @@ function createMockModels() {
         result = result.slice(0, n);
         return chain;
       },
+      populate: () => chain,
       lean: async () => JSON.parse(JSON.stringify(result)),
     };
     return chain;

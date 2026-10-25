@@ -1,7 +1,6 @@
-import { Logger, Injectable, NotFoundException, BadRequestException, ForbiddenException, ConflictException, MethodNotAllowedException } from '@nestjs/common';
+import { Logger, Injectable, NotFoundException, BadRequestException, ForbiddenException, ConflictException, MethodNotAllowedException, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types, isValidObjectId } from 'mongoose';
-import Stripe from 'stripe';
+import { ClientSession, Model, Types, isValidObjectId } from 'mongoose';
 import { buildPublicTrackingResponse } from './tracking-response.cjs';
 
 import { Order, OrderStatus, PaymentStatus, ReturnRequestStatus, RefundStatus } from './models/order.model';
@@ -13,13 +12,16 @@ import { sendMsg } from '../shared/utils/email/mailer';
 import { Translation } from '../translations/translation.model';
 import { prepareCart } from '../shared/utils/prepareUtils';
 import { Cart } from '../cart/utils/cart';
+import { PaymentService } from './payment.service';
 
-const secret = process.env.STRIPE_SECRETKEY;
-export const stripe = new Stripe(secret, { apiVersion: '2020-08-27' });
+// Link VNPAY hết hạn sau 15 phút; chờ thêm 15 phút trước khi coi là khách bỏ dở.
+const VNPAY_ABANDON_AFTER_MS = 30 * 60 * 1000;
 
 @Injectable()
-export class OrdersService {
+export class OrdersService implements OnModuleInit, OnModuleDestroy {
   private logger = new Logger('OrdersService');
+  private vnpayReconcileTimer?: NodeJS.Timeout;
+  private vnpayReconcileRunning = false;
 
   private addressCache = {
     provinces: null as any[] | null,
@@ -37,8 +39,29 @@ export class OrdersService {
     @InjectModel('User') private userModel: Model<any>,
     @InjectModel('Coupon') private couponModel: Model<any>,
     @InjectModel('Category') private categoryModel: Model<any>,
+    private readonly paymentService: PaymentService,
     @InjectModel('Interaction') private interactionModel?: Model<any>,
   ) {}
+
+  onModuleInit(): void {
+    if (process.env.VNPAY_RECONCILE_ENABLED !== 'true') return;
+    this.vnpayReconcileTimer = setInterval(async () => {
+      if (this.vnpayReconcileRunning) return;
+      this.vnpayReconcileRunning = true;
+      try {
+        await this.reconcilePendingVnpayPayments();
+      } catch (error) {
+        this.logger.error(`VNPAY reconciliation failed: ${error.message}`);
+      } finally {
+        this.vnpayReconcileRunning = false;
+      }
+    }, 10 * 60 * 1000);
+    this.vnpayReconcileTimer.unref();
+  }
+
+  onModuleDestroy(): void {
+    if (this.vnpayReconcileTimer) clearInterval(this.vnpayReconcileTimer);
+  }
 
   /**
    * Tự động ghi nhận sự kiện PURCHASE vào user_interactions phục vụ huấn luyện Machine Learning.
@@ -372,9 +395,13 @@ export class OrdersService {
       throw new ForbiddenException('Bạn không có quyền hủy đơn hàng này.');
     }
 
-    // 3. Backend xác minh trạng thái thực tế: chỉ cho phép hủy khi là PENDING / NEW / Chờ xác nhận
+    // 3. Backend xác minh trạng thái thực tế: cho phép hủy khi là PENDING / NEW / Chờ xác nhận,
+    //    hoặc đơn COD đã tự xác nhận nhưng chưa xử lý và chưa thu tiền
     const rawStatus = (order.status || '').toUpperCase().trim();
-    if (rawStatus !== 'PENDING' && rawStatus !== 'NEW' && rawStatus !== 'CHỜ XÁC NHẬN') {
+    const methodCode = String(order.payment?.method || order.paymentMethodSnapshot?.code || '').toUpperCase();
+    const unpaidCodConfirmed = rawStatus === OrderStatus.CONFIRMED && methodCode === 'COD' &&
+      order.paymentStatus !== PaymentStatus.PAID;
+    if (rawStatus !== 'PENDING' && rawStatus !== 'NEW' && rawStatus !== 'CHỜ XÁC NHẬN' && !unpaidCodConfirmed) {
       throw new BadRequestException('Đơn hàng hiện không ở trạng thái Chờ xác nhận, không thể hủy.');
     }
 
@@ -406,6 +433,7 @@ export class OrdersService {
     });
 
     await order.save();
+    await this.releaseCancelledOrderStock(order);
     return {
       success: true,
       message: 'Hủy đơn hàng thành công.',
@@ -1264,6 +1292,8 @@ export class OrdersService {
       throw new NotFoundException('Không tìm thấy đơn hàng.');
     }
 
+    const methodCode = String(order.payment?.method || order.paymentMethodSnapshot?.code || order.type || '').toUpperCase();
+    if (methodCode !== 'COD') throw new BadRequestException('Chỉ đối soát COD cho đơn thanh toán khi nhận hàng.');
     const codCollected = Boolean(body?.codCollected);
     const orderTotal = Number(order.totalAmount) || Number(order.total) || 0;
     const actualCollectedAmount = Number(body?.actualCollectedAmount) >= 0
@@ -1291,8 +1321,18 @@ export class OrdersService {
     if (codCollected && (order.payment.status === 'UNPAID' || order.payment.status === 'PENDING' || !order.payment.status)) {
       order.payment.status = 'PAID';
       order.payment.paidAt = order.payment.paidAt || now;
+      order.paymentStatus = PaymentStatus.PAID;
+      order.paidAt = order.paidAt || now;
+      if (order.transactionId && isValidObjectId(order.transactionId)) {
+        await this.paymentService.markPaid(
+          new Types.ObjectId(order.transactionId),
+          order.transactionId,
+        );
+      }
     } else if (!codCollected && order.payment.status === 'PAID') {
       order.payment.status = 'UNPAID';
+      order.paymentStatus = PaymentStatus.PENDING;
+      order.paidAt = null;
     }
 
     if (Array.isArray(order.statusHistory)) {
@@ -1389,6 +1429,7 @@ export class OrdersService {
       SHIPPING: 'Đang giao',
       PROCESSING: 'Đang xử lý',
       PENDING: 'Chờ xác nhận',
+      CONFIRMED: 'Đã xác nhận',
       CANCELLED: 'Đã hủy',
       RETURNED: 'Đã hoàn trả',
     };
@@ -1418,6 +1459,7 @@ export class OrdersService {
 
     const VALID_TRANSITIONS: Record<string, string[]> = {
       PENDING: ['PROCESSING', 'CANCELLED'],
+      CONFIRMED: ['PROCESSING', 'CANCELLED'],
       PROCESSING: ['SHIPPING', 'CANCELLED'],
       SHIPPING: ['DELIVERED', 'CANCELLED'],
       DELIVERED: ['RETURNED'],
@@ -1446,6 +1488,7 @@ export class OrdersService {
     } as any);
 
     await order.save();
+    if (targetStatus === OrderStatus.CANCELLED) await this.releaseCancelledOrderStock(order);
 
     return {
       success: true,
@@ -1653,6 +1696,300 @@ export class OrdersService {
   }
 
   // ─── Thêm order COD ───────────────────────────────────────────────────────
+  async createPayment(
+    body: any,
+    user: User | null,
+    lang = 'vi',
+    session?: any,
+    guestCartId?: string,
+    clientIp = '127.0.0.1',
+  ): Promise<{ error: string; result: Order; cart?: any; payment?: any }> {
+    // Không gửi phương thức thì mặc định COD, nhưng COD vẫn phải đang được bật.
+    const paymentMethodId = body?.paymentMethodId || 'COD';
+    let paymentMethod: any = null;
+
+    if (isValidObjectId(String(paymentMethodId))) {
+      paymentMethod = await this.paymentMethodModel.findById(paymentMethodId).lean();
+    }
+    if (!paymentMethod) {
+      paymentMethod = await this.paymentMethodModel.findOne({ code: paymentMethodId }).lean();
+    }
+
+    const paymentCode = String(paymentMethod?.code || paymentMethodId).trim().toUpperCase();
+    if (!paymentMethod || paymentMethod.status !== 'ACTIVE') {
+      throw new BadRequestException('Phương thức thanh toán không tồn tại hoặc đã ngừng hoạt động.');
+    }
+
+    if (paymentCode === 'COD') {
+      return this.addOrder(body, user, lang, session, guestCartId);
+    }
+
+    if (paymentCode === 'VNPAY') {
+      return this.orderWithVnpay(body, user, lang, clientIp);
+    }
+
+    const isStripeCard = ['STRIPE', 'CARD', 'CREDIT_CARD'].includes(paymentCode);
+
+    if (!isStripeCard) {
+      throw new BadRequestException(
+        `Phương thức "${paymentMethod?.name || paymentCode}" chưa được kết nối với nhà cung cấp thanh toán thực tế.`,
+      );
+    }
+
+    return this.orderWithStripe(body, user, lang, session, guestCartId);
+  }
+
+  async orderWithVnpay(
+    body: any,
+    user: User | null,
+    lang = 'vi',
+    clientIp = '127.0.0.1',
+  ): Promise<{ error: string; result: Order; payment?: any }> {
+    try {
+      if (await this.isMaintenanceMode()) {
+        return { error: 'Hệ thống đang bảo trì. Quý khách vui lòng quay lại sau.', result: null };
+      }
+
+      const orderData = await this.buildOrderData(body, user, 'VNPAY');
+      const newOrder = new this.orderModel(orderData);
+      await newOrder.save();
+
+      const payment = await this.paymentService.createVnpayPayment(
+        {
+          orderId: new Types.ObjectId(String(newOrder._id)),
+          orderCode: newOrder.orderId,
+          provider: 'VNPAY',
+          method: 'VNPAY',
+          amount: newOrder.totalAmount,
+          currency: 'VND',
+        },
+        clientIp,
+      );
+
+      newOrder.transactionId = String(payment.transaction._id);
+      newOrder.payment = {
+        ...(newOrder.payment || {}),
+        method: 'VNPAY',
+        status: PaymentStatus.PENDING,
+        provider: 'VNPAY',
+        transactionId: String(payment.transaction._id),
+      };
+      await newOrder.save();
+
+      return {
+        error: '',
+        result: newOrder,
+        payment: {
+          provider: 'VNPAY',
+          status: PaymentStatus.PENDING,
+          transactionId: String(payment.transaction._id),
+          paymentUrl: payment.paymentUrl,
+        },
+      };
+    } catch (err) {
+      this.logger.error(err.stack || err.message);
+      return { error: err.message || 'VNPAY_PAYMENT_CREATION_FAILED', result: null };
+    }
+  }
+
+  async handleVnpayResult(query: Record<string, string>): Promise<{
+    success: boolean;
+    order?: any;
+    message: string;
+    rspCode: string;
+  }> {
+    if (!this.paymentService.verifyVnpayResponse(query) || query.vnp_TmnCode !== process.env.VNPAY_TMN_CODE?.trim()) {
+      return { success: false, rspCode: '97', message: 'Chữ ký hoặc mã merchant không hợp lệ.' };
+    }
+    return this.commitVerifiedVnpayResult(query);
+  }
+
+  private async commitVerifiedVnpayResult(query: Record<string, string>): Promise<{
+    success: boolean;
+    order?: any;
+    message: string;
+    rspCode: string;
+  }> {
+    let session: ClientSession | undefined;
+    try {
+      session = await this.orderModel.db.startSession();
+      const result = await session.withTransaction(() => this.applyVnpayResult(query, session));
+      if (result.success && result.rspCode === '00' && result.order?.status !== OrderStatus.CANCELLED) {
+        try {
+          await this.recordPurchaseInteractions(result.order);
+          await this.sendOrderEmail(result.order, 'vi');
+        } catch (error) {
+          this.logger.warn(`VNPAY payment committed but notification failed: ${error.message}`);
+        }
+      }
+      return result;
+    } catch (error) {
+      this.logger.error(`VNPAY callback could not be committed: ${error.message}`);
+      return { success: false, rspCode: '99', message: 'Chưa thể cập nhật thanh toán. Vui lòng kiểm tra lại trạng thái đơn hàng.' };
+    } finally {
+      if (session) await session.endSession();
+    }
+  }
+
+  async reconcilePendingVnpayPayments(): Promise<{ checked: number; updated: number; errors: number }> {
+    const pending = await this.paymentService.getPendingVnpayTransactions(
+      new Date(Date.now() - 20 * 60 * 1000),
+      new Date(Date.now() - 24 * 60 * 60 * 1000),
+    );
+    const summary = { checked: 0, updated: 0, errors: 0 };
+    for (const transaction of pending) {
+      summary.checked++;
+      try {
+        const result = await this.paymentService.queryVnpayTransaction(transaction);
+        // Link đã hết hạn (15 phút) mà VNPAY vẫn báo chưa có/chưa hoàn tất giao dịch: khách đã bỏ dở.
+        const abandoned = new Date(transaction.createdAt).getTime() < Date.now() - VNPAY_ABANDON_AFTER_MS &&
+          (result.vnp_ResponseCode === '91' ||
+            (result.vnp_ResponseCode === '00' && result.vnp_TransactionStatus === '01'));
+        if (abandoned) {
+          const committed = await this.commitVerifiedVnpayResult({
+            vnp_TxnRef: String(transaction._id),
+            vnp_Amount: String(Number(transaction.amount) * 100),
+            vnp_ResponseCode: '11',
+            vnp_TransactionStatus: result.vnp_TransactionStatus || '02',
+          });
+          if (committed.rspCode === '00') summary.updated++;
+          else if (committed.rspCode !== '02') summary.errors++;
+          continue;
+        }
+        if (result.vnp_ResponseCode !== '00' || result.vnp_TransactionType !== '01' ||
+            !['00', '02', '07'].includes(result.vnp_TransactionStatus)) continue;
+        const committed = await this.commitVerifiedVnpayResult({
+          ...result,
+          vnp_ResponseCode: result.vnp_TransactionStatus === '00' ? '00' : '99',
+        });
+        if (committed.rspCode === '00') summary.updated++;
+        else if (committed.rspCode !== '02') summary.errors++;
+      } catch (error) {
+        summary.errors++;
+        this.logger.warn(`VNPAY query failed for transaction ${transaction._id}: ${error.message}`);
+      }
+    }
+    return summary;
+  }
+
+  private async applyVnpayResult(query: Record<string, string>, session: ClientSession) {
+    const txnRef = String(query.vnp_TxnRef || '');
+    const transaction: any = await this.paymentService.getTransactionByProviderId(txnRef, session);
+    if (!transaction) {
+      return { success: false, rspCode: '01', message: 'Không tìm thấy giao dịch VNPAY.' };
+    }
+
+    const paidAmount = Number(query.vnp_Amount);
+    if (!/^\d+$/.test(query.vnp_Amount || '') || !Number.isSafeInteger(paidAmount) || paidAmount !== Number(transaction.amount) * 100) {
+      return { success: false, rspCode: '04', message: 'Số tiền thanh toán VNPAY không khớp.' };
+    }
+
+    const order: any = await this.orderModel.findById(transaction.orderId).session(session);
+    if (!order) {
+      return { success: false, rspCode: '01', message: 'Không tìm thấy đơn hàng của giao dịch VNPAY.' };
+    }
+
+    if (transaction.status === 'PAID') {
+      return { success: true, order, rspCode: '02', message: 'Thanh toán VNPAY đã được ghi nhận.' };
+    }
+    if (transaction.status !== 'PENDING') {
+      return { success: false, order, rspCode: '02', message: 'Giao dịch VNPAY đã kết thúc trước đó.' };
+    }
+
+    const responseCode = String(query.vnp_ResponseCode || '');
+    if (responseCode !== '00' || query.vnp_TransactionStatus !== '00') {
+      await this.paymentService.markFailed(
+        transaction._id,
+        String(query.vnp_TransactionNo || `VNPAY_${responseCode}`),
+        session,
+      );
+      order.paymentStatus = PaymentStatus.FAILED;
+      order.payment = {
+        ...(order.payment || {}),
+        method: 'VNPAY',
+        provider: 'VNPAY',
+        status: PaymentStatus.FAILED,
+        transactionId: txnRef,
+      };
+      await order.save({ session });
+      return { success: false, order, rspCode: '00', message: 'Thanh toán VNPAY không thành công.' };
+    }
+
+    const markedPaid = await this.paymentService.markPaid(
+      transaction._id,
+      String(query.vnp_TransactionNo || txnRef),
+      '',
+      session,
+    );
+    if (!markedPaid) {
+      const currentTransaction = await this.paymentService.getTransactionByProviderId(txnRef, session);
+      return {
+        success: currentTransaction?.status === 'PAID',
+        order,
+        rspCode: currentTransaction?.status === 'PAID' ? '02' : '99',
+        message: currentTransaction?.status === 'PAID'
+          ? 'Thanh toán VNPAY thành công.'
+          : 'Giao dịch VNPAY đang được xử lý.',
+      };
+    }
+
+    const paidAt = new Date();
+    order.paymentStatus = PaymentStatus.PAID;
+    order.paidAt = paidAt;
+    const cancelled = order.status === OrderStatus.CANCELLED;
+    if (!cancelled) order.status = OrderStatus.CONFIRMED;
+    order.transactionId = String(query.vnp_TransactionNo || txnRef);
+    order.payment = {
+      ...(order.payment || {}),
+      method: 'VNPAY',
+      provider: 'VNPAY',
+      status: PaymentStatus.PAID,
+      transactionId: order.transactionId,
+      paidAt,
+    };
+    if (!Array.isArray(order.statusHistory)) order.statusHistory = [];
+    order.statusHistory.push({
+      status: order.status,
+      updatedAt: paidAt,
+      updatedBy: null,
+      note: cancelled ? 'Đã nhận tiền VNPAY cho đơn đã hủy; cần đối soát hoàn tiền.' : 'Thanh toán VNPAY thành công',
+    });
+    await order.save({ session });
+    if (!cancelled) await this.decreaseStock(order.items, session);
+    if (!cancelled && order.couponCode) {
+      await this.couponModel.updateOne(
+        { code: order.couponCode },
+        { $inc: { usedCount: 1 } },
+        { session },
+      );
+    }
+    const ownerId = order.userId || order._user;
+    if (!cancelled && ownerId) {
+      const user: any = await this.userModel.findById(ownerId).session(session).lean();
+      const purchased = new Map<string, number>();
+      const itemKey = (item: any) => {
+        const raw = String(item.productId || item.item?._id || item.item?.id || item.id || '');
+        const parts = raw.split('_');
+        return `${parts[0]}_${item.variantId || parts.slice(1).join('_') || ''}`;
+      };
+      for (const item of order.items) {
+        const key = itemKey(item);
+        purchased.set(key, (purchased.get(key) || 0) + Number(item.quantity));
+      }
+      const remaining = (user?.cart?.items || []).flatMap((item: any) => {
+        const key = itemKey(item);
+        const qty = Number(item.qty ?? item.quantity ?? 1);
+        const consumed = Math.min(qty, purchased.get(key) || 0);
+        purchased.set(key, (purchased.get(key) || 0) - consumed);
+        if (!consumed) return [item];
+        if (qty <= consumed) return [];
+        return [{ ...item, ...(item.qty !== undefined ? { qty: qty - consumed } : { quantity: qty - consumed }) }];
+      });
+      await this.userModel.updateOne({ _id: ownerId }, { $set: { 'cart.items': remaining } }, { session });
+    }
+    return { success: true, order, rspCode: '00', message: 'Thanh toán VNPAY thành công.' };
+  }
+
   async addOrder(
     orderDto: OrderDto,
     user: User | null,
@@ -1666,6 +2003,29 @@ export class OrdersService {
       }
       const orderData = await this.buildOrderData(orderDto, user, 'COD');
       const newOrder = new this.orderModel(orderData);
+      await newOrder.save();
+      const transaction = await this.paymentService.createPending({
+        orderId: new Types.ObjectId(String(newOrder._id)),
+        orderCode: newOrder.orderId,
+        provider: 'COD',
+        method: 'COD',
+        amount: newOrder.totalAmount,
+        currency: newOrder.currency || 'VND',
+      });
+      newOrder.transactionId = String(transaction._id);
+      newOrder.payment = {
+        ...(newOrder.payment || {}),
+        method: newOrder.payment?.method || 'COD',
+        status: newOrder.payment?.status || PaymentStatus.PENDING,
+        transactionId: String(transaction._id),
+      };
+      newOrder.status = OrderStatus.CONFIRMED;
+      newOrder.statusHistory.push({
+        status: OrderStatus.CONFIRMED,
+        updatedAt: new Date(),
+        updatedBy: null,
+        note: 'Đơn COD đã được xác nhận, chờ thu tiền khi giao hàng',
+      });
       await newOrder.save();
 
       // Ghi nhận tương tác mua hàng cho mô hình ML
@@ -1731,32 +2091,54 @@ export class OrdersService {
     lang = 'vi',
     session?: any,
     guestCartId?: string,
-  ): Promise<{ error: string; result: Order; cart?: any }> {
+  ): Promise<{ error: string; result: Order; cart?: any; payment?: any }> {
     try {
       if (await this.isMaintenanceMode()) {
         return { error: 'Hệ thống đang bảo trì. Quý khách vui lòng quay lại sau.', result: null };
       }
       const orderData = await this.buildOrderData(body, user, 'STRIPE');
-      const chargeCurrency = 'vnd';
-      const charge = await stripe.charges.create({
-        amount: orderData.totalAmount * 100,
-        currency: chargeCurrency,
-        description: 'Credit Card Payment - Chéri',
-        source: body.token?.id,
-        capture: false,
+      const newOrder = new this.orderModel(orderData);
+      await newOrder.save();
+      const transaction = await this.paymentService.createPending({
+        orderId: new Types.ObjectId(String(newOrder._id)),
+        orderCode: newOrder.orderId,
+        provider: 'STRIPE',
+        method: newOrder.paymentMethodSnapshot?.code || 'STRIPE',
+        amount: newOrder.totalAmount,
+        currency: newOrder.currency || 'VND',
       });
-
-      const newOrder = new this.orderModel({
-        ...orderData,
-        transactionId: charge.id,
-        paymentStatus: PaymentStatus.PENDING,
-      });
-
-      const capturePayment = await stripe.charges.capture(charge.id);
       let updatedGuestCart: any = null;
-      if (capturePayment) {
+      try {
+        const charge = await this.paymentService.chargeCard(
+          newOrder.totalAmount,
+          newOrder.currency || 'VND',
+          body.token?.id,
+          newOrder.orderId,
+        );
+        await this.paymentService.markPaid(
+          transaction._id,
+          charge.providerTransactionId,
+          charge.paymentLink,
+        );
+
+        newOrder.transactionId = charge.providerTransactionId;
         newOrder.paymentStatus = PaymentStatus.PAID;
         newOrder.paidAt = new Date();
+        newOrder.payment = {
+          method: newOrder.payment?.method || 'STRIPE',
+          ...(newOrder.payment || {}),
+          status: PaymentStatus.PAID,
+          transactionId: charge.providerTransactionId,
+          paidAt: newOrder.paidAt,
+          provider: 'STRIPE',
+        };
+        newOrder.status = OrderStatus.CONFIRMED;
+        newOrder.statusHistory.push({
+          status: OrderStatus.CONFIRMED,
+          updatedAt: newOrder.paidAt,
+          updatedBy: null,
+          note: 'Thanh toán Stripe thành công',
+        });
         await newOrder.save();
 
         // Ghi nhận tương tác mua hàng cho mô hình ML
@@ -1800,11 +2182,32 @@ export class OrdersService {
         }
 
         await this.sendOrderEmail(newOrder, lang);
+      } catch (err) {
+        if (newOrder.paymentStatus === PaymentStatus.PAID) {
+          this.logger.error(`Stripe payment captured for ${newOrder.orderId}; fulfillment needs reconciliation: ${err.message}`);
+          throw err;
+        }
+        await this.paymentService.markFailed(transaction._id, err.message || 'Thanh toán thất bại');
+        newOrder.paymentStatus = PaymentStatus.FAILED;
+        newOrder.payment = {
+          method: newOrder.payment?.method || 'STRIPE',
+          ...(newOrder.payment || {}),
+          status: PaymentStatus.FAILED,
+          provider: 'STRIPE',
+          transactionId: String(transaction._id),
+        };
+        await newOrder.save();
+        throw err;
       }
 
       return {
         error: '',
         result: newOrder,
+        payment: {
+          transactionId: String(transaction._id),
+          provider: 'STRIPE',
+          status: PaymentStatus.PAID,
+        },
         ...(updatedGuestCart ? { cart: updatedGuestCart } : {}),
       };
     } catch (err) {
@@ -1895,6 +2298,9 @@ export class OrdersService {
 
   // ─── Build order data từ cart của user ────────────────────────────────────
   private async buildOrderData(orderDto: OrderDto, user: User | null, type: string) {
+    if (orderDto.currency && String(orderDto.currency).toUpperCase() !== 'VND') {
+      throw new BadRequestException('Bảng giá hiện tại chỉ hỗ trợ thanh toán bằng VND.');
+    }
     // Lấy cart items từ DB user hoặc fallback từ body
     let cartItems: any[] = [];
     if (user) {
@@ -2008,19 +2414,21 @@ export class OrdersService {
       }
     } else {
       // Fallback nếu client cũ chưa truyền paymentMethodId: tìm phương thức ACTIVE tương ứng
-      const targetCode = type === 'STRIPE' ? 'STRIPE' : 'COD';
+      const targetCode = type;
       paymentMethod = await this.paymentMethodModel.findOne({
         code: targetCode,
         status: 'ACTIVE',
       }).lean();
       if (!paymentMethod) {
-        paymentMethod = await this.paymentMethodModel.findOne({ status: 'ACTIVE' }).lean();
-      }
-      if (!paymentMethod) {
         throw new BadRequestException('Hiện tại không có phương thức thanh toán nào khả dụng.');
       }
     }
 
+    const selectedCode = String(paymentMethod.code).toUpperCase();
+    const allowedCodes = type === 'STRIPE' ? ['STRIPE', 'CARD', 'CREDIT_CARD'] : [type];
+    if (!allowedCodes.includes(selectedCode)) {
+      throw new BadRequestException('Phương thức thanh toán không khớp với cổng xử lý.');
+    }
     paymentMethodId = paymentMethod._id;
 
     if (paymentMethod.transactionFee?.enabled) {
@@ -2097,9 +2505,9 @@ export class OrdersService {
       shippingMethodSnapshot,
       shippingFee,
       payment: {
-        method: paymentMethodSnapshot?.code || (type === 'STRIPE' ? 'STRIPE' : 'COD'),
+        method: paymentMethodSnapshot.code,
         status: PaymentStatus.PENDING,
-        provider: paymentMethodSnapshot?.name || (type === 'STRIPE' ? 'Stripe' : 'COD'),
+        provider: type,
         transactionId: null,
         paidAt: null,
       },
@@ -2150,6 +2558,7 @@ export class OrdersService {
       }
 
       const quantity = Math.max(1, Number(cartItem.quantity || cartItem.qty) || 1);
+      if (!Number.isSafeInteger(quantity)) throw new BadRequestException('Số lượng sản phẩm không hợp lệ.');
 
       // 3. Tìm sản phẩm trong DB bằng findById (nếu ObjectId hợp lệ) hoặc findOne theo SKU/code
       let product: any = null;
@@ -2168,31 +2577,9 @@ export class OrdersService {
       }
 
       // 4. Nếu không tìm thấy product trong DB nhưng cartItem có snapshot/item sẵn (phòng vệ cao)
-      if (!product && (cartItem.productSnapshot || cartItem.item)) {
-        const fallbackItem = cartItem.item || {};
-        const fallbackSnapshot = cartItem.productSnapshot || {};
-        const title = fallbackSnapshot.title || fallbackItem.title || fallbackItem.vi?.title || 'Sản phẩm Chéri';
-        const sku = fallbackSnapshot.sku || fallbackItem.sku || fallbackItem.vi?.sku || (cleanProdId ? `SKU-${cleanProdId}` : 'SKU-CHERI');
-        const image = fallbackSnapshot.image || fallbackItem.mainImage?.url || fallbackItem.image || (Array.isArray(fallbackItem.images) && (fallbackItem.images[0]?.url || fallbackItem.images[0])) || '';
-        const unitPrice = Number(cartItem.unitPrice || cartItem.price || fallbackItem.salePrice || fallbackItem.price || 0);
-
-        orderItems.push({
-          productId: cleanProdId && isValidObjectId(cleanProdId) ? new Types.ObjectId(cleanProdId) : null,
-          variantId: variantId && isValidObjectId(String(variantId)) ? new Types.ObjectId(String(variantId)) : (variantId ? String(variantId) : null),
-          productSnapshot: {
-            title,
-            sku,
-            image,
-            variant: fallbackSnapshot.variant || null,
-          },
-          quantity,
-          unitPrice,
-          subtotal: unitPrice * quantity,
-        });
-        continue;
+      if (!product) {
+        throw new BadRequestException('Sản phẩm không còn tồn tại. Vui lòng cập nhật giỏ hàng.');
       }
-
-      if (!product) continue;
 
       // Chặn nếu sản phẩm bị Ẩn (Case 3 & 4)
       if (product.visibility === false || product.vi?.visibility === false) {
@@ -2232,6 +2619,9 @@ export class OrdersService {
         if (!variant) {
           variant = await this.variantModel.findOne({ sku: vIdStr }).lean() as any;
         }
+        if (variant?.productId && String(variant.productId) !== String(product._id)) {
+          throw new BadRequestException('Biến thể không thuộc sản phẩm đã chọn.');
+        }
 
         // 3. Fallback: tìm trong mảng variants nhúng của product
         if (!variant && Array.isArray(product.variants) && product.variants.length > 0) {
@@ -2254,12 +2644,15 @@ export class OrdersService {
             classification: variant.classification || '',
           };
           snapshot.sku = variant.sku || snapshot.sku;
-        } else if (cartItem.productSnapshot?.variant) {
-          snapshot.variant = cartItem.productSnapshot.variant;
+        } else {
+          throw new BadRequestException('Biến thể không còn tồn tại. Vui lòng cập nhật giỏ hàng.');
         }
       }
 
       // Chặn nếu hết hàng hoặc số lượng đặt vượt quá tồn kho (Case 2 & 4)
+      if (!Number.isFinite(Number(unitPrice)) || Number(unitPrice) <= 0) {
+        throw new BadRequestException('Giá sản phẩm không hợp lệ.');
+      }
       if (availableQty <= 0) {
         throw new Error(`Sản phẩm "${snapshot.title || 'Sản phẩm'}" đã hết hàng.`);
       }
@@ -2288,7 +2681,30 @@ export class OrdersService {
   }
 
   // ─── Trừ tồn kho sau khi đặt hàng thành công ─────────────────────────────
-  private async decreaseStock(items: any[]) {
+  // Đơn COD và đơn đã thanh toán online bị trừ kho lúc tạo/ghi nhận thanh toán; hủy thì trả lại.
+  // Đơn cũ không có giao dịch (transactionId) không chắc đã trừ kho nên bỏ qua.
+  private async releaseCancelledOrderStock(order: any): Promise<void> {
+    const method = String(order.payment?.method || order.paymentMethodSnapshot?.code || '').toUpperCase();
+    const paid = order.paymentStatus === PaymentStatus.PAID || order.payment?.status === PaymentStatus.PAID;
+    if (!order.transactionId || (method !== 'COD' && !paid)) return;
+    try {
+      const items = (order.items || []).map((item: any) => {
+        const plain = item?.toObject ? item.toObject() : item;
+        return { ...plain, quantity: -Number(plain.quantity) };
+      });
+      await this.decreaseStock(items);
+      if (order.couponCode) {
+        await this.couponModel.updateOne(
+          { code: order.couponCode, usedCount: { $gt: 0 } },
+          { $inc: { usedCount: -1 } },
+        );
+      }
+    } catch (error) {
+      this.logger.error(`Không thể hoàn kho cho đơn đã hủy ${order.orderId}: ${error.message}`);
+    }
+  }
+
+  private async decreaseStock(items: any[], session?: ClientSession) {
     for (const item of items) {
       if (item.variantId) {
         const vIdStr = String(item.variantId).trim();
@@ -2297,7 +2713,7 @@ export class OrdersService {
         if (isValidObjectId(vIdStr)) {
           const res = await this.variantModel.findByIdAndUpdate(vIdStr, {
             $inc: { stock: -item.quantity },
-          });
+          }, { session });
           if (res) updated = true;
         }
 
@@ -2305,6 +2721,7 @@ export class OrdersService {
           const res = await this.variantModel.findOneAndUpdate(
             { sku: vIdStr },
             { $inc: { stock: -item.quantity } },
+            { session },
           );
           if (res) updated = true;
         }
@@ -2312,12 +2729,12 @@ export class OrdersService {
         if (item.productId && isValidObjectId(String(item.productId))) {
           await this.productModel.findByIdAndUpdate(item.productId, {
             $inc: { quantity: -item.quantity },
-          });
+          }, { session });
         }
       } else if (item.productId && isValidObjectId(String(item.productId))) {
         await this.productModel.findByIdAndUpdate(item.productId, {
           $inc: { quantity: -item.quantity },
-        });
+        }, { session });
       }
     }
   }

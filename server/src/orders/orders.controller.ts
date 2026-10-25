@@ -11,6 +11,7 @@ import {
   Query,
   Session,
   Headers,
+  Res,
   MethodNotAllowedException,
   NotFoundException,
   ForbiddenException,
@@ -198,6 +199,52 @@ export class OrdersController {
     @Headers('x-guest-cart-id') guestCartId?: string,
   ): Promise<{ error: string; result: Order; cart?: any }> {
     return this.ordersService.addOrder(orderDto, user, 'vi', session, guestCartId);
+  }
+
+  // ─── Thanh toán thống nhất: COD tạo đơn trực tiếp, online dùng Stripe ─────
+  @UseGuards(OptionalJwtAuthGuard)
+  @Post('/payment')
+  async createPayment(
+    @Body() body,
+    @GetUser() user: User,
+    @Session() session: any,
+    @Headers('x-guest-cart-id') guestCartId?: string,
+    @Headers('x-forwarded-for') forwardedFor?: string,
+  ): Promise<{ error: string; result: Order; cart?: any; payment?: any }> {
+    return this.ordersService.createPayment(
+      body,
+      user,
+      'vi',
+      session,
+      guestCartId,
+      forwardedFor || '127.0.0.1',
+    );
+  }
+
+  @Get('/payment/vnpay/return')
+  async vnpayReturn(@Query() query: Record<string, string>, @Res() res: any) {
+    const result = await this.ordersService.handleVnpayResult(query);
+    const orderId = result.order?.orderId || '';
+    const status = result.success ? 'success' : 'failed';
+    const origin = (process.env.ORIGIN || 'http://localhost:3000').replace(/\/+$/, '');
+    return res.redirect(
+      `${origin}/vi/order?orderId=${encodeURIComponent(orderId)}&payment=${status}`,
+    );
+  }
+
+  @Get('/payment/vnpay/ipn')
+  async vnpayIpn(@Query() query: Record<string, string>, @Res() res: any) {
+    const result = await this.ordersService.handleVnpayResult(query);
+    return res.status(200).json({
+      RspCode: result.rspCode,
+      Message: result.message,
+    });
+  }
+
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @Post('/payment/vnpay/reconcile')
+  reconcileVnpayPayments() {
+    return this.ordersService.reconcilePendingVnpayPayments();
   }
 
   // ─── Đặt hàng Stripe — hỗ trợ cả user đăng nhập và khách vãng lai ────────

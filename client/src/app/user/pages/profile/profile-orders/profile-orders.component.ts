@@ -270,7 +270,12 @@ export class ProfileOrdersComponent {
   // ── Thao tác dialog ──
   canCancelOrder(order: Order | any): boolean {
     if (!order) return false;
-    return this.normalizeStatus(order.statusCode || order.rawStatus || order.status) === 'PENDING';
+    const status = this.normalizeStatus(order.statusCode || order.rawStatus || order.status);
+    if (status === 'PENDING') return true;
+    // Đơn COD tự xác nhận khi đặt; vẫn hủy được khi chưa xử lý và chưa thu tiền (khớp kiểm tra ở server).
+    const method = String(order.payment?.method || order.paymentMethodSnapshot?.code || '').toUpperCase();
+    return status === 'CONFIRMED' && method === 'COD' &&
+      String(order.paymentStatus || '').toUpperCase() !== 'PAID';
   }
 
   openCancelDialog(order: Order | any): void {

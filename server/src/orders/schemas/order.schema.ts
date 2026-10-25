@@ -292,7 +292,7 @@ const OrderSchema = new Schema(
 
     // Thanh toán (chuẩn hóa & snapshot)
     payment: {
-      method: { type: String, default: 'COD' },
+      method: { type: String, default: '' },
       status: { type: String, default: 'PENDING' },
       provider: { type: String, default: null },
       transactionId: { type: String, default: null },

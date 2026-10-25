@@ -1,12 +1,13 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
+    "rootDir": "..",
     "outDir": "./dist/out-tsc",
     "esModuleInterop": true,
     "sourceMap": true,
     "declaration": false,
     "experimentalDecorators": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "emitDecoratorMetadata": true,
     "importHelpers": true,
     "target": "ES2022",

@@ -5240,6 +5240,10 @@ async function handleUpdateCodReconciliation(req, res) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
     }
 
+    const methodCode = String(order.payment?.method || order.paymentMethodSnapshot?.code || order.type || '').toUpperCase();
+    if (methodCode !== 'COD') {
+      return res.status(400).json({ success: false, message: 'Chỉ đối soát COD cho đơn thanh toán khi nhận hàng.' });
+    }
     const codCollected = Boolean(body.codCollected);
     const orderTotal = Number(order.totalAmount) || Number(order.total) || 0;
     const actualCollectedAmount = Number(body.actualCollectedAmount) >= 0

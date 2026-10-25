@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, Signal } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, OnDestroy, Signal } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Location } from '@angular/common';
 import { Observable, Subscription, combineLatest } from 'rxjs';
@@ -7,6 +7,7 @@ import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
 import { ApiService } from '../../../services/api.service';
 import { NotificationService } from '../../shared/notification/notification.service';
 import { Order } from '../../shared/models';
+import { accessTokenKey } from '../../shared/constants';
 
 @Component({
   selector: 'app-order',
@@ -21,6 +22,31 @@ export class OrderComponent implements OnInit, OnDestroy {
   currentOrder: any = null;
   isLoading = false;
   errorMessage = '';
+  get paymentMethodLabel(): string {
+    const order = this.currentOrder;
+    const code = String(order?.payment?.method || order?.paymentMethodCode || order?.paymentMethodSnapshot?.code || '').toUpperCase();
+    const labels: Record<string, string> = {
+      VNPAY: 'Thanh toán qua VNPAY', STRIPE: 'Thanh toán thẻ (Stripe)',
+      CREDIT_CARD: 'Thẻ tín dụng / Ghi nợ', CARD: 'Thanh toán thẻ',
+      COD: 'Thanh toán khi nhận hàng (COD)', BANK_TRANSFER: 'Chuyển khoản ngân hàng',
+    };
+    return labels[code] || order?.paymentMethodSnapshot?.name || order?.paymentMethod || order?.payment?.provider || 'Chưa xác định';
+  }
+  get awaitingOnlinePayment(): boolean {
+    const order = this.currentOrder;
+    const method = String(order?.payment?.method || order?.paymentMethodSnapshot?.code || order?.paymentMethodCode || order?.payment?.provider || order?.paymentMethod || '').toUpperCase();
+    const status = String(order?.paymentStatus || order?.payment?.status || '').toUpperCase();
+    return ['VNPAY', 'STRIPE', 'CARD', 'CREDIT_CARD'].includes(method) && !['PAID', 'REFUNDED', 'PARTIALLY_REFUNDED'].includes(status);
+  }
+
+  get confirmationTitle(): string {
+    if (this.currentOrder?.status === 'CANCELLED') return 'Đơn hàng đã hủy';
+    if (this.awaitingOnlinePayment) {
+      const status = this.currentOrder?.paymentStatus || this.currentOrder?.payment?.status;
+      return status === 'FAILED' ? 'Thanh toán không thành công' : 'Đơn hàng chờ thanh toán';
+    }
+    return 'Đặt hàng thành công';
+  }
   storeContact: { email?: string; phone?: string; address?: string } | null = null;
 
   private sub = new Subscription();
@@ -38,7 +64,8 @@ export class OrderComponent implements OnInit, OnDestroy {
     private selectors: SignalStoreSelectors,
     public translate: TranslateService,
     private apiService: ApiService,
-    private notify: NotificationService
+    private notify: NotificationService,
+    private cdr: ChangeDetectorRef
   ) {
     this.orderSignal = this.selectors.order;
     this.lang$ = this.translate.getLang$();
@@ -79,16 +106,18 @@ export class OrderComponent implements OnInit, OnDestroy {
    * 1. Ưu tiên order trực tiếp từ store (sau khi đặt hàng thành công)
    * 2. Nếu store rỗng (F5/reload): đọc từ sessionStorage ('cheri_last_order')
    * 3. Đối chiếu queryParam orderId hoặc route param :id
-   * 4. Nếu user đăng nhập: tìm trong danh sách đơn hàng của user qua getUserOrders()
+   * 4. Nếu có phiên đăng nhập: lấy riêng đơn qua API có kiểm tra quyền truy cập.
    */
   resolveOrderData(explicitOrderId?: string): void {
+    const paymentReturn = this.route.snapshot.queryParamMap.has('payment');
+    if (paymentReturn) this.currentOrder = null;
     const storeOrder = this.orderSignal();
     const queryOrderId = explicitOrderId !== undefined
       ? explicitOrderId
       : (this.route.snapshot.queryParamMap.get('orderId') || this.route.snapshot.paramMap.get('id'));
 
     // 1. Kiểm tra store
-    if (storeOrder && (!queryOrderId || storeOrder.orderId === queryOrderId || (storeOrder as any)._id === queryOrderId)) {
+    if (!paymentReturn && !queryOrderId && storeOrder) {
       this.currentOrder = storeOrder;
       this.errorMessage = '';
       this.saveOrderToSession(storeOrder);
@@ -101,7 +130,7 @@ export class OrderComponent implements OnInit, OnDestroy {
     if (typeof window !== 'undefined' && window.sessionStorage) {
       try {
         const cachedRaw = window.sessionStorage.getItem('cheri_last_order');
-        if (cachedRaw) {
+        if (cachedRaw && !paymentReturn) {
           const cached = JSON.parse(cachedRaw);
           if (cached && (!queryOrderId || cached.orderId === queryOrderId || cached._id === queryOrderId)) {
             this.currentOrder = cached;
@@ -112,37 +141,40 @@ export class OrderComponent implements OnInit, OnDestroy {
       } catch (_) {}
     }
 
-    // 3. Nếu người dùng đã đăng nhập và có orderId, luôn nạp mới từ máy chủ qua getUserOrders() để cập nhật trạng thái mới nhất
-    const currentUser = this.selectors.user();
-    if (currentUser && queryOrderId) {
+    // 3. Nạp trạng thái mới nhất từ API chi tiết đơn hàng.
+    // The API uses the stored token even while the user signal is still hydrating.
+    // Fetch one authorized order: admin list endpoints may return a paginated object.
+    const hasSession = !!this.selectors.user() || (typeof window !== 'undefined' && !!window.localStorage.getItem(accessTokenKey));
+    if (hasSession && queryOrderId) {
       if (!hasSessionCache) {
         this.isLoading = true;
       }
       this.errorMessage = '';
-      this.apiService.getUserOrders().subscribe({
-        next: (orders: any[]) => {
+      this.apiService.getOrder(queryOrderId).subscribe({
+        next: (order: any) => {
           this.isLoading = false;
-          if (Array.isArray(orders)) {
-            const matched = orders.find(
-              (o) => o.orderId === queryOrderId || o._id === queryOrderId
-            );
+          if (order && !order.error) {
+            const matched = order.orderId === queryOrderId || order._id === queryOrderId ? order : null;
             if (matched) {
               this.currentOrder = matched;
               this.errorMessage = '';
               this.saveOrderToSession(matched);
               this.resetScrollToTop();
+              this.cdr.markForCheck();
               return;
             }
           }
           if (!hasSessionCache) {
             this.fetchViaTrackOrder(queryOrderId);
           }
+          this.cdr.markForCheck();
         },
         error: () => {
           this.isLoading = false;
           if (!hasSessionCache) {
             this.fetchViaTrackOrder(queryOrderId);
           }
+          this.cdr.markForCheck();
         }
       });
       return;
@@ -185,6 +217,7 @@ export class OrderComponent implements OnInit, OnDestroy {
     }
 
     this.isLoading = true;
+    this.cdr.markForCheck();
     this.apiService.trackOrder({ orderId: queryOrderId, authContact }).subscribe({
       next: (res: any) => {
         this.isLoading = false;
@@ -196,12 +229,14 @@ export class OrderComponent implements OnInit, OnDestroy {
         } else if (!this.currentOrder) {
           this.errorMessage = res?.error || 'Không tìm thấy thông tin đơn hàng này.';
         }
+        this.cdr.markForCheck();
       },
       error: () => {
         this.isLoading = false;
         if (!this.currentOrder) {
           this.errorMessage = 'Không thể tải thông tin đơn hàng. Vui lòng thử lại sau.';
         }
+        this.cdr.markForCheck();
       }
     });
   }
@@ -351,7 +386,8 @@ export class OrderComponent implements OnInit, OnDestroy {
   getPaymentStatusText(status: string): string {
     switch ((status || '').toUpperCase()) {
       case 'PENDING':
-        return 'Chờ thanh toán';
+        return String(this.currentOrder?.payment?.method || this.currentOrder?.paymentMethodCode || this.currentOrder?.paymentMethodSnapshot?.code || '').toUpperCase() === 'COD'
+          ? 'Chưa thanh toán' : 'Chờ thanh toán';
       case 'PAID':
         return 'Đã thanh toán';
       case 'FAILED':
@@ -438,9 +474,11 @@ export class OrderComponent implements OnInit, OnDestroy {
           } else {
             this.storeContact = null;
           }
+          this.cdr.markForCheck();
         },
         error: () => {
           this.storeContact = null;
+          this.cdr.markForCheck();
         }
       })
     );

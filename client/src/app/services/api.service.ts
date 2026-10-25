@@ -486,18 +486,18 @@ export class ApiService {
   }
 
   handleToken(token) {
-    const tokenUrl = this.apiUrl + '/api/orders/stripe';
+    const tokenUrl = this.apiUrl + '/api/orders/payment';
     return this.http.post(tokenUrl, token, this.getRequestOptions()).pipe(
       map((response: any) => response),
-      catchError((error: Error) => of({ error })),
+      catchError((error: any) => of({ error: error?.error || error })),
     );
   }
 
   makeOrder(req) {
-    const addOrder = this.apiUrl + '/api/orders/add';
+    const addOrder = this.apiUrl + '/api/orders/payment';
     return this.http.post(addOrder, req, this.getRequestOptions()).pipe(
       map((response: any) => response),
-      catchError((error: Error) => of({ error })),
+      catchError((error: any) => of({ error: error?.error || error })),
     );
   }
 

@@ -15,6 +15,8 @@ import CouponSchema from './schemas/coupon.schema';
 import CategorySchema from '../products/schemas/category.schema';
 import { InteractionSchema } from '../interactions/schemas/interaction.schema';
 import { DashboardController } from './dashboard.controller';
+import PaymentTransactionSchema from './schemas/payment-transaction.schema';
+import { PaymentService } from './payment.service';
 
 @Module({
   imports: [
@@ -30,11 +32,12 @@ import { DashboardController } from './dashboard.controller';
       { name: 'User', schema: UserSchema },
       { name: 'Coupon', schema: CouponSchema },
       { name: 'Interaction', schema: InteractionSchema },
+      { name: 'PaymentTransaction', schema: PaymentTransactionSchema },
     ]),
     AuthModule,
   ],
   controllers: [OrdersController, DashboardController],
-  providers: [OrdersService],
+  providers: [OrdersService, PaymentService],
   exports: [MongooseModule, OrdersService],
 })
 export class OrdersModule {}

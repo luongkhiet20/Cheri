@@ -505,6 +505,11 @@ export class SignalStore {
         if (callback) callback(response);
         return;
       }
+      if (response.payment?.provider === 'VNPAY' && response.payment?.status !== 'PAID') {
+        this.selectors.productState.update((state) => ({ ...state, order: null, loading: false, error: '' }));
+        if (callback) callback(response);
+        return;
+      }
       const updatedCart = response.cart || { items: [], totalQty: 0, totalPrice: 0 };
       this.selectors.productState.update((state) => ({
         ...state,
@@ -531,6 +536,11 @@ export class SignalStore {
           error: typeof errorMsg === 'string' ? errorMsg : (errorMsg.message || 'ORDER_SUBMIT_ERROR'),
           loading: false,
         }));
+        if (callback) callback(response);
+        return;
+      }
+      if (response.payment?.provider === 'VNPAY' && response.payment?.status !== 'PAID') {
+        this.selectors.productState.update((state) => ({ ...state, order: null, loading: false, error: '' }));
         if (callback) callback(response);
         return;
       }

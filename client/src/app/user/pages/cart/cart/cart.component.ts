@@ -1,7 +1,7 @@
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { Observable, Subscription } from 'rxjs';
-import { filter, take, withLatestFrom } from 'rxjs/operators';
+import { filter, take } from 'rxjs/operators';
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Location } from '@angular/common';
 import { FormBuilder, FormGroup, FormControl, Validators } from '@angular/forms';
@@ -169,21 +169,6 @@ export class CartComponent implements OnInit, OnDestroy {
       addressDetail: ['', Validators.required],
       // 8. Ghi chú đơn hàng
       notes: ['']
-    });
-
-    this.order$.pipe(
-      filter(order => !!order),
-      withLatestFrom(this.lang$),
-      take(1)
-    ).subscribe(([order, lang]) => {
-      if (typeof window !== 'undefined' && window.sessionStorage) {
-        try {
-          window.sessionStorage.setItem('cheri_last_order', JSON.stringify(order));
-        } catch (_) {}
-      }
-      this.router.navigate(['/' + lang + '/order'], {
-        queryParams: { orderId: order.orderId }
-      });
     });
 
     this.error$.pipe(filter((err) => !!err)).subscribe((err) => {
@@ -1318,11 +1303,7 @@ export class CartComponent implements OnInit, OnDestroy {
   isCardPaymentSelected(): boolean {
     const method = this.getSelectedPaymentMethod();
     if (!method) return false;
-    return (
-      method.code === 'STRIPE' ||
-      method.code === 'CARD' ||
-      method.paymentType === 'PAYMENT_GATEWAY'
-    );
+    return ['STRIPE', 'CARD', 'CREDIT_CARD'].includes(String(method.code).toUpperCase());
   }
 
   // ─── PHẦN 6: MÃ GIẢM GIÁ (COUPON) ───
@@ -1992,6 +1973,17 @@ export class CartComponent implements OnInit, OnDestroy {
         this.isSubmittingOrder = false;
         if (response && response.result && !response.error) {
           const createdOrder = response.result;
+          const paymentUrl = response.payment?.paymentUrl;
+          if (response.payment?.provider === 'VNPAY') {
+            if (!paymentUrl) {
+              this.notify.error('Không tạo được liên kết thanh toán VNPAY. Vui lòng thử lại.');
+              return;
+            }
+            this.rememberPendingPaymentContact(createdOrder);
+            this.isSubmittingOrder = true;
+            window.location.assign(paymentUrl);
+            return;
+          }
           if (typeof window !== 'undefined' && window.sessionStorage) {
             try {
               window.sessionStorage.setItem('cheri_last_order', JSON.stringify(createdOrder));
@@ -2019,7 +2011,7 @@ export class CartComponent implements OnInit, OnDestroy {
     });
   }
 
-  submit(currency?: string): void {
+  submit(): void {
     if (this.isSubmittingOrder) return;
 
     if (this.selectedItemIds.size === 0) {
@@ -2039,16 +2031,26 @@ export class CartComponent implements OnInit, OnDestroy {
     }
 
     this.isSubmittingOrder = true;
-    const selectedCurrency = currency || this.selectors.currency() || 'VND';
     const selectedMethod = this.getSelectedPaymentMethod();
     this.user$.pipe(take(1)).subscribe((user: User) => {
-      const orderRequest = this.buildOrderPayload(user, selectedCurrency, this.latestCart || undefined);
+      const orderRequest = this.buildOrderPayload(user, 'VND', this.latestCart || undefined);
       orderRequest.paymentMethodId = selectedMethod?._id || selectedMethod?.code || '';
       
       this.store.makeOrder(orderRequest, (response: any) => {
         this.isSubmittingOrder = false;
         if (response && response.result && !response.error) {
           const createdOrder = response.result;
+          const paymentUrl = response.payment?.paymentUrl;
+          if (response.payment?.provider === 'VNPAY') {
+            if (!paymentUrl) {
+              this.notify.error('Không tạo được liên kết thanh toán VNPAY. Vui lòng thử lại.');
+              return;
+            }
+            this.rememberPendingPaymentContact(createdOrder);
+            this.isSubmittingOrder = true;
+            window.location.assign(paymentUrl);
+            return;
+          }
           if (typeof window !== 'undefined' && window.sessionStorage) {
             try {
               window.sessionStorage.setItem('cheri_last_order', JSON.stringify(createdOrder));
@@ -2075,6 +2077,15 @@ export class CartComponent implements OnInit, OnDestroy {
       });
       this.scrollToTop();
     });
+  }
+
+  private rememberPendingPaymentContact(order: any): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const contact = order.customerPhone || order.customerEmail || order.shippingAddress?.phone || '';
+      window.sessionStorage.setItem('cheri_last_order_contact', contact);
+      window.sessionStorage.removeItem('cheri_last_order');
+    } catch (_) {}
   }
 
   goToProducts(event?: Event): void {

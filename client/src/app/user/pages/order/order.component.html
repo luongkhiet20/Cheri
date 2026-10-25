@@ -10,7 +10,7 @@
     }
 
     <!-- ─── TRẠNG THÁI KHÔNG TÌM THẤY ĐƠN HÀNG ─── -->
-    @if (!isLoading && !currentOrder) {
+    @else if (!currentOrder) {
     <div class="bill-card bill-state-card">
       <div class="bill-empty-icon-wrap">
         <mat-icon class="bill-empty-icon">search_off</mat-icon>
@@ -31,7 +31,7 @@
     }
 
     <!-- ─── GIAO DIỆN BILL CHI TIẾT ─── -->
-    @if (!isLoading && currentOrder) {
+    @else {
     <div class="bill-card printable-bill bill-print-area" [class.not-printable]="!canPrintInvoice">
 
       <!-- 0. THÔNG TIN CỬA HÀNG / ĐỊA CHỈ GỬI (STORE SENDER INFO - CHỈ HIỂN THỊ KHI IN HÓA ĐƠN) -->
@@ -67,10 +67,10 @@
       <!-- 1. HEADER / SUCCESS BANNER -->
       <header class="bill-header">
         <div class="bill-success-badge">
-          <mat-icon class="bill-success-icon">check</mat-icon>
+          <mat-icon class="bill-success-icon">{{ awaitingOnlinePayment ? 'info' : 'check' }}</mat-icon>
         </div>
-        <h1 class="bill-main-title">Đặt hàng thành công</h1>
-        <p class="bill-thankyou-text">Cảm ơn bạn đã mua sắm tại Chéri.</p>
+        <h1 class="bill-main-title">{{ confirmationTitle }}</h1>
+        <p class="bill-thankyou-text">{{ awaitingOnlinePayment ? 'Đơn hàng chưa được xác nhận thanh toán.' : 'Cảm ơn bạn đã mua sắm tại Chéri.' }}</p>
         <div class="bill-order-id-tag">
           <span class="order-id-label">Mã đơn hàng:</span>
           <span class="order-id-value">{{ currentOrder.orderId }}</span>
@@ -98,8 +98,7 @@
         <div class="meta-item">
           <span class="meta-label">Phương thức thanh toán</span>
           <span class="meta-value">
-            {{ currentOrder.paymentMethodSnapshot?.name || currentOrder.payment?.provider ||
-            currentOrder.payment?.method || 'Thanh toán khi nhận hàng (COD)' }}
+            {{ paymentMethodLabel }}
           </span>
           @if (currentOrder.paymentStatus || currentOrder.payment?.status) {
           <div class="meta-sub-badge">
@@ -114,7 +113,7 @@
         <div class="meta-item">
           <span class="meta-label">Phương thức vận chuyển</span>
           <span class="meta-value">
-            {{ currentOrder.shippingMethodSnapshot?.name || currentOrder.shipping?.provider || 'Giao hàng tiêu chuẩn' }}
+            {{ currentOrder.shippingMethodSnapshot?.name || currentOrder.shipping?.provider || currentOrder.carrierName || 'Chưa xác định' }}
           </span>
           @if (currentOrder.trackingNumber || currentOrder.shipping?.trackingNumber) {
           <div class="meta-tracking-number">
@@ -125,6 +124,7 @@
       </section>
 
       <!-- 3. THÔNG TIN KHÁCH HÀNG & NHẬN HÀNG -->
+      @if (currentOrder.shippingAddress || currentOrder.customer || currentOrder.name) {
       <section class="bill-section">
         <h2 class="bill-section-title">Thông tin nhận hàng</h2>
         <div class="customer-info-box">
@@ -163,6 +163,7 @@
         </div>
       </section>
 
+      }
       <!-- 4. GHI CHÚ ĐƠN HÀNG (NẾU CÓ) -->
       @if (currentOrder.notes && currentOrder.notes.trim()) {
       <section class="bill-section">
@@ -186,14 +187,14 @@
             <!-- Ảnh sản phẩm snapshot -->
             <div class="item-img-wrap">
               <img
-                [src]="item.productSnapshot?.image || item.item?.mainImage?.url || item.item?.images?.[0] || 'assets/placeholder.png'"
-                [alt]="item.productSnapshot?.title || item.item?.title || 'Sản phẩm'" class="item-img" loading="lazy" />
+                [src]="item.productSnapshot?.image || item.image || item.item?.mainImage?.url || item.item?.images?.[0] || 'assets/placeholder.png'"
+                [alt]="item.productSnapshot?.title || item.title || item.item?.title || 'Sản phẩm'" class="item-img" loading="lazy" />
             </div>
 
             <!-- Thông tin chi tiết sản phẩm -->
             <div class="item-details">
               <div class="item-name">
-                {{ item.productSnapshot?.title || item.item?.title || 'Sản phẩm Chéri' }}
+                {{ item.productSnapshot?.title || item.title || item.item?.title || 'Sản phẩm Chéri' }}
               </div>
 
               @if (item.productSnapshot?.sku || item.item?.sku) {

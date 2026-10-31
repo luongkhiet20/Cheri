@@ -35,21 +35,22 @@ export class AdminSidebarComponent implements OnInit, OnDestroy {
 
   // Danh sách các mục cơ bản cho backward compatibility
   navItems: NavItem[] = [
-    { label: 'Dashboard',                     route: '/admin',                    exact: true, icon: 'dashboard' },
-    { label: 'Quản lý sản phẩm',              route: '/admin/products',           icon: 'products' },
-    { label: 'Quản lý danh mục',              route: '/admin/categories',         icon: 'categories' },
-    { label: 'Quản lý đơn hàng',              route: '/admin/orders',             icon: 'orders' },
-    { label: 'Mã giảm giá',                   route: '/admin/pages/coupons',      icon: 'coupons' },
-    { label: 'Đăng ký nhận ưu đãi',           route: '/admin/marketing/subscribers', icon: 'subscribers' },
-    { label: 'Phương thức thanh toán',         route: '/admin/payment-methods',    icon: 'payment-methods' },
-    { label: 'Đơn vị vận chuyển',             route: '/admin/shipping-methods',   icon: 'shipping-methods' },
-    { label: 'Quản lý tài khoản',             route: '/admin/users',              icon: 'users' },
-    { label: 'Quản lý tồn kho',               route: '/admin/inventory',          icon: 'inventory' },
-    { label: 'Quản lý tin nhắn',              route: '/admin/messages',           icon: 'messages' },
-    { label: 'Quản lý đánh giá',              route: '/admin/reviews',            icon: 'reviews' },
-    { label: 'Trang chủ',                     route: ADMIN_PAGES_URLS.HOME,       exact: true, icon: 'home' },
-    { label: 'Giới thiệu',                    route: ADMIN_PAGES_URLS.ABOUT,      exact: true, icon: 'about' },
-    { label: 'Chính sách',                    route: ADMIN_PAGES_URLS.POLICIES,   exact: false, icon: 'policies' },
+    { label: 'Dashboard', route: '/admin', exact: true, icon: 'dashboard' },
+    { label: 'Quản lý sản phẩm', route: '/admin/products', icon: 'products' },
+    { label: 'Quản lý danh mục', route: '/admin/categories', icon: 'categories' },
+    { label: 'Quản lý đơn hàng', route: '/admin/orders', icon: 'orders' },
+    { label: 'Mã giảm giá', route: '/admin/pages/coupons', icon: 'coupons' },
+    { label: 'Đăng ký nhận ưu đãi', route: '/admin/marketing/subscribers', icon: 'subscribers' },
+    { label: 'Phương thức thanh toán', route: '/admin/payment-methods', icon: 'payment-methods' },
+    { label: 'Đơn vị vận chuyển', route: '/admin/shipping-methods', icon: 'shipping-methods' },
+    { label: 'Quản lý tài khoản', route: '/admin/users', icon: 'users' },
+    { label: 'Quản lý tồn kho', route: '/admin/inventory', icon: 'inventory' },
+    { label: 'Quản lý tin nhắn', route: '/admin/messages', icon: 'messages' },
+    { label: 'Quản lý đánh giá', route: '/admin/reviews', icon: 'reviews' },
+    { label: 'Trang chủ', route: ADMIN_PAGES_URLS.HOME, exact: true, icon: 'home' },
+    { label: 'Giới thiệu', route: ADMIN_PAGES_URLS.ABOUT, exact: true, icon: 'about' },
+    { label: 'Chính sách', route: ADMIN_PAGES_URLS.POLICIES, exact: false, icon: 'policies' },
+    { label: 'Mạng xã hội', route: '/admin/social-links', exact: false, icon: 'social-links' },
   ];
 
   readonly adminPagesUrls = ADMIN_PAGES_URLS;
@@ -98,12 +99,13 @@ export class AdminSidebarComponent implements OnInit, OnDestroy {
       items: [
         { label: 'Trang chủ', route: ADMIN_PAGES_URLS.HOME, exact: true, icon: 'home' },
         { label: 'Giới thiệu', route: ADMIN_PAGES_URLS.ABOUT, exact: true, icon: 'about' },
-        { label: 'Chính sách', route: ADMIN_PAGES_URLS.POLICIES, exact: false, icon: 'policies' }
+        { label: 'Chính sách', route: ADMIN_PAGES_URLS.POLICIES, exact: false, icon: 'policies' },
+        { label: 'Mạng xã hội', route: '/admin/social-links', exact: false, icon: 'social-links' }
       ]
     }
   ];
 
-  constructor(private router: Router) {}
+  constructor(private router: Router) { }
 
   ngOnInit(): void {
     if (typeof window !== 'undefined' && window.innerWidth <= 1200 && window.innerWidth > 768) {

@@ -13,6 +13,7 @@ import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.c
 })
 export class CategoriesComponent implements OnInit {
   breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Kinh doanh' },
     { label: 'Quản lý danh mục' }
   ];
 

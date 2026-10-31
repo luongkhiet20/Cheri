@@ -179,6 +179,14 @@ export class ApiService {
     );
   }
 
+  changePassword(data: { currentPassword: string; newPassword: string }): Observable<any> {
+    const changePasswordUrl = this.apiUrl + '/api/auth/change-password';
+    return this.http.post(changePasswordUrl, data, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: any) => of({ error: error?.error || error })),
+    );
+  }
+
   uploadAvatar(file: File): Observable<any> {
     const formData = new FormData();
     formData.append('avatar', file);
@@ -1242,6 +1250,11 @@ export class ApiService {
   }): Observable<any> {
     const url = `${this.apiUrl}/api/chat/message`;
     return this.http.post(url, payload, this.getRequestOptions());
+  }
+
+  
+  getSocialLinks(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/api/social-links`);
   }
 
   subscribeNewsletter(email: string, source: string = 'FOOTER'): Observable<any> {

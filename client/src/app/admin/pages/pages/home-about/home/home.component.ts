@@ -49,7 +49,7 @@ import { BreadcrumbItem } from '../../../../shared/admin-breadcrumb/admin-breadc
 })
 export class HomeComponent implements OnInit, OnDestroy {
   breadcrumbItems: BreadcrumbItem[] = [
-    { label: 'Quản lý trang' },
+    { label: 'CMS' },
     { label: 'Trang chủ' }
   ];
 

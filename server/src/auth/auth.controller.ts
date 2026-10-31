@@ -106,7 +106,10 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt'))
   @Put('/profile')
   async updateProfile(@GetUser() user: User, @Body() body: any) {
-    const updated = await this.authService.updateUser(user._id.toString(), body);
+    const safeBody = { ...body };
+    delete safeBody.password;
+    delete safeBody.salt;
+    const updated = await this.authService.updateUser(user._id.toString(), safeBody);
     const roles = Array.isArray(updated.roles) ? [...updated.roles] : (updated as any).role ? [(updated as any).role] : ['user'];
     const rawAvatar = (updated as any).avatar || (updated as any).avatarUrl || ((updated as any).images?.[0]?.url || (updated as any).images?.[0]) || '';
     const images = Array.isArray((updated as any).images) && (updated as any).images.length > 0 ? (updated as any).images : rawAvatar ? [rawAvatar] : [];
@@ -124,6 +127,32 @@ export class AuthController {
       avatarUrl: rawAvatar,
       images,
     };
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('/change-password')
+  async changePassword(
+    @GetUser() user: User,
+    @Body() body: { currentPassword?: string; newPassword?: string },
+  ) {
+    return this.authService.changePassword(
+      user._id.toString(),
+      body?.currentPassword || '',
+      body?.newPassword || '',
+    );
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Put('/change-password')
+  async changePasswordPut(
+    @GetUser() user: User,
+    @Body() body: { currentPassword?: string; newPassword?: string },
+  ) {
+    return this.authService.changePassword(
+      user._id.toString(),
+      body?.currentPassword || '',
+      body?.newPassword || '',
+    );
   }
 
   @UseGuards(AuthGuard('jwt'))

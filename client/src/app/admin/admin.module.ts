@@ -68,6 +68,7 @@ import { CustomerProfileComponent } from './pages/messages/customer-profile/cust
 import { ReviewsComponent } from './pages/reviews/reviews.component';
 import { NewsletterSubscribersComponent } from './pages/newsletter-subscribers/newsletter-subscribers.component';
 import { NewsletterExportCsvComponent } from './pages/newsletter-subscribers/newsletter-export-csv/newsletter-export-csv.component';
+import { SocialLinksComponent } from './pages/social-links/social-links.component';
 
 const routes: Routes = [
   {
@@ -127,6 +128,7 @@ const routes: Routes = [
       { path: 'settings', component: SettingsComponent },
       { path: 'messages', component: MessagesComponent },
       { path: 'reviews', component: ReviewsComponent },
+      { path: 'social-links', component: SocialLinksComponent },
     ]
   }
 ];
@@ -193,6 +195,7 @@ const routes: Routes = [
     ReviewsComponent,
     NewsletterSubscribersComponent,
     NewsletterExportCsvComponent,
+    SocialLinksComponent,
   ],
   imports: [
     CommonModule,

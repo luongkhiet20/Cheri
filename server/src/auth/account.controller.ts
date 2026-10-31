@@ -46,6 +46,19 @@ export class AccountController {
   }
 
   @UseGuards(AuthGuard('jwt'))
+  @Post('/change-password')
+  async changePassword(
+    @GetUser() user: User,
+    @Body() body: { currentPassword?: string; newPassword?: string },
+  ) {
+    return this.authService.changePassword(
+      user._id.toString(),
+      body?.currentPassword || '',
+      body?.newPassword || '',
+    );
+  }
+
+  @UseGuards(AuthGuard('jwt'))
   @Post('/me/avatar')
   @UseInterceptors(FileInterceptor('avatar'))
   async uploadAvatar(@GetUser() user: User, @UploadedFile() file: any) {

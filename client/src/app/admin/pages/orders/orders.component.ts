@@ -16,6 +16,7 @@ import { formatVND } from '../../../pipes/price.pipe';
 })
 export class OrdersComponent implements OnInit {
   breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Kinh doanh' },
     { label: 'Quản lý đơn hàng' }
   ];
 

@@ -2520,3 +2520,113 @@ textarea,
     transform: translate(-50%, -50%) !important;
   }
 }
+
+/* ── Cố định chiều cao 4 khung Dashboard & Scroll nội bộ ────────────────── */
+.dash-card--top-selling,
+.dash-card--low-stock {
+  height: 560px !important;
+  min-height: 560px !important;
+  max-height: 560px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+.dash-card--recent-orders,
+.dash-card--system-status {
+  height: 500px !important;
+  min-height: 500px !important;
+  max-height: 500px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+/* Header cố định, không co giãn */
+.dash-card--top-selling .dash-card__header,
+.dash-card--low-stock .dash-card__header,
+.dash-card--recent-orders .dash-card__header,
+.dash-card--system-status .dash-card__header {
+  flex-shrink: 0 !important;
+  margin-bottom: 12px;
+}
+
+/* Nội dung cuộn dọc độc lập cho 2 khung sản phẩm */
+.dash-card--top-selling .dash-card__content,
+.dash-card--low-stock .dash-card__content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+}
+
+/* Khung Đơn hàng mới nhất: Bảng cuộn dọc & ngang, thead sticky */
+.dash-card--recent-orders .table-scroll-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: auto;
+  overscroll-behavior: contain;
+  position: relative;
+}
+
+.dash-card--recent-orders .dash-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--cheri-pink-mist);
+  box-shadow: 0 1px 0 var(--cheri-pink-soft);
+}
+
+/* Khung Trạng thái hệ thống: cuộn nếu tràn */
+.dash-card--system-status .system-status-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+}
+
+/* Thanh cuộn mảnh, đồng bộ thương hiệu Chéri */
+.dash-card--top-selling .dash-card__content::-webkit-scrollbar,
+.dash-card--low-stock .dash-card__content::-webkit-scrollbar,
+.dash-card--recent-orders .table-scroll-wrap::-webkit-scrollbar,
+.dash-card--system-status .system-status-body::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.dash-card--top-selling .dash-card__content::-webkit-scrollbar-track,
+.dash-card--low-stock .dash-card__content::-webkit-scrollbar-track,
+.dash-card--recent-orders .table-scroll-wrap::-webkit-scrollbar-track,
+.dash-card--system-status .system-status-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dash-card--top-selling .dash-card__content::-webkit-scrollbar-thumb,
+.dash-card--low-stock .dash-card__content::-webkit-scrollbar-thumb,
+.dash-card--recent-orders .table-scroll-wrap::-webkit-scrollbar-thumb,
+.dash-card--system-status .system-status-body::-webkit-scrollbar-thumb {
+  background-color: rgba(116, 7, 14, 0.2);
+  border-radius: 4px;
+}
+
+.dash-card--top-selling .dash-card__content::-webkit-scrollbar-thumb:hover,
+.dash-card--low-stock .dash-card__content::-webkit-scrollbar-thumb:hover,
+.dash-card--recent-orders .table-scroll-wrap::-webkit-scrollbar-thumb:hover,
+.dash-card--system-status .system-status-body::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(116, 7, 14, 0.38);
+}
+
+.dash-card--top-selling .dash-card__content,
+.dash-card--low-stock .dash-card__content,
+.dash-card--recent-orders .table-scroll-wrap,
+.dash-card--system-status .system-status-body {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(116, 7, 14, 0.2) transparent;
+}

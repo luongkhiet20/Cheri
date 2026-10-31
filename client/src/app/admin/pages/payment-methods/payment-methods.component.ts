@@ -13,6 +13,7 @@ import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.c
 })
 export class PaymentMethodsComponent implements OnInit {
   breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Vận hành' },
     { label: 'Phương thức thanh toán' }
   ];
 

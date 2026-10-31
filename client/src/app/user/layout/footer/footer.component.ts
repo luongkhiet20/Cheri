@@ -31,6 +31,10 @@ export class FooterComponent implements OnDestroy {
 
   private langSub: Subscription;
   private settingsSub: Subscription;
+  private socialLinksSub?: Subscription;
+
+  /** Dữ liệu mạng xã hội đồng bộ từ collection social_links */
+  socialLinks: { [key: string]: { url: string; isActive: boolean } } = {};
 
   constructor(
     private translate: TranslateService,
@@ -49,6 +53,8 @@ export class FooterComponent implements OnDestroy {
     this.settingsSub = this.settingsService.settings$.subscribe(settings => {
       this.contact = settings?.contact ?? null;
     });
+
+    this.loadSocialLinks();
   }
 
   isPageVisible(slug: string): boolean {
@@ -61,6 +67,39 @@ export class FooterComponent implements OnDestroy {
       return false;
     }
     return isPagePublished(page, this.lang);
+  }
+
+  loadSocialLinks(): void {
+    this.socialLinksSub = this.apiService.getSocialLinks().subscribe({
+      next: (res: any) => {
+        if (res?.success && Array.isArray(res.data)) {
+          const map: { [key: string]: { url: string; isActive: boolean } } = {};
+          res.data.forEach((item: any) => {
+            const platformKey = String(item.platform || '').toUpperCase();
+            map[platformKey] = {
+              url: (item.url || '').trim(),
+              isActive: Boolean(item.isActive)
+            };
+          });
+          this.socialLinks = map;
+          this.cdr.markForCheck();
+        }
+      },
+      error: (err) => {
+        console.error('Không thể tải liên kết mạng xã hội Footer:', err);
+      }
+    });
+  }
+
+  hasSocial(platform: string): boolean {
+    const p = this.socialLinks[platform.toUpperCase()];
+    if (!p) return false;
+    return Boolean(p.isActive && p.url && /^https?:\/\//i.test(p.url));
+  }
+
+  getSocialUrl(platform: string): string {
+    const p = this.socialLinks[platform.toUpperCase()];
+    return p?.url || '#';
   }
 
   onSubscribe(event: Event): void {
@@ -102,5 +141,8 @@ export class FooterComponent implements OnDestroy {
   ngOnDestroy(): void {
     this.langSub.unsubscribe();
     this.settingsSub.unsubscribe();
+    if (this.socialLinksSub) {
+      this.socialLinksSub.unsubscribe();
+    }
   }
 }

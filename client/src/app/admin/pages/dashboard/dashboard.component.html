@@ -445,7 +445,7 @@
     <!-- ── 3. TOP SELLING | LOW STOCK ─────────────────────────────── -->
     <section class="dash-grid-products">
 
-      <div class="dash-card">
+      <div class="dash-card dash-card--top-selling">
         <div class="dash-card__header">
           <div>
             <h2 class="dash-card__title">Sản phẩm bán chạy</h2>
@@ -456,44 +456,46 @@
             </svg>
           </button>
         </div>
-        <div class="product-row-list" *ngIf="stats.topSellingProducts?.length > 0">
-          <div *ngFor="let prod of stats.topSellingProducts; let idx=index" class="product-row-item"
-            [class.product-row-item--first]="idx===0"
-            (click)="navigateProductEdit(prod.id)" tabindex="0" role="button">
-            <span class="rank-index"
-              [class.rank-index--first]="idx===0"
-              [class.rank-index--second]="idx===1"
-              [class.rank-index--third]="idx===2">#{{ idx+1 }}</span>
-            <div class="product-img-box">
-              <img *ngIf="prod.image" [src]="prod.image" [alt]="prod.name" loading="lazy" />
-              <div *ngIf="!prod.image" class="product-placeholder-svg">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
-                  <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-                  <line x1="3" y1="6" x2="21" y2="6" />
-                  <path d="M16 10a4 4 0 0 1-8 0" />
-                </svg>
+        <div class="dash-card__content">
+          <div class="product-row-list" *ngIf="stats.topSellingProducts?.length > 0">
+            <div *ngFor="let prod of stats.topSellingProducts; let idx=index" class="product-row-item"
+              [class.product-row-item--first]="idx===0"
+              (click)="navigateProductEdit(prod.id)" tabindex="0" role="button">
+              <span class="rank-index"
+                [class.rank-index--first]="idx===0"
+                [class.rank-index--second]="idx===1"
+                [class.rank-index--third]="idx===2">#{{ idx+1 }}</span>
+              <div class="product-img-box">
+                <img *ngIf="prod.image" [src]="prod.image" [alt]="prod.name" loading="lazy" />
+                <div *ngIf="!prod.image" class="product-placeholder-svg">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                    <line x1="3" y1="6" x2="21" y2="6" />
+                    <path d="M16 10a4 4 0 0 1-8 0" />
+                  </svg>
+                </div>
+              </div>
+              <div class="product-details">
+                <span class="product-title" [title]="prod.name">{{ prod.title || prod.name }}</span>
+              </div>
+              <div class="product-stat">
+                <span class="product-stat__qty">{{ prod.totalSold }}</span>
+                <span class="product-stat__unit">đã bán</span>
               </div>
             </div>
-            <div class="product-details">
-              <span class="product-title" [title]="prod.name">{{ prod.title || prod.name }}</span>
-            </div>
-            <div class="product-stat">
-              <span class="product-stat__qty">{{ prod.totalSold }}</span>
-              <span class="product-stat__unit">đã bán</span>
-            </div>
           </div>
-        </div>
-        <div *ngIf="!stats.topSellingProducts || stats.topSellingProducts.length===0" class="empty-state-box">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#8A8A8A" stroke-width="1.5">
-            <circle cx="9" cy="21" r="1" />
-            <circle cx="20" cy="21" r="1" />
-            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-          </svg>
-          <span>Chưa có dữ liệu bán hàng</span>
+          <div *ngIf="!stats.topSellingProducts || stats.topSellingProducts.length===0" class="empty-state-box">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#8A8A8A" stroke-width="1.5">
+              <circle cx="9" cy="21" r="1" />
+              <circle cx="20" cy="21" r="1" />
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+            </svg>
+            <span>Chưa có dữ liệu bán hàng</span>
+          </div>
         </div>
       </div>
 
-      <div class="dash-card">
+      <div class="dash-card dash-card--low-stock">
         <div class="dash-card__header">
           <div>
             <div class="title-badge-group">
@@ -507,48 +509,50 @@
             </svg>
           </button>
         </div>
-        <div class="alert-stock-notice" *ngIf="(stats.inventory?.outOfStockCount || stats.outOfStockCount || 0) > 0" (click)="navigateProducts()" role="button"
-          tabindex="0">
-          <span class="stock-badge-out">Hết hàng</span>
-          <span class="stock-notice-text">Hiện có <strong>{{ stats.inventory?.outOfStockCount ?? stats.outOfStockCount ?? 0 }}</strong> sản phẩm đã hết
-            hàng.</span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#74070E" stroke-width="2">
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
-        </div>
-        <div class="product-row-list" *ngIf="stats.lowStockProducts?.length > 0">
-          <div *ngFor="let p of stats.lowStockProducts" class="product-row-item" (click)="navigateProductEdit(p.id)"
-            tabindex="0" role="button">
-            <div class="product-img-box">
-              <img *ngIf="p.image" [src]="p.image" [alt]="p.name" loading="lazy" />
-              <div *ngIf="!p.image" class="product-placeholder-svg">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
-                  <path
-                    d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                  <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-                  <line x1="12" y1="22.08" x2="12" y2="12" />
-                </svg>
+        <div class="dash-card__content">
+          <div class="alert-stock-notice" *ngIf="(stats.inventory?.outOfStockCount || stats.outOfStockCount || 0) > 0" (click)="navigateProducts()" role="button"
+            tabindex="0">
+            <span class="stock-badge-out">Hết hàng</span>
+            <span class="stock-notice-text">Hiện có <strong>{{ stats.inventory?.outOfStockCount ?? stats.outOfStockCount ?? 0 }}</strong> sản phẩm đã hết
+              hàng.</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#74070E" stroke-width="2">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </div>
+          <div class="product-row-list" *ngIf="stats.lowStockProducts?.length > 0">
+            <div *ngFor="let p of stats.lowStockProducts" class="product-row-item" (click)="navigateProductEdit(p.id)"
+              tabindex="0" role="button">
+              <div class="product-img-box">
+                <img *ngIf="p.image" [src]="p.image" [alt]="p.name" loading="lazy" />
+                <div *ngIf="!p.image" class="product-placeholder-svg">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                    <path
+                      d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                    <line x1="12" y1="22.08" x2="12" y2="12" />
+                  </svg>
+                </div>
               </div>
-            </div>
-            <div class="product-details">
-              <span class="product-title" [title]="p.name">{{ p.name }}</span>
-              <div class="product-meta">
-                <span class="sku-chip">{{ p.sku }}</span>
-                <span class="category-name">{{ p.category }}</span>
+              <div class="product-details">
+                <span class="product-title" [title]="p.name">{{ p.name }}</span>
+                <div class="product-meta">
+                  <span class="sku-chip">{{ p.sku }}</span>
+                  <span class="category-name">{{ p.category }}</span>
+                </div>
               </div>
-            </div>
-            <div class="product-stat">
-              <span class="product-stat__qty product-stat__qty--alert">{{ p.stock }}</span>
-              <span class="product-stat__unit">còn lại</span>
+              <div class="product-stat">
+                <span class="product-stat__qty product-stat__qty--alert">{{ p.stock }}</span>
+                <span class="product-stat__unit">còn lại</span>
+              </div>
             </div>
           </div>
-        </div>
-        <div *ngIf="!stats.lowStockProducts || stats.lowStockProducts.length===0" class="empty-state-box">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-            <polyline points="22 4 12 14.01 9 11.01" />
-          </svg>
-          <span>Tất cả sản phẩm đều đủ tồn kho</span>
+          <div *ngIf="!stats.lowStockProducts || stats.lowStockProducts.length===0" class="empty-state-box">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+            <span>Tất cả sản phẩm đều đủ tồn kho</span>
+          </div>
         </div>
       </div>
 
@@ -557,7 +561,7 @@
     <!-- ── 4. RECENT ORDERS | SYSTEM STATUS ───────────────────────── -->
     <section class="dash-grid-recent">
 
-      <div class="dash-card">
+      <div class="dash-card dash-card--recent-orders">
         <div class="dash-card__header">
           <div>
             <h2 class="dash-card__title">Đơn hàng mới nhất</h2>
@@ -602,7 +606,7 @@
         </div>
       </div>
 
-      <div class="dash-card">
+      <div class="dash-card dash-card--system-status">
         <div class="dash-card__header">
           <div>
             <h2 class="dash-card__title">Trạng thái hệ thống</h2>

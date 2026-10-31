@@ -11185,6 +11185,222 @@ app.patch('/api/admin/newsletter-subscribers/:id/status', async (req, res) => {
   }
 });
 
+
+// ==========================================
+// 13. QUẢN LÝ MẠNG XÃ HỘI (SOCIAL LINKS)
+// ==========================================
+
+const SOCIAL_PLATFORMS = ['TIKTOK', 'INSTAGRAM', 'FACEBOOK'];
+
+function checkAdminAuth(req) {
+  let userFromToken = null;
+  const authHeader = req.headers.authorization || '';
+  if (authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice(7).trim();
+    try {
+      userFromToken = jwt.verify(token, process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789');
+    } catch (_) {
+      try {
+        userFromToken = jwt.decode(token);
+      } catch (_) {}
+    }
+  }
+
+  const userRoles = userFromToken?.roles || userFromToken?.role || [];
+  const roles = Array.isArray(userRoles) ? userRoles : [userRoles];
+  return roles.some(
+    (r) => typeof r === 'string' && (r.toLowerCase() === 'admin' || r.toLowerCase() === 'superadmin' || r.toLowerCase() === 'super-admin')
+  );
+}
+
+function validateSocialUrl(platform, rawUrl) {
+  const trimmed = (rawUrl || '').trim();
+  if (!trimmed) {
+    return { valid: false, message: 'Đường dẫn URL không được để trống' };
+  }
+  if (!/^https?:\/\//i.test(trimmed)) {
+    return { valid: false, message: 'Đường dẫn URL phải bắt đầu bằng http:// hoặc https://' };
+  }
+  try {
+    const parsed = new URL(trimmed);
+    const hostname = parsed.hostname.toLowerCase();
+    if (platform === 'TIKTOK' && !hostname.includes('tiktok.com')) {
+      return { valid: false, message: 'Đường dẫn không hợp lệ cho TikTok (phải thuộc tên miền tiktok.com)' };
+    }
+    if (platform === 'INSTAGRAM' && !hostname.includes('instagram.com')) {
+      return { valid: false, message: 'Đường dẫn không hợp lệ cho Instagram (phải thuộc tên miền instagram.com)' };
+    }
+    if (platform === 'FACEBOOK' && !hostname.includes('facebook.com') && !hostname.includes('fb.com')) {
+      return { valid: false, message: 'Đường dẫn không hợp lệ cho Facebook (phải thuộc tên miền facebook.com hoặc fb.com)' };
+    }
+  } catch (_) {
+    return { valid: false, message: 'Định dạng URL không hợp lệ' };
+  }
+  return { valid: true, url: trimmed };
+}
+
+// 13.1 GET /api/admin/social-links & GET /api/social-links
+const getSocialLinksHandler = async (req, res) => {
+  try {
+    const database = await connectToMongo();
+    const collection = database.collection('social_links');
+
+    const now = new Date();
+    for (const p of SOCIAL_PLATFORMS) {
+      await collection.updateOne(
+        { platform: p },
+        {
+          $setOnInsert: {
+            platform: p,
+            url: '',
+            isActive: false,
+            createdAt: now,
+          },
+          $set: {
+            updatedAt: now,
+          },
+        },
+        { upsert: true }
+      );
+    }
+
+    const items = await collection.find({}).toArray();
+    const orderMap = { TIKTOK: 1, INSTAGRAM: 2, FACEBOOK: 3 };
+    items.sort((a, b) => (orderMap[a.platform] || 99) - (orderMap[b.platform] || 99));
+
+    return res.json({
+      success: true,
+      data: items.map((i) => ({
+        id: i._id,
+        _id: i._id,
+        platform: i.platform,
+        url: i.url || '',
+        isActive: Boolean(i.isActive),
+        createdAt: i.createdAt,
+        updatedAt: i.updatedAt,
+      })),
+    });
+  } catch (err) {
+    console.error('Error in GET social-links:', err);
+    return res.status(500).json({ success: false, message: 'Lỗi khi tải danh sách mạng xã hội' });
+  }
+};
+
+app.get('/api/social-links', getSocialLinksHandler);
+app.get('/api/admin/social-links', async (req, res) => {
+  if (!checkAdminAuth(req)) {
+    return res.status(403).json({ success: false, message: 'Truy cập bị từ chối: Yêu cầu quyền quản trị.' });
+  }
+  return getSocialLinksHandler(req, res);
+});
+
+// 13.2 PUT /api/admin/social-links/:platform (Cập nhật đường dẫn URL)
+app.put('/api/admin/social-links/:platform', async (req, res) => {
+  try {
+    if (!checkAdminAuth(req)) {
+      return res.status(403).json({ success: false, message: 'Truy cập bị từ chối: Yêu cầu quyền quản trị.' });
+    }
+
+    const platform = (req.params.platform || '').trim().toUpperCase();
+    if (!SOCIAL_PLATFORMS.includes(platform)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nền tảng không hợp lệ. Chỉ chấp nhận: ' + SOCIAL_PLATFORMS.join(', '),
+      });
+    }
+
+    const valResult = validateSocialUrl(platform, req.body?.url);
+    if (!valResult.valid) {
+      return res.status(400).json({ success: false, message: valResult.message });
+    }
+
+    const database = await connectToMongo();
+    const collection = database.collection('social_links');
+
+    const result = await collection.findOneAndUpdate(
+      { platform },
+      { $set: { url: valResult.url, updatedAt: new Date() } },
+      { returnDocument: 'after', upsert: true }
+    );
+
+    const updated = result?.value || result;
+    return res.json({
+      success: true,
+      message: 'Đã cập nhật đường dẫn cho ' + platform + ' thành công',
+      data: {
+        id: updated._id,
+        _id: updated._id,
+        platform: updated.platform,
+        url: updated.url,
+        isActive: Boolean(updated.isActive),
+        createdAt: updated.createdAt,
+        updatedAt: updated.updatedAt,
+      },
+    });
+  } catch (err) {
+    console.error('Error in PUT /api/admin/social-links/:platform:', err);
+    return res.status(500).json({ success: false, message: 'Lỗi khi cập nhật đường dẫn mạng xã hội' });
+  }
+});
+
+// 13.3 PATCH /api/admin/social-links/:platform/status (Bật / Tắt trạng thái)
+app.patch('/api/admin/social-links/:platform/status', async (req, res) => {
+  try {
+    if (!checkAdminAuth(req)) {
+      return res.status(403).json({ success: false, message: 'Truy cập bị từ chối: Yêu cầu quyền quản trị.' });
+    }
+
+    const platform = (req.params.platform || '').trim().toUpperCase();
+    if (!SOCIAL_PLATFORMS.includes(platform)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nền tảng không hợp lệ. Chỉ chấp nhận: ' + SOCIAL_PLATFORMS.join(', '),
+      });
+    }
+
+    const database = await connectToMongo();
+    const collection = database.collection('social_links');
+
+    const existing = await collection.findOne({ platform });
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy nền tảng ' + platform });
+    }
+
+    const targetStatus = typeof req.body?.isActive === 'boolean' ? req.body.isActive : !existing.isActive;
+
+    if (targetStatus && (!existing.url || !existing.url.trim())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Không thể kích hoạt hiển thị ' + platform + ' khi chưa cấu hình đường dẫn liên kết URL hợp lệ.',
+      });
+    }
+
+    const result = await collection.findOneAndUpdate(
+      { platform },
+      { $set: { isActive: targetStatus, updatedAt: new Date() } },
+      { returnDocument: 'after' }
+    );
+
+    const updated = result?.value || result;
+    return res.json({
+      success: true,
+      message: 'Đã ' + (targetStatus ? 'bật' : 'tắt') + ' hiển thị nền tảng ' + platform + ' thành công',
+      data: {
+        id: updated._id,
+        _id: updated._id,
+        platform: updated.platform,
+        url: updated.url,
+        isActive: Boolean(updated.isActive),
+        createdAt: updated.createdAt,
+        updatedAt: updated.updatedAt,
+      },
+    });
+  } catch (err) {
+    console.error('Error in PATCH /api/admin/social-links/:platform/status:', err);
+    return res.status(500).json({ success: false, message: 'Lỗi khi cập nhật trạng thái mạng xã hội' });
+  }
+});
+
 // Start Server (Chỉ listen khi chạy trực tiếp file này bằng node server/admin-server.js)
 if (require.main === module) {
   connectToMongo().then(() => {

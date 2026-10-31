@@ -1,0 +1,189 @@
+/* ── Social Links Component Styles ──
+   Kế thừa toàn bộ layout chuẩn từ admin-shared.css & admin/styles/styles.css
+   như trang payment-methods */
+
+/* Modal / Popup Chỉnh sửa đường dẫn liên kết */
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md, 16px);
+  animation: overlayFadeIn 0.15s ease;
+}
+
+@keyframes overlayFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.dialog-panel {
+  background: var(--cheri-white, #ffffff);
+  border-radius: var(--radius-xl, 12px);
+  box-shadow: var(--shadow-lg, 0 10px 25px -5px rgba(0, 0, 0, 0.1));
+  width: 100%;
+  max-width: 460px;
+  animation: panelSlideIn 0.2s ease;
+  overflow: hidden;
+}
+
+@keyframes panelSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-lg, 20px) var(--space-xl, 24px);
+  border-bottom: 1px solid var(--cheri-divider, #EEEAEA);
+}
+
+.dialog-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dialog-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dialog-icon--accept {
+  background-color: var(--cheri-primary-light, #F5E8E9);
+  color: var(--cheri-primary, #74070E);
+}
+
+.dialog-title {
+  font-size: var(--font-size-section-title, 17px);
+  font-weight: 700;
+  color: var(--cheri-text, #2B2B2B);
+  margin: 0;
+}
+
+.dialog-close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cheri-text-light, #9A9A9A);
+  padding: 6px;
+  border-radius: var(--radius-sm, 4px);
+  transition: all var(--transition-fast, 150ms ease);
+}
+
+.dialog-close:hover:not(:disabled) {
+  color: var(--cheri-text, #2B2B2B);
+  background: var(--cheri-background, #F8F6F6);
+}
+
+.dialog-body {
+  padding: var(--space-lg, 20px) var(--space-xl, 24px);
+}
+
+.form-group {
+  margin-bottom: var(--space-md, 16px);
+}
+
+.form-label {
+  display: block;
+  font-size: var(--font-size-label, 13px);
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.form-label.required::after {
+  content: ' *';
+  color: var(--cheri-danger, #B42318);
+}
+
+.form-control {
+  width: 100%;
+  padding: 9px 13px;
+  font-size: var(--font-size-base, 14px);
+  border: 1px solid var(--cheri-border, #E5E0E0);
+  border-radius: var(--radius-md, 6px);
+  color: var(--cheri-text, #2B2B2B);
+  background: var(--cheri-white, #ffffff);
+  outline: none;
+  transition: border-color var(--transition-fast, 150ms ease), box-shadow var(--transition-fast, 150ms ease);
+  box-sizing: border-box;
+}
+
+.form-control:focus {
+  border-color: var(--cheri-primary, #74070E);
+  box-shadow: 0 0 0 3px rgba(116, 7, 14, 0.12);
+}
+
+.form-control:disabled,
+.form-control[readonly] {
+  background: #F9FAFB;
+  color: var(--cheri-text-secondary, #6B6B6B);
+  cursor: not-allowed;
+}
+
+.form-control.is-invalid {
+  border-color: var(--cheri-danger, #B42318);
+}
+
+.form-control.is-invalid:focus {
+  box-shadow: 0 0 0 3px rgba(180, 35, 24, 0.15);
+}
+
+.form-text {
+  font-size: var(--font-size-small, 12px);
+  margin-top: 5px;
+  display: block;
+}
+
+.text-muted {
+  color: var(--cheri-text-secondary, #6B6B6B);
+}
+
+.dialog-error {
+  margin-top: 14px;
+  padding: 10px 14px;
+  background-color: var(--cheri-danger-light, #FEF2F2);
+  border: 1px solid #FCA5A5;
+  border-radius: var(--radius-md, 6px);
+  color: var(--cheri-danger, #B42318);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-sm, 8px);
+  padding: 14px var(--space-xl, 24px);
+  background: var(--cheri-background, #F8F6F6);
+  border-top: 1px solid var(--cheri-divider, #EEEAEA);
+}

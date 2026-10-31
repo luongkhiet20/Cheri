@@ -624,5 +624,17 @@ export class AdminService {
     }
     return this.http.get(`${this.baseUrl}/admin/newsletter-subscribers/export`, { params: httpParams });
   }
-}
 
+  // ── Social Links ───────────────────────────────────────
+  getSocialLinks(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/admin/social-links`);
+  }
+
+  updateSocialLinkUrl(platform: string, url: string): Observable<any> {
+    return this.http.put(`${this.baseUrl}/admin/social-links/${platform}`, { url });
+  }
+
+  toggleSocialLinkStatus(platform: string, isActive?: boolean): Observable<any> {
+    return this.http.patch(`${this.baseUrl}/admin/social-links/${platform}/status`, { isActive });
+  }
+}

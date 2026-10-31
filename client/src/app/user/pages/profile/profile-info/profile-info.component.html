@@ -1,78 +1,129 @@
-<!-- RIGHT: Profile Form Card -->
-<aside class="profile-sidebar-card">
+<div class="profile-info-container">
 
-  <!-- Title with red bar -->
-  <div class="profile-card-heading">
-    <span class="heading-bar"></span>
-    <h3 class="heading-text">Hồ sơ</h3>
-  </div>
+  <!-- ── SECTION 1: HỒ SƠ ── -->
+  <section class="profile-sidebar-card profile-sidebar-card--info">
 
-  <!-- Basic info form -->
-  <div class="profile-form-body">
-
-    <div class="form-field-group">
-      <label class="field-label">Họ và tên</label>
-      <input type="text" class="field-input" [(ngModel)]="formName" placeholder="Nhập họ và tên" />
+    <!-- Title with red bar -->
+    <div class="profile-card-heading">
+      <span class="heading-bar"></span>
+      <h3 class="heading-text">Hồ sơ</h3>
     </div>
 
-    <div class="form-field-group">
-      <label class="field-label">Email liên lạc</label>
-      <input type="email" class="field-input readonly-input" [(ngModel)]="formEmail" [readonly]="true"
-        title="Email định danh tài khoản" />
+    <!-- Basic info form -->
+    <form class="profile-form-body" (submit)="onSaveProfile(); $event.preventDefault()">
+
+      <div class="form-field-group">
+        <label class="field-label" for="profile-name">Họ và tên</label>
+        <input id="profile-name" type="text" class="field-input" name="profileName" [(ngModel)]="formName" placeholder="Nhập họ và tên" />
+      </div>
+
+      <div class="form-field-group">
+        <label class="field-label" for="profile-email">Email liên lạc</label>
+        <input id="profile-email" type="email" class="field-input readonly-input" name="profileEmail" [(ngModel)]="formEmail" [readonly]="true"
+          autocomplete="off" title="Email định danh tài khoản" />
+      </div>
+
+      <div class="form-field-group">
+        <label class="field-label" for="profile-phone">Điện thoại liên hệ</label>
+        <input id="profile-phone" type="tel" class="field-input" name="profilePhone" [(ngModel)]="formPhone" placeholder="Nhập số điện thoại" />
+      </div>
+
+      <div class="form-field-group">
+        <label class="field-label" for="profile-gender">Giới tính</label>
+        <select id="profile-gender" class="field-input" name="profileGender" [(ngModel)]="formGender">
+          <option value="">Chọn giới tính</option>
+          <option value="Nam">Nam</option>
+          <option value="Nữ">Nữ</option>
+          <option value="Khác">Khác</option>
+        </select>
+      </div>
+
+      <div class="form-field-group">
+        <label class="field-label" for="profile-dob">Ngày sinh</label>
+        <input id="profile-dob" type="date" class="field-input" name="profileDob" [(ngModel)]="formDateOfBirth" [min]="minBirthDate"
+          [max]="maxBirthDate" />
+      </div>
+
+      <div class="form-field-group">
+        <label class="field-label" for="profile-address">Địa chỉ giao hàng mặc định</label>
+        <textarea id="profile-address" class="field-input field-textarea" name="profileAddress" [(ngModel)]="formAddress" rows="2"
+          placeholder="Nhập địa chỉ giao hàng"></textarea>
+      </div>
+
+      <!-- Feedback messages for Profile -->
+      <div class="profile-feedback-box success" *ngIf="profileSuccess">✓ Đã lưu thông tin hồ sơ thành công.</div>
+      <div class="profile-feedback-box error" *ngIf="profileError">✗ {{ profileError }}</div>
+
+      <!-- Submit button for Profile -->
+      <button type="submit" class="profile-submit-btn" [disabled]="isSavingProfile">
+        <span *ngIf="!isSavingProfile">Lưu hồ sơ</span>
+        <span *ngIf="isSavingProfile">Đang lưu...</span>
+      </button>
+
+    </form>
+
+  </section>
+
+  <!-- ── SECTION 2: ĐỔI MẬT KHẨU ── -->
+  <section class="profile-sidebar-card profile-sidebar-card--password">
+
+    <!-- Title with red bar -->
+    <div class="profile-card-heading">
+      <span class="heading-bar"></span>
+      <h3 class="heading-text">Đổi mật khẩu</h3>
     </div>
 
-    <div class="form-field-group">
-      <label class="field-label">Điện thoại liên hệ</label>
-      <input type="tel" class="field-input" [(ngModel)]="formPhone" placeholder="Nhập số điện thoại" />
-    </div>
+    <!-- Password form -->
+    <form class="profile-form-body" autocomplete="off" (submit)="onChangePassword(); $event.preventDefault()">
 
-    <div class="form-field-group">
-      <label class="field-label">Giới tính</label>
-      <select class="field-input" [(ngModel)]="formGender">
-        <option value="">Chọn giới tính</option>
-        <option value="Nam">Nam</option>
-        <option value="Nữ">Nữ</option>
-        <option value="Khác">Khác</option>
-      </select>
-    </div>
+      <div class="form-field-group">
+        <label class="field-label" for="profile-current-password">Mật khẩu hiện tại</label>
+        <input
+          id="profile-current-password"
+          type="password"
+          class="field-input"
+          name="profileCurrentPassword"
+          [(ngModel)]="currentPassword"
+          placeholder="Nhập mật khẩu hiện tại"
+          autocomplete="current-password" />
+      </div>
 
-    <div class="form-field-group">
-      <label class="field-label">Ngày sinh</label>
-      <input type="date" class="field-input" [(ngModel)]="formDateOfBirth" [min]="minBirthDate"
-        [max]="maxBirthDate" />
-    </div>
+      <div class="form-field-group">
+        <label class="field-label" for="profile-new-password">Mật khẩu mới</label>
+        <input
+          id="profile-new-password"
+          type="password"
+          class="field-input"
+          name="profileNewPassword"
+          [(ngModel)]="newPassword"
+          placeholder="Tối thiểu 8 ký tự"
+          autocomplete="new-password" />
+      </div>
 
-    <div class="form-field-group">
-      <label class="field-label">Địa chỉ giao hàng mặc định</label>
-      <textarea class="field-input field-textarea" [(ngModel)]="formAddress" rows="2"
-        placeholder="Nhập địa chỉ giao hàng"></textarea>
-    </div>
+      <div class="form-field-group">
+        <label class="field-label" for="profile-confirm-password">Nhập lại mật khẩu mới</label>
+        <input
+          id="profile-confirm-password"
+          type="password"
+          class="field-input"
+          name="profileConfirmPassword"
+          [(ngModel)]="confirmPassword"
+          placeholder="Nhập lại mật khẩu mới"
+          autocomplete="new-password" />
+      </div>
 
-    <!-- Password change section -->
-    <div class="password-sub-heading">Đổi mật khẩu</div>
+      <!-- Feedback messages for Password -->
+      <div class="profile-feedback-box success" *ngIf="passwordSuccess">✓ Đổi mật khẩu thành công.</div>
+      <div class="profile-feedback-box error" *ngIf="passwordError">✗ {{ passwordError }}</div>
 
-    <div class="form-field-group">
-      <label class="field-label-sub" for="profile-new-password">Mật khẩu mới</label>
-      <input id="profile-new-password" type="password" class="field-input" name="profileNewPassword"
-        [(ngModel)]="formNewPassword" placeholder="Để trống nếu không muốn đổi" autocomplete="new-password" />
-    </div>
+      <!-- Submit button for Password -->
+      <button type="submit" class="profile-submit-btn" [disabled]="isChangingPassword">
+        <span *ngIf="!isChangingPassword">Đổi mật khẩu</span>
+        <span *ngIf="isChangingPassword">Đang cập nhật...</span>
+      </button>
 
-    <div class="form-field-group">
-      <label class="field-label-sub" for="profile-confirm-password">Nhập lại mật khẩu mới</label>
-      <input id="profile-confirm-password" type="password" class="field-input" name="profileConfirmPassword"
-        [(ngModel)]="formConfirmPassword" placeholder="Để trống nếu không muốn đổi" autocomplete="new-password" />
-    </div>
+    </form>
 
-    <!-- Feedback messages -->
-    <div class="profile-feedback-box success" *ngIf="saveSuccess">✓ Đã lưu thông tin thành công.</div>
-    <div class="profile-feedback-box error" *ngIf="saveError">✗ {{ saveError }}</div>
+  </section>
 
-    <!-- Submit button -->
-    <button type="button" class="profile-submit-btn" (click)="onSave()" [disabled]="isSaving">
-      <span *ngIf="!isSaving">Lưu</span>
-      <span *ngIf="isSaving">Đang lưu...</span>
-    </button>
-
-  </div>
-
-</aside>
+</div>

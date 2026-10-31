@@ -1,6 +1,6 @@
-<nav class="admin-breadcrumb" aria-label="Đường dẫn điều hướng" *ngIf="items && items.length > 0">
+<nav class="admin-breadcrumb" aria-label="Đường dẫn điều hướng" *ngIf="displayItems && displayItems.length > 0">
   <ol class="admin-breadcrumb__list">
-    <li *ngFor="let item of items; let isLast = last; let i = index" class="admin-breadcrumb__item" [class.is-current]="isLast">
+    <li *ngFor="let item of displayItems; let isLast = last; let i = index" class="admin-breadcrumb__item" [class.is-current]="isLast">
       
       <!-- Link cho item không phải trang hiện tại -->
       <ng-container *ngIf="!isLast && item.url; else currentOrStatic">

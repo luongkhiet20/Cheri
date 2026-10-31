@@ -13,6 +13,7 @@ import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.c
 })
 export class UsersComponent implements OnInit {
   breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Vận hành' },
     { label: 'Quản lý tài khoản' }
   ];
 

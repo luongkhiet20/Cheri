@@ -14,6 +14,7 @@ import { formatVND } from '../../../pipes/price.pipe';
 })
 export class CouponsComponent implements OnInit {
   breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Marketing' },
     { label: 'Mã giảm giá' }
   ];
 

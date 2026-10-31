@@ -16,6 +16,7 @@ export class InventoryComponent implements OnInit, OnDestroy {
   private querySub?: Subscription;
 
   breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Vận hành' },
     { label: 'Quản lý tồn kho' }
   ];
 

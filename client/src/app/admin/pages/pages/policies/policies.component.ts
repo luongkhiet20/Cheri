@@ -21,7 +21,8 @@ export function isPolicyPublished(row: any): boolean {
 export class PoliciesComponent implements OnInit {
   readonly adminPagesUrls = ADMIN_PAGES_URLS;
   breadcrumbItems: BreadcrumbItem[] = [
-    { label: 'Quản lý chính sách' }
+    { label: 'CMS' },
+    { label: 'Chính sách' }
   ];
 
   columns: TableColumn[] = [

@@ -12,15 +12,16 @@ import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.c
 })
 export class NewsletterSubscribersComponent implements OnInit {
   breadcrumbItems: BreadcrumbItem[] = [
+    { label: 'Marketing' },
     { label: 'Đăng ký nhận ưu đãi' }
   ];
 
   columns: TableColumn[] = [
     { key: 'stt', label: 'STT', type: 'text', width: '70px', align: 'center' },
     { key: 'customer', label: 'Khách hàng', type: 'customer', width: '220px' },
-    { key: 'email', label: 'Email', type: 'text', sortable: true },
-    { key: 'subscribedAtFormatted', label: 'Ngày đăng ký', type: 'text', sortable: true },
-    { key: 'statusText', label: 'Trạng thái', type: 'status', sortable: true }
+    { key: 'email', label: 'Email', type: 'text', width: '260px', sortable: true },
+    { key: 'subscribedAtFormatted', label: 'Ngày đăng ký', type: 'text', width: '180px', sortable: true },
+    { key: 'statusText', label: 'Trạng thái', type: 'status', width: '160px', sortable: true }
   ];
 
   actions: RowAction[] = [

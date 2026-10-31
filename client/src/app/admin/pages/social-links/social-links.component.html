@@ -1,0 +1,127 @@
+<div class="page-content">
+
+  <!-- Page Header -->
+  <div class="page-top">
+    <div>
+      <app-admin-breadcrumb [items]="breadcrumbItems"></app-admin-breadcrumb>
+      <h1 class="page-title">Quản lý mạng xã hội</h1>
+    </div>
+  </div>
+
+  <!-- Alert Messages -->
+  <div *ngIf="errorMessage" class="alert-box alert-error">
+    <div class="alert-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+    </div>
+
+    <div class="alert-content">
+      {{ errorMessage }}
+    </div>
+  </div>
+
+  <!-- Reusable Toolbar -->
+  <app-admin-toolbar
+    searchPlaceholder="Tìm kiếm theo tên nền tảng hoặc đường dẫn..."
+    [filterFields]="filterFields"
+    [total]="displayTotal"
+    [isLoading]="isLoading"
+    (searchChange)="onSearch($event)"
+    (filterChange)="onFilter($event)"
+    (refresh)="onRefresh()">
+  </app-admin-toolbar>
+
+  <!-- Reusable Table -->
+  <app-admin-table
+    [columns]="columns"
+    [data]="data"
+    [loading]="isLoading"
+    [actions]="actions"
+    [pagination]="pagination"
+    [selectable]="false"
+    totalLabel="nền tảng"
+    (actionClick)="onAction($event)"
+    (pageChange)="onPageChange($event)"
+    (pageSizeChange)="onPageSizeChange($event)">
+  </app-admin-table>
+
+</div>
+
+<!-- Modal / Popup chỉnh sửa đường dẫn URL -->
+<div class="dialog-overlay" *ngIf="isEditModalOpen" (click)="closeEditModal()" role="dialog" aria-modal="true" aria-label="Chỉnh sửa đường dẫn mạng xã hội">
+  <div class="dialog-panel" (click)="$event.stopPropagation()">
+    <div class="dialog-header">
+      <div class="dialog-title-group">
+        <div class="dialog-icon dialog-icon--accept" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+          </svg>
+        </div>
+        <h2 class="dialog-title">Chỉnh sửa liên kết {{ editingItem?.platformName }}</h2>
+      </div>
+
+      <button type="button" class="dialog-close" [disabled]="isSaving" (click)="closeEditModal()" aria-label="Đóng">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <div class="dialog-body">
+      <!-- Tên nền tảng (chỉ đọc) -->
+      <div class="form-group mb-3">
+        <label class="form-label text-muted">Tên nền tảng</label>
+        <input type="text" class="form-control" [value]="editingItem?.platformName" readonly disabled />
+      </div>
+
+      <!-- Đường dẫn URL -->
+      <div class="form-group mb-2">
+        <label class="form-label required">Đường dẫn liên kết (URL)</label>
+        <input
+          type="url"
+          class="form-control"
+          [class.is-invalid]="editUrlError"
+          [(ngModel)]="editUrlValue"
+          (keydown.enter)="onSaveUrl()"
+          placeholder="https://..."
+          [disabled]="isSaving"
+          autofocus />
+        <small class="form-text text-muted" *ngIf="editingItem?.platform === 'TIKTOK'">
+          Ví dụ: https://www.tiktok.com/@cheri.fashion
+        </small>
+        <small class="form-text text-muted" *ngIf="editingItem?.platform === 'INSTAGRAM'">
+          Ví dụ: https://www.instagram.com/cheri.fashion
+        </small>
+        <small class="form-text text-muted" *ngIf="editingItem?.platform === 'FACEBOOK'">
+          Ví dụ: https://www.facebook.com/cheri.fashion
+        </small>
+      </div>
+
+      <!-- Báo lỗi xác thực URL -->
+      <div class="dialog-error" *ngIf="editUrlError">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span>{{ editUrlError }}</span>
+      </div>
+    </div>
+
+    <div class="dialog-footer">
+      <button type="button" class="btn btn-outline" [disabled]="isSaving" (click)="closeEditModal()">
+        Hủy
+      </button>
+      <button type="button" class="btn btn-primary" [disabled]="isSaving" (click)="onSaveUrl()">
+        <span *ngIf="!isSaving">Lưu</span>
+        <span *ngIf="isSaving">Đang lưu...</span>
+      </button>
+    </div>
+  </div>
+</div>

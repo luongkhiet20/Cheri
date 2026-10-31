@@ -628,6 +628,60 @@ export class AuthService {
     }
   }
 
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<{ success: boolean; message: string }> {
+    if (!currentPassword || typeof currentPassword !== 'string' || !currentPassword.trim()) {
+      throw new BadRequestException('Vui lòng nhập mật khẩu hiện tại');
+    }
+    if (!newPassword || typeof newPassword !== 'string' || !newPassword.trim()) {
+      throw new BadRequestException('Vui lòng nhập mật khẩu mới');
+    }
+
+    const user = await this.userModel.findById(userId).exec();
+    if (!user) {
+      throw new NotFoundException('Không tìm thấy tài khoản người dùng');
+    }
+
+    if (!user.password || !user.salt) {
+      throw new BadRequestException(
+        'Tài khoản đăng nhập qua Google không sử dụng mật khẩu. Vui lòng đăng nhập bằng Google.',
+      );
+    }
+
+    // Kiểm tra mật khẩu hiện tại
+    const isMatch =
+      (await this.validatePassword(currentPassword, user)) ||
+      (await bcrypt.compare(currentPassword, user.password));
+    if (!isMatch) {
+      throw new BadRequestException('Mật khẩu hiện tại không chính xác');
+    }
+
+    if (currentPassword === newPassword) {
+      throw new BadRequestException('Mật khẩu mới không được trùng với mật khẩu hiện tại');
+    }
+
+    // Validate chính sách mật khẩu hiện tại của dự án
+    const securityCheck = validatePasswordSecurity(newPassword, user.email);
+    if (!securityCheck.valid) {
+      throw new BadRequestException(securityCheck.message);
+    }
+
+    const salt = await bcrypt.genSalt();
+    const hashedPassword = await this.hashPassword(newPassword, salt);
+
+    user.salt = salt;
+    user.password = hashedPassword;
+    await user.save();
+
+    return {
+      success: true,
+      message: 'Đổi mật khẩu thành công',
+    };
+  }
+
   async deleteUser(id: string): Promise<any> {
     return this.userModel.findByIdAndDelete(id).exec();
   }

@@ -13,7 +13,8 @@ import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.c
 })
 export class ShippingMethodsComponent implements OnInit {
   breadcrumbItems: BreadcrumbItem[] = [
-    { label: 'Phương thức vận chuyển' }
+    { label: 'Vận hành' },
+    { label: 'Đơn vị vận chuyển' }
   ];
 
   columns: TableColumn[] = [

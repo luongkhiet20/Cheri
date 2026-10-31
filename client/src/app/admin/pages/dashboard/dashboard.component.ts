@@ -43,7 +43,8 @@ type PresetKey = typeof QUICK_PRESETS[number]['key'];
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   breadcrumbItems: BreadcrumbItem[] = [
-    { label: 'Tổng quan' }
+    { label: 'Tổng quan' },
+    { label: 'Dashboard' }
   ];
 
   // ── Constants ──────────────────────────────────────────────────────────

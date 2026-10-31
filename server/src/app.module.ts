@@ -12,14 +12,8 @@ import { RecommendationsModule } from './recommendations/recommendations.module'
 import { ReviewsModule } from './reviews/reviews.module';
 import { ChatModule } from './chat/chat.module';
 import { NewsletterModule } from './newsletter/newsletter.module';
+import { SocialLinksModule } from './social-links/social-links.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-// import { join } from 'path';
-// import { ServeStaticModule } from '@nestjs/serve-static';
-// import { existsSync } from 'fs';
-
-// const staticFile = existsSync(join(process.cwd(), 'dist/cheri/browser'))
-//   ? join(process.cwd(), '/dist/cheri/browser')
-//   : join(process.cwd(), 'public');
 
 @Module({
   imports: [
@@ -47,11 +41,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     ReviewsModule,
     ChatModule,
     NewsletterModule,
-
-    // ServeStaticModule.forRoot({
-    //   rootPath: staticFile,
-    //   exclude: ['/api'],
-    // }),
+    SocialLinksModule,
   ],
   exports: [],
   controllers: [],

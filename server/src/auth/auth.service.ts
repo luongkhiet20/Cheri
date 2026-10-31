@@ -645,16 +645,36 @@ export class AuthService {
       throw new NotFoundException('Không tìm thấy tài khoản người dùng');
     }
 
-    if (!user.password || !user.salt) {
+    // 1. Nhận diện tài khoản Google OAuth không sử dụng mật khẩu
+    if (user.googleId && !user.password) {
       throw new BadRequestException(
         'Tài khoản đăng nhập qua Google không sử dụng mật khẩu. Vui lòng đăng nhập bằng Google.',
       );
     }
 
-    // Kiểm tra mật khẩu hiện tại
-    const isMatch =
-      (await this.validatePassword(currentPassword, user)) ||
-      (await bcrypt.compare(currentPassword, user.password));
+    if (!user.password) {
+      throw new BadRequestException(
+        'Tài khoản chưa thiết lập mật khẩu. Vui lòng đăng nhập bằng phương thức liên kết.',
+      );
+    }
+
+    // 2. Xác thực mật khẩu hiện tại bằng bcrypt.compare() làm phương thức chính
+    let isMatch = false;
+    try {
+      isMatch = await bcrypt.compare(currentPassword, user.password);
+    } catch {
+      isMatch = false;
+    }
+
+    // Fallback dự phòng tương thích ngược nếu tài khoản cũ dùng cơ chế validatePassword
+    if (!isMatch && user.salt) {
+      try {
+        isMatch = await this.validatePassword(currentPassword, user);
+      } catch {
+        isMatch = false;
+      }
+    }
+
     if (!isMatch) {
       throw new BadRequestException('Mật khẩu hiện tại không chính xác');
     }
@@ -669,7 +689,7 @@ export class AuthService {
       throw new BadRequestException(securityCheck.message);
     }
 
-    const salt = await bcrypt.genSalt();
+    const salt = await bcrypt.genSalt(10);
     const hashedPassword = await this.hashPassword(newPassword, salt);
 
     user.salt = salt;

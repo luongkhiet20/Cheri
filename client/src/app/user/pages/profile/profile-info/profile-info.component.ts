@@ -20,6 +20,7 @@ export class ProfileInfoComponent implements OnInit {
   @Input() set user(value: User | null) {
     this._user = value;
     if (value && !this.isSavingProfile) {
+      // Chỉ điền dữ liệu hồ sơ; bảo toàn toàn bộ dữ liệu form mật khẩu đang nhập
       this.populateForm(value);
     }
   }
@@ -124,10 +125,7 @@ export class ProfileInfoComponent implements OnInit {
     this.formDateOfBirth = this.formatDateForInput(user.dateOfBirth);
     this.formAddress = user.address || (user.shippingAddress?.address ? this.getOrderAddress(user.shippingAddress) : '');
 
-    // Đảm bảo tuyệt đối cả ba trường mật khẩu không bao giờ nhận giá trị từ user object
-    this.currentPassword = '';
-    this.newPassword = '';
-    this.confirmPassword = '';
+    // Lưu ý: populateForm chỉ cập nhật dữ liệu hồ sơ; tuyệt đối không reset form mật khẩu đang nhập
     this.cdr.markForCheck();
   }
 
@@ -209,9 +207,9 @@ export class ProfileInfoComponent implements OnInit {
     this.passwordSuccess = false;
     this.passwordError = '';
 
-    const curr = (this.currentPassword || '').trim();
-    const next = (this.newPassword || '').trim();
-    const conf = (this.confirmPassword || '').trim();
+    const curr = this.currentPassword || '';
+    const next = this.newPassword || '';
+    const conf = this.confirmPassword || '';
 
     // 1. Kiểm tra không bỏ trống trường nào
     if (!curr) {

@@ -1,11 +1,18 @@
 /* ==========================================================================
    CHÉRI ADMIN — ACCOUNT PROFILE STYLES
+   Responsive & Adaptive Layout (Desktop, Laptop, Tablet, Mobile)
+   Brand Colors:
+   - Primary: #74070E (Wine Red)
+   - Primary Hover: #5C050B
+   - Backgrounds & Neutrals: #FFFFFF, #FAF8F8, #F1EEEE, #E5E0E0
    ========================================================================== */
 
 .account-page {
+  width: 100%;
   max-width: 1240px;
   margin: 0 auto;
-  padding: 8px 4px 48px;
+  padding: 8px 16px 48px;
+  box-sizing: border-box;
   animation: fadeIn 0.2s ease-in-out;
 }
 
@@ -22,6 +29,17 @@
   margin-bottom: 24px;
   flex-wrap: wrap;
   gap: 16px;
+  width: 100%;
+  height: auto;
+  min-height: auto;
+  box-sizing: border-box;
+
+  .account-header-info {
+    min-width: 0;
+    flex: 1 1 auto;
+    height: auto;
+    min-height: auto;
+  }
 
   .breadcrumb {
     display: flex;
@@ -30,6 +48,7 @@
     font-size: 13px;
     color: var(--cheri-text-secondary, #6B6B6B);
     margin-bottom: 4px;
+    flex-wrap: wrap;
 
     .breadcrumb-link {
       color: var(--cheri-text-secondary, #6B6B6B);
@@ -55,8 +74,9 @@
     font-size: 24px;
     font-weight: 700;
     color: var(--cheri-text, #2B2B2B);
-    margin: 0 0 6px 0;
+    margin: 0 0 4px 0;
     line-height: 1.25;
+    word-break: break-word;
   }
 
   .page-subtitle {
@@ -71,12 +91,18 @@
     padding: 4px;
     border-radius: 10px;
     gap: 4px;
+    flex-wrap: wrap;
+    max-width: 100%;
+    height: auto;
+    min-height: auto;
+    box-sizing: border-box;
   }
 }
 
 .tab-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 8px 16px;
   border: none;
@@ -87,9 +113,12 @@
   border-radius: 7px;
   cursor: pointer;
   transition: all 0.2s ease;
+  white-space: nowrap;
+  flex: 0 1 auto;
 
   svg {
     opacity: 0.75;
+    flex-shrink: 0;
   }
 
   &:hover {
@@ -119,6 +148,8 @@
   border-radius: 8px;
   margin-bottom: 20px;
   font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
   animation: slideDown 0.2s ease;
 
   .alert-icon {
@@ -128,7 +159,9 @@
 
   .alert-content {
     flex: 1;
+    min-width: 0;
     line-height: 1.5;
+    word-break: break-word;
   }
 
   .alert-close {
@@ -138,6 +171,7 @@
     cursor: pointer;
     opacity: 0.6;
     transition: opacity 0.15s;
+    flex-shrink: 0;
 
     &:hover {
       opacity: 1;
@@ -174,6 +208,8 @@
   color: var(--cheri-text-secondary, #6B6B6B);
   font-size: 14px;
   gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
 
   .loading-spinner {
     width: 38px;
@@ -192,12 +228,16 @@
 /* ── Layout Grid ────────────────────────────────────── */
 .account-grid {
   display: grid;
-  grid-template-columns: 320px 1fr;
+  grid-template-columns: 320px minmax(0, 1fr);
   gap: 24px;
   align-items: start;
+  width: 100%;
+  box-sizing: border-box;
 
-  @media (max-width: 960px) {
-    grid-template-columns: 1fr;
+  .profile-card,
+  .main-content {
+    min-width: 0;
+    box-sizing: border-box;
   }
 }
 
@@ -212,6 +252,8 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
   position: sticky;
   top: 80px;
+  width: 100%;
+  box-sizing: border-box;
 
   .profile-card-header {
     display: flex;
@@ -281,6 +323,7 @@
     font-weight: 700;
     color: var(--cheri-text, #2B2B2B);
     margin: 0 0 2px 0;
+    word-break: break-word;
   }
 
   .profile-username {
@@ -288,6 +331,7 @@
     color: var(--cheri-text-secondary, #6B6B6B);
     margin: 0 0 12px 0;
     font-family: monospace;
+    word-break: break-all;
   }
 
   .profile-badges {
@@ -349,7 +393,7 @@
     justify-content: space-between;
     align-items: center;
     font-size: 13px;
-    gap: 8px;
+    gap: 12px;
 
     .detail-label {
       display: flex;
@@ -360,6 +404,7 @@
 
       svg {
         opacity: 0.65;
+        flex-shrink: 0;
       }
     }
 
@@ -367,10 +412,12 @@
       font-weight: 500;
       color: var(--cheri-text, #2B2B2B);
       text-align: right;
+      min-width: 0;
+      word-break: break-word;
     }
 
     .text-ellipsis {
-      max-width: 140px;
+      max-width: min(240px, 50vw);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -388,6 +435,18 @@
 /* ══════════════════════════════════════════════════════
    CONTENT CARDS (MAIN CONTENT)
    ══════════════════════════════════════════════════════ */
+.main-content {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+}
+
+.tab-panel {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+}
+
 .content-card {
   background: #ffffff;
   border: 1px solid var(--cheri-border, #E5E0E0);
@@ -395,6 +454,10 @@
   padding: 24px;
   margin-bottom: 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  box-sizing: border-box;
 
   .card-header {
     display: flex;
@@ -403,6 +466,17 @@
     margin-bottom: 20px;
     padding-bottom: 14px;
     border-bottom: 1px solid var(--cheri-divider, #EEEAEA);
+    gap: 12px;
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 0;
+
+    > div {
+      min-width: 0;
+      flex: 1 1 auto;
+      height: auto;
+      min-height: 0;
+    }
   }
 
   .card-title {
@@ -410,24 +484,24 @@
     font-weight: 700;
     color: var(--cheri-text, #2B2B2B);
     margin: 0 0 4px 0;
+    word-break: break-word;
   }
 
   .card-desc {
     font-size: 13px;
     color: var(--cheri-text-secondary, #6B6B6B);
     margin: 0;
+    line-height: 1.45;
   }
 }
 
 /* ── Info Grid (Overview Tab) ───────────────────────── */
 .info-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
-
-  @media (max-width: 640px) {
-    grid-template-columns: 1fr;
-  }
+  width: 100%;
+  box-sizing: border-box;
 
   .info-cell {
     background: #FAF8F8;
@@ -437,6 +511,8 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+    min-width: 0;
+    box-sizing: border-box;
 
     .cell-label {
       font-size: 12px;
@@ -447,6 +523,8 @@
     .cell-value {
       font-size: 14px;
       color: var(--cheri-text, #2B2B2B);
+      word-break: break-word;
+      overflow-wrap: break-word;
 
       &.font-medium {
         font-weight: 600;
@@ -455,6 +533,7 @@
       &.font-mono {
         font-family: monospace;
         font-weight: 600;
+        word-break: break-all;
       }
     }
   }
@@ -471,11 +550,15 @@
   border-radius: 10px;
   gap: 16px;
   flex-wrap: wrap;
+  width: 100%;
+  box-sizing: border-box;
 
   .security-info {
     display: flex;
     align-items: center;
     gap: 14px;
+    min-width: 0;
+    flex: 1 1 240px;
   }
 
   .security-icon {
@@ -501,11 +584,13 @@
     letter-spacing: 2px;
     color: var(--cheri-text-secondary, #6B6B6B);
     margin: 2px 0;
+    word-break: break-all;
   }
 
   .security-hint {
     font-size: 12px;
     color: var(--cheri-text-light, #9A9A9A);
+    line-height: 1.4;
   }
 }
 
@@ -514,22 +599,31 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  box-sizing: border-box;
 }
 
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
-
-  @media (max-width: 680px) {
-    grid-template-columns: 1fr;
-  }
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  box-sizing: border-box;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  box-sizing: border-box;
 
   .form-label {
     font-size: 13px;
@@ -538,6 +632,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    flex-wrap: wrap;
   }
 
   .required-star {
@@ -598,6 +693,7 @@
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
 
   .form-control {
     padding-right: 40px;
@@ -630,6 +726,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  word-break: break-word;
 }
 
 .password-status-banner {
@@ -642,6 +739,10 @@
   padding: 12px 16px;
   margin-bottom: 20px;
   color: var(--cheri-primary, #74070E);
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  box-sizing: border-box;
 
   .status-icon {
     flex-shrink: 0;
@@ -668,6 +769,9 @@
   margin-top: 10px;
   padding-top: 16px;
   border-top: 1px solid var(--cheri-divider, #EEEAEA);
+  flex-wrap: wrap;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* ── Buttons ────────────────────────────────────────── */
@@ -685,6 +789,7 @@
   cursor: pointer;
   transition: all 0.15s ease;
   font-family: inherit;
+  box-sizing: border-box;
 
   &:disabled {
     opacity: 0.6;
@@ -753,6 +858,7 @@
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   display: inline-block;
+  flex-shrink: 0;
 }
 
 /* ══════════════════════════════════════════════════════
@@ -768,6 +874,7 @@
   align-items: center;
   justify-content: center;
   padding: 16px;
+  box-sizing: border-box;
   animation: fadeIn 0.15s ease;
 }
 
@@ -776,10 +883,12 @@
   border-radius: 14px;
   width: 100%;
   max-width: 460px;
+  max-height: calc(100vh - 32px);
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-sizing: border-box;
   animation: scaleUp 0.15s ease;
 }
 
@@ -794,6 +903,7 @@
   align-items: center;
   padding: 16px 20px;
   border-bottom: 1px solid var(--cheri-divider, #EEEAEA);
+  flex-shrink: 0;
 
   .modal-title {
     font-size: 16px;
@@ -826,6 +936,10 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow-y: auto;
+  max-height: calc(100vh - 170px);
+  box-sizing: border-box;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-avatar-preview {
@@ -845,6 +959,7 @@
     overflow: hidden;
     border: 3px solid #ffffff;
     box-shadow: 0 4px 14px rgba(116, 7, 14, 0.25);
+    flex-shrink: 0;
 
     .preview-img {
       width: 100%;
@@ -886,6 +1001,9 @@
     font-weight: 600;
     cursor: pointer;
     transition: all 0.15s ease;
+    text-align: center;
+    max-width: 100%;
+    box-sizing: border-box;
 
     &:hover {
       background: rgba(116, 7, 14, 0.14);
@@ -900,6 +1018,7 @@
     font-size: 11.5px;
     color: var(--cheri-text-light, #9A9A9A);
     margin: 0;
+    text-align: center;
   }
 }
 
@@ -931,6 +1050,7 @@
   background: var(--cheri-danger-light, #FEF2F2);
   color: var(--cheri-danger, #B42318);
   font-size: 12.5px;
+  word-break: break-word;
 }
 
 .modal-footer {
@@ -940,4 +1060,361 @@
   padding: 14px 20px;
   border-top: 1px solid var(--cheri-divider, #EEEAEA);
   background: #faf8f8;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+/* ==========================================================================
+   RESPONSIVE DESIGN BREAKPOINTS
+   ========================================================================== */
+
+/* 1. Màn hình Laptop nhỏ & Tablet phong cảnh (1024px - 1180px) */
+@media (max-width: 1180px) {
+  .account-grid {
+    grid-template-columns: 290px minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .profile-card {
+    padding: 20px 16px;
+  }
+
+  .content-card {
+    padding: 20px;
+  }
+}
+
+/* 2. Tablet (<= 960px): Chuyển thành bố cục 1 cột, loại bỏ sticky chồng lấn & loại bỏ khoảng trống header */
+@media (max-width: 960px) {
+  .account-page {
+    padding: 8px 14px 40px;
+  }
+
+  .account-header {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 10px;
+    margin-bottom: 16px;
+    height: auto;
+    min-height: auto;
+
+    .account-header-info {
+      flex: 0 0 auto;
+      width: 100%;
+      height: auto;
+      min-height: auto;
+      margin: 0;
+      padding: 0;
+    }
+
+    .account-header-actions {
+      width: 100%;
+      flex: 0 0 auto;
+      margin: 0;
+    }
+  }
+
+  .tab-btn {
+    flex: 1 1 0;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .account-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  /* Khắc phục thành phần cố định vị trí: chuyển sticky thành static để không che khuất nội dung khi cuộn */
+  .profile-card {
+    position: static;
+    top: auto;
+    width: 100%;
+    margin-bottom: 4px;
+
+    .profile-details-list {
+      .text-ellipsis {
+        max-width: min(340px, 60vw);
+      }
+    }
+  }
+}
+
+/* 3. Phablet & Tablet nhỏ (<= 768px) */
+@media (max-width: 768px) {
+  .account-page {
+    padding: 6px 12px 36px;
+  }
+
+  .account-header {
+    gap: 10px;
+    margin-bottom: 16px;
+
+    .page-title {
+      font-size: 22px;
+      margin-bottom: 2px;
+    }
+
+    .account-header-info {
+      height: auto;
+      min-height: auto;
+      flex: 0 0 auto;
+    }
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .security-preview-row {
+    .security-info {
+      flex: 1 1 100%;
+    }
+
+    .btn {
+      width: 100%;
+    }
+  }
+}
+
+/* 4. Mobile vừa (<= 640px) */
+@media (max-width: 640px) {
+  .account-header {
+    gap: 8px;
+    margin-bottom: 14px;
+
+    .account-header-info {
+      height: auto;
+      min-height: auto;
+      flex: 0 0 auto;
+    }
+
+    .account-header-actions {
+      display: flex;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding: 3px;
+      margin: 0;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
+    .tab-btn {
+      flex: 0 0 auto;
+      padding: 7px 12px;
+      font-size: 12.5px;
+    }
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .content-card {
+    padding: 16px 14px;
+    margin-bottom: 16px;
+    height: auto;
+    min-height: 0;
+
+    .card-header {
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: flex-start;
+      gap: 10px;
+      margin-bottom: 14px;
+      padding-bottom: 12px;
+      height: auto;
+      min-height: 0;
+
+      > div {
+        flex: 0 0 auto;
+        width: 100%;
+        height: auto;
+        min-height: 0;
+      }
+
+      .btn {
+        width: 100%;
+      }
+    }
+  }
+
+  .profile-card {
+    padding: 18px 14px;
+
+    .profile-card-footer {
+      flex-direction: column;
+      gap: 8px;
+    }
+  }
+
+  .profile-details-list {
+    .detail-item {
+      font-size: 12.5px;
+
+      .text-ellipsis {
+        max-width: min(220px, 50vw);
+      }
+    }
+  }
+}
+
+/* 5. Mobile nhỏ (<= 480px và 390px, 375px) */
+@media (max-width: 480px) {
+  .account-page {
+    padding: 4px 8px 32px;
+  }
+
+  .account-header {
+    gap: 8px;
+    margin-bottom: 12px;
+    height: auto;
+    min-height: auto;
+
+    .account-header-info {
+      height: auto;
+      min-height: auto;
+      flex: 0 0 auto;
+      margin: 0;
+      padding: 0;
+    }
+
+    .page-title {
+      font-size: 20px;
+      margin: 0 0 2px 0;
+    }
+
+    .page-subtitle {
+      font-size: 13px;
+    }
+  }
+
+  .avatar-circle {
+    width: 84px;
+    height: 84px;
+
+    .avatar-placeholder {
+      font-size: 34px;
+    }
+  }
+
+  .profile-details-list {
+    .detail-item {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+
+      .detail-value {
+        text-align: left;
+        width: 100%;
+      }
+
+      .text-ellipsis {
+        max-width: 100%;
+        white-space: normal;
+        word-break: break-all;
+      }
+    }
+  }
+
+  .security-preview-row {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px;
+    gap: 12px;
+
+    .security-info {
+      flex: 0 0 auto;
+      width: 100%;
+      height: auto;
+      min-height: 0;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+  }
+
+  .content-card {
+    padding: 14px 12px;
+    margin-bottom: 14px;
+    height: auto;
+    min-height: 0;
+
+    .card-header {
+      gap: 8px;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      height: auto;
+      min-height: 0;
+
+      > div {
+        flex: 0 0 auto;
+        width: 100%;
+        height: auto;
+        min-height: 0;
+      }
+    }
+  }
+
+  .password-status-banner {
+    padding: 10px 12px;
+    margin-bottom: 14px;
+    gap: 10px;
+    height: auto;
+    min-height: 0;
+  }
+
+  .account-form {
+    gap: 14px;
+    height: auto;
+    min-height: 0;
+  }
+
+  .form-grid {
+    gap: 12px;
+    height: auto;
+    min-height: 0;
+  }
+
+  .form-actions {
+    flex-direction: column-reverse;
+    gap: 8px;
+
+    .btn {
+      width: 100%;
+      height: 42px;
+    }
+  }
+
+  .modal-card {
+    max-width: 100%;
+    border-radius: 10px;
+  }
+
+  .modal-header {
+    padding: 14px 16px;
+  }
+
+  .modal-body {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .modal-footer {
+    padding: 12px 16px;
+    flex-direction: column-reverse;
+    gap: 8px;
+
+    .btn {
+      width: 100%;
+      height: 42px;
+    }
+  }
 }

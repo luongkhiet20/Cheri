@@ -84,6 +84,8 @@
   align-items: center;
   justify-content: space-between;
   padding-top: 4px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 :host .toolbar-label {
@@ -113,6 +115,8 @@
   pointer-events: auto !important;
   position: relative;
   z-index: 2;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 :host .btn-delete-selected * {
@@ -185,9 +189,11 @@
   height: 72px;
   border-radius: 6px;
   object-fit: cover;
+  aspect-ratio: 1 / 1;
   border: 1px solid var(--cheri-border, #E5E0E0);
   display: block;
   background-color: #f9f9f9;
+  flex-shrink: 0;
 }
 
 :host .cart-item-content {
@@ -244,7 +250,8 @@
   position: relative;
   z-index: 2;
   transition: all 180ms ease;
-  max-width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
   user-select: none;
   font-family: inherit;
   outline: none;
@@ -624,18 +631,21 @@
   gap: 5px;
   color: #6B7280;
   font-size: 13px;
+  flex-wrap: wrap;
 }
 
 :host .cart-unit-price-group .price-label {
   color: #6B7280;
   font-size: 13px;
   font-weight: 400;
+  white-space: nowrap;
 }
 
 :host .cart-unit-price-group .price-val {
   font-weight: 500;
   color: #374151;
   font-size: 13px;
+  white-space: nowrap;
 }
 
 :host .cart-unit-price-group .cart-regular-price-val {
@@ -643,6 +653,7 @@
   color: #9CA3AF;
   font-size: 12px;
   margin-left: 2px;
+  white-space: nowrap;
 }
 
 :host .cart-subtotal-price-group {
@@ -651,18 +662,21 @@
   gap: 4px;
   margin-left: auto;
   font-size: 14px;
+  flex-shrink: 0;
 }
 
 :host .cart-subtotal-price-group .subtotal-label {
   color: #74070E;
   font-size: 14px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 :host .cart-subtotal-price-group .cart-subtotal-val {
   font-size: 14px;
   font-weight: 700;
   color: #74070E;
+  white-space: nowrap;
 }
 
 :host .stock-badge {
@@ -1103,14 +1117,20 @@
   font-family: inherit;
   font-size: 14px;
   color: var(--cheri-text, #2B2B2B);
+  gap: 8px;
 }
 
 :host .summary-line-label {
   color: #6B6B6B;
+  min-width: 0;
+  word-break: break-word;
 }
 
 :host .summary-line-val {
   font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-align: right;
 }
 
 :host .summary-line--discount {
@@ -1139,12 +1159,19 @@
   margin-top: 4px;
   border-top: 1px dashed var(--cheri-line, #EEEAEA);
   font-size: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
 }
 
 :host .final-total-price {
   font-size: 18px;
   color: var(--cheri-primary, #74070E);
   font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-align: right;
 }
 
 :host .cart-selection-warning {
@@ -2226,13 +2253,8 @@
   }
 
   :host .cart-items {
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-
-  :host .cart-item-part {
-    min-width: auto;
-    text-align: left;
+    flex-wrap: nowrap;
+    gap: 12px;
   }
 
   :host .payment-choice {
@@ -2244,28 +2266,279 @@
   }
 }
 
+@media screen and (max-width: 768px) {
+  :host .cart-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  :host .cart-item-actions-row {
+    gap: 8px 12px;
+  }
+
+  :host .coupon-rules-hint {
+    align-items: flex-start;
+  }
+
+  :host .coupon-rules-hint .hint-icon {
+    margin-top: 2px;
+  }
+}
+
+@media screen and (max-width: 640px) {
+  /* Khu vực thông tin giá sản phẩm (ƯU TIÊN CAO NHẤT) */
+  :host .cart-item-price-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    width: 100%;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed #F3F4F6;
+    box-sizing: border-box;
+  }
+
+  :host .cart-unit-price-group {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-wrap: wrap;
+    width: 100%;
+    font-size: 12.5px;
+  }
+
+  :host .cart-unit-price-group .price-label {
+    font-size: 12px;
+    color: #6B7280;
+    white-space: nowrap;
+    font-weight: 500;
+  }
+
+  :host .cart-unit-price-group .price-val {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    white-space: nowrap;
+  }
+
+  :host .cart-unit-price-group .cart-regular-price-val {
+    font-size: 11.5px;
+    color: #9CA3AF;
+    text-decoration: line-through;
+    white-space: nowrap;
+    margin-left: 2px;
+  }
+
+  :host .cart-subtotal-price-group {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-left: 0;
+    width: 100%;
+    font-size: 13.5px;
+  }
+
+  :host .cart-subtotal-price-group .subtotal-label {
+    font-size: 12.5px;
+    color: #74070E;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  :host .cart-subtotal-price-group .cart-subtotal-val {
+    font-size: 14.5px;
+    font-weight: 700;
+    color: #74070E;
+    white-space: nowrap;
+  }
+
+  /* Khu vực thông tin sản phẩm */
+  :host .cart-items {
+    flex-wrap: nowrap;
+    gap: 10px;
+    padding: 14px 0;
+  }
+
+  :host .cart-item-checkbox {
+    padding-top: 2px;
+    flex-shrink: 0;
+  }
+
+  :host .cart-image-col {
+    width: 68px;
+    height: 68px;
+    flex-shrink: 0;
+  }
+
+  :host .cart-image {
+    width: 68px;
+    height: 68px;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+
+  :host .cart-item-content {
+    flex: 1 1 0%;
+    min-width: 0;
+    gap: 6px;
+  }
+
+  :host .cart-title {
+    font-size: 13.5px;
+    line-height: 1.35;
+  }
+
+  :host .cart-title-row {
+    gap: 6px;
+  }
+
+  :host .cart-variant-badge-wrap {
+    max-width: 100%;
+    padding: 3px 8px;
+  }
+
+  :host .cart-variant-summary-text {
+    font-size: 11.5px;
+    line-height: 1.35;
+  }
+
+  :host .cart-item-actions-row {
+    gap: 8px 10px;
+    margin-top: 2px;
+  }
+
+  /* Khu vực vận chuyển */
+  :host .shipping-method-card {
+    padding: 10px 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  :host .shipping-card-left {
+    width: 100%;
+  }
+
+  :host .shipping-method-fee {
+    margin-left: 30px;
+    align-self: flex-start;
+  }
+}
+
 @media screen and (max-width: 480px) {
   :host .cart-container {
-    padding: 16px 10px 32px;
+    padding: 14px 8px 32px;
   }
 
   :host .cart-wrap,
   :host .order-form-wrap {
-    padding: 12px;
-    border-radius: 6px;
+    padding: 14px 10px;
+    border-radius: 8px;
   }
 
   :host .cart-main-title,
   :host .cart-order-title {
     font-size: 16px;
+    margin-bottom: 8px;
+    padding-bottom: 10px;
+  }
+
+  :host .cart-toolbar {
+    gap: 6px;
+  }
+
+  :host .toolbar-label {
+    font-size: 12px;
+  }
+
+  :host .btn-delete-selected {
+    font-size: 11.5px;
+    padding: 3px 8px;
+  }
+
+  :host .cart-items {
+    gap: 8px;
+    padding: 12px 0;
+  }
+
+  :host .cart-image-col {
+    width: 64px;
+    height: 64px;
+  }
+
+  :host .cart-image {
+    width: 64px;
+    height: 64px;
+  }
+
+  :host .cart-item-checkbox ::ng-deep .mdc-checkbox {
+    padding: 2px !important;
+  }
+
+  :host .cart-qty-control {
+    height: 26px;
+  }
+
+  :host .qty-btn {
+    width: 26px;
+    height: 26px;
+    font-size: 14px;
+  }
+
+  :host .qty-input {
+    width: 36px;
+    height: 26px;
+    font-size: 12.5px;
+  }
+
+  :host .cart-remove-btn {
+    font-size: 11.5px;
+    padding: 2px 5px;
+  }
+
+  :host .stock-badge {
+    font-size: 10.5px;
+    padding: 1px 5px;
+  }
+
+  :host .cart-coupon-section {
+    padding: 12px 10px;
+    margin-top: 14px;
+  }
+
+  :host .coupon-header {
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+
+  :host .coupon-form {
+    gap: 6px;
+  }
+
+  :host .coupon-input {
+    font-size: 12.5px;
+    padding: 7px 10px;
+  }
+
+  :host .coupon-btn {
+    padding: 7px 12px;
+    font-size: 12.5px;
+  }
+
+  :host .summary-line {
+    font-size: 13px;
+  }
+
+  :host .final-total-price {
+    font-size: 17px;
   }
 
   :host ::ng-deep .order-form-wrap .mat-step-header {
-    padding: 6px 6px !important;
+    padding: 6px 4px !important;
   }
 
   :host ::ng-deep .order-form-wrap .mat-step-header .mat-step-label {
-    font-size: 12px !important;
+    font-size: 11.5px !important;
   }
 
   :host .payment-choice {
@@ -2278,21 +2551,33 @@
 
   :host .payment-choice-name b {
     font-size: 12px;
-  }
-
-  :host .shipping-method-card {
-    padding: 10px 12px;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  :host .shipping-method-fee {
-    margin-left: 30px;
+    white-space: nowrap;
   }
 
   :host .order-confirmation-box {
     padding: 12px 10px;
+  }
+
+  :host .submit-order-button {
+    font-size: 13px;
+    padding: 10px 12px;
+    min-height: 44px;
+  }
+}
+
+@media screen and (max-width: 360px) {
+  :host .coupon-form {
+    flex-wrap: wrap;
+  }
+
+  :host .coupon-input {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+
+  :host .coupon-btn {
+    width: 100%;
+    height: 36px;
   }
 }
 

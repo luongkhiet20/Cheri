@@ -75,7 +75,11 @@
       (mouseleave)="onMouseLeave()"
     >
       @for (product of recommendedProducts; track (product._id || product.id)) {
-      <div class="pcard" (click)="onOpenQuickView(product)">
+      <div
+        class="pcard"
+        [attr.data-product-id]="product._id || product.id"
+        (click)="onOpenQuickView(product)"
+      >
 
         <!-- Image -->
         <div class="pcard-img-wrap">

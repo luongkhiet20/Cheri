@@ -1,14 +1,30 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, isValidObjectId } from 'mongoose';
+import { Model, Types, isValidObjectId } from 'mongoose';
 import { spawn } from 'child_process';
+import * as crypto from 'crypto';
 import * as path from 'path';
 import * as fs from 'fs';
 
 import { Product, ProductModel } from '../products/models/product.model';
 import { ProductVariantDocument } from '../products/models/product-variant.model';
+import { RecommendationImpressionDocument } from './schemas/recommendation-impression.schema';
+import { InteractionDocument } from '../interactions/schemas/interaction.schema';
 import { prepareProduct } from '../shared/utils/prepareUtils';
 import { GetRecommendationsDto } from './dto/get-recommendations.dto';
+import { RecordImpressionsDto } from './dto/record-impressions.dto';
+
+// Centralized Hybrid Recommendation + Diversity Re-ranking + Exposure Rotation configuration
+export const RECOMMENDATION_CONFIG = {
+  DEFAULT_TOP_N: 10,
+  CANDIDATE_POOL_SIZE: 30,
+  PRIORITY_COUNT: 6,
+  EXPLORATION_COUNT: 4,
+  PRIORITY_RATIO: 0.6,
+  MAX_PER_CATEGORY: 3,
+  IMPRESSION_LOOKBACK_DAYS: 7,
+  ANONYMIZATION_SALT: process.env.ML_SALT || 'cheri_ml_salt_2026_secured',
+};
 
 export interface RecommendationResponse {
   status: 'success' | 'fallback' | 'error';
@@ -17,8 +33,24 @@ export interface RecommendationResponse {
   isMachineLearning: boolean;
   dataSource?: string;
   currentProductId?: string;
+  candidatePoolSize?: number;
+  priorityCount?: number;
+  explorationCount?: number;
   count: number;
   products: Product[];
+}
+
+interface CandidateMeta {
+  product_id: string;
+  title?: string;
+  category?: string;
+  score?: number;
+  _mlScore?: number;
+  rank?: number;
+  _mlRank?: number;
+  display_rank?: number;
+  selection_group?: string;
+  reason?: string;
 }
 
 interface PythonCLIResult {
@@ -28,14 +60,17 @@ interface PythonCLIResult {
   is_bootstrap?: boolean;
   data_source?: string;
   current_product_id?: string;
+  candidate_pool_size?: number;
+  priority_count?: number;
+  exploration_count?: number;
   count: number;
-  recommendations: Array<{
-    product_id: string;
-    title?: string;
-    category?: string;
-    score?: number;
-    reason?: string;
-  }>;
+  recommendations: CandidateMeta[];
+}
+
+interface ExposureEntry {
+  impressionCount: number;
+  hoursSinceLastShown: number;
+  hasPositiveEngagement: boolean;
 }
 
 @Injectable()
@@ -46,25 +81,142 @@ export class RecommendationsService {
     @InjectModel('Product') private productModel: ProductModel,
     @InjectModel('ProductVariant')
     private productVariantModel: Model<ProductVariantDocument>,
+    @InjectModel('RecommendationImpression')
+    private impressionModel: Model<RecommendationImpressionDocument>,
+    @InjectModel('Interaction')
+    private interactionModel: Model<InteractionDocument>,
   ) {}
 
   /**
+   * Produces the exact same SHA-256 16-hex pseudonymized user_key as Python's pseudonymize_user_key().
+   */
+  public computePseudonymizedUserKey(rawId: string, prefix: 'usr' | 'gst' = 'usr'): string {
+    const cleanVal = String(rawId || '').trim().toLowerCase();
+    if (!cleanVal) return `${prefix}_unknown`;
+    if (/^(usr|gst)_[0-9a-f]{16}$/.test(cleanVal)) {
+      return cleanVal;
+    }
+    const stripped = cleanVal.replace(/^(usr_|gst_)/, '');
+    const hash = crypto
+      .createHash('sha256')
+      .update(`${stripped}:${RECOMMENDATION_CONFIG.ANONYMIZATION_SALT}`, 'utf8')
+      .digest('hex')
+      .slice(0, 16);
+    return `${prefix}_${hash}`;
+  }
+
+  /**
+   * Records recommendation impressions when products actually appear in the user's recommendation viewport.
+   * Stored in the dedicated 'recommendation_impressions' collection (never mixed with 'user_interactions' or PURCHASE labels).
+   */
+  async recordImpressions(
+    dto: RecordImpressionsDto,
+    user?: any,
+    session?: any,
+    guestCartId?: string,
+  ): Promise<{ success: boolean; recordedCount: number }> {
+    try {
+      if (!dto || !Array.isArray(dto.productIds) || dto.productIds.length === 0) {
+        return { success: true, recordedCount: 0 };
+      }
+
+      const uniqueValidIds = Array.from(
+        new Set(
+          dto.productIds
+            .map((id) => String(id || '').trim())
+            .filter((id) => isValidObjectId(id)),
+        ),
+      ).slice(0, RECOMMENDATION_CONFIG.CANDIDATE_POOL_SIZE);
+
+      if (uniqueValidIds.length === 0) {
+        return { success: true, recordedCount: 0 };
+      }
+
+      let userId: Types.ObjectId | null = null;
+      let sessionId: string | null = null;
+      let userKey: string;
+
+      if (user && user._id && isValidObjectId(String(user._id))) {
+        userId = new Types.ObjectId(String(user._id));
+        sessionId =
+          guestCartId?.trim() ||
+          dto.sessionId?.trim() ||
+          (session?.id ? String(session.id) : null);
+        userKey = this.computePseudonymizedUserKey(String(user._id), 'usr');
+      } else {
+        sessionId =
+          guestCartId?.trim() ||
+          dto.sessionId?.trim() ||
+          (session?.id ? String(session.id) : null);
+        if (!sessionId) {
+          return { success: true, recordedCount: 0 };
+        }
+        userKey = this.computePseudonymizedUserKey(sessionId, 'gst');
+      }
+
+      const currentProductId = dto.currentProductId ? String(dto.currentProductId).trim() : null;
+      const strategy = dto.strategy ? String(dto.strategy).trim() : 'ml_bootstrap_model';
+      const now = new Date();
+      const dedupCutoff = new Date(now.getTime() - 15 * 1000); // 15-second technical deduplication window
+
+      const existingRecent = await this.impressionModel
+        .find(
+          {
+            userKey,
+            currentProductId,
+            productId: { $in: uniqueValidIds.map((id) => new Types.ObjectId(id)) },
+            shownAt: { $gte: dedupCutoff },
+          },
+          { productId: 1 },
+        )
+        .lean();
+
+      const recentlyRecordedSet = new Set(
+        existingRecent.map((doc: any) => String(doc.productId)),
+      );
+
+      const docsToInsert = uniqueValidIds
+        .filter((pid) => !recentlyRecordedSet.has(pid))
+        .map((pid) => ({
+          userKey,
+          userId,
+          sessionId,
+          productId: new Types.ObjectId(pid),
+          currentProductId,
+          strategy,
+          shownAt: now,
+        }));
+
+      if (docsToInsert.length > 0) {
+        await this.impressionModel.insertMany(docsToInsert, { ordered: false });
+      }
+
+      return { success: true, recordedCount: docsToInsert.length };
+    } catch (err: any) {
+      this.logger.warn(`Non-fatal error recording recommendation impressions: ${err?.message}`);
+      return { success: false, recordedCount: 0 };
+    }
+  }
+
+  /**
    * Main recommendation entrypoint:
-   * 1. Resolves clean input and target user/product.
-   * 2. Attempts Python ML inference if Python environment is available.
-   * 3. Falls back seamlessly to Native MongoDB algorithms if Python fails or is absent.
-   * 4. Hydrates and validates all items from MongoDB to guarantee data freshness and visibility.
+   * 1. Resolves clean input and target user/product (default limit = 10).
+   * 2. Attempts Python ML inference (Top-30 pool -> 6 Priority + 4 Exploration + Exposure Rotation).
+   * 3. Falls back seamlessly to Native MongoDB algorithms with synchronized Diversity Re-ranking & Exposure Rotation.
+   * 4. Hydrates and validates all items from MongoDB while preserving original scores and ranks.
    */
   async getRecommendations(
     dto: GetRecommendationsDto,
     user?: any,
     guestCartId?: string,
   ): Promise<RecommendationResponse> {
-    const limit = Math.min(Math.max(Number(dto.limit) || 8, 1), 24);
+    const limit = Math.min(
+      Math.max(Number(dto.limit) || RECOMMENDATION_CONFIG.DEFAULT_TOP_N, 1),
+      24,
+    );
     const lang = dto.lang || 'vi';
     const rawProductId = dto.productId ? String(dto.productId).trim() : undefined;
 
-    // Resolve user identifier safely without exposing PII
     let userKey: string | undefined = undefined;
     if (user && user._id) {
       userKey = `usr_${user._id.toString()}`;
@@ -84,7 +236,14 @@ export class RecommendationsService {
         .map((r) => r.product_id)
         .filter((id) => id && typeof id === 'string');
 
-      const hydrated = await this.hydrateProducts(candidateIds, lang, rawProductId);
+      const metaMap = new Map<string, CandidateMeta>();
+      for (const r of cliResult.recommendations) {
+        if (r && r.product_id) {
+          metaMap.set(r.product_id, r);
+        }
+      }
+
+      const hydrated = await this.hydrateProducts(candidateIds, lang, rawProductId, metaMap);
 
       if (hydrated.length >= Math.min(limit, 4)) {
         const isML =
@@ -92,7 +251,7 @@ export class RecommendationsService {
           (cliResult.strategy as string) === 'ml_bootstrap_model';
 
         this.logger.log(
-          `Recommendations served: strategy=${cliResult.strategy}, model=${cliResult.model_used}, count=${hydrated.length}`,
+          `Recommendations served: strategy=${cliResult.strategy}, model=${cliResult.model_used}, count=${hydrated.length} (priority=${cliResult.priority_count ?? 'n/a'}, exploration=${cliResult.exploration_count ?? 'n/a'})`,
         );
 
         return {
@@ -102,45 +261,341 @@ export class RecommendationsService {
           isMachineLearning: isML,
           dataSource: cliResult.data_source || (isML ? 'synthetic_bootstrap' : 'real_data'),
           currentProductId: rawProductId,
-          count: hydrated.length,
+          candidatePoolSize: cliResult.candidate_pool_size,
+          priorityCount: cliResult.priority_count,
+          explorationCount: cliResult.exploration_count,
+          count: Math.min(hydrated.length, limit),
           products: hydrated.slice(0, limit),
         };
       }
     }
 
-    // Step 2: Native MongoDB Fallback (Guaranteed to work in serverless/Vercel environments)
-    if (rawProductId) {
-      const catFallback = await this.nativeFallbackByCategory(rawProductId, limit, lang);
-      if (catFallback.products.length >= limit) {
-        return catFallback;
-      }
-      // If category has few items, pad with Popularity fallback
-      const popFallback = await this.nativeFallbackByPopularity(rawProductId, limit, lang);
-      const existingIds = new Set(catFallback.products.map((p: any) => p._id.toString()));
-      const paddedProducts = [
-        ...catFallback.products,
-        ...popFallback.products.filter((p: any) => !existingIds.has(p._id.toString())),
-      ].slice(0, limit);
+    // Step 2: Native MongoDB Fallback with synchronized Top-30 Pool + 6/4 Diversity Re-ranking + Exposure Rotation
+    const { exposureMap, purchasedSet } = await this.getExposureAndPurchasedHistory(user, guestCartId);
 
+    if (rawProductId) {
+      return this.nativeFallbackByCategory(
+        rawProductId,
+        limit,
+        lang,
+        exposureMap,
+        purchasedSet,
+      );
+    }
+
+    return this.nativeFallbackByPopularity(
+      undefined,
+      limit,
+      lang,
+      exposureMap,
+      purchasedSet,
+    );
+  }
+
+  /**
+   * Retrieves 7-day exposure history from 'recommendation_impressions' plus positive engagements
+   * ('CLICK', 'ADD_TO_CART') and purchased products ('PURCHASE') from 'user_interactions'.
+   */
+  private async getExposureAndPurchasedHistory(
+    user?: any,
+    guestCartId?: string,
+  ): Promise<{ exposureMap: Map<string, ExposureEntry>; purchasedSet: Set<string> }> {
+    const exposureMap = new Map<string, ExposureEntry>();
+    const purchasedSet = new Set<string>();
+
+    try {
+      const orConditions: any[] = [];
+      const interactionOrConditions: any[] = [];
+
+      if (user && user._id && isValidObjectId(String(user._id))) {
+        const uid = new Types.ObjectId(String(user._id));
+        const hashedKey = this.computePseudonymizedUserKey(String(user._id), 'usr');
+        orConditions.push({ userId: uid }, { userKey: hashedKey }, { userKey: `usr_${user._id}` });
+        interactionOrConditions.push({ userId: uid });
+      }
+      if (guestCartId && guestCartId.trim()) {
+        const cleanSess = guestCartId.trim();
+        const hashedGst = this.computePseudonymizedUserKey(cleanSess, 'gst');
+        orConditions.push({ sessionId: cleanSess }, { userKey: hashedGst }, { userKey: `gst_${cleanSess}` });
+        interactionOrConditions.push({ sessionId: cleanSess });
+      }
+
+      if (orConditions.length === 0) {
+        return { exposureMap, purchasedSet };
+      }
+
+      const engagedSet = new Set<string>();
+      if (interactionOrConditions.length > 0) {
+        const interactions = await this.interactionModel
+          .find(
+            {
+              $or: interactionOrConditions,
+              isSynthetic: { $ne: true },
+              eventType: { $in: ['CLICK', 'ADD_TO_CART', 'PURCHASE'] },
+            },
+            { productId: 1, eventType: 1 },
+          )
+          .limit(300)
+          .lean();
+
+        for (const ev of interactions) {
+          const pid = String(ev.productId || '');
+          if (!pid) continue;
+          if (ev.eventType === 'PURCHASE') {
+            purchasedSet.add(pid);
+          } else if (ev.eventType === 'CLICK' || ev.eventType === 'ADD_TO_CART') {
+            engagedSet.add(pid);
+          }
+        }
+      }
+
+      const cutoff = new Date(
+        Date.now() - RECOMMENDATION_CONFIG.IMPRESSION_LOOKBACK_DAYS * 24 * 3600 * 1000,
+      );
+      const impressions = await this.impressionModel
+        .find(
+          {
+            $or: orConditions,
+            shownAt: { $gte: cutoff },
+          },
+          { productId: 1, shownAt: 1 },
+        )
+        .sort({ shownAt: -1 })
+        .limit(500)
+        .lean();
+
+      const nowMs = Date.now();
+      for (const imp of impressions) {
+        const pid = String(imp.productId || '');
+        if (!pid) continue;
+        const shownMs = imp.shownAt ? new Date(imp.shownAt).getTime() : nowMs;
+        const hoursAgo = Math.max(0, (nowMs - shownMs) / 3600000);
+        const existing = exposureMap.get(pid);
+        if (!existing) {
+          exposureMap.set(pid, {
+            impressionCount: 1,
+            hoursSinceLastShown: hoursAgo,
+            hasPositiveEngagement: engagedSet.has(pid),
+          });
+        } else {
+          existing.impressionCount += 1;
+          if (hoursAgo < existing.hoursSinceLastShown) {
+            existing.hoursSinceLastShown = hoursAgo;
+          }
+        }
+      }
+
+      for (const ep of engagedSet) {
+        if (!exposureMap.has(ep)) {
+          exposureMap.set(ep, {
+            impressionCount: 0,
+            hoursSinceLastShown: 999,
+            hasPositiveEngagement: true,
+          });
+        }
+      }
+    } catch (err: any) {
+      this.logger.debug(`Exposure history lookup skipped: ${err?.message}`);
+    }
+
+    return { exposureMap, purchasedSet };
+  }
+
+  /**
+   * Computes Exposure Rotation decay and novelty multiplier for Native MongoDB Fallback,
+   * mirroring Python's compute_exposure_rotation_factors().
+   */
+  private computeNativeExposureFactors(
+    productId: string,
+    exposureMap: Map<string, ExposureEntry>,
+  ): { priorityDecay: number; explorationNovelty: number } {
+    const entry = exposureMap.get(productId);
+    if (!entry || entry.impressionCount <= 0) {
       return {
-        status: 'fallback',
-        strategy: 'fallback_category',
-        modelUsed: 'None',
-        isMachineLearning: false,
-        dataSource: 'native_fallback',
-        currentProductId: rawProductId,
-        count: paddedProducts.length,
-        products: paddedProducts,
+        priorityDecay: 1.0,
+        explorationNovelty: entry?.hasPositiveEngagement ? 1.25 : 1.5,
       };
     }
 
-    // Fallback Popularity when no current product specified
-    return this.nativeFallbackByPopularity(undefined, limit, lang);
+    if (entry.hasPositiveEngagement) {
+      return {
+        priorityDecay: 0.96,
+        explorationNovelty: 1.15,
+      };
+    }
+
+    const countDecay = 1.0 / (1.0 + 0.35 * entry.impressionCount);
+    let recencyFactor = 0.95;
+    if (entry.hoursSinceLastShown < 0.5) recencyFactor = 0.55;
+    else if (entry.hoursSinceLastShown < 6.0) recencyFactor = 0.72;
+    else if (entry.hoursSinceLastShown < 24.0) recencyFactor = 0.85;
+
+    return {
+      priorityDecay: Math.max(0.25, countDecay * recencyFactor),
+      explorationNovelty: Math.max(
+        0.15,
+        (1.0 / (1.0 + 0.65 * entry.impressionCount)) * recencyFactor,
+      ),
+    };
+  }
+
+  /**
+   * Synchronized Top-30 Candidate Pool + 6 Priority (60%) / 4 Exploration (40%) Diversity Re-ranking
+   * + Exposure Rotation for Native MongoDB Fallback.
+   */
+  public diversifyAndRotateNativeCandidates(
+    rawCandidates: Array<{
+      id: string;
+      category: string;
+      baseScore: number;
+      origRank: number;
+    }>,
+    limit: number,
+    exposureMap: Map<string, ExposureEntry>,
+  ): {
+    selected: Array<CandidateMeta>;
+    poolSize: number;
+    priorityCount: number;
+    explorationCount: number;
+  } {
+    const poolSizeLimit = Math.max(RECOMMENDATION_CONFIG.CANDIDATE_POOL_SIZE, limit);
+    const pool = rawCandidates.slice(0, poolSizeLimit).map((c) => {
+      const factors = this.computeNativeExposureFactors(c.id, exposureMap);
+      const jitter = Math.random() * 0.012;
+      const rotatedPriorityScore =
+        c.baseScore * (0.55 + 0.45 * factors.priorityDecay) + c.baseScore * jitter;
+      return {
+        ...c,
+        priorityDecay: factors.priorityDecay,
+        explorationNovelty: factors.explorationNovelty,
+        rotatedPriorityScore,
+      };
+    });
+
+    if (pool.length === 0) {
+      return { selected: [], poolSize: 0, priorityCount: 0, explorationCount: 0 };
+    }
+
+    const targetPriority =
+      limit === RECOMMENDATION_CONFIG.DEFAULT_TOP_N
+        ? Math.min(RECOMMENDATION_CONFIG.PRIORITY_COUNT, pool.length)
+        : Math.min(Math.round(limit * RECOMMENDATION_CONFIG.PRIORITY_RATIO), pool.length);
+    const targetExploration = Math.max(0, limit - targetPriority);
+    const maxPerCat = RECOMMENDATION_CONFIG.MAX_PER_CATEGORY;
+
+    const selectedIds = new Set<string>();
+    const selectedList: Array<CandidateMeta> = [];
+    const catCounts: Record<string, number> = {};
+
+    // Group 1: Priority (60%)
+    const prioritySorted = [...pool].sort(
+      (a, b) => b.rotatedPriorityScore - a.rotatedPriorityScore || b.baseScore - a.baseScore || a.origRank - b.origRank,
+    );
+
+    for (const item of prioritySorted) {
+      if (selectedList.length >= targetPriority) break;
+      const cat = item.category || 'Khác';
+      if ((catCounts[cat] || 0) < maxPerCat) {
+        selectedIds.add(item.id);
+        catCounts[cat] = (catCounts[cat] || 0) + 1;
+        selectedList.push({
+          product_id: item.id,
+          category: cat,
+          score: Number(item.baseScore.toFixed(4)),
+          _mlScore: Number(item.baseScore.toFixed(4)),
+          rank: item.origRank,
+          _mlRank: item.origRank,
+          display_rank: selectedList.length + 1,
+          selection_group: 'priority',
+        });
+      }
+    }
+
+    // Group 2: Exploration (40%) via Random Weighted Sampling
+    const maxPoolScore = Math.max(...pool.map((p) => p.baseScore), 0.01);
+    const qualityFloor = Math.max(0.005, 0.18 * maxPoolScore);
+    let remaining = pool.filter((p) => !selectedIds.has(p.id));
+
+    let explorationPicked = 0;
+    while (explorationPicked < targetExploration && remaining.length > 0) {
+      const eligible = remaining.filter((item) => {
+        const cat = item.category || 'Khác';
+        return (catCounts[cat] || 0) < maxPerCat && item.baseScore >= qualityFloor;
+      });
+
+      if (eligible.length === 0) break;
+
+      const weights = eligible.map((item) => {
+        const cat = item.category || 'Khác';
+        const cCount = catCounts[cat] || 0;
+        const suitability = Math.pow(Math.max(item.baseScore, 0.01) / maxPoolScore, 0.75);
+        const catBoost = cCount === 0 ? 1.75 : cCount === 1 ? 1.25 : 0.8;
+        return Math.max(1e-6, suitability * item.explorationNovelty * catBoost);
+      });
+
+      const totalWeight = weights.reduce((acc, w) => acc + w, 0);
+      let r = Math.random() * totalWeight;
+      let chosenIdx = 0;
+      for (let i = 0; i < eligible.length; i++) {
+        r -= weights[i];
+        if (r <= 0) {
+          chosenIdx = i;
+          break;
+        }
+      }
+
+      const chosen = eligible[chosenIdx];
+      const cat = chosen.category || 'Khác';
+      selectedIds.add(chosen.id);
+      catCounts[cat] = (catCounts[cat] || 0) + 1;
+      selectedList.push({
+        product_id: chosen.id,
+        category: cat,
+        score: Number(chosen.baseScore.toFixed(4)),
+        _mlScore: Number(chosen.baseScore.toFixed(4)),
+        rank: chosen.origRank,
+        _mlRank: chosen.origRank,
+        display_rank: selectedList.length + 1,
+        selection_group: 'exploration',
+      });
+      remaining = remaining.filter((p) => p.id !== chosen.id);
+      explorationPicked++;
+    }
+
+    // Backfill if needed under category cap
+    if (selectedList.length < limit && remaining.length > 0) {
+      for (const item of prioritySorted) {
+        if (selectedList.length >= limit) break;
+        if (selectedIds.has(item.id)) continue;
+        const cat = item.category || 'Khác';
+        if ((catCounts[cat] || 0) < maxPerCat) {
+          selectedIds.add(item.id);
+          catCounts[cat] = (catCounts[cat] || 0) + 1;
+          selectedList.push({
+            product_id: item.id,
+            category: cat,
+            score: Number(item.baseScore.toFixed(4)),
+            _mlScore: Number(item.baseScore.toFixed(4)),
+            rank: item.origRank,
+            _mlRank: item.origRank,
+            display_rank: selectedList.length + 1,
+            selection_group: 'exploration_backfill',
+          });
+        }
+      }
+    }
+
+    const actualPriority = selectedList.filter((s) => s.selection_group === 'priority').length;
+    return {
+      selected: selectedList,
+      poolSize: pool.length,
+      priorityCount: actualPriority,
+      explorationCount: selectedList.length - actualPriority,
+    };
   }
 
   /**
    * Safe execution of predict_recommendations.py via child_process.spawn.
-   * Enforces 3000ms timeout, array-only arguments, and strict JSON validation.
    */
   private async invokePythonCLI(params: {
     productId?: string;
@@ -156,11 +611,7 @@ export class RecommendationsService {
     }
 
     return new Promise<PythonCLIResult | null>((resolve) => {
-      const args = [
-        scriptPath,
-        '--top-n',
-        String(params.limit),
-      ];
+      const args = [scriptPath, '--top-n', String(params.limit)];
 
       if (params.productId) {
         args.push('--product-id', params.productId);
@@ -169,11 +620,7 @@ export class RecommendationsService {
         args.push('--user-id', params.userKey);
       }
 
-      // Server-side authorization for bootstrap model:
-      // Controlled strictly via server configuration, never client query parameter.
-      const allowBootstrap =
-        process.env.ENABLE_ML_BOOTSTRAP !== 'false';
-
+      const allowBootstrap = process.env.ENABLE_ML_BOOTSTRAP !== 'false';
       if (allowBootstrap) {
         args.push('--allow-bootstrap');
       }
@@ -232,9 +679,6 @@ export class RecommendationsService {
     });
   }
 
-  /**
-   * Resolves the best available Python binary path across environments.
-   */
   private resolvePythonExecutable(): string | null {
     if (process.env.PYTHON_PATH && fs.existsSync(process.env.PYTHON_PATH)) {
       return process.env.PYTHON_PATH;
@@ -257,15 +701,17 @@ export class RecommendationsService {
   }
 
   /**
-   * Native MongoDB Fallback 1: Category-based recommendation.
+   * Native MongoDB Fallback 1: Category-based recommendation with Top-30 pool,
+   * 6 Priority + 4 Exploration Diversity Re-ranking, and Exposure Rotation.
    */
   private async nativeFallbackByCategory(
     currentProductId: string,
     limit: number,
     lang: string,
+    exposureMap: Map<string, ExposureEntry> = new Map(),
+    purchasedSet: Set<string> = new Set(),
   ): Promise<RecommendationResponse> {
     try {
-      // Find current product to identify its primary category
       let currentProd: any = null;
       if (isValidObjectId(currentProductId)) {
         currentProd = await this.productModel.findById(currentProductId).lean();
@@ -275,41 +721,108 @@ export class RecommendationsService {
       }
 
       if (!currentProd) {
-        // Current product doesn't exist, fallback to popularity
-        return this.nativeFallbackByPopularity(undefined, limit, lang);
+        return this.nativeFallbackByPopularity(undefined, limit, lang, exposureMap, purchasedSet);
       }
 
       const currId = currentProd._id;
       const targetCategory =
         currentProd.categoryLevel1 ||
         (currentProd.vi && currentProd.vi.categoryLevel1) ||
-        (currentProd.primary_category) ||
+        currentProd.primary_category ||
         null;
 
       const categoryFilter = Array.isArray(targetCategory)
         ? { $in: targetCategory }
         : targetCategory;
 
-      const query: any = {
-        _id: { $ne: currId },
+      const excludedIds = [currId, ...Array.from(purchasedSet).filter(isValidObjectId).map((id) => new Types.ObjectId(id))];
+
+      const sameCatQuery: any = {
+        _id: { $nin: excludedIds },
         visibility: { $ne: false },
       };
 
       if (categoryFilter) {
-        query.$or = [
+        sameCatQuery.$or = [
           { categoryLevel1: categoryFilter },
           { 'vi.categoryLevel1': categoryFilter },
         ];
       }
 
-      const rawCandidates = await this.productModel
-        .find(query)
+      const sameCatDocs = await this.productModel
+        .find(sameCatQuery)
         .sort({ quantity: -1, dateAdded: -1, createdAt: -1 })
-        .limit(limit * 2)
+        .limit(RECOMMENDATION_CONFIG.CANDIDATE_POOL_SIZE)
         .lean();
 
-      const candidateIds = rawCandidates.map((c: any) => c._id.toString());
-      const hydrated = await this.hydrateProducts(candidateIds, lang, currId.toString());
+      // Supplement pool up to 30 with popular items from other categories so category cap (max 3/cat) and exploration work smoothly
+      const seenIds = new Set(sameCatDocs.map((d: any) => d._id.toString()));
+      seenIds.add(currId.toString());
+
+      let otherDocs: any[] = [];
+      if (sameCatDocs.length < RECOMMENDATION_CONFIG.CANDIDATE_POOL_SIZE) {
+        const otherExcluded = [
+          ...excludedIds,
+          ...sameCatDocs.map((d: any) => d._id),
+        ];
+        otherDocs = await this.productModel
+          .find({
+            _id: { $nin: otherExcluded },
+            visibility: { $ne: false },
+          })
+          .sort({ quantity: -1, rating: -1, dateAdded: -1, createdAt: -1 })
+          .limit(RECOMMENDATION_CONFIG.CANDIDATE_POOL_SIZE - sameCatDocs.length)
+          .lean();
+      }
+
+      const combinedDocs = [...sameCatDocs, ...otherDocs];
+      const hydratedPool = await this.hydrateProducts(
+        combinedDocs.map((d: any) => d._id.toString()),
+        lang,
+        currId.toString(),
+      );
+
+      // Filter out out-of-stock products
+      const inStockPool = hydratedPool.filter((p: any) => Number(p.quantity ?? 1) > 0 && p.stock !== 'out');
+      const activePool = inStockPool.length > 0 ? inStockPool : hydratedPool;
+
+      const sameCatIdSet = new Set(sameCatDocs.map((d: any) => d._id.toString()));
+      const rawCandidates = activePool.map((p: any, idx: number) => {
+        const pid = String(p._id || p.id);
+        const cat = p.categoryName || (Array.isArray(p.tags) && p.tags[0]) || 'Khác';
+        const isSameCat = sameCatIdSet.has(pid);
+        const baseScore = isSameCat
+          ? Math.max(0.55, 0.85 - idx * 0.015)
+          : Math.max(0.25, 0.60 - idx * 0.012);
+        return {
+          id: pid,
+          category: String(cat),
+          baseScore,
+          origRank: idx + 1,
+        };
+      });
+
+      const divResult = this.diversifyAndRotateNativeCandidates(rawCandidates, limit, exposureMap);
+      const productMap = new Map<string, any>();
+      for (const p of activePool) {
+        productMap.set(String((p as any)._id || (p as any).id), p);
+      }
+
+      const finalProducts: Product[] = [];
+      for (const meta of divResult.selected) {
+        const prod = productMap.get(meta.product_id);
+        if (prod) {
+          finalProducts.push({
+            ...prod,
+            score: meta.score,
+            _mlScore: meta._mlScore,
+            rank: meta.rank,
+            _mlRank: meta._mlRank,
+            displayRank: meta.display_rank,
+            selectionGroup: meta.selection_group,
+          });
+        }
+      }
 
       return {
         status: 'fallback',
@@ -317,66 +830,96 @@ export class RecommendationsService {
         modelUsed: 'None',
         isMachineLearning: false,
         dataSource: 'native_fallback',
-        currentProductId: currentProductId,
-        count: Math.min(hydrated.length, limit),
-        products: hydrated.slice(0, limit),
+        currentProductId,
+        candidatePoolSize: divResult.poolSize,
+        priorityCount: divResult.priorityCount,
+        explorationCount: divResult.explorationCount,
+        count: Math.min(finalProducts.length, limit),
+        products: finalProducts.slice(0, limit),
       };
     } catch (err: any) {
       this.logger.error(`Error in nativeFallbackByCategory: ${err.message}`);
-      return this.nativeFallbackByPopularity(currentProductId, limit, lang);
+      return this.nativeFallbackByPopularity(currentProductId, limit, lang, exposureMap, purchasedSet);
     }
   }
 
   /**
-   * Native MongoDB Fallback 2: Popularity-based recommendation with category diversity.
+   * Native MongoDB Fallback 2: Popularity-based recommendation with Top-30 pool,
+   * 6 Priority + 4 Exploration Diversity Re-ranking, and Exposure Rotation.
    */
   private async nativeFallbackByPopularity(
     excludeProductId: string | undefined,
     limit: number,
     lang: string,
+    exposureMap: Map<string, ExposureEntry> = new Map(),
+    purchasedSet: Set<string> = new Set(),
   ): Promise<RecommendationResponse> {
     try {
+      const excludedIds: Types.ObjectId[] = Array.from(purchasedSet)
+        .filter(isValidObjectId)
+        .map((id) => new Types.ObjectId(id));
+
+      if (excludeProductId && isValidObjectId(excludeProductId)) {
+        excludedIds.push(new Types.ObjectId(excludeProductId));
+      }
+
       const query: any = {
         visibility: { $ne: false },
       };
-
-      if (excludeProductId && isValidObjectId(excludeProductId)) {
-        query._id = { $ne: excludeProductId };
+      if (excludedIds.length > 0) {
+        query._id = { $nin: excludedIds };
       }
 
-      // Fetch active items prioritized by stock and recency
       const candidates = await this.productModel
         .find(query)
         .sort({ quantity: -1, rating: -1, dateAdded: -1, createdAt: -1 })
-        .limit(limit * 3)
+        .limit(RECOMMENDATION_CONFIG.CANDIDATE_POOL_SIZE * 2)
         .lean();
 
-      // Apply category diversity (max 3 items per category)
-      const selected: any[] = [];
-      const catCounts: Record<string, number> = {};
-      const remaining: any[] = [];
+      const hydratedPool = await this.hydrateProducts(
+        candidates.map((c: any) => c._id.toString()),
+        lang,
+        excludeProductId,
+      );
 
-      for (const item of candidates) {
-        const cat = Array.isArray(item.categoryLevel1)
-          ? item.categoryLevel1[0]
-          : item.categoryLevel1 || (item.vi && item.vi.categoryLevel1) || 'other';
+      const inStockPool = hydratedPool.filter((p: any) => Number(p.quantity ?? 1) > 0 && p.stock !== 'out');
+      const activePool = (inStockPool.length > 0 ? inStockPool : hydratedPool).slice(
+        0,
+        RECOMMENDATION_CONFIG.CANDIDATE_POOL_SIZE,
+      );
 
-        const count = catCounts[cat] || 0;
-        if (count < 3) {
-          selected.push(item);
-          catCounts[cat] = count + 1;
-          if (selected.length >= limit) break;
-        } else {
-          remaining.push(item);
+      const rawCandidates = activePool.map((p: any, idx: number) => {
+        const pid = String(p._id || p.id);
+        const cat = p.categoryName || (Array.isArray(p.tags) && p.tags[0]) || 'Khác';
+        return {
+          id: pid,
+          category: String(cat),
+          baseScore: Math.max(0.20, 0.75 - idx * 0.015),
+          origRank: idx + 1,
+        };
+      });
+
+      const divResult = this.diversifyAndRotateNativeCandidates(rawCandidates, limit, exposureMap);
+      const productMap = new Map<string, any>();
+      for (const p of activePool) {
+        productMap.set(String((p as any)._id || (p as any).id), p);
+      }
+
+      const finalProducts: Product[] = [];
+      for (const meta of divResult.selected) {
+        const prod = productMap.get(meta.product_id);
+        if (prod) {
+          finalProducts.push({
+            ...prod,
+            score: meta.score,
+            _mlScore: meta._mlScore,
+            rank: meta.rank,
+            _mlRank: meta._mlRank,
+            displayRank: meta.display_rank,
+            selectionGroup: meta.selection_group,
+          });
         }
       }
-
-      if (selected.length < limit && remaining.length > 0) {
-        selected.push(...remaining.slice(0, limit - selected.length));
-      }
-
-      const candidateIds = selected.map((c: any) => c._id.toString());
-      const hydrated = await this.hydrateProducts(candidateIds, lang, excludeProductId);
 
       return {
         status: 'fallback',
@@ -385,8 +928,11 @@ export class RecommendationsService {
         isMachineLearning: false,
         dataSource: 'native_fallback',
         currentProductId: excludeProductId,
-        count: Math.min(hydrated.length, limit),
-        products: hydrated.slice(0, limit),
+        candidatePoolSize: divResult.poolSize,
+        priorityCount: divResult.priorityCount,
+        explorationCount: divResult.explorationCount,
+        count: Math.min(finalProducts.length, limit),
+        products: finalProducts.slice(0, limit),
       };
     } catch (err: any) {
       this.logger.error(`Error in nativeFallbackByPopularity: ${err.message}`);
@@ -405,12 +951,13 @@ export class RecommendationsService {
 
   /**
    * Hydrates product IDs from MongoDB, enforcing visibility, in-stock priority, and variants.
-   * Preserves candidate ordering while ensuring strict data freshness.
+   * Preserves candidate ordering and attaches original ML/ranking metadata ('score', '_mlScore', 'rank', '_mlRank').
    */
   private async hydrateProducts(
     productIds: string[],
     lang: string,
     excludeId?: string,
+    metaMap?: Map<string, CandidateMeta>,
   ): Promise<Product[]> {
     if (!productIds || productIds.length === 0) {
       return [];
@@ -434,7 +981,6 @@ export class RecommendationsService {
       return [];
     }
 
-    // Fetch variants in bulk
     const foundIds = docs.map((d: any) => d._id);
     const variants = await this.productVariantModel
       .find({ productId: { $in: foundIds }, isActive: true })
@@ -447,7 +993,6 @@ export class RecommendationsService {
       variantMap.get(pid)!.push(v);
     }
 
-    // Map by ID for order preservation
     const docMap = new Map<string, any>();
     for (const d of docs) {
       docMap.set(d._id.toString(), d);
@@ -459,7 +1004,18 @@ export class RecommendationsService {
       const doc = docMap.get(id);
       if (doc) {
         const itemVariants = variantMap.get(id) || doc.variants || [];
-        const prepared = prepareProduct(doc, lang, false, itemVariants);
+        const prepared: any = prepareProduct(doc, lang, false, itemVariants);
+        const meta = metaMap?.get(id);
+        if (meta) {
+          if (meta.score !== undefined) prepared.score = meta.score;
+          if (meta._mlScore !== undefined) prepared._mlScore = meta._mlScore;
+          else if (meta.score !== undefined) prepared._mlScore = meta.score;
+          if (meta.rank !== undefined) prepared.rank = meta.rank;
+          if (meta._mlRank !== undefined) prepared._mlRank = meta._mlRank;
+          else if (meta.rank !== undefined) prepared._mlRank = meta.rank;
+          if (meta.display_rank !== undefined) prepared.displayRank = meta.display_rank;
+          if (meta.selection_group !== undefined) prepared.selectionGroup = meta.selection_group;
+        }
         preparedList.push(prepared);
       }
     }

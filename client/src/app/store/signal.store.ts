@@ -210,6 +210,16 @@ export class SignalStore {
       try {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('cheri_cart_selected_ids');
+        try {
+          const keysToRemove: string[] = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith('cheri_cart_selected_ids_')) {
+              keysToRemove.push(k);
+            }
+          }
+          keysToRemove.forEach((k) => localStorage.removeItem(k));
+        } catch (_) {}
         localStorage.removeItem('cheri_cart_payment_method');
         localStorage.removeItem('cheri_cart_shipping_method');
         localStorage.removeItem('cheri_wishlist');
@@ -393,24 +403,33 @@ export class SignalStore {
     });
   };
 
-  getCart = (payload) => {
+  getCart = (payload, callback?: (response: any) => void) => {
     this.apiService.getCart(payload).subscribe((response: any) => {
-      this.selectors.productState.update((state) => ({ ...state, cart: response }));
-      this.apiService.saveGuestCartLocal(response);
+      if (response && !response.error && Array.isArray(response.items)) {
+        this.selectors.productState.update((state) => ({ ...state, cart: response }));
+        this.apiService.saveGuestCartLocal(response);
+      }
+      if (callback) callback(response);
     });
   };
 
-  addToCart = (payload) => {
+  addToCart = (payload, callback?: (response: any) => void) => {
     this.apiService.addToCart(payload).subscribe((response: any) => {
-      this.selectors.productState.update((state) => ({ ...state, cart: response }));
-      this.apiService.saveGuestCartLocal(response);
+      if (response && !response.error && Array.isArray(response.items)) {
+        this.selectors.productState.update((state) => ({ ...state, cart: response }));
+        this.apiService.saveGuestCartLocal(response);
+      }
+      if (callback) callback(response);
     });
   };
 
-  removeFromCart = (payload) => {
+  removeFromCart = (payload, callback?: (response: any) => void) => {
     this.apiService.removeFromCart(payload).subscribe((response: any) => {
-      this.selectors.productState.update((state) => ({ ...state, cart: response }));
-      this.apiService.saveGuestCartLocal(response);
+      if (response && !response.error && Array.isArray(response.items)) {
+        this.selectors.productState.update((state) => ({ ...state, cart: response }));
+        this.apiService.saveGuestCartLocal(response);
+      }
+      if (callback) callback(response);
     });
   };
 

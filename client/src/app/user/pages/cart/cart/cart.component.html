@@ -612,7 +612,7 @@
          POPUP MODAL: CHỌN LẠI SẢN PHẨM (BIẾN THỂ)
     ═══════════════════════════════════════════════════ -->
     <app-cart-variant-popup [isOpen]="isVariantModalOpen" [cartItem]="editingCartItem" [currency]="currency$ | async"
-      [lang]="(lang$ | async) || 'vi'" (close)="closeVariantModal()" (updated)="onVariantModalUpdated()">
+      [lang]="(lang$ | async) || 'vi'" (close)="closeVariantModal()" (updated)="onVariantModalUpdated($event)">
     </app-cart-variant-popup>
 
     }

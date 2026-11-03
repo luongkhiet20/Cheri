@@ -187,18 +187,30 @@ def extract_bootstrap_orders(
 
 def extract_products(db: Optional[Database] = None) -> pd.DataFrame:
     """
-    Extracts product catalog from MongoDB 'products' collection.
-    Parses multi-lingual fields (vi/en), embedded variants, pricing, and inventory.
+    Extracts product catalog from MongoDB 'products' collection (and 'product_variants' if present).
+    Parses multi-lingual fields (vi/en), embedded/external variants, pricing, and inventory,
+    and delegates stock validation/coercion to validate_and_clean_products().
     """
+    from .validate_data import validate_and_clean_products
+
     if db is None:
         db = get_mongo_db()
+
+    col_names = db.list_collection_names()
+    external_variants_by_pid: Dict[str, List[Dict[str, Any]]] = {}
+    if "product_variants" in col_names:
+        for v_doc in db["product_variants"].find({"isActive": {"$ne": False}}):
+            pid_str = str(v_doc.get("productId") or "")
+            if pid_str:
+                external_variants_by_pid.setdefault(pid_str, []).append(v_doc)
 
     cursor = db["products"].find({})
     records: List[Dict[str, Any]] = []
 
     for doc in cursor:
         p_id = str(doc.get("_id"))
-        vi_data = doc.get("vi") or {}
+        vi_data = doc.get("vi") if isinstance(doc.get("vi"), dict) else {}
+        en_data = doc.get("en") if isinstance(doc.get("en"), dict) else {}
 
         # Product Title
         title = vi_data.get("title") or doc.get("title") or doc.get("titleUrl") or "Sản phẩm Chéri"
@@ -216,13 +228,18 @@ def extract_products(db: Optional[Database] = None) -> pd.DataFrame:
             or regular_price
         )
 
-        variants = doc.get("variants") or []
-        variant_count = len(variants) if isinstance(variants, list) else 0
+        ext_vars = external_variants_by_pid.get(p_id, [])
+        emb_vars = doc.get("variants") if isinstance(doc.get("variants"), list) else (
+            vi_data.get("variants") if isinstance(vi_data.get("variants"), list) else []
+        )
+        variants = ext_vars if len(ext_vars) > 0 else emb_vars
+        active_variants = [v for v in variants if isinstance(v, dict) and v.get("isActive") is not False]
+        variant_count = len(active_variants)
 
         # Classification / Category from variants or attributes
         primary_category = "Khác"
-        if variants and isinstance(variants, list) and len(variants) > 0:
-            first_v = variants[0]
+        if active_variants:
+            first_v = active_variants[0]
             if first_v.get("classification"):
                 primary_category = str(first_v["classification"]).strip()
             # If variant has discounted price, fallback to it
@@ -236,38 +253,46 @@ def extract_products(db: Optional[Database] = None) -> pd.DataFrame:
             if isinstance(tags, list) and len(tags) > 0:
                 primary_category = str(tags[0]).strip()
 
-        # Stock status
-        quantity = doc.get("quantity", 0)
-        stock_status = doc.get("stock", "inStock")
-        is_in_stock = (
-            stock_status not in ["out", "outOfStock", "unavailable"]
-            and (quantity is None or quantity > 0)
-        )
+        # Visibility matching NestJS prepareProduct (root.visibility !== false and vi.visibility !== false)
+        is_globally_visible = doc.get("visibility") is not False
+        is_vi_visible = vi_data.get("visibility") is not False
+        visibility = bool(is_globally_visible and is_vi_visible)
 
-        records.append({
+        raw_record: Dict[str, Any] = {
             "product_id": p_id,
             "sku": doc.get("sku") or vi_data.get("sku") or f"SKU-{p_id[:8]}",
             "title": title,
             "title_url": doc.get("titleUrl", ""),
             "primary_category": primary_category,
-            "regular_price": float(regular_price or 0),
-            "sale_price": float(sale_price or 0),
-            "visibility": bool(doc.get("visibility", True)),
-            "quantity": int(quantity or 0),
-            "is_in_stock": bool(is_in_stock),
+            "regular_price": regular_price,
+            "sale_price": sale_price,
+            "visibility": visibility,
             "variant_count": variant_count,
             "date_added": doc.get("dateAdded") or doc.get("createdAt"),
-        })
+            "vi": vi_data,
+            "en": en_data,
+            "raw_variants": active_variants,
+        }
+        if "quantity" in doc:
+            raw_record["raw_root_quantity"] = doc.get("quantity")
+        if "stock" in doc:
+            raw_record["raw_root_stock"] = doc.get("stock")
+        if "inventory" in doc:
+            raw_record["raw_root_inventory"] = doc.get("inventory")
+            raw_record["inventory"] = doc.get("inventory")
+        if "quantity" in vi_data:
+            raw_record["raw_vi_quantity"] = vi_data.get("quantity")
+        if "stock" in vi_data:
+            raw_record["raw_vi_stock"] = vi_data.get("stock")
+        if "quantity" in en_data:
+            raw_record["raw_en_quantity"] = en_data.get("quantity")
+        if "stock" in en_data:
+            raw_record["raw_en_stock"] = en_data.get("stock")
 
-    expected_cols = [
-        "product_id", "sku", "title", "title_url", "primary_category",
-        "regular_price", "sale_price", "visibility", "quantity",
-        "is_in_stock", "variant_count", "date_added"
-    ]
-    if not records:
-        return pd.DataFrame(columns=expected_cols)
+        records.append(raw_record)
 
-    return pd.DataFrame(records)
+    clean_df, _ = validate_and_clean_products(records)
+    return clean_df
 
 
 def extract_orders(db: Optional[Database] = None) -> pd.DataFrame:
@@ -311,9 +336,12 @@ def extract_orders(db: Optional[Database] = None) -> pd.DataFrame:
         if raw_user_id:
             user_key = anonymize_identifier(raw_user_id, prefix="usr")
         else:
-            # For guests, combine order phone/email hash to associate return visits safely
+            # For guests, prioritize sessionId (guestCartId) so it matches user_interactions,
+            # falling back to order phone/email hash if sessionId is absent
             contact = (
-                doc.get("customerPhone")
+                doc.get("sessionId")
+                or doc.get("guestCartId")
+                or doc.get("customerPhone")
                 or doc.get("customerEmail")
                 or (doc.get("shippingAddress") or {}).get("phone")
                 or (doc.get("shippingAddress") or {}).get("email")

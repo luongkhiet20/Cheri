@@ -67,13 +67,14 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
    * Tự động ghi nhận sự kiện PURCHASE vào user_interactions phục vụ huấn luyện Machine Learning.
    * Sử dụng cơ chế idempotent upsert để tránh ghi trùng khi cập nhật đơn hàng.
    */
-  private async recordPurchaseInteractions(order: any): Promise<void> {
+  private async recordPurchaseInteractions(order: any, fallbackSessionId?: string | null): Promise<void> {
     if (!this.interactionModel || !order || !Array.isArray(order.items)) return;
     try {
       const orderCode = order.orderId || String(order._id);
       const userId = order.userId
         ? (isValidObjectId(order.userId) ? new Types.ObjectId(String(order.userId)) : null)
         : null;
+      const resolvedSessionId = order.sessionId || fallbackSessionId || null;
 
       for (const it of order.items) {
         const rawPid = it.productId || it.id || it.item?._id;
@@ -88,7 +89,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
             {
               $setOnInsert: {
                 userId,
-                sessionId: order.sessionId || null,
+                sessionId: resolvedSessionId,
                 productId: productObjectId,
                 variantId: it.variantId || null,
                 orderId: orderCode,
@@ -1725,7 +1726,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
     }
 
     if (paymentCode === 'VNPAY') {
-      return this.orderWithVnpay(body, user, lang, clientIp);
+      return this.orderWithVnpay(body, user, lang, clientIp, session, guestCartId);
     }
 
     const isStripeCard = ['STRIPE', 'CARD', 'CREDIT_CARD'].includes(paymentCode);
@@ -1744,13 +1745,19 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
     user: User | null,
     lang = 'vi',
     clientIp = '127.0.0.1',
+    session?: any,
+    guestCartId?: string,
   ): Promise<{ error: string; result: Order; payment?: any }> {
     try {
       if (await this.isMaintenanceMode()) {
         return { error: 'Hệ thống đang bảo trì. Quý khách vui lòng quay lại sau.', result: null };
       }
 
-      const orderData = await this.buildOrderData(body, user, 'VNPAY');
+      const resolvedSessionId =
+        (guestCartId && guestCartId.trim()) ||
+        body?.sessionId?.trim() ||
+        (session?.id ? String(session.id) : null);
+      const orderData = await this.buildOrderData(body, user, 'VNPAY', resolvedSessionId);
       const newOrder = new this.orderModel(orderData);
       await newOrder.save();
 
@@ -2001,7 +2008,11 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       if (await this.isMaintenanceMode()) {
         return { error: 'Hệ thống đang bảo trì. Quý khách vui lòng quay lại sau.', result: null };
       }
-      const orderData = await this.buildOrderData(orderDto, user, 'COD');
+      const resolvedSessionId =
+        (guestCartId && guestCartId.trim()) ||
+        (orderDto as any)?.sessionId?.trim() ||
+        (session?.id ? String(session.id) : null);
+      const orderData = await this.buildOrderData(orderDto, user, 'COD', resolvedSessionId);
       const newOrder = new this.orderModel(orderData);
       await newOrder.save();
       const transaction = await this.paymentService.createPending({
@@ -2029,7 +2040,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       await newOrder.save();
 
       // Ghi nhận tương tác mua hàng cho mô hình ML
-      await this.recordPurchaseInteractions(newOrder);
+      await this.recordPurchaseInteractions(newOrder, resolvedSessionId);
 
       // Giảm tồn kho sản phẩm/biến thể
       await this.decreaseStock(newOrder.items);
@@ -2041,10 +2052,17 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
           const selectedSet = new Set(orderDto.selectedItemIds.map(id => String(id)));
           const freshUser: any = await this.userModel.findById(user._id).lean();
           const remainingItems = (freshUser?.cart?.items || []).filter((item: any) => {
-            const pId = String(item.productId || item.id || item.item?._id || item.item?.id || '');
-            const vId = item.variantId ? String(item.variantId) : null;
+            const rawPId = item.productId || item.item?._id || item.item?.id || item.id || '';
+            const pId = String(typeof rawPId === 'string' && rawPId.includes('_') ? rawPId.split('_')[0] : rawPId);
+            const vId = (item.variantId !== undefined && item.variantId !== null && item.variantId !== '')
+              ? String(item.variantId).trim()
+              : null;
             const compoundId = vId ? `${pId}_${vId}` : pId;
-            return !selectedSet.has(compoundId) && !selectedSet.has(pId) && (!item.id || !selectedSet.has(String(item.id)));
+            const itemId = item.id ? String(item.id) : '';
+            if (vId) {
+              return !selectedSet.has(compoundId) && (!itemId || !selectedSet.has(itemId));
+            }
+            return !selectedSet.has(compoundId) && !selectedSet.has(pId) && (!itemId || !selectedSet.has(itemId));
           });
           await this.userModel.findByIdAndUpdate(user._id, {
             $set: { 'cart.items': remainingItems },
@@ -2096,7 +2114,11 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       if (await this.isMaintenanceMode()) {
         return { error: 'Hệ thống đang bảo trì. Quý khách vui lòng quay lại sau.', result: null };
       }
-      const orderData = await this.buildOrderData(body, user, 'STRIPE');
+      const resolvedSessionId =
+        (guestCartId && guestCartId.trim()) ||
+        body?.sessionId?.trim() ||
+        (session?.id ? String(session.id) : null);
+      const orderData = await this.buildOrderData(body, user, 'STRIPE', resolvedSessionId);
       const newOrder = new this.orderModel(orderData);
       await newOrder.save();
       const transaction = await this.paymentService.createPending({
@@ -2142,7 +2164,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
         await newOrder.save();
 
         // Ghi nhận tương tác mua hàng cho mô hình ML
-        await this.recordPurchaseInteractions(newOrder);
+        await this.recordPurchaseInteractions(newOrder, resolvedSessionId);
 
         await this.decreaseStock(newOrder.items);
 
@@ -2151,10 +2173,17 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
             const selectedSet = new Set(body.selectedItemIds.map(id => String(id)));
             const freshUser: any = await this.userModel.findById(user._id).lean();
             const remainingItems = (freshUser?.cart?.items || []).filter((item: any) => {
-              const pId = String(item.productId || item.id || item.item?._id || item.item?.id || '');
-              const vId = item.variantId ? String(item.variantId) : null;
+              const rawPId = item.productId || item.item?._id || item.item?.id || item.id || '';
+              const pId = String(typeof rawPId === 'string' && rawPId.includes('_') ? rawPId.split('_')[0] : rawPId);
+              const vId = (item.variantId !== undefined && item.variantId !== null && item.variantId !== '')
+                ? String(item.variantId).trim()
+                : null;
               const compoundId = vId ? `${pId}_${vId}` : pId;
-              return !selectedSet.has(compoundId) && !selectedSet.has(pId) && (!item.id || !selectedSet.has(String(item.id)));
+              const itemId = item.id ? String(item.id) : '';
+              if (vId) {
+                return !selectedSet.has(compoundId) && (!itemId || !selectedSet.has(itemId));
+              }
+              return !selectedSet.has(compoundId) && !selectedSet.has(pId) && (!itemId || !selectedSet.has(itemId));
             });
             await this.userModel.findByIdAndUpdate(user._id, {
               $set: { 'cart.items': remainingItems },
@@ -2252,8 +2281,8 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
 
         const isSelected = selectedSet.size > 0 && (
           selectedSet.has(compoundId) ||
-          selectedSet.has(itemId) ||
-          selectedSet.has(pId)
+          (Boolean(itemId) && selectedSet.has(itemId)) ||
+          (!vId && selectedSet.has(pId))
         );
 
         const isPurchased = purchasedMatchList.some((p: any) => {
@@ -2297,7 +2326,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
   }
 
   // ─── Build order data từ cart của user ────────────────────────────────────
-  private async buildOrderData(orderDto: OrderDto, user: User | null, type: string) {
+  private async buildOrderData(orderDto: OrderDto, user: User | null, type: string, sessionId?: string | null) {
     if (orderDto.currency && String(orderDto.currency).toUpperCase() !== 'VND') {
       throw new BadRequestException('Bảng giá hiện tại chỉ hỗ trợ thanh toán bằng VND.');
     }
@@ -2313,13 +2342,23 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
     }
 
     // Lọc theo selectedItemIds nếu có
-    if (orderDto.selectedItemIds && Array.isArray(orderDto.selectedItemIds) && orderDto.selectedItemIds.length > 0) {
+    if (Array.isArray(orderDto.selectedItemIds)) {
+      if (orderDto.selectedItemIds.length === 0) {
+        throw new BadRequestException('Vui lòng chọn ít nhất 1 sản phẩm để đặt hàng');
+      }
       const selectedSet = new Set(orderDto.selectedItemIds.map(id => String(id)));
       cartItems = cartItems.filter(item => {
-        const pId = String(item.productId || item.id || item.item?._id || item.item?.id || '');
-        const vId = item.variantId ? String(item.variantId) : null;
+        const rawPId = item.productId || item.item?._id || item.item?.id || item.id || '';
+        const pId = String(typeof rawPId === 'string' && rawPId.includes('_') ? rawPId.split('_')[0] : rawPId);
+        const vId = (item.variantId !== undefined && item.variantId !== null && item.variantId !== '')
+          ? String(item.variantId).trim()
+          : null;
         const compoundId = vId ? `${pId}_${vId}` : pId;
-        return selectedSet.has(compoundId) || selectedSet.has(pId) || (item.id && selectedSet.has(String(item.id)));
+        const itemId = item.id ? String(item.id) : '';
+        if (vId) {
+          return selectedSet.has(compoundId) || (Boolean(itemId) && selectedSet.has(itemId));
+        }
+        return selectedSet.has(compoundId) || selectedSet.has(pId) || (Boolean(itemId) && selectedSet.has(itemId));
       });
     }
 
@@ -2489,6 +2528,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       orderId,
       _user: user ? new Types.ObjectId(user._id as string) : null,
       userId: user ? new Types.ObjectId(user._id as string) : null,
+      sessionId: sessionId || (orderDto as any)?.sessionId || null,
       customerEmail: orderDto.email,
       customerPhone: orderDto.customerPhone || normalizedShippingAddress.phone || '',
       status: OrderStatus.PENDING,

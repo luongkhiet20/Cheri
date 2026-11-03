@@ -216,6 +216,12 @@ def _snapshot_rows(
         last = up_last.get((u, p))
         days_since = 999.0 if last is None or pd.isna(last) else max(0.0, round((T - last).total_seconds() / 86400.0, 2))
         price = float(info.get("sale_price", 0) or info.get("regular_price", 0) or 0)
+        if "in_stock" in info and not pd.isna(info.get("in_stock")):
+            p_in_stock = 1 if int(float(info["in_stock"])) > 0 else 0
+        elif "is_in_stock" in info and not pd.isna(info.get("is_in_stock")):
+            p_in_stock = 1 if bool(info["is_in_stock"]) else 0
+        else:
+            p_in_stock = 1
         rows.append({
             "snapshot_id": T.strftime("%Y%m%d"),
             "user_key": u,
@@ -231,8 +237,7 @@ def _snapshot_rows(
             "user_previously_purchased": 1 if (u, p) in bought_before else 0,
             "product_price": price,
             "product_variant_count": int(info.get("variant_count", 0) or 0),
-            # Point-in-time product state is unknown -> neutral, documented policy (no leakage)
-            "product_in_stock": 1,
+            "product_in_stock": p_in_stock,
             "product_visibility": 1,
             "product_category": cat,
             "product_popularity_views": int(p_pop.get(p, 0)),

@@ -174,6 +174,7 @@ export interface Order extends Document {
   orderId: string;
   userId?: Types.ObjectId;
   _user?: Types.ObjectId;
+  sessionId?: string | null;
   customer?: CustomerSnapshot;
   customerEmail: string;
   customerPhone?: string;

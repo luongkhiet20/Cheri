@@ -76,9 +76,11 @@ EXCLUDED_ORDER_STATUSES = {"CANCELLED", "RETURNED", "DELIVERY_FAILED"}
 
 # MongoDB ObjectId Regex (24 hex characters)
 OBJECT_ID_REGEX = re.compile(r"^[0-9a-fA-F]{24}$")
+HASHED_KEY_HEX_REGEX = re.compile(r"^[0-9a-f]{16}$")
 
 # Anonymization Salt (stable per environment, never committed)
 ANONYMIZATION_SALT = os.getenv("ML_SALT", "cheri_ml_salt_2026_secured")
+PSEUDONYM_SALT = ANONYMIZATION_SALT
 
 
 # Bootstrap (synthetic) settings — synthetic data lives ONLY in this collection
@@ -92,6 +94,16 @@ SYNTHETIC_ORDER_PREFIX: str = "SYN-BS-ORD-"     # synthetic order ids (never wri
 # Snapshot labeling defaults
 SNAPSHOT_STEP_DAYS: int = int(os.getenv("SNAPSHOT_STEP_DAYS", "3"))
 CANDIDATE_LOOKBACK_DAYS: int = int(os.getenv("CANDIDATE_LOOKBACK_DAYS", "30"))
+
+# Hybrid Recommendation + Diversity Re-ranking + Exposure Rotation configuration
+RECOMMENDATION_DEFAULT_TOP_N: int = int(os.getenv("RECOMMENDATION_DEFAULT_TOP_N", "10"))
+RECOMMENDATION_CANDIDATE_POOL_SIZE: int = int(os.getenv("RECOMMENDATION_CANDIDATE_POOL_SIZE", "30"))
+RECOMMENDATION_PRIORITY_COUNT: int = int(os.getenv("RECOMMENDATION_PRIORITY_COUNT", "6"))
+RECOMMENDATION_EXPLORATION_COUNT: int = int(os.getenv("RECOMMENDATION_EXPLORATION_COUNT", "4"))
+RECOMMENDATION_PRIORITY_RATIO: float = float(os.getenv("RECOMMENDATION_PRIORITY_RATIO", "0.6"))
+RECOMMENDATION_MAX_PER_CATEGORY: int = int(os.getenv("RECOMMENDATION_MAX_PER_CATEGORY", "3"))
+IMPRESSION_COLLECTION_NAME: str = os.getenv("IMPRESSION_COLLECTION_NAME", "recommendation_impressions")
+IMPRESSION_LOOKBACK_DAYS: int = int(os.getenv("IMPRESSION_LOOKBACK_DAYS", "7"))
 
 def get_mongo_client(uri: Optional[str] = None, timeout_ms: int = 15000) -> MongoClient:
     """Creates an authenticated MongoClient with timeout and ping verification."""
@@ -218,3 +230,38 @@ def anonymize_identifier(raw_id: Any, prefix: str = "usr") -> str:
     payload = f"{clean_val}:{ANONYMIZATION_SALT}".encode("utf-8")
     hashed = hashlib.sha256(payload).hexdigest()[:16]
     return f"{prefix}_{hashed}"
+
+
+def pseudonymize_user_key(raw_user_id: Any) -> str:
+    """
+    Normalizes and pseudonymizes a user or guest identifier so that Online Inference
+    matches Offline Training ('interactions_clean.csv' / 'orders') 100%:
+    - If already a 16-hex hashed key ('usr_<16_hex>' or 'gst_<16_hex>'), returns it as-is.
+    - If 'usr_<raw_id>' (e.g., 'usr_<24_hex_objectId>' from NestJS), hashes <raw_id> with prefix 'usr'.
+    - If 'gst_<raw_session>' (e.g., 'gst_guest_...' from NestJS), hashes <raw_session> with prefix 'gst'.
+    - If 'guest_...' (raw guest cart ID), hashes with prefix 'gst'.
+    - Otherwise hashes raw_user_id with prefix 'usr'.
+    """
+    if raw_user_id is None:
+        return ""
+    raw_str = str(raw_user_id).strip()
+    if not raw_str:
+        return ""
+
+    lower_str = raw_str.lower()
+    if lower_str.startswith("usr_"):
+        suffix = lower_str[4:].strip()
+        if HASHED_KEY_HEX_REGEX.match(suffix):
+            return f"usr_{suffix}"
+        return anonymize_identifier(suffix, prefix="usr") if suffix else ""
+
+    if lower_str.startswith("gst_"):
+        suffix = lower_str[4:].strip()
+        if HASHED_KEY_HEX_REGEX.match(suffix):
+            return f"gst_{suffix}"
+        return anonymize_identifier(suffix, prefix="gst") if suffix else ""
+
+    if lower_str.startswith("guest_"):
+        return anonymize_identifier(raw_str, prefix="gst")
+
+    return anonymize_identifier(raw_str, prefix="usr")

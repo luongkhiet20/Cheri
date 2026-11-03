@@ -4,8 +4,11 @@ Constructs User-Product tabular features with strict temporal cutoff to prevent 
 """
 
 from typing import List, Dict, Any, Optional
+import logging
 import pandas as pd
 from datetime import datetime, timezone
+
+logger = logging.getLogger("cheri_ml.feature_engineering")
 
 
 def extract_user_product_features_at_cutoff(
@@ -23,10 +26,27 @@ def extract_user_product_features_at_cutoff(
     # 1. Product static and catalog properties
     p_info = products_lookup.get(product_id, {})
     p_cat = p_info.get("primary_category", "Khác")
-    p_price = float(p_info.get("sale_price", 0))
-    p_var_count = int(p_info.get("variant_count", 0))
-    p_in_stock = 1 if p_info.get("is_in_stock", True) else 0
-    p_visible = 1 if p_info.get("visibility", True) else 0
+    p_price_num = pd.to_numeric(p_info.get("sale_price", 0), errors="coerce")
+    p_price = 0.0 if pd.isna(p_price_num) else float(p_price_num)
+    p_var_num = pd.to_numeric(p_info.get("variant_count", 0), errors="coerce")
+    p_var_count = 0 if pd.isna(p_var_num) else int(p_var_num)
+
+    if "in_stock" in p_info and not pd.isna(p_info.get("in_stock")):
+        stock_num = pd.to_numeric(p_info.get("in_stock"), errors="coerce")
+        p_in_stock = 1 if (not pd.isna(stock_num) and float(stock_num) > 0) else 0
+    elif "is_in_stock" in p_info and not pd.isna(p_info.get("is_in_stock")):
+        p_in_stock = 1 if bool(p_info.get("is_in_stock")) else 0
+    else:
+        if p_info:
+            logger.warning(
+                f"[Feature Engineering] Product '{product_id}' missing 'in_stock'/'is_in_stock' field; defaulting to 0."
+            )
+            p_in_stock = 0
+        else:
+            p_in_stock = 0
+
+    raw_vis = p_info.get("visibility", True)
+    p_visible = 0 if pd.isna(raw_vis) else (1 if bool(raw_vis) else 0)
 
     # Normalize cutoff_time to UTC Timestamp
     cutoff_ts = pd.to_datetime(cutoff_time, utc=True)

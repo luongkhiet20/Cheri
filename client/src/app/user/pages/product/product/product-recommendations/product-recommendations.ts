@@ -38,7 +38,7 @@ export class ProductRecommendationsComponent implements OnInit, OnChanges, After
   @Input() lang: string = 'vi';
   @Input() currency: string = 'đ';
   @Input() cartIds: { [productId: string]: number } = {};
-  @Input() limit: number = 8;
+  @Input() limit: number = 10;
 
   @ViewChild('carouselTrack', { static: false }) carouselTrack?: ElementRef<HTMLElement>;
 
@@ -56,7 +56,13 @@ export class ProductRecommendationsComponent implements OnInit, OnChanges, After
   private recSubscription: Subscription | null = null;
   private currentRequestId: number = 0;
   private resizeObserver?: ResizeObserver;
+  private impressionObserver?: IntersectionObserver;
   private isBrowser: boolean;
+
+  // Deduplication set & batch buffer for viewport impressions (prevents duplicate logging on re-render/change detection)
+  private recordedImpressionKeys: Set<string> = new Set<string>();
+  private pendingImpressionIds: Set<string> = new Set<string>();
+  private impressionFlushTimer: any = null;
 
   // Hỗ trợ kéo vuốt chuột trên desktop mà không làm ảnh hưởng click sản phẩm
   private isMouseDown: boolean = false;
@@ -84,6 +90,7 @@ export class ProductRecommendationsComponent implements OnInit, OnChanges, After
 
   ngAfterViewInit(): void {
     this.setupResizeObserver();
+    this.setupImpressionObserver();
     this.updateScrollState();
   }
 
@@ -110,6 +117,14 @@ export class ProductRecommendationsComponent implements OnInit, OnChanges, After
       this.resizeObserver.disconnect();
       this.resizeObserver = undefined;
     }
+    if (this.impressionObserver) {
+      this.impressionObserver.disconnect();
+      this.impressionObserver = undefined;
+    }
+    if (this.impressionFlushTimer) {
+      clearTimeout(this.impressionFlushTimer);
+      this.impressionFlushTimer = null;
+    }
   }
 
   @HostListener('window:resize')
@@ -128,6 +143,78 @@ export class ProductRecommendationsComponent implements OnInit, OnChanges, After
       });
       this.resizeObserver.observe(this.carouselTrack.nativeElement);
     }
+  }
+
+  /**
+   * Observes recommendation product cards inside the carousel viewport.
+   * Records an impression only when at least 50% of a card is actually visible,
+   * and strictly deduplicates per (currentProductId, recommendedProductId) load cycle.
+   */
+  private setupImpressionObserver(): void {
+    if (!this.isBrowser || typeof IntersectionObserver === 'undefined') return;
+    if (this.impressionObserver) {
+      this.impressionObserver.disconnect();
+    }
+    const trackEl = this.carouselTrack?.nativeElement;
+    if (!trackEl) return;
+
+    this.impressionObserver = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+            const target = entry.target as HTMLElement;
+            const pid = target.getAttribute('data-product-id');
+            if (pid) {
+              this.queueImpression(pid);
+            }
+          }
+        }
+      },
+      {
+        root: null,
+        threshold: 0.5,
+      }
+    );
+
+    const cards = trackEl.querySelectorAll('.pcard[data-product-id]');
+    cards.forEach((card) => this.impressionObserver?.observe(card));
+  }
+
+  private queueImpression(recommendedProductId: string): void {
+    const cleanRecId = String(recommendedProductId || '').trim();
+    if (!cleanRecId) return;
+
+    const contextKey = `${this.currentRequestId}:${this.productId}:${cleanRecId}`;
+    if (this.recordedImpressionKeys.has(contextKey)) {
+      return;
+    }
+
+    this.recordedImpressionKeys.add(contextKey);
+    this.pendingImpressionIds.add(cleanRecId);
+
+    if (this.impressionFlushTimer) {
+      clearTimeout(this.impressionFlushTimer);
+    }
+
+    this.impressionFlushTimer = setTimeout(() => {
+      this.flushPendingImpressions();
+    }, 350);
+  }
+
+  private flushPendingImpressions(): void {
+    this.impressionFlushTimer = null;
+    if (this.pendingImpressionIds.size === 0) return;
+
+    const batchIds = Array.from(this.pendingImpressionIds);
+    this.pendingImpressionIds.clear();
+
+    this.apiService
+      .recordRecommendationImpressions({
+        productIds: batchIds,
+        currentProductId: this.productId || undefined,
+        strategy: this.recommendationStrategy || undefined,
+      })
+      .subscribe();
   }
 
   updateScrollState(): void {
@@ -210,6 +297,7 @@ export class ProductRecommendationsComponent implements OnInit, OnChanges, After
     }
 
     const requestId = ++this.currentRequestId;
+    this.pendingImpressionIds.clear();
 
     if (this.recSubscription) {
       this.recSubscription.unsubscribe();
@@ -219,8 +307,10 @@ export class ProductRecommendationsComponent implements OnInit, OnChanges, After
     this.hasError = false;
     this.cdr.markForCheck();
 
-    this.apiService
-      .getRecommendations(this.productId, this.limit || 8, this.lang || 'vi')
+    const targetLimit = this.limit || 10;
+
+    this.recSubscription = this.apiService
+      .getRecommendations(this.productId, targetLimit, this.lang || 'vi')
       .subscribe({
         next: (res: any) => {
           if (requestId !== this.currentRequestId) return;
@@ -242,7 +332,7 @@ export class ProductRecommendationsComponent implements OnInit, OnChanges, After
               : (Array.isArray(res?.data) ? res.data : []);
 
             const currentPid = String(this.productId).trim().toLowerCase();
-            this.recommendedProducts = rawList.filter((p: any) => {
+            const filteredList = rawList.filter((p: any) => {
               if (!p) return false;
               if (p.visibility === false) return false;
               const pId = p._id ? String(p._id).trim().toLowerCase() : '';
@@ -250,12 +340,17 @@ export class ProductRecommendationsComponent implements OnInit, OnChanges, After
               const pSlug = p.titleUrl ? String(p.titleUrl).trim().toLowerCase() : '';
               return pId !== currentPid && pAltId !== currentPid && pSlug !== currentPid;
             });
+
+            // Tiếp nhận trực tiếp thứ tự đã qua Diversity Re-ranking (6 Priority + 4 Exploration)
+            // và Exposure Rotation từ Backend mà không random toàn bộ danh sách một cách độc lập
+            this.recommendedProducts = filteredList.slice(0, targetLimit);
           }
           this.cdr.markForCheck();
 
-          // Cập nhật trạng thái cuộn của carousel sau khi sản phẩm render
+          // Cập nhật trạng thái cuộn và gắn IntersectionObserver ghi nhận impression thực tế
           setTimeout(() => {
             this.setupResizeObserver();
+            this.setupImpressionObserver();
             this.updateScrollState();
           }, 80);
         },
@@ -297,11 +392,22 @@ export class ProductRecommendationsComponent implements OnInit, OnChanges, After
       return;
     }
     this.store.addToCart('?id=' + id);
+    this.apiService.recordInteraction({
+      productId: String(id),
+      eventType: 'ADD_TO_CART',
+    }).subscribe();
     this.notify.success('✨Đã thêm sản phẩm vào giỏ hàng✨');
   }
 
   onOpenQuickView(product: any): void {
     if (this.hasDragged) return;
+    const validPid = product?._id || product?.id;
+    if (validPid) {
+      this.apiService.recordInteraction({
+        productId: String(validPid),
+        eventType: 'CLICK',
+      }).subscribe();
+    }
     const slug = product?.titleUrl || product?._id || product?.id;
     if (slug) {
       if (typeof document !== 'undefined') {

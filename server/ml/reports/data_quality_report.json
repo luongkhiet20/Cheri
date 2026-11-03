@@ -1,42 +1,45 @@
 {
-  "generated_at": "2026-10-23T01:08:34.382715+00:00",
+  "generated_at": "2026-11-03T16:01:55.808055+00:00",
   "readiness_summary": {
     "has_interactions": true,
     "has_products": true,
     "has_orders": true,
-    "is_training_ready": false,
+    "is_training_ready": true,
     "recommended_strategy": "PURCHASE_PREDICTION"
   },
   "interaction_metrics": {
-    "total_raw_records": 383,
-    "real_records_count": 273,
+    "total_raw_records": 559,
+    "real_records_count": 449,
     "synthetic_records_count": 110,
     "included_synthetic_in_clean": false,
-    "total_views": 263,
-    "valid_clean_records": 265,
+    "total_views": 428,
+    "valid_clean_records": 437,
     "null_timestamp_count": 0,
     "invalid_identifier_count": 0,
     "compound_id_count": 0,
-    "linked_product_count": 270,
+    "linked_product_count": 446,
     "unlinked_product_count": 3,
-    "technical_duplicate_count": 8,
-    "distinct_registered_users": 3,
+    "technical_duplicate_count": 12,
+    "distinct_registered_users": 6,
     "distinct_guest_sessions": 0,
     "time_range_start": "2026-10-15T09:42:12.914000+00:00",
-    "time_range_end": "2026-10-22T17:19:11.254000+00:00"
+    "time_range_end": "2026-11-03T16:00:19.121000+00:00"
   },
   "product_metrics": {
-    "total_products": 98,
-    "products_with_valid_price": 98,
-    "products_with_category": 98,
-    "visible_products": 95,
-    "in_stock_products": 4
+    "total_products": 99,
+    "products_with_valid_price": 99,
+    "products_with_category": 99,
+    "visible_products": 97,
+    "in_stock_products": 96,
+    "out_of_stock_products": 3,
+    "missing_stock_field_count": 0,
+    "stock_coercion_error_count": 0
   },
   "order_metrics": {
-    "total_orders": 50,
-    "successful_conversion_orders": 25,
-    "total_order_lines": 85,
-    "linked_order_lines": 81,
+    "total_orders": 68,
+    "successful_conversion_orders": 35,
+    "total_order_lines": 106,
+    "linked_order_lines": 102,
     "unlinked_order_lines": 4
   },
   "purchase_dataset": {
@@ -48,33 +51,48 @@
     "window_days": 14,
     "snapshot_step_days": 3,
     "candidate_lookback_days": 30,
-    "observation_end": "2026-10-23T01:08:34.382715+00:00",
+    "observation_end": "2026-11-03T16:01:55.808055+00:00",
     "events_time_range": [
       "2026-10-15T09:42:12.914000+00:00",
-      "2026-10-22T17:19:11.254000+00:00"
+      "2026-11-03T16:00:19.121000+00:00"
     ],
-    "candidate_snapshots_total": 3,
-    "snapshots_labeled": 0,
-    "snapshots_excluded_insufficient_followup": 3,
-    "rows_excluded_insufficient_followup": 134,
+    "candidate_snapshots_total": 7,
+    "snapshots_labeled": 2,
+    "snapshots_excluded_insufficient_followup": 5,
+    "rows_excluded_insufficient_followup": 326,
     "earliest_snapshot_with_full_followup_possible": "2026-10-30T00:00:00+00:00",
     "split_strategy": "chronological_by_snapshot_with_embargo",
     "embargo_days": 14,
     "rows_purged_by_embargo": 0,
     "snapshots_purged_by_embargo": 0,
-    "split_counts": {},
-    "split_time_ranges": {},
-    "split_mode": "none",
-    "rows": 0,
-    "snapshots_in_dataset": 0,
+    "split_counts": {
+      "train": 86
+    },
+    "split_time_ranges": {
+      "train": [
+        "2026-10-16T00:00:00+00:00",
+        "2026-10-19T00:00:00+00:00"
+      ]
+    },
+    "split_mode": "all_train_insufficient_span_for_embargo",
+    "rows": 86,
+    "snapshots_in_dataset": 2,
     "snapshot_time_range": [
-      null,
-      null
+      "2026-10-16T00:00:00+00:00",
+      "2026-10-19T00:00:00+00:00"
     ],
-    "distinct_users": 0,
-    "distinct_products": 0,
-    "label_distribution": {},
-    "positive_rate": null,
-    "split_distribution": {}
+    "distinct_users": 3,
+    "distinct_products": 29,
+    "label_distribution": {
+      "0": 79,
+      "1": 7
+    },
+    "positive_rate": 0.0814,
+    "split_distribution": {
+      "train": {
+        "0": 79,
+        "1": 7
+      }
+    }
   }
 }

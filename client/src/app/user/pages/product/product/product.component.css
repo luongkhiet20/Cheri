@@ -642,52 +642,136 @@
   user-select: none;
 }
 
-/* 15. Action Buttons (Thêm vào giỏ hàng & Mua ngay) */
+/* 15. Action Buttons (Thêm vào giỏ hàng & Mua ngay) - Luxury Fashion Minimalist */
 .cheri-action-buttons {
   display: flex;
-  gap: 12px;
-  margin-top: 10px;
+  align-items: stretch;
+  gap: 14px;
+  margin-top: 12px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .cheri-action-btn {
-  flex: 1;
-  height: 48px;
-  border-radius: 6px;
-  font-size: 13.5px;
-  font-weight: 600;
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 50px;
+  padding: 0 20px;
+  border-radius: 4px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  white-space: nowrap;
   cursor: pointer;
-  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 10px;
   outline: none;
+  box-sizing: border-box;
+  transition:
+    background-color 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.18s ease;
 }
 
+.cheri-action-btn .cheri-btn-label {
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cheri-action-btn .cheri-btn-ornament {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+}
+
+.cheri-action-btn .cheri-btn-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.28s ease;
+}
+
+.cheri-action-btn .cheri-btn-svg .svg-stroke-main,
+.cheri-action-btn .cheri-btn-svg .svg-stroke-accent,
+.cheri-action-btn .cheri-btn-svg .svg-dot-accent {
+  transition: stroke 0.28s ease, fill 0.28s ease, opacity 0.28s ease;
+}
+
+/* Secondary Button: THÊM VÀO GIỎ HÀNG */
 .cheri-action-btn.secondary-btn {
-  background: #FFFFFF;
-  border: 1.5px solid #74070E;
+  background-color: #FFFFFF;
+  border: 1px solid #74070E;
   color: #74070E;
+  box-shadow: inset 0 0 0 1px rgba(168, 135, 85, 0.16);
 }
 
 .cheri-action-btn.secondary-btn:hover:not([disabled]) {
-  background: #FDF2F3;
+  background-color: #74070E;
+  border-color: #74070E;
+  color: #FFFFFF;
+  box-shadow:
+    inset 0 0 0 1px rgba(168, 135, 85, 0.45),
+    0 6px 18px rgba(116, 7, 14, 0.14);
 }
 
+.cheri-action-btn.secondary-btn:hover:not([disabled]) .svg-atelier-emblem {
+  transform: translateY(-1px) scale(1.05);
+}
+
+/* Primary Button: MUA NGAY */
 .cheri-action-btn.primary-btn {
-  background: #74070E;
-  border: 1.5px solid #74070E;
+  background-color: #74070E;
+  border: 1px solid #74070E;
   color: #FFFFFF;
+  box-shadow: inset 0 0 0 1px rgba(168, 135, 85, 0.32);
 }
 
 .cheri-action-btn.primary-btn:hover:not([disabled]) {
-  background: #58050A;
-  border-color: #58050A;
+  background-color: #5C050B;
+  border-color: #A88755;
+  color: #FFFFFF;
+  box-shadow:
+    inset 0 0 0 1px rgba(168, 135, 85, 0.55),
+    0 6px 18px rgba(116, 7, 14, 0.2);
 }
 
+.cheri-action-btn.primary-btn:hover:not([disabled]) .svg-couture-crest {
+  transform: translateX(2.5px);
+}
+
+/* Active & Focus States */
+.cheri-action-btn:active:not([disabled]) {
+  transform: translateY(1px);
+  box-shadow: inset 0 0 0 1px rgba(168, 135, 85, 0.35);
+}
+
+.cheri-action-btn:focus-visible {
+  outline: 1.5px solid #A88755;
+  outline-offset: 2px;
+}
+
+/* Disabled / Out-of-Stock State */
 .cheri-action-btn[disabled] {
-  opacity: 0.45;
+  background-color: #F5F2F2;
+  border-color: #D8D0D0;
+  color: #2B2B2B;
+  opacity: 0.48;
+  box-shadow: none;
   cursor: not-allowed;
   pointer-events: none;
 }
@@ -747,29 +831,142 @@
   font-size: 12px;
 }
 
-/* Full Description */
+/* Full Description - Luxury Minimalism Accordion Style */
 .cheri-full-desc-panel {
-  padding: 12px 14px;
-  border-radius: 6px;
-  background: #FAF9F8;
-  border-left: 1px solid #74070E;
-  margin-top: 4px;
+  width: 100%;
+  padding: 0;
+  margin-top: 10px;
+  background: #FFFFFF;
+  border: none;
+  border-top: 1px solid #D9D9D9;
+  border-bottom: 1px solid #D9D9D9;
+  border-radius: 0;
+  box-shadow: none;
+  box-sizing: border-box;
 }
 
 .cheri-full-desc-panel .full-desc-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 16px 0;
+  margin: 0;
   font-family: var(--font-sans);
-  font-size: 13.5px;
+  font-size: 15px;
   font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.2px;
   color: #74070E;
-  margin-bottom: 6px;
+  text-align: left;
+  background: #FFFFFF;
+  border: none;
+  box-shadow: none;
+  box-sizing: border-box;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.2s ease;
+}
+
+.cheri-full-desc-panel .full-desc-title:hover {
+  color: #74070E;
+}
+
+.cheri-full-desc-panel .full-desc-title:focus-visible {
+  outline: 1.5px solid #A88755;
+  outline-offset: 2px;
+}
+
+.cheri-full-desc-panel .full-desc-title::after {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-left: auto;
+  margin-right: 2px;
+  border-right: 1.5px solid #74070E;
+  border-bottom: 1.5px solid #74070E;
+  transform: translateY(2px) rotate(-135deg);
+  transform-origin: center;
+  flex-shrink: 0;
+  pointer-events: none;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s ease;
+}
+
+/* Trạng thái đóng (collapsed) */
+.cheri-full-desc-panel.is-collapsed .full-desc-title::after,
+.cheri-full-desc-panel.collapsed .full-desc-title::after,
+.cheri-full-desc-panel[aria-expanded="false"] .full-desc-title::after,
+.cheri-full-desc-panel .full-desc-title[aria-expanded="false"]::after,
+.cheri-full-desc-panel:not(:has(.full-desc-list)) .full-desc-title::after {
+  transform: translateY(-2px) rotate(45deg);
+}
+
+.cheri-full-desc-panel.is-collapsed .full-desc-list,
+.cheri-full-desc-panel.collapsed .full-desc-list,
+.cheri-full-desc-panel[aria-expanded="false"] .full-desc-list {
+  display: none;
+  height: 0;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+/* Nội dung khi mở rộng */
+@keyframes cheriDescFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .cheri-full-desc-panel .full-desc-list {
   margin: 0;
-  padding-left: 18px;
+  padding: 2px 0 18px 18px;
+  font-family: var(--font-sans);
   font-size: 13px;
-  color: #4B5563;
-  line-height: 1.6;
+  font-weight: 400;
+  color: #3D3D3D;
+  line-height: 1.7;
+  letter-spacing: 0.01em;
+  background: #FFFFFF;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  list-style-type: disc;
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  animation: cheriDescFadeIn 0.22s ease-out;
+}
+
+.cheri-full-desc-panel .full-desc-list li {
+  margin-bottom: 6px;
+  padding-left: 2px;
+  font-weight: 400;
+  color: #3D3D3D;
+  line-height: 1.7;
+}
+
+.cheri-full-desc-panel .full-desc-list li:last-child {
+  margin-bottom: 0;
+}
+
+.cheri-full-desc-panel .full-desc-list li::marker {
+  color: #4A4A4A;
+  font-size: 0.8em;
+}
+
+.cheri-full-desc-panel .full-desc-list strong,
+.cheri-full-desc-panel .full-desc-list b {
+  font-weight: 600;
+  color: #2B2B2B;
 }
 
 /* 18. Tags Container */
@@ -819,7 +1016,8 @@
     padding: 24px 20px 48px 20px;
   }
 
-  .cheri-product-heading {
+  .cheri-product-heading,
+  .cheri-full-desc-panel .full-desc-title {
     font-size: 20px;
   }
 }
@@ -858,6 +1056,22 @@
   }
 
   .cheri-action-btn {
+    flex: none;
     width: 100%;
+    height: 48px;
+    padding: 0 16px;
+    font-size: 12.5px;
+    letter-spacing: 0.12em;
+  }
+
+  .cheri-full-desc-panel .full-desc-title {
+    font-size: 18px;
+    padding: 14px 0;
+  }
+
+  .cheri-full-desc-panel .full-desc-list {
+    font-size: 14px;
+    line-height: 1.7;
+    padding: 2px 0 16px 16px;
   }
 }

@@ -17,6 +17,7 @@ Usage (from server/ml):
 
 import sys
 import json
+import shutil
 import argparse
 from pathlib import Path
 from datetime import datetime, timezone
@@ -33,7 +34,13 @@ import pandas as pd
 import joblib
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
-    accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, average_precision_score,
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_auc_score,
+    average_precision_score,
+    brier_score_loss,
 )
 
 CURRENT_DIR = Path(__file__).resolve().parent
@@ -92,6 +99,7 @@ def _evaluate_split_with_baselines(model, split_df: pd.DataFrame, target_col: st
 
     preds = model.predict(X)
     probs = model.predict_proba(X)[:, 1] if len(model.classes_) > 1 else np.zeros(samples)
+    clipped_probs = np.clip(np.asarray(probs, dtype=float), 0.0, 1.0)
     has_two_classes = y.nunique() > 1
 
     clf_metrics = {
@@ -105,6 +113,7 @@ def _evaluate_split_with_baselines(model, split_df: pd.DataFrame, target_col: st
         "f1_score": round(float(f1_score(y, preds, zero_division=0)), 4),
         "roc_auc": round(float(roc_auc_score(y, probs)), 4) if has_two_classes else "N/A (1 class)",
         "pr_auc": round(float(average_precision_score(y, probs)), 4) if has_two_classes else "N/A (1 class)",
+        "brier_score": round(float(brier_score_loss(y, clipped_probs)), 4),
     }
 
     # Recommender ranking metrics (Precision@K and Recall@K grouped by snapshot and user)
@@ -142,11 +151,13 @@ def _evaluate_split_with_baselines(model, split_df: pd.DataFrame, target_col: st
     }
 
     # Baseline 2: Prior Base Rate Predictor (predicting class prior)
+    prior_probs = np.full(samples, base_rate, dtype=float)
     prior_baseline = {
         "baseline_name": "PriorPositiveRate",
         "description": "Predict constant prior probability equal to positive rate",
         "roc_auc": 0.5000,
         "pr_auc": base_rate,
+        "brier_score": round(float(brier_score_loss(y, prior_probs)), 4),
     }
 
     # Statistical significance / sample size assessment
@@ -169,7 +180,6 @@ def _evaluate_split_with_baselines(model, split_df: pd.DataFrame, target_col: st
         },
         "reliability_assessment": reliability_assessment,
     }
-
 
 
 def train_and_evaluate_bootstrap_model(generator: Optional[str] = BOOTSTRAP_GENERATOR_NAME, batch_id: Optional[str] = None):
@@ -225,9 +235,12 @@ def train_and_evaluate_bootstrap_model(generator: Optional[str] = BOOTSTRAP_GENE
 
     print("\n  Top features: " + ", ".join(f"{n}={v:.3f}" for n, v in importances[:5]))
 
-
     model_filename = "randomforest.bootstrap.joblib"
-    joblib.dump(model, OUTPUT_MODEL_DIR / model_filename)
+    model_path = OUTPUT_MODEL_DIR / model_filename
+    if model_path.exists():
+        shutil.copy2(model_path, OUTPUT_MODEL_DIR / f"{model_filename}.bak")
+
+    joblib.dump(model, model_path)
     metadata = {
         "model_name": "RandomForestBootstrap",
         "model_file": model_filename,
@@ -251,7 +264,10 @@ def train_and_evaluate_bootstrap_model(generator: Optional[str] = BOOTSTRAP_GENE
         "metrics": metrics,
     }
     for name in ("model_metadata.bootstrap.json", "model_metadata.json"):
-        with open(OUTPUT_MODEL_DIR / name, "w", encoding="utf-8") as f:
+        meta_file = OUTPUT_MODEL_DIR / name
+        if meta_file.exists():
+            shutil.copy2(meta_file, OUTPUT_MODEL_DIR / f"{name}.bak")
+        with open(meta_file, "w", encoding="utf-8") as f:
             json.dump(metadata, f, indent=2, ensure_ascii=False, default=str)
 
     df.to_csv(OUTPUT_DATA_DIR / "user_product_bootstrap_dataset.csv", index=False, encoding="utf-8")
@@ -260,7 +276,7 @@ def train_and_evaluate_bootstrap_model(generator: Optional[str] = BOOTSTRAP_GENE
     with open(OUTPUT_REPORT_DIR / "bootstrap_dataset_report.json", "w", encoding="utf-8") as f:
         json.dump({"purchase": summary, "interest": interest_summary, "disclaimer": SYNTHETIC_DISCLAIMER},
                   f, indent=2, ensure_ascii=False, default=str)
-    print(f"\nSaved model + metadata to {OUTPUT_MODEL_DIR} (trained_on_synthetic=true, is_production_ready=false)")
+    print(f"\nSaved model + metadata to {OUTPUT_MODEL_DIR} (trained_on_synthetic=true, is_production_ready=false, backed up previous artifacts to .bak)")
     return model, metadata
 
 

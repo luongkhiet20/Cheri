@@ -1,10 +1,10 @@
 """
-Unit Tests for Model Training & Eligibility Module (Phase B1).
+Unit Tests for Model Training & Eligibility Module (Phase B1 & Priority 3 Remediation).
 Verifies:
   - Strict eligibility gates (sample size, class diversity)
-  - Safe evaluation metrics (marking ROC-AUC as N/A when classes < 2)
+  - Safe evaluation metrics (marking ROC-AUC as N/A when classes < 2, plus Brier Score)
   - Feature contract consistency
-  - Rejection of ungrounded production training
+  - Automatic best model selection (PR-AUC / ROC-AUC) and .bak artifact backup
 """
 
 import sys
@@ -26,6 +26,8 @@ from src.train_model import (
     check_training_eligibility,
     prepare_feature_matrices,
     evaluate_model_safely,
+    select_best_model,
+    save_model_artifacts,
 )
 
 
@@ -92,8 +94,9 @@ class TestModelTrainingPhaseB1(unittest.TestCase):
         self.assertIsInstance(metrics["roc_auc"], str)
         self.assertIn("N/A", metrics["roc_auc"])
         self.assertIn("N/A", metrics["pr_auc"])
+        self.assertIn("brier_score", metrics)
 
-    # 7. Đánh giá đầy đủ: Khi test set có cả 2 lớp nhãn -> ROC-AUC tính toán hợp lệ
+    # 7. Đánh giá đầy đủ: Khi test set có cả 2 lớp nhãn -> ROC-AUC & Brier Score tính toán hợp lệ
     def test_07_safe_evaluation_multi_class_test_set(self):
         from sklearn.ensemble import RandomForestClassifier
 
@@ -106,13 +109,15 @@ class TestModelTrainingPhaseB1(unittest.TestCase):
             self.assertIsInstance(metrics["roc_auc"], float)
             self.assertGreaterEqual(metrics["roc_auc"], 0.0)
             self.assertLessEqual(metrics["roc_auc"], 1.0)
+            self.assertIsInstance(metrics["brier_score"], float)
+            self.assertGreaterEqual(metrics["brier_score"], 0.0)
+            self.assertLessEqual(metrics["brier_score"], 1.0)
 
-    # 8. Kiểm tra lưu model artifact và model_metadata.json
-    def test_08_save_model_artifacts(self):
+    # 8. Kiểm tra lưu model artifact, model_metadata.json và sao lưu tự động (.bak)
+    def test_08_save_model_artifacts_and_backup(self):
         import tempfile
         import json
         from sklearn.ensemble import RandomForestClassifier
-        from src.train_model import save_model_artifacts
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_path = Path(tmp_dir)
@@ -121,28 +126,58 @@ class TestModelTrainingPhaseB1(unittest.TestCase):
             y = pd.Series([0, 1] * 5)
             rf.fit(X, y)
 
-            metrics = {"accuracy": 1.0, "roc_auc": 1.0, "pr_auc": 1.0}
-            result = save_model_artifacts(
+            metrics_v1 = {"accuracy": 0.8, "roc_auc": 0.75, "pr_auc": 0.6, "brier_score": 0.15}
+            result_v1 = save_model_artifacts(
                 model=rf,
-                model_name="TestRF",
-                metrics=metrics,
+                model_name="TestRF_v1",
+                metrics=metrics_v1,
                 feature_names=FEATURE_COLUMNS,
                 is_production_ready=False,
                 trained_on_synthetic=True,
                 output_dir=tmp_path,
             )
 
-            self.assertTrue(result["model_path"].exists())
-            self.assertTrue(result["metadata_path"].exists())
+            self.assertTrue(result_v1["model_path"].exists())
+            self.assertTrue(result_v1["metadata_path"].exists())
+            self.assertNotIn("metadata_backup_path", result_v1)
 
-            with open(result["metadata_path"], "r", encoding="utf-8") as f:
-                meta = json.load(f)
+            # Save second time to verify .bak creation
+            metrics_v2 = {"accuracy": 0.9, "roc_auc": 0.85, "pr_auc": 0.75, "brier_score": 0.10}
+            result_v2 = save_model_artifacts(
+                model=rf,
+                model_name="TestRF_v1",
+                metrics=metrics_v2,
+                feature_names=FEATURE_COLUMNS,
+                is_production_ready=True,
+                trained_on_synthetic=False,
+                output_dir=tmp_path,
+            )
 
-            self.assertEqual(meta["model_name"], "TestRF")
-            self.assertFalse(meta["is_production_ready"])
-            self.assertTrue(meta["trained_on_synthetic"])
-            self.assertEqual(meta["feature_columns"], FEATURE_COLUMNS)
-            self.assertEqual(meta["metrics"]["accuracy"], 1.0)
+            self.assertIn("model_backup_path", result_v2)
+            self.assertTrue(result_v2["model_backup_path"].exists())
+            self.assertTrue(result_v2["metadata_backup_path"].exists())
+
+            with open(result_v2["metadata_backup_path"], "r", encoding="utf-8") as f:
+                bak_meta = json.load(f)
+            self.assertEqual(bak_meta["metrics"]["accuracy"], 0.8)
+
+            with open(result_v2["metadata_path"], "r", encoding="utf-8") as f:
+                new_meta = json.load(f)
+            self.assertEqual(new_meta["metrics"]["accuracy"], 0.9)
+
+    # 9. Kiểm tra tự động chọn model tốt nhất theo PR-AUC / ROC-AUC / Brier Score
+    def test_09_select_best_model(self):
+        rf_metrics = {"pr_auc": 0.42, "roc_auc": 0.78, "f1_score": 0.50, "brier_score": 0.12}
+        xgb_metrics = {"pr_auc": 0.51, "roc_auc": 0.81, "f1_score": 0.55, "brier_score": 0.09}
+        best_model, best_name, best_metrics = select_best_model(
+            rf_model="rf_obj",
+            rf_metrics=rf_metrics,
+            xgb_model="xgb_obj",
+            xgb_metrics=xgb_metrics,
+        )
+        self.assertEqual(best_name, "XGBoost")
+        self.assertEqual(best_model, "xgb_obj")
+        self.assertEqual(best_metrics["pr_auc"], 0.51)
 
 
 if __name__ == "__main__":

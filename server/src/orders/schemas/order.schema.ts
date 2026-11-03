@@ -244,6 +244,7 @@ const OrderSchema = new Schema(
     orderId: { type: String, required: true, unique: true, index: true },
     userId: { type: Schema.Types.ObjectId, ref: 'User', index: true, default: null },
     _user: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+    sessionId: { type: String, default: null, index: true },
     customer: {
       name: { type: String, default: '' },
       email: { type: String, default: '' },

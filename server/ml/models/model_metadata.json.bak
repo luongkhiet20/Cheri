@@ -1,0 +1,205 @@
+{
+  "model_name": "RandomForestBootstrap",
+  "model_file": "randomforest.bootstrap.joblib",
+  "version": "rf_bootstrap_v2_20261103_153632",
+  "created_at": "2026-11-03T15:36:32.672327+00:00",
+  "is_production_ready": false,
+  "is_bootstrap": true,
+  "trained_on_synthetic": true,
+  "dataset_source": "ml_bootstrap_interactions",
+  "generator": "cheri-bootstrap-seeder",
+  "generator_version": "2.0.0",
+  "batch_ids": [
+    "05a987f79f7b"
+  ],
+  "target": "purchase_within_14_days",
+  "label_definition": "label=1 nếu tồn tại đơn hàng THÀNH CÔNG của cùng user và cùng product trong [T, T+14 ngày]; label=0 nếu đã quan sát đủ 14 ngày sau T mà không có đơn như vậy. Snapshot chưa đủ 14 ngày theo dõi bị loại, không gán 0.",
+  "window_days": 14,
+  "split_strategy": "chronological_by_snapshot_with_embargo",
+  "description": "Trained on SYNTHETIC bootstrap timelines anchored to real product catalog. Not production evidence.",
+  "feature_columns": [
+    "user_total_views",
+    "user_distinct_products_viewed",
+    "user_product_views",
+    "user_category_views",
+    "days_since_last_view",
+    "user_total_orders_before",
+    "user_previously_purchased",
+    "product_price",
+    "product_variant_count",
+    "product_in_stock",
+    "product_visibility",
+    "product_popularity_views"
+  ],
+  "feature_importances": {
+    "days_since_last_view": 0.1903,
+    "product_price": 0.1547,
+    "product_popularity_views": 0.1244,
+    "user_distinct_products_viewed": 0.1223,
+    "user_total_views": 0.0914,
+    "user_total_orders_before": 0.0911,
+    "user_category_views": 0.0853,
+    "user_product_views": 0.0755,
+    "user_previously_purchased": 0.0338,
+    "product_variant_count": 0.0296,
+    "product_in_stock": 0.0017,
+    "product_visibility": 0.0
+  },
+  "dataset_summary": {
+    "data_source": "ml_bootstrap_interactions (synthetic)",
+    "is_synthetic": true,
+    "target": "purchase",
+    "label_definition": "label=1 nếu tồn tại đơn hàng THÀNH CÔNG của cùng user và cùng product trong [T, T+14 ngày]; label=0 nếu đã quan sát đủ 14 ngày sau T mà không có đơn như vậy. Snapshot chưa đủ 14 ngày theo dõi bị loại, không gán 0.",
+    "product_state_policy": "Không có lịch sử tồn kho/hiển thị theo thời điểm trong DB, nên tại snapshot lịch sử product_in_stock và product_visibility được đặt = 1 (sản phẩm đã được xem trước T nên đang hiển thị); không dùng trạng thái hiện tại để tránh leakage. product_price/product_variant_count lấy từ catalog hiện tại (không có lịch sử giá) — đây là giới hạn đã biết.",
+    "window_days": 14,
+    "snapshot_step_days": 3,
+    "candidate_lookback_days": 30,
+    "observation_end": "2026-10-23T00:00:00+00:00",
+    "events_time_range": [
+      "2026-07-29T13:00:10+00:00",
+      "2026-10-22T22:39:15+00:00"
+    ],
+    "candidate_snapshots_total": 29,
+    "snapshots_labeled": 24,
+    "snapshots_excluded_insufficient_followup": 5,
+    "rows_excluded_insufficient_followup": 2475,
+    "earliest_snapshot_with_full_followup_possible": "2026-08-13T00:00:00+00:00",
+    "split_strategy": "chronological_by_snapshot_with_embargo",
+    "embargo_days": 14,
+    "rows_purged_by_embargo": 2546,
+    "snapshots_purged_by_embargo": 8,
+    "split_counts": {
+      "test": 458,
+      "train": 962,
+      "val": 325
+    },
+    "split_time_ranges": {
+      "test": [
+        "2026-10-07T00:00:00+00:00",
+        "2026-10-07T00:00:00+00:00"
+      ],
+      "train": [
+        "2026-07-30T00:00:00+00:00",
+        "2026-09-07T00:00:00+00:00"
+      ],
+      "val": [
+        "2026-09-22T00:00:00+00:00",
+        "2026-09-22T00:00:00+00:00"
+      ]
+    },
+    "split_mode": "train_val_test",
+    "rows": 1745,
+    "snapshots_in_dataset": 16,
+    "snapshot_time_range": [
+      "2026-07-30T00:00:00+00:00",
+      "2026-10-07T00:00:00+00:00"
+    ],
+    "distinct_users": 113,
+    "distinct_products": 88,
+    "label_distribution": {
+      "0": 1672,
+      "1": 73
+    },
+    "positive_rate": 0.0418,
+    "split_distribution": {
+      "test": {
+        "0": 441,
+        "1": 17
+      },
+      "train": {
+        "0": 916,
+        "1": 46
+      },
+      "val": {
+        "0": 315,
+        "1": 10
+      }
+    }
+  },
+  "metrics": {
+    "evaluation_scope": "synthetic_bootstrap_only",
+    "disclaimer": "Các chỉ số dưới đây được đo trên dữ liệu SYNTHETIC bootstrap, chỉ để kiểm tra kỹ thuật pipeline; KHÔNG phải kết quả đánh giá production và không được trích dẫn như hiệu năng thực tế.",
+    "validation": {
+      "model_performance": {
+        "samples": 325,
+        "positives": 10,
+        "negatives": 315,
+        "base_rate": 0.0308,
+        "accuracy": 0.9108,
+        "precision": 0.0476,
+        "recall": 0.1,
+        "f1_score": 0.0645,
+        "roc_auc": 0.7537,
+        "pr_auc": 0.0744,
+        "precision@5": 0.0282,
+        "recall@5": 1.0,
+        "precision@10": 0.0272,
+        "recall@10": 1.0
+      },
+      "baselines": {
+        "popularity": {
+          "baseline_name": "PopularityRanking",
+          "description": "Rank candidates by historical product popularity views strictly before T",
+          "roc_auc": 0.5722,
+          "pr_auc": 0.0505,
+          "precision@5": 0.0259,
+          "recall@5": 0.8889,
+          "precision@10": 0.0272,
+          "recall@10": 1.0
+        },
+        "prior": {
+          "baseline_name": "PriorPositiveRate",
+          "description": "Predict constant prior probability equal to positive rate",
+          "roc_auc": 0.5,
+          "pr_auc": 0.0308
+        }
+      },
+      "reliability_assessment": {
+        "status": "CHƯA ĐỦ DỮ LIỆU ĐỂ KẾT LUẬN HIỆU NĂNG",
+        "is_statistically_reliable": false,
+        "sample_size_warning": "Số mẫu positive (10) < ngưỡng tối thiểu (30 mẫu). Cỡ mẫu quá nhỏ để kết luận hiệu năng mô hình một cách đáng tin cậy. Kết quả chỉ dùng để kiểm tra kỹ thuật (sanity check) của pipeline, không thể hiện hiệu năng production."
+      }
+    },
+    "test": {
+      "model_performance": {
+        "samples": 458,
+        "positives": 17,
+        "negatives": 441,
+        "base_rate": 0.0371,
+        "accuracy": 0.9345,
+        "precision": 0.1176,
+        "recall": 0.1176,
+        "f1_score": 0.1176,
+        "roc_auc": 0.6356,
+        "pr_auc": 0.0641,
+        "precision@5": 0.051,
+        "recall@5": 0.9412,
+        "precision@10": 0.0497,
+        "recall@10": 1.0
+      },
+      "baselines": {
+        "popularity": {
+          "baseline_name": "PopularityRanking",
+          "description": "Rank candidates by historical product popularity views strictly before T",
+          "roc_auc": 0.6469,
+          "pr_auc": 0.0545,
+          "precision@5": 0.049,
+          "recall@5": 0.8824,
+          "precision@10": 0.0497,
+          "recall@10": 1.0
+        },
+        "prior": {
+          "baseline_name": "PriorPositiveRate",
+          "description": "Predict constant prior probability equal to positive rate",
+          "roc_auc": 0.5,
+          "pr_auc": 0.0371
+        }
+      },
+      "reliability_assessment": {
+        "status": "CHƯA ĐỦ DỮ LIỆU ĐỂ KẾT LUẬN HIỆU NĂNG",
+        "is_statistically_reliable": false,
+        "sample_size_warning": "Số mẫu positive (17) < ngưỡng tối thiểu (30 mẫu). Cỡ mẫu quá nhỏ để kết luận hiệu năng mô hình một cách đáng tin cậy. Kết quả chỉ dùng để kiểm tra kỹ thuật (sanity check) của pipeline, không thể hiện hiệu năng production."
+      }
+    }
+  }
+}

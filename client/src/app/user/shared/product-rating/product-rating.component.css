@@ -23,7 +23,7 @@
 .rating-star {
   font-size: 14px;
   line-height: 1;
-  color: #F5B301;
+  color: #74070E;
   display: inline-block;
   flex-shrink: 0;
 }
@@ -38,5 +38,5 @@
 }
 
 .empty-rating .rating-star {
-  color: #F5B301;
+  color: #74070E;
 }

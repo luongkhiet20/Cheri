@@ -19,6 +19,7 @@ from src.config import (
 )
 from src.validate_data import (
     validate_and_clean_interactions,
+    validate_and_clean_products,
     compile_data_quality_report,
 )
 from src.feature_engineering import (
@@ -366,6 +367,153 @@ class TestCheriMLPipeline(unittest.TestCase):
         # Must strictly equal 1 (the event before cutoff), NOT 3!
         self.assertEqual(features["user_product_views"], 1)
         self.assertEqual(features["user_total_views"], 1)
+
+    # -------------------------------------------------------------------------
+    # TEST 17: Stock là kiểu int (dương, 0, âm)
+    # -------------------------------------------------------------------------
+    def test_17_stock_as_integer(self):
+        raw_products = [
+            {"product_id": "p_int_pos", "stock": 12},
+            {"product_id": "p_int_zero", "stock": 0},
+            {"product_id": "p_int_neg", "stock": -3},
+        ]
+        clean_df, metrics = validate_and_clean_products(raw_products)
+        self.assertEqual(int(clean_df.loc[clean_df["product_id"] == "p_int_pos", "in_stock"].iloc[0]), 1)
+        self.assertTrue(bool(clean_df.loc[clean_df["product_id"] == "p_int_pos", "is_in_stock"].iloc[0]))
+        self.assertEqual(int(clean_df.loc[clean_df["product_id"] == "p_int_zero", "in_stock"].iloc[0]), 0)
+        self.assertFalse(bool(clean_df.loc[clean_df["product_id"] == "p_int_zero", "is_in_stock"].iloc[0]))
+        self.assertEqual(int(clean_df.loc[clean_df["product_id"] == "p_int_neg", "in_stock"].iloc[0]), 0)
+        self.assertEqual(metrics["missing_stock_field_count"], 0)
+        self.assertEqual(metrics["stock_coercion_error_count"], 0)
+
+    # -------------------------------------------------------------------------
+    # TEST 18: Stock là string số ("15") và string lỗi ("abc")
+    # -------------------------------------------------------------------------
+    def test_18_stock_as_string_numeric_and_coercion_error(self):
+        raw_products = [
+            {"product_id": "p_str_15", "stock": "15"},
+            {"product_id": "p_str_bad", "stock": "invalid_stock_value"},
+        ]
+        with self.assertLogs("cheri_ml.validate_data", level="WARNING") as cm:
+            clean_df, metrics = validate_and_clean_products(raw_products)
+
+        row_15 = clean_df[clean_df["product_id"] == "p_str_15"].iloc[0]
+        row_bad = clean_df[clean_df["product_id"] == "p_str_bad"].iloc[0]
+
+        self.assertEqual(int(row_15["quantity"]), 15)
+        self.assertEqual(int(row_15["in_stock"]), 1)
+        self.assertTrue(bool(row_15["is_in_stock"]))
+
+        self.assertEqual(int(row_bad["quantity"]), 0)
+        self.assertEqual(int(row_bad["in_stock"]), 0)
+        self.assertFalse(bool(row_bad["is_in_stock"]))
+        self.assertEqual(metrics["stock_coercion_error_count"], 1)
+        self.assertTrue(any("p_str_bad" in msg for msg in cm.output))
+
+    # -------------------------------------------------------------------------
+    # TEST 19: Stock là None / bị thiếu hoàn toàn (Cảnh báo log & in_stock=0)
+    # -------------------------------------------------------------------------
+    def test_19_stock_is_none_or_missing(self):
+        raw_products = [
+            {"product_id": "p_none", "stock": None},
+            {"product_id": "p_missing_all", "title": "Sản phẩm không có trường stock"},
+        ]
+        with self.assertLogs("cheri_ml.validate_data", level="WARNING") as cm:
+            clean_df, metrics = validate_and_clean_products(raw_products)
+
+        self.assertEqual(list(clean_df["in_stock"]), [0, 0])
+        self.assertEqual(list(clean_df["is_in_stock"]), [False, False])
+        self.assertEqual(metrics["missing_stock_field_count"], 2)
+        self.assertEqual(metrics["in_stock_products"], 0)
+        self.assertTrue(any("p_none" in msg for msg in cm.output))
+
+    # -------------------------------------------------------------------------
+    # TEST 20: Variants có stock (kể cả khi root quantity âm hoặc None như DB thật)
+    # -------------------------------------------------------------------------
+    def test_20_variants_with_stock(self):
+        raw_products = [
+            {
+                "product_id": "p_var_stock",
+                "quantity": -1,
+                "stock": None,
+                "vi": {"stock": "onStock", "quantity": 50},
+                "variants": [
+                    {"sku": "V1", "stock": 0, "price": 500000},
+                    {"sku": "V2", "stock": 30, "price": 500000},
+                    {"sku": "V3", "stock": "20", "price": 500000},
+                ],
+            }
+        ]
+        clean_df, metrics = validate_and_clean_products(raw_products)
+        row = clean_df.iloc[0]
+        self.assertEqual(int(row["in_stock"]), 1)
+        self.assertTrue(bool(row["is_in_stock"]))
+        self.assertEqual(int(row["quantity"]), 50)
+        self.assertEqual(int(row["variant_count"]), 3)
+        self.assertEqual(metrics["missing_stock_field_count"], 0)
+        self.assertEqual(metrics["stock_coercion_error_count"], 0)
+
+    # -------------------------------------------------------------------------
+    # TEST 21: Variants rỗng (variants=[])
+    # -------------------------------------------------------------------------
+    def test_21_empty_variants(self):
+        raw_products = [
+            {"product_id": "p_empty_var_with_vi_qty", "variants": [], "vi": {"quantity": 6, "stock": "onStock"}},
+            {"product_id": "p_empty_var_zero", "variants": [], "vi": {"quantity": 0, "stock": "outOfStock"}},
+            {"product_id": "p_empty_var_no_stock", "variants": []},
+        ]
+        with self.assertLogs("cheri_ml.validate_data", level="WARNING"):
+            clean_df, metrics = validate_and_clean_products(raw_products)
+
+        r1 = clean_df[clean_df["product_id"] == "p_empty_var_with_vi_qty"].iloc[0]
+        r2 = clean_df[clean_df["product_id"] == "p_empty_var_zero"].iloc[0]
+        r3 = clean_df[clean_df["product_id"] == "p_empty_var_no_stock"].iloc[0]
+
+        self.assertEqual(int(r1["in_stock"]), 1)
+        self.assertEqual(int(r1["quantity"]), 6)
+        self.assertEqual(int(r2["in_stock"]), 0)
+        self.assertEqual(int(r2["quantity"]), 0)
+        self.assertEqual(int(r3["in_stock"]), 0)
+        self.assertEqual(metrics["missing_stock_field_count"], 1)
+
+    # -------------------------------------------------------------------------
+    # TEST 22: Tồn kho lồng sâu (sizes lồng trong variants, hoặc inventory dict lồng sâu)
+    # -------------------------------------------------------------------------
+    def test_22_deeply_nested_stock(self):
+        raw_products = [
+            {
+                "product_id": "p_nested_sizes",
+                "variants": [
+                    {
+                        "color": "Đỏ",
+                        "sizes": [
+                            {"size": "S", "stock": 0},
+                            {"size": "M", "stock": "7"},
+                            {"size": "L", "quantity": 3},
+                        ],
+                    }
+                ],
+            },
+            {
+                "product_id": "p_nested_warehouse",
+                "inventory": {
+                    "warehouses": [
+                        {"location": "HCM", "stock": 4},
+                        {"location": "HN", "stock": "8"},
+                    ]
+                },
+            },
+        ]
+        clean_df, metrics = validate_and_clean_products(raw_products)
+        r_sizes = clean_df[clean_df["product_id"] == "p_nested_sizes"].iloc[0]
+        r_wh = clean_df[clean_df["product_id"] == "p_nested_warehouse"].iloc[0]
+
+        self.assertEqual(int(r_sizes["in_stock"]), 1)
+        self.assertEqual(int(r_sizes["quantity"]), 10)
+        self.assertEqual(int(r_wh["in_stock"]), 1)
+        self.assertEqual(int(r_wh["quantity"]), 12)
+        self.assertEqual(metrics["missing_stock_field_count"], 0)
+        self.assertEqual(metrics["stock_coercion_error_count"], 0)
 
 
 if __name__ == "__main__":

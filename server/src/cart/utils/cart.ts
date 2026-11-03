@@ -98,21 +98,37 @@ export class Cart {
     const targetItem = this.items.find((ci: any) => ci.id === id);
     if (!targetItem) return;
 
-    const prodId = targetItem.item?._id?.toString() || targetItem.item?.id;
-    const newVarId = newVariantData.variantId;
+    const prodId = (
+      targetItem.item?._id?.toString() ||
+      targetItem.item?.id ||
+      (typeof id === 'string' && id.includes('_') ? id.split('_')[0] : id)
+    ).toString();
+    const newVarId = (newVariantData.variantId !== undefined && newVariantData.variantId !== null && newVariantData.variantId !== '')
+      ? String(newVariantData.variantId).trim()
+      : null;
+    const newCartItemId = newVarId ? `${prodId}_${newVarId}` : prodId;
 
     // Check if another item in cart already has the target variant
     const duplicateItem = this.items.find((ci: any) => {
-      const otherProdId = ci.item?._id?.toString() || ci.item?.id;
-      return ci.id !== id && otherProdId === prodId && ci.variantId === newVarId;
+      const otherProdId = (
+        ci.item?._id?.toString() ||
+        ci.item?.id ||
+        (typeof ci.id === 'string' && ci.id.includes('_') ? ci.id.split('_')[0] : ci.id)
+      ).toString();
+      const otherVarId = (ci.variantId !== undefined && ci.variantId !== null && ci.variantId !== '')
+        ? String(ci.variantId).trim()
+        : null;
+      return ci.id !== id && otherProdId === prodId && otherVarId === newVarId;
     });
 
     if (duplicateItem) {
       // Merge quantity into duplicateItem and remove targetItem
       duplicateItem.qty += newVariantData.targetQty || targetItem.qty;
+      duplicateItem.id = newCartItemId;
       this.items = this.items.filter((ci: any) => ci.id !== id);
     } else {
       // Update targetItem in place
+      targetItem.id = newCartItemId;
       targetItem.variantId = newVarId || targetItem.variantId;
       targetItem.selectedClassification =
         newVariantData.classification || targetItem.selectedClassification;

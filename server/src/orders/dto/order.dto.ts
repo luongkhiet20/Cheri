@@ -94,6 +94,10 @@ export class OrderDto {
   userId?: string;
 
   @IsOptional()
+  @IsString()
+  sessionId?: string;
+
+  @IsOptional()
   @IsArray()
   items?: any[];
 

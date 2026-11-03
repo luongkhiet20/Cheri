@@ -12,7 +12,7 @@ export class GetRecommendationsDto {
   @IsInt()
   @Min(1)
   @Max(24)
-  limit?: number = 8;
+  limit?: number = 10;
 
   @IsOptional()
   @IsString()

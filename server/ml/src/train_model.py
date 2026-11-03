@@ -6,6 +6,7 @@ strict separation of real vs synthetic data, and robust metric evaluations.
 
 import sys
 import json
+import shutil
 import argparse
 from pathlib import Path
 from datetime import datetime, timezone
@@ -171,9 +172,18 @@ def evaluate_model_safely(
     model_name: str,
 ) -> Dict[str, Any]:
     """
-    Evaluates model performance. Flags ROC-AUC and PR-AUC as N/A if test set lacks both classes.
+    Evaluates model performance including Brier Score.
+    Flags ROC-AUC and PR-AUC as N/A if test set lacks both classes.
     """
-    from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, average_precision_score
+    from sklearn.metrics import (
+        accuracy_score,
+        precision_score,
+        recall_score,
+        f1_score,
+        roc_auc_score,
+        average_precision_score,
+        brier_score_loss,
+    )
 
     if X_test.empty or y_test.empty:
         return {
@@ -183,6 +193,7 @@ def evaluate_model_safely(
             "roc_auc": "N/A (Test set empty)",
             "pr_auc": "N/A (Test set empty)",
             "f1_score": None,
+            "brier_score": None,
         }
 
     distinct_test_classes = y_test.nunique()
@@ -196,6 +207,11 @@ def evaluate_model_safely(
         pos_probs = preds
 
     acc = float(accuracy_score(y_test, preds))
+    try:
+        clipped_probs = np.clip(np.asarray(pos_probs, dtype=float), 0.0, 1.0)
+        brier_val = round(float(brier_score_loss(y_test, clipped_probs)), 4)
+    except Exception:
+        brier_val = None
 
     if distinct_test_classes < 2:
         roc_auc_val = "N/A (Chỉ có 1 lớp nhãn trong tập Test)"
@@ -225,7 +241,38 @@ def evaluate_model_safely(
         "f1_score": f1_val,
         "roc_auc": roc_auc_val,
         "pr_auc": pr_auc_val,
+        "brier_score": brier_val,
     }
+
+
+def select_best_model(
+    rf_model: Any,
+    rf_metrics: Dict[str, Any],
+    xgb_model: Optional[Any] = None,
+    xgb_metrics: Optional[Dict[str, Any]] = None,
+) -> Tuple[Any, str, Dict[str, Any]]:
+    """
+    Automatically selects the better-performing model between RandomForest and XGBoost
+    based on PR-AUC (primary), ROC-AUC (secondary), and lower Brier Score (tie-breaker).
+    """
+    if xgb_model is None or xgb_metrics is None:
+        return rf_model, "RandomForest", rf_metrics
+
+    def _score_tuple(m: Dict[str, Any]) -> Tuple[float, float, float, float]:
+        pr = m.get("pr_auc")
+        roc = m.get("roc_auc")
+        f1 = m.get("f1_score")
+        brier = m.get("brier_score")
+        pr_num = float(pr) if isinstance(pr, (int, float)) else -1.0
+        roc_num = float(roc) if isinstance(roc, (int, float)) else -1.0
+        f1_num = float(f1) if isinstance(f1, (int, float)) else -1.0
+        # Lower Brier score is better, so negate it
+        neg_brier = -float(brier) if isinstance(brier, (int, float)) else -1.0
+        return (pr_num, roc_num, f1_num, neg_brier)
+
+    if _score_tuple(xgb_metrics) > _score_tuple(rf_metrics):
+        return xgb_model, "XGBoost", xgb_metrics
+    return rf_model, "RandomForest", rf_metrics
 
 
 def save_model_artifacts(
@@ -239,14 +286,7 @@ def save_model_artifacts(
 ) -> Dict[str, Path]:
     """
     Saves model artifact (.joblib) and detailed metadata (.json) to output_dir.
-    Metadata explicitly tracks:
-      - model_name
-      - version
-      - created_at
-      - is_production_ready (False if trained on synthetic or below eligibility criteria)
-      - trained_on_synthetic (True if trained on synthetic data)
-      - feature_columns
-      - metrics
+    Automatically backs up any existing model and metadata files to '.bak' before overwriting.
     """
     import joblib
 
@@ -259,6 +299,19 @@ def save_model_artifacts(
 
     model_filename = f"{model_name.lower()}.joblib"
     model_path = target_dir / model_filename
+    metadata_path = target_dir / "model_metadata.json"
+
+    # Back up existing model and metadata before overwriting for safe rollback
+    backup_paths: Dict[str, Path] = {}
+    if model_path.exists():
+        bak_model = target_dir / f"{model_filename}.bak"
+        shutil.copy2(model_path, bak_model)
+        backup_paths["model_backup_path"] = bak_model
+    if metadata_path.exists():
+        bak_meta = target_dir / "model_metadata.json.bak"
+        shutil.copy2(metadata_path, bak_meta)
+        backup_paths["metadata_backup_path"] = bak_meta
+
     joblib.dump(model, model_path)
 
     metadata = {
@@ -272,11 +325,10 @@ def save_model_artifacts(
         "metrics": metrics,
     }
 
-    metadata_path = target_dir / "model_metadata.json"
     with open(metadata_path, "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=2, ensure_ascii=False)
 
-    return {"model_path": model_path, "metadata_path": metadata_path}
+    return {"model_path": model_path, "metadata_path": metadata_path, **backup_paths}
 
 
 def main():
@@ -315,7 +367,7 @@ def main():
     if not eligibility["is_eligible"]:
         print(f"  Reason                  : {eligibility['reason']}")
 
-    if args.check_only:
+    if args.check-only if hasattr(args, "check-only") else args.check_only:
         print("\n[CHECK-ONLY COMPLETED] No training executed.")
         sys.exit(0 if eligibility["is_eligible"] else 1)
 
@@ -337,6 +389,8 @@ def main():
     import xgboost as xgb
 
     X_train, y_train, X_val, y_val, X_test, y_test = prepare_feature_matrices(df)
+    eval_X = X_test if not X_test.empty else (X_val if not X_val.empty else X_train)
+    eval_y = y_test if not y_test.empty else (y_val if not y_val.empty else y_train)
 
     # Train Random Forest
     rf_model = RandomForestClassifier(
@@ -350,26 +404,30 @@ def main():
     # Train XGBoost if distinct classes >= 2
     xgb_metrics = None
     if len(np.unique(y_train)) >= 2:
+        pos_cnt = int((y_train == 1).sum())
+        neg_cnt = int((y_train == 0).sum())
+        scale_pos = float(neg_cnt / max(1, pos_cnt))
         xgb_model = xgb.XGBClassifier(
             n_estimators=100,
             max_depth=4,
             learning_rate=0.05,
+            scale_pos_weight=scale_pos,
             random_state=42,
             eval_metric="logloss",
         )
         xgb_model.fit(X_train, y_train)
-        xgb_metrics = evaluate_model_safely(xgb_model, X_test, y_test, "XGBoost")
+        xgb_metrics = evaluate_model_safely(xgb_model, eval_X, eval_y, "XGBoost")
     else:
         xgb_model = None
         print("\n[NOTE] XGBoost yêu cầu tối thiểu 2 lớp nhãn trong tập huấn luyện để khởi tạo cây quyết định gradient boosted.")
 
     # Evaluate
-    rf_metrics = evaluate_model_safely(rf_model, X_test, y_test, "RandomForest")
+    rf_metrics = evaluate_model_safely(rf_model, eval_X, eval_y, "RandomForest")
 
     print("\n--- MODEL EVALUATION RESULTS ---")
-    print(f"Random Forest : Acc: {rf_metrics['accuracy']:.4f} | ROC-AUC: {rf_metrics['roc_auc']} | PR-AUC: {rf_metrics['pr_auc']}")
+    print(f"Random Forest : Acc: {rf_metrics['accuracy']:.4f} | ROC-AUC: {rf_metrics['roc_auc']} | PR-AUC: {rf_metrics['pr_auc']} | Brier: {rf_metrics['brier_score']}")
     if xgb_metrics:
-        print(f"XGBoost       : Acc: {xgb_metrics['accuracy']:.4f} | ROC-AUC: {xgb_metrics['roc_auc']} | PR-AUC: {xgb_metrics['pr_auc']}")
+        print(f"XGBoost       : Acc: {xgb_metrics['accuracy']:.4f} | ROC-AUC: {xgb_metrics['roc_auc']} | PR-AUC: {xgb_metrics['pr_auc']} | Brier: {xgb_metrics['brier_score']}")
     else:
         print("XGBoost       : N/A (Tập train chỉ có 1 lớp nhãn)")
 
@@ -382,10 +440,10 @@ def main():
     is_prod_ready = eligibility["is_eligible"] and not is_sandbox
 
     if (args.save_model and is_prod_ready) or (args.save_sandbox_model and is_sandbox):
-        # Choose better model or default to RandomForest
-        chosen_model = rf_model
-        chosen_name = "RandomForest"
-        chosen_metrics = rf_metrics
+        chosen_model, chosen_name, chosen_metrics = select_best_model(
+            rf_model, rf_metrics, xgb_model, xgb_metrics
+        )
+        print(f"\n[MODEL SELECTION] Selected best model: {chosen_name} (PR-AUC={chosen_metrics.get('pr_auc')}, ROC-AUC={chosen_metrics.get('roc_auc')})")
 
         saved = save_model_artifacts(
             model=chosen_model,

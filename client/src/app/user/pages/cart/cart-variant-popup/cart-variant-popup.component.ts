@@ -22,7 +22,7 @@ export class CartVariantPopupComponent implements OnChanges {
   @Input() lang: string = 'vi';
 
   @Output() close = new EventEmitter<void>();
-  @Output() updated = new EventEmitter<void>();
+  @Output() updated = new EventEmitter<{ oldItemId: string; newItemId: string } | void>();
 
   modalClassification = '';
   modalColor = '';
@@ -283,7 +283,15 @@ export class CartVariantPopupComponent implements OnChanges {
       this.modalSelectedVariant._id?.toString() ||
       this.modalSelectedVariant.id ||
       this.modalSelectedVariant.sku;
-    const targetItemId = this.cartItem.id;
+    const targetItemId = String(this.cartItem.id || '');
+    const rawProdId =
+      this.cartItem.productId ||
+      this.cartItem.item?._id ||
+      this.cartItem.item?.id ||
+      (targetItemId.includes('_') ? targetItemId.split('_')[0] : targetItemId);
+    const prodId = String(rawProdId || '').trim();
+    const normalizedNewVarId = newVarId ? String(newVarId).trim() : '';
+    const newCartItemId = normalizedNewVarId ? `${prodId}_${normalizedNewVarId}` : prodId;
     const targetQty = this.modalQuantity;
 
     this.isModalSubmitting = true;
@@ -295,7 +303,7 @@ export class CartVariantPopupComponent implements OnChanges {
       .updateCartVariant(
         targetItemId,
         {
-          variantId: newVarId,
+          variantId: normalizedNewVarId,
           classification: this.modalSelectedVariant.classification,
           color: this.modalSelectedVariant.color,
           size: this.modalSelectedVariant.size,
@@ -313,16 +321,16 @@ export class CartVariantPopupComponent implements OnChanges {
           }
 
           if (targetQty !== this.cartItem.qty) {
-            this.store.updateCartQuantity(targetItemId, targetQty, lang).subscribe({
+            this.store.updateCartQuantity(newCartItemId, targetQty, lang).subscribe({
               next: () => {
-                this.finishSubmit();
+                this.finishSubmit(targetItemId, newCartItemId);
               },
               error: () => {
-                this.finishSubmit();
+                this.finishSubmit(targetItemId, newCartItemId);
               },
             });
           } else {
-            this.finishSubmit();
+            this.finishSubmit(targetItemId, newCartItemId);
           }
         },
         error: () => {
@@ -332,13 +340,13 @@ export class CartVariantPopupComponent implements OnChanges {
       });
   }
 
-  private finishSubmit(): void {
+  private finishSubmit(oldItemId: string, newItemId: string): void {
     const lang = this.lang || 'vi';
     this.store.getCart(lang);
     this.isModalSubmitting = false;
     this.modalError = '';
     this.notify.success('✨Đã cập nhật sản phẩm trong giỏ hàng✨');
-    this.updated.emit();
+    this.updated.emit({ oldItemId, newItemId });
     this.close.emit();
   }
 }

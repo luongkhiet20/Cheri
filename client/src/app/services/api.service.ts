@@ -1122,6 +1122,46 @@ export class ApiService {
     );
   }
 
+  public recordRecommendationImpressions(payload: {
+    productIds: string[];
+    currentProductId?: string;
+    strategy?: string;
+    sessionId?: string;
+  }): Observable<any> {
+    if (!payload?.productIds || payload.productIds.length === 0) {
+      return of({ success: true, recordedCount: 0 });
+    }
+    const url = `${this.apiUrl}/api/recommendations/impressions`;
+    const guestCartId = this.getOrCreateGuestCartId();
+    let headers = new HttpHeaders({
+      'Content-Type': 'application/json',
+    });
+    if (guestCartId) {
+      headers = headers.set('x-guest-cart-id', guestCartId);
+    }
+    if (isPlatformBrowser(this.platformId)) {
+      try {
+        const token = localStorage.getItem(accessTokenKey);
+        if (token && token !== 'null' && token !== 'undefined' && token.trim() !== '') {
+          headers = headers.set('Authorization', `Bearer ${token}`);
+        }
+      } catch {}
+    }
+
+    const body = {
+      productIds: payload.productIds,
+      currentProductId: payload.currentProductId || undefined,
+      strategy: payload.strategy || undefined,
+      sessionId: payload.sessionId || guestCartId || undefined,
+    };
+
+    return this.http.post(url, body, { headers }).pipe(
+      catchError((err) => {
+        return of({ success: false, error: err?.message || 'Impression tracking error' });
+      }),
+    );
+  }
+
   // ─── Product Reviews APIs ──────────────────────────────────────────────────
   getProductReviewStats(productId: string): Observable<any> {
     const url = `${this.apiUrl}/api/reviews/product/${encodeURIComponent(productId)}/stats`;

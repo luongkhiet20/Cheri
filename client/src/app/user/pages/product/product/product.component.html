@@ -174,12 +174,36 @@
           <div class="cheri-action-buttons">
             <button type="button" class="cheri-action-btn secondary-btn" [disabled]="isOutOfStock"
               (click)="handleAddToCart()">
-              Thêm vào giỏ hàng
+              <span class="cheri-btn-ornament" aria-hidden="true">
+                <svg class="cheri-btn-svg svg-atelier-emblem" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                  fill="none">
+                  <path class="svg-stroke-main"
+                    d="M3 4H5.2L7.4 15.2C7.58 16.12 8.39 16.8 9.33 16.8H18.4C19.3 16.8 20.08 16.18 20.3 15.3L22 8.2H6.1"
+                    stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                  <circle class="svg-stroke-main" cx="9.5" cy="20" r="1.5" stroke="currentColor" stroke-width="1.6" />
+                  <circle class="svg-stroke-main" cx="18" cy="20" r="1.5" stroke="currentColor" stroke-width="1.6" />
+                </svg>
+              </span>
+              <span class="cheri-btn-label">Thêm vào giỏ hàng</span>
             </button>
 
             <button type="button" class="cheri-action-btn primary-btn" [disabled]="isOutOfStock"
               (click)="handleBuyNow()">
-              Mua ngay
+              <span class="cheri-btn-label">Mua ngay</span>
+              <span class="cheri-btn-ornament" aria-hidden="true">
+                <svg class="cheri-btn-svg svg-couture-crest" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                  fill="none">
+                  <path class="svg-stroke-accent"
+                    d="M6.2 4.5C7.9 7.35 9.85 9.15 12.6 10C9.85 10.85 7.9 12.65 6.2 15.5"
+                    stroke="#A88755" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+                  <line class="svg-stroke-main" x1="3.2" y1="10" x2="16.2" y2="10" stroke="currentColor"
+                    stroke-width="1.2" stroke-linecap="round" />
+                  <path class="svg-stroke-main"
+                    d="M12.2 6.2C13.6 7.85 15.15 9.15 17 10C15.15 10.85 13.6 12.15 12.2 13.8"
+                    stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" />
+                  <circle class="svg-dot-accent" cx="3.2" cy="10" r="1.35" fill="#A88755" />
+                </svg>
+              </span>
             </button>
           </div>
 
@@ -212,8 +236,13 @@
 
           <!-- 4.3 Mô tả chi tiết nếu có -->
           @if (productDescriptionFull && productDescriptionFull.length > 0) {
-          <div class="cheri-full-desc-panel">
-            <div class="full-desc-title">Thông tin chi tiết:</div>
+          <div class="cheri-full-desc-panel" [class.is-collapsed]="isFullDescCollapsed"
+            [attr.aria-expanded]="!isFullDescCollapsed">
+            <div class="full-desc-title" role="button" tabindex="0" [attr.aria-expanded]="!isFullDescCollapsed"
+              (click)="toggleFullDesc()" (keydown.enter)="toggleFullDesc()"
+              (keydown.space)="toggleFullDesc(); $event.preventDefault()">
+              Thông tin chi tiết:
+            </div>
             <ul class="full-desc-list">
               @for (bullet of productDescriptionFull; track $index) {
               <li>{{ bullet }}</li>

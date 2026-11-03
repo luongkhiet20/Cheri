@@ -23,6 +23,7 @@ from .extract_data import (
 )
 from .validate_data import (
     validate_and_clean_interactions,
+    validate_and_clean_products,
     compile_data_quality_report,
 )
 from .feature_engineering import build_user_product_feature_matrix
@@ -93,6 +94,9 @@ def generate_markdown_report(report_dict: Dict[str, Any]) -> str:
         f"- **Sản phẩm có danh mục/phân loại**: {pm['products_with_category']}/{pm['total_products']}",
         f"- **Sản phẩm đang hiển thị (visibility=true)**: {pm['visible_products']}/{pm['total_products']}",
         f"- **Sản phẩm còn hàng (in_stock=true)**: {pm['in_stock_products']}/{pm['total_products']}",
+        f"- **Sản phẩm hết hàng (in_stock=false)**: {pm.get('out_of_stock_products', pm['total_products'] - pm['in_stock_products'])}/{pm['total_products']}",
+        f"- **Sản phẩm thiếu trường tồn kho**: {pm.get('missing_stock_field_count', 0)}",
+        f"- **Sản phẩm lỗi ép kiểu tồn kho**: {pm.get('stock_coercion_error_count', 0)}",
         "",
         "### 2.2. Lịch sử Đơn hàng (Collection `orders`)",
         f"- **Tổng số đơn hàng**: {om['total_orders']}",
@@ -163,6 +167,7 @@ def run_pipeline(
     orders_df = extract_orders(db)
 
     # Step 2: Validation and Cleaning
+    products_df, product_quality_metrics = validate_and_clean_products(products_df)
     valid_p_ids = set(products_df["product_id"].unique()) if not products_df.empty else set()
     clean_interactions_df, quality_metrics = validate_and_clean_interactions(
         raw_interactions_df,
@@ -170,8 +175,26 @@ def run_pipeline(
         include_synthetic=include_synthetic,
     )
 
+    # Enrich products_df with popularity_views computed from clean VIEW interactions
+    if not products_df.empty:
+        if not clean_interactions_df.empty and "event_type" in clean_interactions_df.columns:
+            views_only = clean_interactions_df[
+                clean_interactions_df["event_type"].astype(str).str.upper() == "VIEW"
+            ]
+            pop_counts = views_only.groupby("clean_product_id").size().to_dict()
+        else:
+            pop_counts = {}
+        products_df["popularity_views"] = (
+            products_df["product_id"].astype(str).map(lambda pid: int(pop_counts.get(pid, 0)))
+        )
+
     # Step 3: Reporting
-    report = compile_data_quality_report(quality_metrics, products_df, orders_df)
+    report = compile_data_quality_report(
+        quality_metrics,
+        products_df,
+        orders_df,
+        product_quality_metrics=product_quality_metrics,
+    )
 
     # Step 4: Snapshot dataset. Old behaviour used ONE cutoff = latest interaction, so the
     # 14-day future window was never observed and every row became label=0. Now we build
@@ -202,9 +225,12 @@ def run_pipeline(
         products_file = out_data / "products_features.csv"
         products_df.to_csv(products_file, index=False, encoding="utf-8")
 
-        # 2. Clean interactions
+        # 2. Clean interactions & clean orders
         interactions_file = out_data / "interactions_clean.csv"
         clean_interactions_df.to_csv(interactions_file, index=False, encoding="utf-8")
+
+        orders_file = out_data / "orders_clean.csv"
+        orders_df.to_csv(orders_file, index=False, encoding="utf-8")
 
         # 3. User-Product Dataset (always write to reflect current state).
         # Synthetic-contaminated runs never overwrite the production dataset file.
@@ -214,7 +240,6 @@ def run_pipeline(
             user_product_dataset.to_csv(dataset_file, index=False, encoding="utf-8")
         else:
             pd.DataFrame(columns=DATASET_COLUMNS).to_csv(dataset_file, index=False, encoding="utf-8")
-
 
         # 4. JSON Quality Report
         report_json_file = out_report / "data_quality_report.json"

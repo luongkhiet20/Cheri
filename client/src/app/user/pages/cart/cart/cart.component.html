@@ -271,6 +271,13 @@
               </span>
             </div>
 
+            @if (getPaymentFee(cart) > 0) {
+            <div class="summary-line">
+              <span class="summary-line-label">Phí thanh toán:</span>
+              <span class="summary-line-val">{{ getPaymentFee(cart) | priceFormat }} {{ currency$ | async }}</span>
+            </div>
+            }
+
             <div class="summary-line summary-line--total">
               <b>Tổng thanh toán:</b>
               <b class="final-total-price">
@@ -474,7 +481,7 @@
               </form>
             </mat-step>
 
-            <!-- BƯỚC 2: PHƯƠNG THỨC THANH TOÁN -->
+            <!-- BƯỚC 2: PHƯƠNG THỨC THANH TOÁN & HOÀN TẤT ĐẶT HÀNG -->
             <mat-step [stepControl]="paymentMethodControl">
               <ng-template matStepLabel>Phương thức thanh toán</ng-template>
               @if (orderForm.valid) {
@@ -521,62 +528,6 @@
                 </mat-radio-button>
                 }
               </mat-radio-group>
-              }
-              }
-              <div>
-                <button class="cart-navigation-button" mat-stroked-button matStepperPrevious>
-                  Quay lại
-                </button>
-
-                <button class="cart-navigation-button" mat-stroked-button matStepperNext
-                  [disabled]="paymentMethodControl.invalid || paymentMethods.length === 0">
-                  Tiếp tục
-                </button>
-
-              </div>
-            </mat-step>
-
-            <!-- BƯỚC 3: XÁC NHẬN ĐƠN HÀNG -->
-            <mat-step>
-              <ng-template matStepLabel>Xác nhận đơn hàng</ng-template>
-              <div class="order-confirmation-box">
-                <span class="summary-section-label">Thông tin giao hàng:</span>
-                <div class="order-last-summary">
-                  <div><strong>Người nhận:</strong> {{ orderForm.get('name')?.value }}</div>
-                  <div><strong>Email:</strong> {{ orderForm.get('email')?.value }}</div>
-                  <div><strong>Điện thoại:</strong> {{ orderForm.get('phone')?.value }}</div>
-                  <div>
-                    <strong>Địa chỉ:</strong>
-                    {{ orderForm.get('addressDetail')?.value }}<span *ngIf="orderForm.get('wardName')?.value">, {{
-                      orderForm.get('wardName')?.value }}</span><span *ngIf="orderForm.get('districtName')?.value">, {{
-                      orderForm.get('districtName')?.value }}</span><span *ngIf="orderForm.get('provinceName')?.value">,
-                      {{ orderForm.get('provinceName')?.value }}</span>
-                  </div>
-                  @if (orderForm.get('notes')?.value) {
-                  <div><strong>Ghi chú:</strong> {{ orderForm.get('notes')?.value }}</div>
-                  }
-                </div>
-
-                <div class="order-checkout-recap">
-                  <div>Sản phẩm đã chọn: <strong>{{ getSelectedCount(cart) }} món</strong></div>
-                  <div>Tạm tính: <strong>{{ getSelectedSubtotal(cart) | priceFormat }} {{ currency$ | async }}</strong>
-                  </div>
-                  @if (appliedCoupon && getDiscountAmount(cart) > 0) {
-                  <div class="color-success">Mã giảm giá ({{ appliedCoupon.code }}): <strong>-{{ getDiscountAmount(cart)
-                      | priceFormat }} {{ currency$ | async }}</strong></div>
-                  }
-                  <div>Phí vận chuyển: <strong>{{ getShippingFee(cart) === 0 ? 'Miễn phí' : (getShippingFee(cart) |
-                      priceFormat) + ' ' + (currency$ | async) }}</strong></div>
-                  @if (getPaymentFee(cart) > 0) {
-                  <div>Phí thanh toán: <strong>{{ getPaymentFee(cart) | priceFormat }} {{ currency$ | async }}</strong>
-                  </div>
-                  }
-                  <div>Phương thức thanh toán: <strong>{{ getSelectedPaymentMethod()?.name || 'Chưa chọn' }}</strong>
-                  </div>
-                  <div class="recap-total">Tổng tiền: <strong class="color-primary">{{ getFinalTotal(cart) | priceFormat
-                      }} {{ currency$ | async }}</strong></div>
-                </div>
-              </div>
 
               @if (isCardPaymentSelected()) {
               <app-card [price]="getFinalTotal(cart) | priceFormat" [currency]="currency$ | async"
@@ -585,14 +536,17 @@
               </app-card>
               } @else {
               <button mat-raised-button color="primary" type="submit" class="submit-order-button"
-                [disabled]="orderForm.invalid || selectedItemIds.size === 0 || paymentMethodControl.invalid || isSubmittingOrder"
+                [disabled]="orderForm.invalid || selectedItemIds.size === 0 || paymentMethodControl.invalid || paymentMethods.length === 0 || isSubmittingOrder"
                 (click)="submit()">
                 {{ isSubmittingOrder ? 'Đang xử lý đặt hàng...' : ('Hoàn tất đặt hàng (' + (getFinalTotal(cart) |
                 priceFormat) + ' ' + ((currency$ | async) || 'đ') + ')') }}
               </button>
               }
+              }
+              }
               <div>
-                <button class="cart-navigation-button" mat-stroked-button matStepperPrevious>
+                <button class="cart-navigation-button" mat-stroked-button matStepperPrevious
+                  [disabled]="isSubmittingOrder">
                   Quay lại
                 </button>
               </div>

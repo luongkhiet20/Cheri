@@ -1,6 +1,16 @@
 :host {
   display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
+}
+
+:host *,
+:host *::before,
+:host *::after {
+  box-sizing: border-box;
 }
 
 button, input, select, textarea, .btn, .form-control {
@@ -8,34 +18,74 @@ button, input, select, textarea, .btn, .form-control {
 }
 
 .account-detail-page {
-  padding: 24px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: 8px;
   display: flex;
   flex-direction: column;
   gap: 20px;
   background-color: var(--color-bg-main, #f8fafc);
-  min-height: calc(100vh - 64px);
+  min-height: calc(100vh - 84px);
 }
+
+/* =========================
+   HEADER & BREADCRUMB
+========================= */
 
 .detail-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
   flex-wrap: wrap;
+  width: 100%;
+  min-width: 0;
+}
+
+.detail-header-info {
+  flex: 1 1 280px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+:host ::ng-deep .admin-breadcrumb {
+  max-width: 100%;
+  min-width: 0;
+}
+
+:host ::ng-deep .admin-breadcrumb__list {
+  min-width: 0;
+  max-width: 100%;
+}
+
+:host ::ng-deep .admin-breadcrumb__current {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .detail-title {
   font-size: 22px;
   font-weight: 700;
+  line-height: 1.3;
   color: var(--color-text-primary, #0f172a);
-  margin: 0 0 4px 0;
+  margin: 0 0 6px 0;
   letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .detail-subtitle {
   font-size: 13px;
+  line-height: 1.5;
   color: var(--color-text-secondary, #64748b);
   margin: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
 }
 
 .detail-subtitle code {
@@ -45,12 +95,19 @@ button, input, select, textarea, .btn, .form-control {
   font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
   font-size: 12px;
   color: #334155;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  max-width: 100%;
 }
 
 .detail-header-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  max-width: 100%;
 }
 
 .btn {
@@ -61,11 +118,17 @@ button, input, select, textarea, .btn, .form-control {
   padding: 9px 18px;
   font-size: 14px;
   font-weight: 600;
+  line-height: 1.3;
   border-radius: 8px;
   border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
+  max-width: 100%;
+}
+
+.btn-icon {
+  flex-shrink: 0;
 }
 
 /* =========================
@@ -134,11 +197,28 @@ button, input, select, textarea, .btn, .form-control {
 
 .alert-box {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   padding: 12px 16px;
   border-radius: 8px;
   font-size: 14px;
+  line-height: 1.5;
+  width: 100%;
+  min-width: 0;
+}
+
+.alert-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.alert-content {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* SUCCESS → GIỮ XANH */
@@ -164,12 +244,14 @@ button, input, select, textarea, .btn, .form-control {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 56px 24px;
+  padding: 48px 24px;
   background: #ffffff;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
   text-align: center;
   gap: 12px;
+  width: 100%;
+  min-width: 0;
 }
 
 .state-title {
@@ -177,12 +259,26 @@ button, input, select, textarea, .btn, .form-control {
   font-weight: 700;
   color: #0f172a;
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .state-desc {
   font-size: 14px;
+  line-height: 1.5;
   color: #64748b;
   margin: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.state-desc code {
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12.5px;
+  color: #334155;
+  word-break: break-all;
 }
 
 .state-icon {
@@ -211,12 +307,15 @@ button, input, select, textarea, .btn, .form-control {
 
 .detail-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .col-span-2 {
-  grid-column: span 2;
+  grid-column: 1 / -1;
 }
 
 /* =========================
@@ -229,12 +328,17 @@ button, input, select, textarea, .btn, .form-control {
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .card-head {
   padding-bottom: 14px;
   border-bottom: 1px solid #f1f5f9;
   margin-bottom: 16px;
+  min-width: 0;
 }
 
 .card-head-title {
@@ -243,13 +347,17 @@ button, input, select, textarea, .btn, .form-control {
   gap: 10px;
   font-size: 16px;
   font-weight: 700;
+  line-height: 1.35;
   color: #0f172a;
   margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 /* ICON → ĐỎ */
 .card-icon {
   color: #990000;
+  flex-shrink: 0;
 }
 
 /* =========================
@@ -257,7 +365,7 @@ button, input, select, textarea, .btn, .form-control {
 ========================= */
 
 .profile-card {
-  grid-column: span 2;
+  grid-column: 1 / -1;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -268,6 +376,8 @@ button, input, select, textarea, .btn, .form-control {
   display: flex;
   align-items: center;
   gap: 20px;
+  min-width: 0;
+  width: 100%;
 }
 
 .profile-avatar-wrap {
@@ -284,31 +394,41 @@ button, input, select, textarea, .btn, .form-control {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
 .profile-main {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .profile-name {
   font-size: 20px;
   font-weight: 700;
+  line-height: 1.3;
   color: #0f172a;
   margin: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .profile-email {
   font-size: 14px;
+  line-height: 1.45;
   color: #64748b;
   margin: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .profile-badges {
   display: flex;
   align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: 6px;
 }
 
@@ -319,6 +439,7 @@ button, input, select, textarea, .btn, .form-control {
   font-size: 12px;
   font-weight: 600;
   border-radius: 9999px;
+  white-space: nowrap;
 }
 
 /* PRIMARY BADGE → ĐỎ */
@@ -337,17 +458,26 @@ button, input, select, textarea, .btn, .form-control {
 
 .profile-meta-row {
   display: flex;
-  gap: 24px;
+  flex-wrap: wrap;
+  gap: 12px 24px;
   padding-top: 12px;
   border-top: 1px solid #f1f5f9;
+  min-width: 0;
 }
 
 .meta-item {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   font-size: 13px;
   color: #64748b;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.meta-label {
+  flex-shrink: 0;
 }
 
 .meta-code {
@@ -357,6 +487,9 @@ button, input, select, textarea, .btn, .form-control {
   font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
   font-size: 12px;
   color: #334155;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  max-width: 100%;
 }
 
 /* =========================
@@ -367,6 +500,7 @@ button, input, select, textarea, .btn, .form-control {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  min-width: 0;
 }
 
 .info-row {
@@ -375,8 +509,10 @@ button, input, select, textarea, .btn, .form-control {
   align-items: flex-start;
   gap: 16px;
   font-size: 14px;
+  line-height: 1.5;
   padding-bottom: 12px;
   border-bottom: 1px solid #f8fafc;
+  min-width: 0;
 }
 
 .info-row:last-child {
@@ -386,13 +522,18 @@ button, input, select, textarea, .btn, .form-control {
 
 .info-label {
   color: #64748b;
-  min-width: 140px;
+  min-width: 130px;
+  max-width: 45%;
   flex-shrink: 0;
+  line-height: 1.5;
 }
 
 .info-value {
   color: #0f172a;
   text-align: right;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
   word-break: break-word;
 }
 
@@ -405,6 +546,7 @@ button, input, select, textarea, .btn, .form-control {
 }
 
 .info-code {
+  display: inline-block;
   background: #f8fafc;
   padding: 2px 6px;
   border-radius: 4px;
@@ -412,6 +554,10 @@ button, input, select, textarea, .btn, .form-control {
   font-size: 13px;
   color: #475569;
   border: 1px solid #e2e8f0;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+  text-align: left;
 }
 
 /* =========================
@@ -531,6 +677,7 @@ button, input, select, textarea, .btn, .form-control {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
 }
 
 .cart-summary-bar {
@@ -548,8 +695,11 @@ button, input, select, textarea, .btn, .form-control {
   padding: 8px 14px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
   font-size: 13px;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 
 .cart-chip-label {
@@ -569,6 +719,7 @@ button, input, select, textarea, .btn, .form-control {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
 }
 
 .cart-item-card {
@@ -580,6 +731,8 @@ button, input, select, textarea, .btn, .form-control {
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  min-width: 0;
+  width: 100%;
 }
 
 .cart-item-card:hover {
@@ -619,7 +772,7 @@ button, input, select, textarea, .btn, .form-control {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -627,8 +780,9 @@ button, input, select, textarea, .btn, .form-control {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .cart-item-title {
@@ -637,6 +791,9 @@ button, input, select, textarea, .btn, .form-control {
   font-weight: 600;
   color: #0f172a;
   line-height: 1.4;
+  flex: 1 1 180px;
+  min-width: 0;
+  overflow-wrap: anywhere;
   word-break: break-word;
 }
 
@@ -655,6 +812,7 @@ button, input, select, textarea, .btn, .form-control {
   font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .cart-item-meta-list {
@@ -662,6 +820,7 @@ button, input, select, textarea, .btn, .form-control {
   flex-direction: column;
   gap: 4px;
   font-size: 13px;
+  min-width: 0;
 }
 
 .cart-item-meta {
@@ -670,16 +829,20 @@ button, input, select, textarea, .btn, .form-control {
   gap: 6px;
   color: #64748b;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .cart-meta-label {
   font-weight: 500;
   color: #64748b;
+  flex-shrink: 0;
 }
 
 .cart-meta-value {
   color: #1e293b;
   font-weight: 500;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .cart-meta-code {
@@ -689,12 +852,16 @@ button, input, select, textarea, .btn, .form-control {
   font-family: inherit;
   font-size: 12px;
   color: #475569;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  max-width: 100%;
 }
 
 .cart-item-pricing {
   display: flex;
   align-items: center;
-  gap: 16px;
+  justify-content: space-between;
+  gap: 8px 16px;
   font-size: 13px;
   color: #64748b;
   margin-top: 2px;
@@ -755,8 +922,11 @@ button, input, select, textarea, .btn, .form-control {
 .card-head-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  justify-content: space-between;
+  gap: 8px 16px;
   flex-wrap: wrap;
+  width: 100%;
+  min-width: 0;
 }
 
 .card-head-sub {
@@ -785,6 +955,7 @@ button, input, select, textarea, .btn, .form-control {
   border-top-color: #990000;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
 }
 
 .orders-error-message {
@@ -795,14 +966,21 @@ button, input, select, textarea, .btn, .form-control {
   border-radius: 8px;
   font-size: 14px;
   margin: 12px 0;
+  overflow-wrap: anywhere;
 }
 
 .orders-table-wrap {
+  width: 100%;
+  max-width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 8px;
+  border: 1px solid #f1f5f9;
 }
 
 .orders-table {
   width: 100%;
+  min-width: 720px;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -812,37 +990,35 @@ button, input, select, textarea, .btn, .form-control {
   padding: 12px 14px;
   text-align: left;
   border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
 }
 
 .orders-table th {
   background: #f8fafc;
   color: #475569;
   font-weight: 600;
+  white-space: nowrap;
+}
+
+.orders-table td {
+  color: #334155;
+}
+
+.orders-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .order-code {
   font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
   font-weight: 600;
   color: #0f172a;
+  white-space: nowrap;
 }
 
-.badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 8px;
-  border-radius: 9999px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.badge-neutral {
-  background: #f1f5f9;
-  color: #475569;
-}
-
-.badge-primary {
-  background: #eff6ff;
-  color: #1d4ed8;
+.orders-table .font-semibold.text-primary {
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--cheri-primary, #74070E);
 }
 
 .badge-warning {
@@ -863,13 +1039,20 @@ button, input, select, textarea, .btn, .form-control {
 .payment-method-text,
 .shipping-method-text {
   color: #334155;
+  display: inline-block;
+  max-width: 180px;
+  overflow-wrap: break-word;
 }
 
 .text-right {
   text-align: right;
+  white-space: nowrap;
 }
 
 .btn-action-view {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 6px 12px;
   background: #ffffff;
   border: 1px solid #cbd5e1;
@@ -878,6 +1061,7 @@ button, input, select, textarea, .btn, .form-control {
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
+  white-space: nowrap;
   transition: all 0.15s ease;
 }
 
@@ -894,27 +1078,123 @@ button, input, select, textarea, .btn, .form-control {
   font-size: 14px;
 }
 
-/* =========================
-   RESPONSIVE
-========================= */
+/* ==========================================================================
+   RESPONSIVE BREAKPOINTS
+   - Desktop / Laptop nhỏ (1024px – 1279px)
+   - Tablet ngang & dọc (768px – 1023px)
+   - Mobile lớn (481px – 767px)
+   - Mobile nhỏ (320px – 480px)
+   ========================================================================== */
 
-@media (max-width: 768px) {
-  .detail-grid {
-    grid-template-columns: 1fr;
+/* 1. Desktop / Laptop vừa (1024px – 1279px): Tối ưu khi Sidebar 240px đang mở */
+@media screen and (max-width: 1279px) {
+  .account-detail-page {
+    padding: 4px;
+    gap: 16px;
   }
 
-  .col-span-2 {
-    grid-column: span 1;
+  .detail-grid {
+    gap: 16px;
+  }
+
+  .card {
+    padding: 20px;
+  }
+
+  .info-label {
+    min-width: 112px;
+  }
+}
+
+/* 2. Tablet (<= 1023px): Chuyển lưới 2 cột thành 1 cột để tránh co ép khi Sidebar mở */
+@media screen and (max-width: 1023px) {
+  .detail-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .col-span-2,
+  .profile-card {
+    grid-column: 1 / -1;
+  }
+
+  .detail-title {
+    font-size: 20px;
+  }
+
+  .profile-name {
+    font-size: 18px;
+  }
+
+  .info-label {
+    min-width: 130px;
+  }
+}
+
+/* 3. Mobile lớn (<= 767px) */
+@media screen and (max-width: 767px) {
+  .account-detail-page {
+    padding: 0;
+    gap: 14px;
+  }
+
+  .detail-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .detail-header-info {
+    flex: none;
+    width: 100%;
+  }
+
+  .detail-header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .card {
+    padding: 16px;
+    border-radius: 10px;
+  }
+
+  .card-head {
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+  }
+
+  .card-head-title {
+    font-size: 15px;
+  }
+
+  .profile-header {
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+  .profile-avatar-wrap {
+    width: 64px;
+    height: 64px;
   }
 
   .info-row {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
+    padding-bottom: 10px;
+  }
+
+  .info-label {
+    min-width: 0;
+    max-width: 100%;
+    font-size: 13px;
   }
 
   .info-value {
     text-align: left;
+    width: 100%;
+    font-size: 13.5px;
   }
 
   .avatar-cell {
@@ -922,8 +1202,10 @@ button, input, select, textarea, .btn, .form-control {
     width: 100%;
   }
 
-  .avatar-cell__data {
+  .avatar-cell__data,
+  .avatar-cell__data.is-expanded {
     justify-content: flex-start;
+    align-items: flex-start;
   }
 
   .avatar-cell__text {
@@ -931,13 +1213,117 @@ button, input, select, textarea, .btn, .form-control {
   }
 
   .cart-item-card {
-    flex-direction: column;
-    align-items: stretch;
+    padding: 12px;
     gap: 12px;
   }
 
   .cart-item-img-wrap {
     width: 64px;
     height: 64px;
+  }
+
+  .cart-item-title {
+    font-size: 14px;
+  }
+
+  .cart-item-pricing {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .orders-table {
+    min-width: 640px;
+    font-size: 12.5px;
+  }
+
+  .orders-table th,
+  .orders-table td {
+    padding: 10px 12px;
+  }
+
+  .state-card {
+    padding: 36px 16px;
+  }
+}
+
+/* 4. Mobile nhỏ (320px – 480px) */
+@media screen and (max-width: 480px) {
+  .detail-title {
+    font-size: 18px;
+  }
+
+  .detail-subtitle {
+    font-size: 12px;
+  }
+
+  .detail-header-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+  }
+
+  .detail-header-actions .btn {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .card {
+    padding: 14px 12px;
+  }
+
+  .profile-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .profile-avatar-wrap {
+    width: 60px;
+    height: 60px;
+  }
+
+  .profile-name {
+    font-size: 17px;
+  }
+
+  .profile-email {
+    font-size: 13px;
+  }
+
+  .meta-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .cart-summary-bar {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .cart-summary-chip {
+    width: 100%;
+    padding: 8px 12px;
+  }
+
+  .cart-item-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .cart-item-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .state-card .btn {
+    width: 100%;
+    white-space: normal;
+    text-align: center;
   }
 }

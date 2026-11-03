@@ -1784,114 +1784,7 @@
   line-height: 1.5;
 }
 
-/* ── BƯỚC 3: XÁC NHẬN ĐƠN HÀNG - TYPOGRAPHY CHUẨN HÓA ── */
-:host .order-confirmation-box {
-  font-family: var(--font-sans, "Inter", "Segoe UI", Arial, sans-serif);
-  font-size: 13px;
-  line-height: 1.5;
-  color: #374151;
-  background-color: #FAFAFA;
-  border: 1px solid var(--cheri-border, #E5E0E0);
-  border-radius: 6px;
-  padding: 14px 16px;
-  margin-top: 12px;
-  margin-bottom: 14px;
-  box-sizing: border-box;
-}
-
-:host .summary-section-label {
-  display: block;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  color: #111827;
-  line-height: 1.5;
-  margin-bottom: 6px;
-}
-
-:host .order-last-summary {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  padding-bottom: 12px;
-  margin-bottom: 12px;
-  border-bottom: 1px dashed var(--cheri-border, #E5E0E0);
-  font-family: inherit;
-  font-size: 13px;
-  line-height: 1.5;
-  color: #374151;
-}
-
-:host .order-last-summary div {
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 400;
-  color: #374151;
-  line-height: 1.5;
-  word-break: break-word;
-}
-
-:host .order-last-summary div strong {
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  color: #111827;
-  margin-right: 4px;
-}
-
-:host .order-checkout-recap {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-family: inherit;
-  font-size: 13px;
-  line-height: 1.5;
-  color: #374151;
-}
-
-:host .order-checkout-recap > div {
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  color: #374151;
-  line-height: 1.5;
-  word-break: break-word;
-}
-
-:host .order-checkout-recap > div strong {
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  color: #111827;
-  margin-left: 2px;
-}
-
-:host .order-checkout-recap .color-success {
-  color: #059669;
-}
-
-:host .order-checkout-recap .color-success strong {
-  color: #059669;
-}
-
-:host .order-checkout-recap .recap-total {
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  color: #111827;
-  margin-top: 4px;
-  padding-top: 6px;
-  border-top: 1px solid var(--cheri-border, #E5E0E0);
-}
-
-:host .order-checkout-recap .recap-total strong,
-:host .order-checkout-recap .recap-total strong.color-primary {
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--cheri-primary, #74070E) !important;
-}
-
+/* ── NÚT HOÀN TẤT ĐẶT HÀNG TẠI BƯỚC PHƯƠNG THỨC THANH TOÁN ── */
 :host .submit-order-button {
   margin: 16px 0 10px 0;
   width: 100%;
@@ -2552,10 +2445,6 @@
   :host .payment-choice-name b {
     font-size: 12px;
     white-space: nowrap;
-  }
-
-  :host .order-confirmation-box {
-    padding: 12px 10px;
   }
 
   :host .submit-order-button {

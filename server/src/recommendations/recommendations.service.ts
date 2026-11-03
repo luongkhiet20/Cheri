@@ -33,6 +33,7 @@ export interface RecommendationResponse {
   isMachineLearning: boolean;
   dataSource?: string;
   currentProductId?: string;
+  recommendationContextId?: string;
   candidatePoolSize?: number;
   priorityCount?: number;
   explorationCount?: number;
@@ -155,18 +156,24 @@ export class RecommendationsService {
       }
 
       const currentProductId = dto.currentProductId ? String(dto.currentProductId).trim() : null;
+      const contextId = dto.recommendationContextId ? String(dto.recommendationContextId).trim() : null;
       const strategy = dto.strategy ? String(dto.strategy).trim() : 'ml_bootstrap_model';
       const now = new Date();
       const dedupCutoff = new Date(now.getTime() - 15 * 1000); // 15-second technical deduplication window
 
+      const recentQuery: any = {
+        userKey,
+        currentProductId,
+        productId: { $in: uniqueValidIds.map((id) => new Types.ObjectId(id)) },
+        shownAt: { $gte: dedupCutoff },
+      };
+      if (contextId) {
+        recentQuery.recommendationContextId = contextId;
+      }
+
       const existingRecent = await this.impressionModel
         .find(
-          {
-            userKey,
-            currentProductId,
-            productId: { $in: uniqueValidIds.map((id) => new Types.ObjectId(id)) },
-            shownAt: { $gte: dedupCutoff },
-          },
+          recentQuery,
           { productId: 1 },
         )
         .lean();
@@ -183,6 +190,7 @@ export class RecommendationsService {
           sessionId,
           productId: new Types.ObjectId(pid),
           currentProductId,
+          recommendationContextId: contextId,
           strategy,
           shownAt: now,
         }));
@@ -216,6 +224,7 @@ export class RecommendationsService {
     );
     const lang = dto.lang || 'vi';
     const rawProductId = dto.productId ? String(dto.productId).trim() : undefined;
+    const contextId = dto.recommendationContextId ? String(dto.recommendationContextId).trim() : undefined;
 
     let userKey: string | undefined = undefined;
     if (user && user._id) {
@@ -229,6 +238,7 @@ export class RecommendationsService {
       productId: rawProductId,
       userKey,
       limit,
+      contextId,
     });
 
     if (cliResult && Array.isArray(cliResult.recommendations) && cliResult.recommendations.length > 0) {
@@ -261,6 +271,7 @@ export class RecommendationsService {
           isMachineLearning: isML,
           dataSource: cliResult.data_source || (isML ? 'synthetic_bootstrap' : 'real_data'),
           currentProductId: rawProductId,
+          recommendationContextId: contextId,
           candidatePoolSize: cliResult.candidate_pool_size,
           priorityCount: cliResult.priority_count,
           explorationCount: cliResult.exploration_count,
@@ -271,7 +282,11 @@ export class RecommendationsService {
     }
 
     // Step 2: Native MongoDB Fallback with synchronized Top-30 Pool + 6/4 Diversity Re-ranking + Exposure Rotation
-    const { exposureMap, purchasedSet } = await this.getExposureAndPurchasedHistory(user, guestCartId);
+    const { exposureMap, purchasedSet } = await this.getExposureAndPurchasedHistory(
+      user,
+      guestCartId,
+      contextId,
+    );
 
     if (rawProductId) {
       return this.nativeFallbackByCategory(
@@ -280,6 +295,7 @@ export class RecommendationsService {
         lang,
         exposureMap,
         purchasedSet,
+        contextId,
       );
     }
 
@@ -289,6 +305,7 @@ export class RecommendationsService {
       lang,
       exposureMap,
       purchasedSet,
+      contextId,
     );
   }
 
@@ -299,6 +316,7 @@ export class RecommendationsService {
   private async getExposureAndPurchasedHistory(
     user?: any,
     guestCartId?: string,
+    contextId?: string,
   ): Promise<{ exposureMap: Map<string, ExposureEntry>; purchasedSet: Set<string> }> {
     const exposureMap = new Map<string, ExposureEntry>();
     const purchasedSet = new Set<string>();
@@ -352,12 +370,16 @@ export class RecommendationsService {
       const cutoff = new Date(
         Date.now() - RECOMMENDATION_CONFIG.IMPRESSION_LOOKBACK_DAYS * 24 * 3600 * 1000,
       );
+      const impressionFilter: any = {
+        $or: orConditions,
+        shownAt: { $gte: cutoff },
+      };
+      if (contextId) {
+        impressionFilter.recommendationContextId = contextId;
+      }
       const impressions = await this.impressionModel
         .find(
-          {
-            $or: orConditions,
-            shownAt: { $gte: cutoff },
-          },
+          impressionFilter,
           { productId: 1, shownAt: 1 },
         )
         .sort({ shownAt: -1 })
@@ -601,6 +623,7 @@ export class RecommendationsService {
     productId?: string;
     userKey?: string;
     limit: number;
+    contextId?: string;
   }): Promise<PythonCLIResult | null> {
     const pythonExe = this.resolvePythonExecutable();
     const scriptPath = path.resolve(process.cwd(), 'server', 'ml', 'src', 'predict_recommendations.py');
@@ -619,6 +642,9 @@ export class RecommendationsService {
       if (params.userKey) {
         args.push('--user-id', params.userKey);
       }
+      if (params.contextId) {
+        args.push('--context-id', params.contextId);
+      }
 
       const allowBootstrap = process.env.ENABLE_ML_BOOTSTRAP !== 'false';
       if (allowBootstrap) {
@@ -635,12 +661,13 @@ export class RecommendationsService {
         windowsHide: true,
       });
 
+      const timeoutMs = Number(process.env.ML_INFERENCE_TIMEOUT_MS) || 6000;
       const timer = setTimeout(() => {
         isTimedOut = true;
         proc.kill('SIGKILL');
-        this.logger.warn('Python inference process timed out (exceeded 3000ms). Falling back.');
+        this.logger.warn(`Python inference process timed out (exceeded ${timeoutMs}ms). Falling back.`);
         resolve(null);
-      }, 3000);
+      }, timeoutMs);
 
       proc.stdout.on('data', (chunk) => {
         stdoutBuffer += chunk.toString('utf-8');
@@ -710,6 +737,7 @@ export class RecommendationsService {
     lang: string,
     exposureMap: Map<string, ExposureEntry> = new Map(),
     purchasedSet: Set<string> = new Set(),
+    contextId?: string,
   ): Promise<RecommendationResponse> {
     try {
       let currentProd: any = null;
@@ -721,7 +749,7 @@ export class RecommendationsService {
       }
 
       if (!currentProd) {
-        return this.nativeFallbackByPopularity(undefined, limit, lang, exposureMap, purchasedSet);
+        return this.nativeFallbackByPopularity(undefined, limit, lang, exposureMap, purchasedSet, contextId);
       }
 
       const currId = currentProd._id;
@@ -755,12 +783,9 @@ export class RecommendationsService {
         .limit(RECOMMENDATION_CONFIG.CANDIDATE_POOL_SIZE)
         .lean();
 
-      // Supplement pool up to 30 with popular items from other categories so category cap (max 3/cat) and exploration work smoothly
-      const seenIds = new Set(sameCatDocs.map((d: any) => d._id.toString()));
-      seenIds.add(currId.toString());
-
+      // Supplement pool with popular items from other categories only if same category has fewer items than requested limit
       let otherDocs: any[] = [];
-      if (sameCatDocs.length < RECOMMENDATION_CONFIG.CANDIDATE_POOL_SIZE) {
+      if (sameCatDocs.length < limit) {
         const otherExcluded = [
           ...excludedIds,
           ...sameCatDocs.map((d: any) => d._id),
@@ -831,6 +856,7 @@ export class RecommendationsService {
         isMachineLearning: false,
         dataSource: 'native_fallback',
         currentProductId,
+        recommendationContextId: contextId,
         candidatePoolSize: divResult.poolSize,
         priorityCount: divResult.priorityCount,
         explorationCount: divResult.explorationCount,
@@ -839,7 +865,7 @@ export class RecommendationsService {
       };
     } catch (err: any) {
       this.logger.error(`Error in nativeFallbackByCategory: ${err.message}`);
-      return this.nativeFallbackByPopularity(currentProductId, limit, lang, exposureMap, purchasedSet);
+      return this.nativeFallbackByPopularity(currentProductId, limit, lang, exposureMap, purchasedSet, contextId);
     }
   }
 
@@ -853,6 +879,7 @@ export class RecommendationsService {
     lang: string,
     exposureMap: Map<string, ExposureEntry> = new Map(),
     purchasedSet: Set<string> = new Set(),
+    contextId?: string,
   ): Promise<RecommendationResponse> {
     try {
       const excludedIds: Types.ObjectId[] = Array.from(purchasedSet)
@@ -928,6 +955,7 @@ export class RecommendationsService {
         isMachineLearning: false,
         dataSource: 'native_fallback',
         currentProductId: excludeProductId,
+        recommendationContextId: contextId,
         candidatePoolSize: divResult.poolSize,
         priorityCount: divResult.priorityCount,
         explorationCount: divResult.explorationCount,
@@ -943,6 +971,7 @@ export class RecommendationsService {
         isMachineLearning: false,
         dataSource: 'native_fallback',
         currentProductId: excludeProductId,
+        recommendationContextId: contextId,
         count: 0,
         products: [],
       };

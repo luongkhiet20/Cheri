@@ -17,4 +17,9 @@ export class GetRecommendationsDto {
   @IsOptional()
   @IsString()
   lang?: string = 'vi';
+
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  recommendationContextId?: string;
 }

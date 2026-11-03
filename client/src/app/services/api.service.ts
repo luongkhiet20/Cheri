@@ -399,28 +399,33 @@ export class ApiService {
   }
 
   getRecommendations(
-    paramsOrProductId?: string | { productId?: string; limit?: number; lang?: string },
+    paramsOrProductId?: string | { productId?: string; limit?: number; lang?: string; recommendationContextId?: string },
     limit?: number,
-    lang?: string
+    lang?: string,
+    recommendationContextId?: string
   ): Observable<any> {
     let pId: string | undefined;
     let lim: number | undefined;
     let l: string | undefined;
+    let ctxId: string | undefined;
 
     if (typeof paramsOrProductId === 'object' && paramsOrProductId !== null) {
       pId = paramsOrProductId.productId;
       lim = paramsOrProductId.limit;
       l = paramsOrProductId.lang;
+      ctxId = paramsOrProductId.recommendationContextId;
     } else if (typeof paramsOrProductId === 'string') {
       pId = paramsOrProductId;
       lim = limit;
       l = lang;
+      ctxId = recommendationContextId;
     }
 
     const queryParts: string[] = [];
     if (pId) queryParts.push('productId=' + encodeURIComponent(pId));
     if (lim) queryParts.push('limit=' + lim);
     if (l) queryParts.push('lang=' + encodeURIComponent(l));
+    if (ctxId) queryParts.push('recommendationContextId=' + encodeURIComponent(ctxId));
     const qs = queryParts.length ? '?' + queryParts.join('&') : '';
     const recUrl = `${this.apiUrl}/api/recommendations${qs}`;
     return this.http.get(recUrl, this.getRequestOptions()).pipe(
@@ -1127,6 +1132,7 @@ export class ApiService {
     currentProductId?: string;
     strategy?: string;
     sessionId?: string;
+    recommendationContextId?: string;
   }): Observable<any> {
     if (!payload?.productIds || payload.productIds.length === 0) {
       return of({ success: true, recordedCount: 0 });
@@ -1153,6 +1159,7 @@ export class ApiService {
       currentProductId: payload.currentProductId || undefined,
       strategy: payload.strategy || undefined,
       sessionId: payload.sessionId || guestCartId || undefined,
+      recommendationContextId: payload.recommendationContextId || undefined,
     };
 
     return this.http.post(url, body, { headers }).pipe(

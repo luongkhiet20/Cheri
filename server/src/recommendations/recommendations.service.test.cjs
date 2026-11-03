@@ -123,6 +123,12 @@ function createMockModels() {
         filtered = filtered.filter((p) => p._id.toString() !== query._id.$ne.toString());
       }
 
+      // Handle $nin for _id
+      if (query._id && query._id.$nin) {
+        const ninSet = new Set(query._id.$nin.map((id) => id.toString()));
+        filtered = filtered.filter((p) => !ninSet.has(p._id.toString()));
+      }
+
       // Handle category matching
       if (query.$or) {
         const catConditions = query.$or;
@@ -171,6 +177,7 @@ function createMockModels() {
 test('1. API trả gợi ý phổ biến khi không truyền sản phẩm hiện tại (fallback_popularity)', async () => {
   const { mockProductModel, mockProductVariantModel } = createMockModels();
   const service = new RecommendationsService(mockProductModel, mockProductVariantModel);
+  service.invokePythonCLI = async () => null;
 
   const res = await service.getRecommendations({ limit: 3 });
 
@@ -187,6 +194,7 @@ test('1. API trả gợi ý phổ biến khi không truyền sản phẩm hiện
 test('2. API trả gợi ý cùng danh mục khi truyền ID sản phẩm hiện tại (fallback_category)', async () => {
   const { mockProductModel, mockProductVariantModel } = createMockModels();
   const service = new RecommendationsService(mockProductModel, mockProductVariantModel);
+  service.invokePythonCLI = async () => null;
 
   // Xem 'Đầm 2 Dây Xòe Zoey Dress' (thuộc danh mục 'Đầm & Váy')
   const currentId = '6ab8f745547709e9279f68fc';
@@ -207,6 +215,7 @@ test('2. API trả gợi ý cùng danh mục khi truyền ID sản phẩm hiện
 test('3. Không bao giờ trả lại chính sản phẩm hiện tại trong danh sách gợi ý', async () => {
   const { mockProductModel, mockProductVariantModel } = createMockModels();
   const service = new RecommendationsService(mockProductModel, mockProductVariantModel);
+  service.invokePythonCLI = async () => null;
 
   const currentId = '6ab8f745547709e9279f68fc';
   const res = await service.getRecommendations({ productId: currentId, limit: 5 });
@@ -218,6 +227,7 @@ test('3. Không bao giờ trả lại chính sản phẩm hiện tại trong dan
 test('4. Không trả sản phẩm đã bị xóa hoặc bị ẩn (visibility: false)', async () => {
   const { mockProductModel, mockProductVariantModel } = createMockModels();
   const service = new RecommendationsService(mockProductModel, mockProductVariantModel);
+  service.invokePythonCLI = async () => null;
 
   const res = await service.getRecommendations({ limit: 10 });
   const hiddenId = '6ab8f746547709e9279f6900';
@@ -229,6 +239,7 @@ test('4. Không trả sản phẩm đã bị xóa hoặc bị ẩn (visibility: 
 test('5. Xử lý an toàn khi ID sản phẩm không hợp lệ hoặc không tồn tại (chuyển sang Popularity an toàn)', async () => {
   const { mockProductModel, mockProductVariantModel } = createMockModels();
   const service = new RecommendationsService(mockProductModel, mockProductVariantModel);
+  service.invokePythonCLI = async () => null;
 
   // ID hoàn toàn bịa đặt
   const nonExistentId = new ObjectId().toString();
@@ -350,3 +361,106 @@ test('11. Khi sử dụng mô hình bootstrap được kích hoạt server-side,
   assert.equal(res.products[1]._id.toString(), '6ab8f745547709e9279f68fe');
 });
 
+test('12. Tiếp nhận và phản hồi recommendationContextId trong getRecommendations', async () => {
+  const { mockProductModel, mockProductVariantModel } = createMockModels();
+  const service = new RecommendationsService(mockProductModel, mockProductVariantModel);
+
+  let capturedParams = null;
+  service.invokePythonCLI = async (params) => {
+    capturedParams = params;
+    return {
+      status: 'success',
+      strategy: 'ml_bootstrap_model',
+      model_used: 'RandomForestBootstrap',
+      is_bootstrap: true,
+      count: 2,
+      recommendations: [
+        { product_id: '6ab8f745547709e9279f68fd', score: 0.95 },
+        { product_id: '6ab8f745547709e9279f68fe', score: 0.72 },
+      ],
+    };
+  };
+
+  const res = await service.getRecommendations({
+    productId: '6ab8f745547709e9279f68fc',
+    limit: 2,
+    recommendationContextId: 'ctx_product_switch_123',
+  });
+
+  assert.equal(res.status, 'success');
+  assert.equal(res.recommendationContextId, 'ctx_product_switch_123');
+  assert.equal(capturedParams.contextId, 'ctx_product_switch_123');
+});
+
+test('13. Ghi nhận impression gắn recommendationContextId và cô lập exposure giữa các context', async () => {
+  const { mockProductModel, mockProductVariantModel } = createMockModels();
+  const insertedDocs = [];
+  const mockImpressionModel = {
+    insertMany: async (docs) => {
+      insertedDocs.push(...docs);
+      return docs;
+    },
+    find: (query) => ({
+      lean: async () => {
+        return insertedDocs.filter((d) => {
+          if (query.recommendationContextId && d.recommendationContextId !== query.recommendationContextId) {
+            return false;
+          }
+          return true;
+        });
+      },
+      sort: () => ({
+        limit: () => ({
+          lean: async () => {
+            return insertedDocs.filter((d) => {
+              if (query.recommendationContextId && d.recommendationContextId !== query.recommendationContextId) {
+                return false;
+              }
+              return true;
+            });
+          },
+        }),
+      }),
+    }),
+  };
+  const mockInteractionModel = {
+    find: () => ({
+      limit: () => ({
+        lean: async () => [],
+      }),
+    }),
+  };
+
+  const service = new RecommendationsService(
+    mockProductModel,
+    mockProductVariantModel,
+    mockImpressionModel,
+    mockInteractionModel,
+  );
+
+  // Ghi impression dưới context A
+  await service.recordImpressions({
+    productIds: ['6ab8f745547709e9279f68fd'],
+    currentProductId: '6ab8f745547709e9279f68fc',
+    recommendationContextId: 'ctx_view_A',
+  }, { _id: new ObjectId('6ab8f745547709e9279f6800') });
+
+  assert.equal(insertedDocs.length, 1);
+  assert.equal(insertedDocs[0].recommendationContextId, 'ctx_view_A');
+
+  // Lấy exposure dưới context A -> có 1 impression
+  const historyA = await service.getExposureAndPurchasedHistory(
+    { _id: new ObjectId('6ab8f745547709e9279f6800') },
+    null,
+    'ctx_view_A',
+  );
+  assert.equal(historyA.exposureMap.get('6ab8f745547709e9279f68fd')?.impressionCount, 1);
+
+  // Khi chuyển sang sản phẩm mới với context B -> Bắt đầu hoàn toàn mới, 0 impression
+  const historyB = await service.getExposureAndPurchasedHistory(
+    { _id: new ObjectId('6ab8f745547709e9279f6800') },
+    null,
+    'ctx_view_B',
+  );
+  assert.equal(historyB.exposureMap.get('6ab8f745547709e9279f68fd'), undefined);
+});

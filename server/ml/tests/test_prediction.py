@@ -434,6 +434,64 @@ class TestRecommendationInference(unittest.TestCase):
         # Ignored item is decayed but never permanently zeroed out (>= 0.25)
         self.assertGreaterEqual(f_ignored["priority_decay"], 0.25)
 
+    # 13. Recommendation Context ID Isolation: New context does not inherit exposure penalty from previous contexts
+    def test_13_recommendation_context_isolation(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            self.mock_catalog.to_csv(tmp_path / "products_features.csv", index=False)
+
+            # Write impressions under different context IDs
+            imp_df = pd.DataFrame([
+                {
+                    "userKey": "usr_test_context_user",
+                    "productId": "prod_cat1_1",
+                    "shownAt": pd.Timestamp.now(tz="UTC").isoformat(),
+                    "recommendationContextId": "ctx_alpha",
+                },
+                {
+                    "userKey": "usr_test_context_user",
+                    "productId": "prod_cat1_1",
+                    "shownAt": pd.Timestamp.now(tz="UTC").isoformat(),
+                    "recommendationContextId": "ctx_alpha",
+                },
+                {
+                    "userKey": "usr_test_context_user",
+                    "productId": "prod_cat2_1",
+                    "shownAt": pd.Timestamp.now(tz="UTC").isoformat(),
+                    "recommendationContextId": "ctx_beta",
+                },
+            ])
+            imp_df.to_csv(tmp_path / "recommendation_impressions.csv", index=False)
+
+            # Querying under ctx_alpha should ONLY see 2 impressions for prod_cat1_1 and 0 for prod_cat2_1
+            exp_alpha = load_exposure_history(
+                raw_user_id="usr_test_context_user",
+                data_dir=tmp_path,
+                recommendation_context_id="ctx_alpha",
+            )
+            self.assertIn("prod_cat1_1", exp_alpha)
+            self.assertEqual(exp_alpha["prod_cat1_1"]["impression_count"], 2)
+            self.assertNotIn("prod_cat2_1", exp_alpha)
+
+            # Querying under a brand new context (ctx_gamma) should see ZERO impressions for any product!
+            exp_gamma = load_exposure_history(
+                raw_user_id="usr_test_context_user",
+                data_dir=tmp_path,
+                recommendation_context_id="ctx_gamma",
+            )
+            self.assertEqual(len(exp_gamma), 0)
+
+            # Full recommend() call under ctx_gamma passes context ID and starts fresh
+            res = recommend(
+                user_id="usr_test_context_user",
+                current_product_id="prod_cat1_1",
+                top_n=3,
+                data_dir=tmp_path,
+                recommendation_context_id="ctx_gamma",
+            )
+            self.assertEqual(res["status"], "success")
+            self.assertEqual(res.get("recommendation_context_id"), "ctx_gamma")
+
 
 if __name__ == "__main__":
     unittest.main()

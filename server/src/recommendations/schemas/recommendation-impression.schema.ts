@@ -7,6 +7,7 @@ export interface RecommendationImpressionDocument extends mongoose.Document {
   sessionId?: string | null;
   productId: mongoose.Types.ObjectId;
   currentProductId?: string | null;
+  recommendationContextId?: string | null;
   strategy: string;
   shownAt: Date;
 }
@@ -18,6 +19,7 @@ export const RecommendationImpressionSchema = new Schema(
     sessionId: { type: String, default: null, index: true },
     productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true, index: true },
     currentProductId: { type: String, default: null, index: true },
+    recommendationContextId: { type: String, default: null, index: true },
     strategy: {
       type: String,
       default: 'ml_bootstrap_model',
@@ -31,6 +33,7 @@ export const RecommendationImpressionSchema = new Schema(
   },
 );
 
+RecommendationImpressionSchema.index({ recommendationContextId: 1, shownAt: -1 });
 RecommendationImpressionSchema.index({ userKey: 1, shownAt: -1 });
 RecommendationImpressionSchema.index({ sessionId: 1, shownAt: -1 });
 RecommendationImpressionSchema.index({ userId: 1, shownAt: -1 });

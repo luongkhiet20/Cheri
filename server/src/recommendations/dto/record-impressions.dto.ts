@@ -21,5 +21,10 @@ export class RecordImpressionsDto {
   @IsString()
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   sessionId?: string;
+
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  recommendationContextId?: string;
 }
 

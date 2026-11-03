@@ -105,20 +105,38 @@ RECOMMENDATION_MAX_PER_CATEGORY: int = int(os.getenv("RECOMMENDATION_MAX_PER_CAT
 IMPRESSION_COLLECTION_NAME: str = os.getenv("IMPRESSION_COLLECTION_NAME", "recommendation_impressions")
 IMPRESSION_LOOKBACK_DAYS: int = int(os.getenv("IMPRESSION_LOOKBACK_DAYS", "7"))
 
-def get_mongo_client(uri: Optional[str] = None, timeout_ms: int = 15000) -> MongoClient:
-    """Creates an authenticated MongoClient with timeout and ping verification."""
+_shared_client: Optional[MongoClient] = None
+
+def get_mongo_client(
+    uri: Optional[str] = None,
+    timeout_ms: int = 15000,
+    ping: bool = True,
+) -> MongoClient:
+    """Creates an authenticated MongoClient with timeout and optional ping verification."""
     conn_uri = uri or MONGO_URI
     client = MongoClient(conn_uri, serverSelectionTimeoutMS=timeout_ms)
-    try:
-        client.admin.command("ping")
-    except (ConnectionFailure, ServerSelectionTimeoutError) as e:
-        raise ConnectionError(f"Failed to connect to MongoDB: {str(e)}") from e
+    if ping:
+        try:
+            client.admin.command("ping")
+        except (ConnectionFailure, ServerSelectionTimeoutError) as e:
+            raise ConnectionError(f"Failed to connect to MongoDB: {str(e)}") from e
     return client
+
+
+def get_shared_mongo_client(
+    uri: Optional[str] = None,
+    timeout_ms: int = 4000,
+) -> MongoClient:
+    """Returns a module-level cached MongoClient without redundant ping commands."""
+    global _shared_client
+    if _shared_client is None:
+        _shared_client = get_mongo_client(uri=uri, timeout_ms=timeout_ms, ping=False)
+    return _shared_client
 
 
 def get_mongo_db(uri: Optional[str] = None, db_name: Optional[str] = None):
     """Returns database instance from MongoClient."""
-    client = get_mongo_client(uri)
+    client = get_shared_mongo_client(uri)
     target_name = db_name or MONGO_DB_NAME
     # If URI specifies database name, default to it
     try:

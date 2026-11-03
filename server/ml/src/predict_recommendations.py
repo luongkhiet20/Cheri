@@ -172,12 +172,8 @@ def load_user_history(
         if is_raw_mongo_uid or is_raw_guest_sess:
             try:
                 from bson import ObjectId
-                from src.config import get_mongo_client, MONGO_DB_NAME
-                client = get_mongo_client(timeout_ms=800)
-                try:
-                    db = client.get_default_database()
-                except Exception:
-                    db = client[MONGO_DB_NAME]
+                from src.config import get_mongo_db
+                db = get_mongo_db()
 
                 query: Dict[str, Any] = {"isSynthetic": {"$ne": True}}
                 if is_raw_mongo_uid:
@@ -283,10 +279,12 @@ def load_exposure_history(
     interactions_df: Optional[pd.DataFrame] = None,
     data_dir: Optional[Path] = None,
     lookback_days: int = IMPRESSION_LOOKBACK_DAYS,
+    recommendation_context_id: Optional[str] = None,
 ) -> Dict[str, Dict[str, Any]]:
     """
     Retrieves recommendation impression history for the last 'lookback_days' (default 7 days)
     from the dedicated 'recommendation_impressions' MongoDB collection (or local CSV in test mode).
+    When 'recommendation_context_id' is provided, isolates impression exposure strictly to the active context.
     Returns mapping:
       product_id -> {
         'impression_count': int,
@@ -316,6 +314,10 @@ def load_exposure_history(
             try:
                 imp_df = pd.read_csv(local_imp_path, dtype=str)
                 for _, r in imp_df.iterrows():
+                    if recommendation_context_id:
+                        rec_ctx = r.get("recommendationContextId") or r.get("recommendation_context_id") or r.get("contextId")
+                        if rec_ctx and str(rec_ctx).strip() != str(recommendation_context_id).strip():
+                            continue
                     rec_ukey = normalize_user_key(r.get("userKey") or r.get("user_key") or r.get("sessionId"))
                     if rec_ukey == u_key or r.get("userKey") == raw_str or r.get("sessionId") == raw_str:
                         records.append({
@@ -329,12 +331,8 @@ def load_exposure_history(
     if data_dir is None:
         try:
             from bson import ObjectId
-            from src.config import get_mongo_client, MONGO_DB_NAME
-            client = get_mongo_client(timeout_ms=800)
-            try:
-                db = client.get_default_database()
-            except Exception:
-                db = client[MONGO_DB_NAME]
+            from src.config import get_mongo_db
+            db = get_mongo_db()
 
             raw_uid_part = raw_str[4:].strip() if raw_str.lower().startswith("usr_") else raw_str
             raw_sess_part = raw_str[4:].strip() if raw_str.lower().startswith("gst_") else raw_str
@@ -346,10 +344,13 @@ def load_exposure_history(
                 or_conditions.append({"sessionId": raw_sess_part})
 
             cutoff_dt = datetime.now(timezone.utc) - timedelta(days=lookback_days)
-            query = {
+            query: Dict[str, Any] = {
                 "$or": or_conditions,
                 "shownAt": {"$gte": cutoff_dt},
             }
+            if recommendation_context_id:
+                query["recommendationContextId"] = str(recommendation_context_id).strip()
+
             mongo_docs = list(
                 db[IMPRESSION_COLLECTION_NAME]
                 .find(query, {"productId": 1, "shownAt": 1})
@@ -363,6 +364,7 @@ def load_exposure_history(
                 })
         except Exception:
             # Non-fatal: if collection is empty or unreachable, proceed without impression penalty
+            pass
             pass
 
     exposure_map: Dict[str, Dict[str, Any]] = {}
@@ -1145,6 +1147,7 @@ def recommend(
     allow_bootstrap: bool = False,
     exposure_map: Optional[Dict[str, Dict[str, Any]]] = None,
     rng_seed: Optional[int] = None,
+    recommendation_context_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Main recommendation workflow:
@@ -1174,6 +1177,7 @@ def recommend(
             raw_user_id=user_id,
             interactions_df=interactions_df,
             data_dir=data_dir,
+            recommendation_context_id=recommendation_context_id,
         )
 
     model, metadata = load_model_and_metadata(
@@ -1283,6 +1287,7 @@ def recommend(
                 "data_source": data_source,
                 "user_key": normalize_user_key(user_id) if user_id else None,
                 "current_product_id": current_product_id,
+                "recommendation_context_id": recommendation_context_id,
                 "candidate_pool_size": div_summary["pool_size"],
                 "priority_count": div_summary["priority_count"],
                 "exploration_count": div_summary["exploration_count"],
@@ -1312,6 +1317,7 @@ def recommend(
                 "strategy": "fallback_category",
                 "model_used": "None",
                 "current_product_id": current_product_id,
+                "recommendation_context_id": recommendation_context_id,
                 "count": len(cat_recs),
                 "recommendations": cat_recs[:top_n],
             }
@@ -1362,6 +1368,7 @@ def recommend(
                 "strategy": "fallback_category",
                 "model_used": "None",
                 "current_product_id": current_product_id,
+                "recommendation_context_id": recommendation_context_id,
                 "count": len(padded),
                 "recommendations": padded,
             }
@@ -1383,6 +1390,7 @@ def recommend(
         "strategy": "fallback_popularity",
         "model_used": "None",
         "current_product_id": current_product_id,
+        "recommendation_context_id": recommendation_context_id,
         "count": len(pop_recs),
         "recommendations": pop_recs,
     }
@@ -1397,6 +1405,7 @@ def main():
     parser.add_argument("--data-dir", type=str, default=None, help="Path to data directory")
     parser.add_argument("--allow-sandbox", action="store_true", help="Allow inference with sandbox model for technical testing")
     parser.add_argument("--allow-bootstrap", action="store_true", help="Allow inference with bootstrap model authorized server-side")
+    parser.add_argument("--context-id", "--recommendation-context-id", dest="context_id", type=str, default=None, help="Recommendation Context ID for isolating impression exposure scope")
     args = parser.parse_args()
 
     result = recommend(
@@ -1407,6 +1416,7 @@ def main():
         data_dir=Path(args.data_dir) if args.data_dir else None,
         allow_sandbox=args.allow_sandbox,
         allow_bootstrap=args.allow_bootstrap,
+        recommendation_context_id=args.context_id,
     )
 
     # Print strict JSON to stdout so consumer (NestJS) can read safely

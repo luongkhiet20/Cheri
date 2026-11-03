@@ -44,6 +44,7 @@ export class ProductRecommendationsComponent implements OnInit, OnChanges, After
 
   recommendedProducts: Product[] = [];
   recommendationStrategy: string = '';
+  recommendationContextId: string = '';
   modelUsed: string = '';
   isMachineLearning: boolean = false;
   isLoading: boolean = false;
@@ -52,6 +53,11 @@ export class ProductRecommendationsComponent implements OnInit, OnChanges, After
   canScrollLeft: boolean = false;
   canScrollRight: boolean = false;
   hasScrollableContent: boolean = false;
+
+  private generateContextId(): string {
+    const rand = Math.random().toString(36).substring(2, 10);
+    return `ctx_${Date.now()}_${rand}`;
+  }
 
   private recSubscription: Subscription | null = null;
   private currentRequestId: number = 0;
@@ -184,7 +190,8 @@ export class ProductRecommendationsComponent implements OnInit, OnChanges, After
     const cleanRecId = String(recommendedProductId || '').trim();
     if (!cleanRecId) return;
 
-    const contextKey = `${this.currentRequestId}:${this.productId}:${cleanRecId}`;
+    const activeCtx = this.recommendationContextId || 'ctx_default';
+    const contextKey = `${activeCtx}:${cleanRecId}`;
     if (this.recordedImpressionKeys.has(contextKey)) {
       return;
     }
@@ -207,12 +214,14 @@ export class ProductRecommendationsComponent implements OnInit, OnChanges, After
 
     const batchIds = Array.from(this.pendingImpressionIds);
     this.pendingImpressionIds.clear();
+    const activeContextId = this.recommendationContextId;
 
     this.apiService
       .recordRecommendationImpressions({
         productIds: batchIds,
         currentProductId: this.productId || undefined,
         strategy: this.recommendationStrategy || undefined,
+        recommendationContextId: activeContextId || undefined,
       })
       .subscribe();
   }
@@ -296,23 +305,53 @@ export class ProductRecommendationsComponent implements OnInit, OnChanges, After
       return;
     }
 
-    const requestId = ++this.currentRequestId;
-    this.pendingImpressionIds.clear();
+    // 1. Tạo recommendationContextId mới cho mỗi lần chọn sản phẩm
+    const newContextId = this.generateContextId();
+    this.recommendationContextId = newContextId;
 
+    // 2. Tăng currentRequestId để loại bỏ mọi response cũ đến muộn (race conditions)
+    const requestId = ++this.currentRequestId;
+
+    // 3. Hủy request API cũ nếu vẫn đang xử lý
     if (this.recSubscription) {
       this.recSubscription.unsubscribe();
+      this.recSubscription = null;
     }
 
+    // 4. Hủy bộ đếm và xóa impression đang chờ gửi của context cũ
+    if (this.impressionFlushTimer) {
+      clearTimeout(this.impressionFlushTimer);
+      this.impressionFlushTimer = null;
+    }
+    this.pendingImpressionIds.clear();
+
+    // 5. Reset bộ nhớ deduplication impression cho context mới
+    this.recordedImpressionKeys.clear();
+
+    // 6. Xóa danh sách đề xuất cũ khỏi giao diện trong khi tải danh sách mới
+    this.recommendedProducts = [];
     this.isLoading = true;
     this.hasError = false;
     this.cdr.markForCheck();
 
+    // 7. Reset trạng thái cuộn carousel về đầu
+    if (this.carouselTrack?.nativeElement) {
+      this.carouselTrack.nativeElement.scrollLeft = 0;
+    }
+
     const targetLimit = this.limit || 10;
 
+    // 8. Gọi API đề xuất với productId và recommendationContextId mới
     this.recSubscription = this.apiService
-      .getRecommendations(this.productId, targetLimit, this.lang || 'vi')
+      .getRecommendations({
+        productId: this.productId,
+        limit: targetLimit,
+        lang: this.lang || 'vi',
+        recommendationContextId: newContextId,
+      })
       .subscribe({
         next: (res: any) => {
+          // 9. Chỉ hiển thị kết quả thuộc request/context hiện tại
           if (requestId !== this.currentRequestId) return;
 
           this.isLoading = false;

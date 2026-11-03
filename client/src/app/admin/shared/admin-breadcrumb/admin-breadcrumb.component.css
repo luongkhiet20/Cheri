@@ -70,6 +70,8 @@
   color: var(--cheri-text, #2B2B2B);
   font-weight: 600;
   cursor: default;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   padding: 2px 0;
 }

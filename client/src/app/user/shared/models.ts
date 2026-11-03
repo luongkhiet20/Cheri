@@ -187,7 +187,6 @@ export interface PaymentMethod {
     value: number;
   };
   logo?: string;
-  paymentProofImage?: string;
   status: string;
 }
 

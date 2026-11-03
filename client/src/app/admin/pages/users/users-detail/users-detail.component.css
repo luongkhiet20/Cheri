@@ -323,6 +323,7 @@ button, input, select, textarea, .btn, .form-control {
 ========================= */
 
 .card {
+  display: block;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
@@ -972,6 +973,7 @@ button, input, select, textarea, .btn, .form-control {
 .orders-table-wrap {
   width: 100%;
   max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   border-radius: 8px;
@@ -1080,9 +1082,9 @@ button, input, select, textarea, .btn, .form-control {
 
 /* ==========================================================================
    RESPONSIVE BREAKPOINTS
-   - Desktop / Laptop nhỏ (1024px – 1279px)
-   - Tablet ngang & dọc (768px – 1023px)
-   - Mobile lớn (481px – 767px)
+   - Desktop rộng (>= 1200px)
+   - Laptop nhỏ & Tablet ngang (769px – 1199px)
+   - Tablet dọc & Mobile lớn (481px – 768px)
    - Mobile nhỏ (320px – 480px)
    ========================================================================== */
 
@@ -1106,8 +1108,8 @@ button, input, select, textarea, .btn, .form-control {
   }
 }
 
-/* 2. Tablet (<= 1023px): Chuyển lưới 2 cột thành 1 cột để tránh co ép khi Sidebar mở */
-@media screen and (max-width: 1023px) {
+/* 2. Laptop nhỏ & Tablet (<= 1199px): Chuyển lưới 2 cột thành 1 cột để tránh co ép khi Sidebar 240px mở */
+@media screen and (max-width: 1199px) {
   .detail-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: 16px;
@@ -1131,8 +1133,8 @@ button, input, select, textarea, .btn, .form-control {
   }
 }
 
-/* 3. Mobile lớn (<= 767px) */
-@media screen and (max-width: 767px) {
+/* 3. Tablet dọc & Mobile (<= 768px): Đồng bộ breakpoint với admin-layout.css */
+@media screen and (max-width: 768px) {
   .account-detail-page {
     padding: 0;
     gap: 14px;

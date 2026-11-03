@@ -4176,8 +4176,7 @@ app.get('/api/orders/payment-methods', async (req, res) => {
         paymentType: pm.paymentType || pm.type || 'Online',
         description: pm.description || '',
         paymentInfo: pm.paymentInfo || '',
-        paymentProofImage: pm.paymentProofImage || pm.proofImage || '',
-        logo: pm.logo || '',
+            logo: pm.logo || '',
         status: isAct ? 'ACTIVE' : 'INACTIVE',
         isActive: isAct,
         statusText: isAct ? 'Đang hoạt động' : 'Tạm khóa'
@@ -6258,7 +6257,7 @@ app.get('/api/payment-methods/:id', async (req, res) => {
 // 6.3 POST /api/payment-methods (Create new payment method)
 app.post('/api/payment-methods', async (req, res) => {
   try {
-    const { name, code, type, isActive, description, paymentInfo, paymentProofImage } = req.body;
+    const { name, code, type, isActive, description, paymentInfo } = req.body;
 
     if (!name || !String(name).trim()) {
       return res.status(400).json({ success: false, message: 'Tên phương thức thanh toán là bắt buộc' });
@@ -6296,7 +6295,6 @@ app.post('/api/payment-methods', async (req, res) => {
       status: activeBool ? 'ACTIVE' : 'INACTIVE', // backward compat
       description: description ? String(description).trim() : '',
       paymentInfo: paymentInfo ? String(paymentInfo).trim() : '',
-      paymentProofImage: paymentProofImage ? String(paymentProofImage).trim() : '',
       createdAt: nowIso,
       updatedAt: nowIso
     };
@@ -6329,7 +6327,7 @@ const handleUpdatePaymentMethod = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Không tìm thấy phương thức thanh toán để cập nhật' });
     }
 
-    const { name, code, type, isActive, description, paymentInfo, paymentProofImage } = req.body;
+    const { name, code, type, isActive, description, paymentInfo } = req.body;
 
     const updateFields = {
       updatedAt: new Date().toISOString()
@@ -6384,9 +6382,6 @@ const handleUpdatePaymentMethod = async (req, res) => {
       updateFields.paymentInfo = String(paymentInfo).trim();
     }
 
-    if (paymentProofImage !== undefined) {
-      updateFields.paymentProofImage = String(paymentProofImage).trim();
-    }
 
     await db.collection('payment_methods').updateOne(
       { _id: pmId },

@@ -4,6 +4,15 @@ import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
 import { environment } from '../../../../../environments/environment';
 import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
+import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
+import { checkIsAdmin } from '../../../../services/auth.guard';
+import {
+  PERMISSION_GROUPS,
+  ALL_STAFF_PERMISSIONS,
+  PermissionGroup,
+  PermissionModule,
+  PermissionItem,
+} from '../../../shared/constants/permissions.catalog';
 
 @Component({
   selector: 'app-users-detail',
@@ -41,12 +50,23 @@ export class UsersDetailComponent implements OnInit {
   avatarHasError = false;
   isAvatarExpanded = false;
 
+  // Quản lý phân quyền STAFF
+  readonly permissionGroups: PermissionGroup[] = PERMISSION_GROUPS;
+  isEditPermissionsModalOpen = false;
+  editingPermissions: Set<string> = new Set<string>();
+  isSavingPermissions = false;
+
+  // Dialog thu hồi toàn bộ quyền
+  revokeConfirmOpen = false;
+  isRevoking = false;
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private apiService: AdminService,
     private cdr: ChangeDetectorRef,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private selectors: SignalStoreSelectors
   ) { }
 
   ngOnInit(): void {
@@ -339,6 +359,216 @@ export class UsersDetailComponent implements OnInit {
     }
     if (!this.hasCartItems) return 0;
     return this.user.cart.items.reduce((sum: number, item: any) => sum + ((Number(item.price) || 0) * (Math.max(1, Number(item.quantity || item.qty) || 1))), 0);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // ROLE & PERMISSION HELPERS
+  // ─────────────────────────────────────────────────────────────
+  get userRoleKey(): 'admin' | 'staff' | 'user' {
+    if (!this.user) return 'user';
+    const rawRoles = this.user.roles || (this.user.role ? [this.user.role] : []);
+    const roles: string[] = (Array.isArray(rawRoles) ? rawRoles : [rawRoles])
+      .map((r: any) => typeof r === 'string' ? r.toLowerCase().trim() : '');
+    if (roles.includes('admin') || roles.includes('superadmin') || roles.includes('super-admin') || this.user.isAdmin === true) {
+      return 'admin';
+    }
+    if (roles.includes('staff')) {
+      return 'staff';
+    }
+    return 'user';
+  }
+
+  get userRoleText(): string {
+    const role = this.userRoleKey;
+    if (role === 'admin') return 'Quản trị viên (Admin)';
+    if (role === 'staff') return 'Nhân viên (Staff)';
+    return 'Khách hàng (User)';
+  }
+
+  get userRoleBadgeClass(): string {
+    const role = this.userRoleKey;
+    if (role === 'admin') return 'badge-admin';
+    if (role === 'staff') return 'badge-staff';
+    return 'badge-user';
+  }
+
+  get isViewingStaff(): boolean {
+    return this.userRoleKey === 'staff';
+  }
+
+  get isViewingAdmin(): boolean {
+    return this.userRoleKey === 'admin';
+  }
+
+  get isViewingCustomer(): boolean {
+    return this.userRoleKey === 'user';
+  }
+
+  get viewerIsAdmin(): boolean {
+    return checkIsAdmin(this.selectors.user());
+  }
+
+  get canManagePermissions(): boolean {
+    return this.isViewingStaff && this.viewerIsAdmin;
+  }
+
+  getGrantedModules(): { module: PermissionModule; permissions: PermissionItem[] }[] {
+    if (!this.user || !Array.isArray(this.user.permissions)) return [];
+    const userPerms = new Set<string>(this.user.permissions);
+    const result: { module: PermissionModule; permissions: PermissionItem[] }[] = [];
+
+    for (const group of PERMISSION_GROUPS) {
+      for (const mod of group.modules) {
+        const granted = mod.permissions.filter(p => userPerms.has(p.key));
+        if (granted.length > 0) {
+          result.push({
+            module: mod,
+            permissions: granted,
+          });
+        }
+      }
+    }
+    return result;
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // MODAL CHỈNH SỬA PHÂN QUYỀN TRỰC TIẾP TẠI TRANG CHI TIẾT
+  // ─────────────────────────────────────────────────────────────
+  openEditPermissionsModal(): void {
+    if (!this.canManagePermissions) return;
+    const currentPerms = Array.isArray(this.user?.permissions) ? this.user.permissions : [];
+    this.editingPermissions = new Set<string>(currentPerms);
+    this.isEditPermissionsModalOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  closeEditPermissionsModal(): void {
+    this.isEditPermissionsModalOpen = false;
+    this.cdr.markForCheck();
+  }
+
+  hasEditingPermission(key: string): boolean {
+    return this.editingPermissions.has(key);
+  }
+
+  toggleEditingPermission(key: string): void {
+    if (this.editingPermissions.has(key)) {
+      this.editingPermissions.delete(key);
+    } else {
+      this.editingPermissions.add(key);
+    }
+    this.cdr.markForCheck();
+  }
+
+  isEditingModuleFullySelected(module: PermissionModule): boolean {
+    if (!module.permissions || module.permissions.length === 0) return false;
+    return module.permissions.every(p => this.editingPermissions.has(p.key));
+  }
+
+  isEditingModuleIndeterminate(module: PermissionModule): boolean {
+    if (!module.permissions || module.permissions.length === 0) return false;
+    const count = module.permissions.filter(p => this.editingPermissions.has(p.key)).length;
+    return count > 0 && count < module.permissions.length;
+  }
+
+  getEditingModuleSelectedCount(module: PermissionModule): number {
+    return module.permissions.filter(p => this.editingPermissions.has(p.key)).length;
+  }
+
+  toggleEditingModulePermissions(module: PermissionModule): void {
+    if (this.isEditingModuleFullySelected(module)) {
+      for (const p of module.permissions) {
+        this.editingPermissions.delete(p.key);
+      }
+    } else {
+      for (const p of module.permissions) {
+        this.editingPermissions.add(p.key);
+      }
+    }
+    this.cdr.markForCheck();
+  }
+
+  selectAllEditingPermissions(): void {
+    for (const key of ALL_STAFF_PERMISSIONS) {
+      this.editingPermissions.add(key);
+    }
+    this.cdr.markForCheck();
+  }
+
+  clearAllEditingPermissions(): void {
+    this.editingPermissions.clear();
+    this.cdr.markForCheck();
+  }
+
+  getEditingSelectedCount(): number {
+    return this.editingPermissions.size;
+  }
+
+  getTotalPermissionsCount(): number {
+    return ALL_STAFF_PERMISSIONS.length;
+  }
+
+  savePermissions(): void {
+    if (!this.userId || this.isSavingPermissions) return;
+    this.isSavingPermissions = true;
+    const newPermissions = Array.from(this.editingPermissions);
+
+    this.apiService.updateUserPermissions(this.userId, newPermissions).subscribe({
+      next: (res) => {
+        this.isSavingPermissions = false;
+        this.isEditPermissionsModalOpen = false;
+        if (res.success) {
+          this.notificationService.success('Cập nhật phân quyền nhân viên thành công');
+          this.loadUser();
+        } else {
+          this.notificationService.error(res.message || 'Cập nhật phân quyền thất bại');
+        }
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.isSavingPermissions = false;
+        this.notificationService.error(err.error?.message || 'Lỗi khi cập nhật phân quyền');
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // THU HỒI TOÀN BỘ QUYỀN
+  // ─────────────────────────────────────────────────────────────
+  openRevokeConfirm(): void {
+    if (!this.canManagePermissions) return;
+    this.revokeConfirmOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  closeRevokeConfirm(): void {
+    this.revokeConfirmOpen = false;
+    this.cdr.markForCheck();
+  }
+
+  confirmRevokeAllPermissions(): void {
+    if (!this.userId || this.isRevoking) return;
+    this.isRevoking = true;
+
+    this.apiService.updateUserPermissions(this.userId, []).subscribe({
+      next: (res) => {
+        this.isRevoking = false;
+        this.revokeConfirmOpen = false;
+        if (res.success) {
+          this.notificationService.success('Đã thu hồi toàn bộ quyền truy cập của nhân viên');
+          this.loadUser();
+        } else {
+          this.notificationService.error(res.message || 'Thu hồi quyền thất bại');
+        }
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.isRevoking = false;
+        this.notificationService.error(err.error?.message || 'Lỗi khi thu hồi quyền truy cập');
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   resolveCartItems(): void {

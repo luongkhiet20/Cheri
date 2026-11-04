@@ -13,7 +13,7 @@ import {
   UsePipes,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { AdminJwtAuthGuard, RolesGuard } from '../auth/roles.guard';
+import { AdminJwtAuthGuard, RolesGuard, RequirePermissions } from '../auth/roles.guard';
 import { ReviewsService } from './reviews.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
@@ -96,6 +96,7 @@ export class ReviewsController {
    */
   @Get('admin')
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('reviews:view')
   async getAdminReviews(@Query() query: any) {
     return this.reviewsService.getAdminReviews(query);
   }
@@ -105,6 +106,7 @@ export class ReviewsController {
    */
   @Get('admin/:id')
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('reviews:view')
   async getAdminReviewDetail(@Param('id') id: string) {
     return this.reviewsService.getReviewDetail(id);
   }
@@ -114,6 +116,7 @@ export class ReviewsController {
    */
   @Post('admin/bulk-delete')
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('reviews:manage')
   async bulkDeleteReviewsByAdmin(@Body('ids') ids: string[]) {
     return this.reviewsService.bulkDeleteReviewsByAdmin(ids);
   }
@@ -157,6 +160,7 @@ export class ReviewsController {
    */
   @Patch('admin/:id/status')
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('reviews:manage')
   async updateStatusByAdmin(
     @Param('id') id: string,
     @Body('status') status: ReviewStatus,

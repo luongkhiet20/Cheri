@@ -9,6 +9,8 @@ import {
 } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
 import { NotificationService } from '../../shared/notification/notification.service';
+import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
+import { hasPermission } from '../../../services/auth.guard';
 import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 @Component({
@@ -43,15 +45,15 @@ export class ReviewsComponent implements OnInit {
       key: 'toggle_hide',
       label: 'Ẩn',
       variant: 'warning',
-      showWhen: (r: any) => r.rawStatus === 'APPROVED' || r.status === 'Hiển thị'
+      showWhen: (r: any) => this.canManage && (r.rawStatus === 'APPROVED' || r.status === 'Hiển thị')
     },
     {
       key: 'toggle_show',
       label: 'Hiện',
       variant: 'default',
-      showWhen: (r: any) => r.rawStatus !== 'APPROVED' && r.status !== 'Hiển thị'
+      showWhen: (r: any) => this.canManage && (r.rawStatus !== 'APPROVED' && r.status !== 'Hiển thị')
     },
-    { key: 'delete', label: 'Xóa', variant: 'danger' },
+    { key: 'delete', label: 'Xóa', variant: 'danger', showWhen: () => this.canManage },
   ];
 
   filterFields: FilterField[] = [
@@ -133,10 +135,15 @@ export class ReviewsComponent implements OnInit {
   pendingRow: any = null;
   pendingDeleteId: string | null = null;
 
+  get canManage(): boolean {
+    return hasPermission(this.selectors.user(), 'reviews:manage');
+  }
+
   constructor(
     private apiService: AdminService,
     private cdr: ChangeDetectorRef,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private selectors: SignalStoreSelectors
   ) { }
 
   ngOnInit(): void {

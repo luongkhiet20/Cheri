@@ -18,8 +18,6 @@
     </div>
   </div>
 
-
-
   <div *ngIf="errorMessage" class="alert-box alert-error">
     <div class="alert-icon">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -68,26 +66,56 @@
             MongoDB.</small>
         </div>
 
-        <!-- Vai trò (roles) -->
-        <div class="form-group" id="field-roles">
-          <label class="form-label required">Vai trò</label>
-          <div class="checkbox-group" [class.is-invalid]="errors['roles']">
-            <label class="custom-checkbox">
-              <input type="checkbox" id="user-role-user" [checked]="isRoleSelected('user')"
-                (change)="onRoleChange('user', $event)" />
-              <span class="checkbox-label">Khách hàng (user)</span>
+        <!-- Vai trò (roles) - Radio Buttons tương hỗ độc quyền -->
+        <div class="form-group col-span-2" id="field-roles" *ngIf="viewerIsAdmin">
+          <label class="form-label required">Vai trò tài khoản</label>
+          <div class="role-radio-group" [class.is-invalid]="errors['roles']">
+
+            <label class="role-radio-card" [class.is-active]="selectedRole === 'user'">
+              <input type="radio" name="userRoleRadio" id="user-role-user" value="user"
+                [checked]="selectedRole === 'user'" (change)="onRoleChange('user')" />
+              <div class="role-radio-content">
+                <div class="role-radio-header">
+                  <span class="role-radio-dot"></span>
+                  <span class="role-name">Khách hàng</span>
+                  <span class="role-badge role-badge-user">USER</span>
+                </div>
+                <p class="role-desc">Tài khoản khách hàng thông thường, mua sắm trên storefront.</p>
+              </div>
             </label>
-            <label class="custom-checkbox">
-              <input type="checkbox" id="user-role-admin" [checked]="isRoleSelected('admin')"
-                (change)="onRoleChange('admin', $event)" />
-              <span class="checkbox-label">Quản trị viên (admin)</span>
+
+            <label class="role-radio-card" [class.is-active]="selectedRole === 'staff'">
+              <input type="radio" name="userRoleRadio" id="user-role-staff" value="staff"
+                [checked]="selectedRole === 'staff'" (change)="onRoleChange('staff')" />
+              <div class="role-radio-content">
+                <div class="role-radio-header">
+                  <span class="role-radio-dot"></span>
+                  <span class="role-name">Nhân viên</span>
+                  <span class="role-badge role-badge-staff">STAFF</span>
+                </div>
+                <p class="role-desc">Nhân viên quản trị nghiệp vụ theo các quyền được cấp.</p>
+              </div>
             </label>
+
+            <label class="role-radio-card" [class.is-active]="selectedRole === 'admin'">
+              <input type="radio" name="userRoleRadio" id="user-role-admin" value="admin"
+                [checked]="selectedRole === 'admin'" (change)="onRoleChange('admin')" />
+              <div class="role-radio-content">
+                <div class="role-radio-header">
+                  <span class="role-radio-dot"></span>
+                  <span class="role-name">Quản trị viên</span>
+                  <span class="role-badge role-badge-admin">ADMIN</span>
+                </div>
+                <p class="role-desc">Toàn quyền kiểm soát và cấu hình toàn bộ hệ thống Chéri.</p>
+              </div>
+            </label>
+
           </div>
           <div *ngIf="errors['roles']" class="field-error">{{ errors['roles'] }}</div>
         </div>
 
         <!-- Trạng thái (status) -->
-        <div class="form-group">
+        <div class="form-group col-span-2">
           <label class="form-label required" for="user-status">Trạng thái</label>
           <select id="user-status" name="status" class="form-control" [(ngModel)]="formData.status">
             <option [ngValue]="true">Hoạt động</option>
@@ -98,36 +126,122 @@
       </div>
     </div>
 
+    <!-- SECTION: PHÂN QUYỀN TRUY CẬP NHÂN VIÊN (Chỉ xuất hiện khi chọn role STAFF) -->
+    <div class="form-card permissions-matrix-card" *ngIf="selectedRole === 'staff' && viewerIsAdmin">
+      <div class="permissions-card-header">
+        <div class="permissions-header-left">
+          <div class="permissions-title-wrap">
+            <div class="permissions-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+            </div>
+            <div>
+              <h2 class="card-title permissions-title">Phân quyền truy cập nhân viên</h2>
+              <p class="permissions-subtitle">Lựa chọn các trang và chức năng nhân viên được phép truy cập theo từng
+                nhóm nghiệp vụ.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="permissions-header-right">
+          <div class="permissions-counter">
+            <span class="counter-label">Đã chọn:</span>
+            <span class="counter-value">{{ getSelectedCount() }}</span>
+            <span class="counter-total">/ {{ getTotalCount() }} quyền</span>
+          </div>
+          <div class="permissions-global-actions">
+            <button type="button" class="btn btn-sm btn-select-all" (click)="selectAllPermissions()">
+              Chọn tất cả
+            </button>
+            <button type="button" class="btn btn-sm btn-clear-all" (click)="clearAllPermissions()">
+              Bỏ chọn tất cả
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Container các nhóm quyền -->
+      <div class="permissions-groups-container">
+        <div class="permission-group-block" *ngFor="let group of permissionGroups">
+
+          <div class="group-header">
+            <div class="group-title">{{ group.name }}</div>
+            <div class="group-line"></div>
+          </div>
+
+          <div class="modules-grid">
+            <div class="module-card" *ngFor="let module of group.modules"
+              [class.is-fully-checked]="isModuleFullySelected(module)"
+              [class.is-partially-checked]="isModuleIndeterminate(module)">
+              <!-- Module Header -->
+              <div class="module-header" (click)="toggleModulePermissions(module)">
+                <label class="custom-checkbox" (click)="$event.stopPropagation()">
+                  <input type="checkbox" [checked]="isModuleFullySelected(module)"
+                    [indeterminate]="isModuleIndeterminate(module)" (change)="toggleModulePermissions(module)" />
+                  <span class="checkbox-box"></span>
+                </label>
+                <div class="module-title-wrap">
+                  <span class="module-name">{{ module.name }}</span>
+                  <span class="module-count-pill" [class.has-selection]="getModuleSelectedCount(module) > 0">
+                    {{ getModuleSelectedCount(module) }}/{{ module.permissions.length }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Module Sub-permissions -->
+              <div class="module-permissions-list">
+                <div class="permission-row" *ngFor="let perm of module.permissions"
+                  [class.is-active]="hasPermission(perm.key)" (click)="togglePermission(perm.key)">
+                  <label class="custom-checkbox" (click)="$event.stopPropagation()">
+                    <input type="checkbox" [checked]="hasPermission(perm.key)" (change)="togglePermission(perm.key)" />
+                    <span class="checkbox-box"></span>
+                  </label>
+                  <div class="permission-info">
+                    <span class="permission-label">{{ perm.label }}</span>
+                    <span class="permission-desc" *ngIf="perm.description">{{ perm.description }}</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
     <!-- SECTION 2: THÔNG TIN CÁ NHÂN -->
     <div class="form-card">
       <div class="card-header">
         <h2 class="card-title">Thông tin cá nhân</h2>
-        <p class="card-desc">Thông tin hồ sơ và liên hệ của người dùng</p>
       </div>
 
       <div class="form-grid">
-        <!-- Họ tên (fullName) -->
+        <!-- Họ và tên -->
         <div class="form-group">
           <label class="form-label" for="user-fullname">Họ và tên</label>
           <input type="text" id="user-fullname" name="fullName" class="form-control" [(ngModel)]="formData.fullName"
-            placeholder="Ví dụ: Nguyễn Văn A" />
+            placeholder="Nguyễn Văn A" />
         </div>
 
-        <!-- Tên hiển thị (name) -->
+        <!-- Tên hiển thị -->
         <div class="form-group">
-          <label class="form-label" for="user-name">Tên hiển thị</label>
+          <label class="form-label" for="user-name">Tên hiển thị (username)</label>
           <input type="text" id="user-name" name="name" class="form-control" [(ngModel)]="formData.name"
-            placeholder="Ví dụ: vana_nguyen" />
+            placeholder="nguyenvana" />
         </div>
 
-        <!-- Số điện thoại (phoneNumber) -->
+        <!-- Số điện thoại -->
         <div class="form-group">
           <label class="form-label" for="user-phone">Số điện thoại</label>
           <input type="tel" id="user-phone" name="phoneNumber" class="form-control" [(ngModel)]="formData.phoneNumber"
-            placeholder="Ví dụ: 0901234567" />
+            placeholder="0912345678" />
         </div>
 
-        <!-- Giới tính (gender) -->
+        <!-- Giới tính -->
         <div class="form-group">
           <label class="form-label" for="user-gender">Giới tính</label>
           <select id="user-gender" name="gender" class="form-control" [(ngModel)]="formData.gender">
@@ -137,34 +251,35 @@
           </select>
         </div>
 
-        <!-- Ngày sinh (dateOfBirth) -->
+        <!-- Ngày sinh -->
         <div class="form-group">
           <label class="form-label" for="user-dob">Ngày sinh</label>
           <input type="date" id="user-dob" name="dateOfBirth" class="form-control" [(ngModel)]="formData.dateOfBirth" />
         </div>
 
-        <!-- Ảnh đại diện (avatar) -->
+        <!-- Ảnh đại diện URL -->
         <div class="form-group">
-          <label class="form-label" for="user-avatar">URL Ảnh đại diện</label>
+          <label class="form-label" for="user-avatar">Đường dẫn ảnh đại diện (Avatar URL)</label>
           <input type="url" id="user-avatar" name="avatar" class="form-control" [(ngModel)]="formData.avatar"
             placeholder="https://example.com/avatar.jpg" />
         </div>
 
-        <!-- Địa chỉ (address) -->
+        <!-- Địa chỉ -->
         <div class="form-group col-span-2">
           <label class="form-label" for="user-address">Địa chỉ</label>
           <input type="text" id="user-address" name="address" class="form-control" [(ngModel)]="formData.address"
-            placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố" />
+            placeholder="Số 123, đường ABC, phường XYZ, quận DEF, TP. HCM" />
         </div>
 
-        <!-- Mô tả (description) -->
+        <!-- Ghi chú / Mô tả -->
         <div class="form-group col-span-2">
-          <label class="form-label" for="user-description">Mô tả / Ghi chú</label>
-          <textarea id="user-description" name="description" rows="3" class="form-control"
-            [(ngModel)]="formData.description" placeholder="Ghi chú thêm về tài khoản người dùng..."></textarea>
+          <label class="form-label" for="user-desc">Ghi chú / Mô tả</label>
+          <textarea id="user-desc" name="description" class="form-control" rows="3" [(ngModel)]="formData.description"
+            placeholder="Ghi chú thêm về người dùng..."></textarea>
         </div>
       </div>
     </div>
+
 
 
   </form>

@@ -3,6 +3,8 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
 import { NotificationService } from '../../shared/notification/notification.service';
+import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
+import { hasPermission } from '../../../services/auth.guard';
 import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 @Component({
@@ -28,11 +30,11 @@ export class UsersComponent implements OnInit {
   ];
   actions: RowAction[] = [
     { key: 'view', label: 'Xem' },
-    { key: 'edit', label: 'Sửa' },
-    { key: 'lock', label: 'Khóa / Mở', variant: 'warning' }
+    { key: 'edit', label: 'Sửa', showWhen: () => this.canUpdate },
+    { key: 'lock', label: 'Khóa / Mở', variant: 'warning', showWhen: () => this.canLock }
   ];
   filterFields: FilterField[] = [
-    { key: 'role', label: 'Vai trò', type: 'select', options: [{ value: 'admin', label: 'Admin' }, { value: 'user', label: 'Khách hàng' }] },
+    { key: 'role', label: 'Vai trò', type: 'select', options: [{ value: 'admin', label: 'Admin' }, { value: 'staff', label: 'Nhân viên (Staff)' }, { value: 'user', label: 'Khách hàng' }] },
     { key: 'status', label: 'Trạng thái', type: 'select', options: [{ value: 'active', label: 'Hoạt động' }, { value: 'inactive', label: 'Đã khóa' }] },
   ];
 
@@ -47,12 +49,23 @@ export class UsersComponent implements OnInit {
 
   get displayTotal(): number { return this.pagination?.total ?? this.data.length; }
 
+  get canCreate(): boolean {
+    return hasPermission(this.selectors.user(), 'users:create');
+  }
+  get canUpdate(): boolean {
+    return hasPermission(this.selectors.user(), 'users:update');
+  }
+  get canLock(): boolean {
+    return hasPermission(this.selectors.user(), 'users:lock');
+  }
+
   constructor(
     private apiService: AdminService,
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private selectors: SignalStoreSelectors
   ) { }
 
   ngOnInit(): void {
@@ -102,7 +115,7 @@ export class UsersComponent implements OnInit {
             avatarAlt: displayName,
             name: displayName,
             phone: u.phoneNumber || u.phone || '—',
-            role: u.roleText || (Array.isArray(u.roles) ? (u.roles.includes('admin') || u.roles.includes('superadmin') ? 'Admin' : 'Khách hàng') : u.role) || 'Khách hàng',
+            role: u.roleText || (Array.isArray(u.roles) ? (u.roles.includes('admin') || u.roles.includes('superadmin') ? 'Admin' : (u.roles.includes('staff') ? 'Nhân viên' : 'Khách hàng')) : (u.role === 'staff' ? 'Nhân viên' : (u.role === 'admin' ? 'Admin' : 'Khách hàng'))),
             status: u.statusText || (isActive ? 'Hoạt động' : 'Đã khóa'),
             statusVariant: u.statusVariant || (isActive ? 'success' : 'danger')
           };

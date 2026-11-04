@@ -4,6 +4,8 @@ import { Subscription } from 'rxjs';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
 import { NotificationService } from '../../shared/notification/notification.service';
+import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
+import { hasPermission } from '../../../services/auth.guard';
 import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 @Component({
@@ -31,8 +33,8 @@ export class InventoryComponent implements OnInit, OnDestroy {
   ];
   actions: RowAction[] = [
     { key: 'view', label: 'Xem' },
-    { key: 'edit', label: 'Sửa' },
-    { key: 'delete', label: 'Xóa', variant: 'danger' }
+    { key: 'edit', label: 'Sửa', showWhen: () => this.canUpdate },
+    { key: 'delete', label: 'Xóa', variant: 'danger', showWhen: () => this.canUpdate }
   ];
   filterFields: FilterField[] = [
     {
@@ -67,12 +69,20 @@ export class InventoryComponent implements OnInit, OnDestroy {
 
   isLoading = false;
 
+  get canUpdate(): boolean {
+    return hasPermission(this.selectors.user(), 'inventory:update');
+  }
+  get canImport(): boolean {
+    return hasPermission(this.selectors.user(), 'inventory:import');
+  }
+
   constructor(
     private apiService: AdminService,
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private selectors: SignalStoreSelectors
   ) { }
 
   onImportInventory(): void {

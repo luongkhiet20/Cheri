@@ -121,6 +121,8 @@ export interface User {
   avatar?     : string;
   roles?      : string[];
   role?       : string;
+  permissions?: string[];
+  isAdmin?    : boolean;
   status?     : boolean;
   images?     : string[];
   description?: string;

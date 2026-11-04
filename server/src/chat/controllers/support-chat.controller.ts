@@ -9,7 +9,7 @@ import {
   UseGuards,
   Req,
 } from '@nestjs/common';
-import { OptionalJwtAuthGuard, AdminJwtAuthGuard, RolesGuard } from '../../auth/roles.guard';
+import { OptionalJwtAuthGuard, AdminJwtAuthGuard, RolesGuard, RequirePermissions } from '../../auth/roles.guard';
 import { GetUser } from '../../auth/utils/get-user.decorator';
 import { User } from '../../auth/models/user.model';
 import { SupportChatService } from '../services/support-chat.service';
@@ -114,6 +114,7 @@ export class SupportChatController {
   // ─────────────────────────────────────────────────────────────
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('messages:view')
   @Get('admin/conversations')
   async getAdminConversations(
     @Query() query: { status?: string; search?: string; page?: number; limit?: number },
@@ -122,30 +123,35 @@ export class SupportChatController {
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('messages:view')
   @Get('admin/conversations/:id')
   async getAdminConversationDetail(@Param('id') id: string) {
     return this.supportChatService.getAdminConversationDetail(id);
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('messages:view')
   @Get('admin/conversations/:id/messages')
   async getAdminMessages(@Param('id') id: string) {
     return this.supportChatService.getAdminMessages(id);
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('messages:reply')
   @Post('admin/conversations/:id/accept')
   async acceptConversation(@Param('id') id: string, @GetUser() adminUser: User) {
     return this.supportChatService.acceptConversation(id, adminUser);
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('messages:reply')
   @Post('admin/conversations/:id/return')
   async returnConversation(@Param('id') id: string, @GetUser() adminUser: User) {
     return this.supportChatService.returnConversation(id, adminUser);
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('messages:reply')
   @Post('admin/conversations/:id/messages')
   async sendAdminMessage(
     @Param('id') id: string,
@@ -156,6 +162,7 @@ export class SupportChatController {
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('messages:reply')
   @Patch('admin/conversations/:id/status')
   async updateConversationStatus(
     @Param('id') id: string,
@@ -165,6 +172,7 @@ export class SupportChatController {
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('messages:reply')
   @Patch('admin/conversations/:id/notes')
   async updateNotes(
     @Param('id') id: string,
@@ -175,6 +183,7 @@ export class SupportChatController {
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('messages:reply')
   @Post('admin/conversations/:id/close')
   async closeConversation(@Param('id') id: string, @GetUser() adminUser: User) {
     return this.supportChatService.closeConversation(id, adminUser);

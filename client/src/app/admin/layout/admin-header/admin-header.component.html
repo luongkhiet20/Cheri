@@ -67,7 +67,7 @@
         </div>
         <div class="admin-header__user-info">
           <span class="admin-header__user-name">{{ currentUser?.fullName || currentUser?.name || currentUser?.username || 'Admin' }}</span>
-          <span class="admin-header__user-role">{{ currentUser?.role || 'Quản trị viên' }}</span>
+          <span class="admin-header__user-role">{{ roleDisplayName }}</span>
         </div>
         <svg class="admin-header__chevron" [class.is-open]="isUserMenuOpen"
              width="16" height="16" viewBox="0 0 24 24" fill="none"
@@ -83,7 +83,7 @@
         <a [routerLink]="['/']" class="admin-header__menu-item" role="menuitem" (click)="navigateTo('/', $event)" id="header-menu-store">
           Xem trang cửa hàng
         </a>
-        <a [routerLink]="['/admin/settings']" class="admin-header__menu-item" role="menuitem" (click)="navigateTo('/admin/settings', $event)" id="header-menu-settings">
+        <a *ngIf="canViewSettings" [routerLink]="['/admin/settings']" class="admin-header__menu-item" role="menuitem" (click)="navigateTo('/admin/settings', $event)" id="header-menu-settings">
           Cài đặt
         </a>
         <div class="admin-header__menu-divider" role="separator"></div>

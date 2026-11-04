@@ -125,7 +125,7 @@ const uploadMemoryImage = multer({
 });
 
 // Endpoint signed Cloudinary upload signature
-app.get('/api/admin/cloudinary-signature', (req, res) => {
+app.get('/api/admin/cloudinary-signature', requireAdminPermission(['products:create', 'products:update', 'cms:home', 'cms:about', 'cms:policies', 'settings:manage'], { any: true }), (req, res) => {
   try {
     const folder = req.query.folder || 'cheri/products';
     const sigData = generateUploadSignature(folder);
@@ -137,7 +137,7 @@ app.get('/api/admin/cloudinary-signature', (req, res) => {
 });
 
 // Endpoint upload image for CMS & Admin products
-app.post('/api/admin/images/upload', uploadMemoryImage.single('file'), async (req, res) => {
+app.post('/api/admin/images/upload', requireAdminPermission(['products:create', 'products:update', 'cms:home', 'cms:about', 'cms:policies', 'settings:manage'], { any: true }), uploadMemoryImage.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'Vui lòng chọn tệp hình ảnh' });
@@ -185,6 +185,100 @@ async function connectToMongo() {
     throw err;
   }
 }
+
+/**
+ * Dynamic RBAC Authentication & Authorization Middleware for Admin Server (Port 5000)
+ * @param {string|string[]} [requiredPerm] Single permission key or list of permission keys required
+ * @param {object} [options]
+ * @param {boolean} [options.any] If true, user needs at least ONE of requiredPerm. If false/omitted, user needs ALL.
+ */
+function requireAdminPermission(requiredPerm, options = {}) {
+  return async (req, res, next) => {
+    try {
+      const authHeader = req.headers.authorization || '';
+      let token = null;
+      if (authHeader.startsWith('Bearer ')) {
+        token = authHeader.slice(7).trim();
+      } else if (req.cookies && (req.cookies['jwt'] || req.cookies['token'] || req.cookies['accessToken'])) {
+        token = req.cookies['jwt'] || req.cookies['token'] || req.cookies['accessToken'];
+      }
+
+      if (!token) {
+        return res.status(401).json({ success: false, error: 'Unauthorized: Yêu cầu token xác thực' });
+      }
+
+      const secret = process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789';
+
+      let decoded;
+      try {
+        decoded = jwt.verify(token, secret);
+      } catch (err) {
+        return res.status(401).json({ success: false, error: 'Unauthorized: Token không hợp lệ hoặc đã hết hạn' });
+      }
+
+      if (!decoded || !decoded.email) {
+        return res.status(401).json({ success: false, error: 'Unauthorized: Token payload không hợp lệ' });
+      }
+
+      const database = await connectToMongo();
+      const user = await database.collection('users').findOne({ email: decoded.email.toLowerCase() });
+      if (!user) {
+        return res.status(401).json({ success: false, error: 'Unauthorized: Người dùng không tồn tại' });
+      }
+
+      if (user.status === false || user.status === 'inactive' || user.status === 'locked') {
+        return res.status(401).json({ success: false, error: 'Unauthorized: Tài khoản của bạn đã bị khóa' });
+      }
+
+      req.adminUser = user;
+      req.user = user;
+
+      const rawRoles = user.roles || (user.role ? [user.role] : ['user']);
+      const roles = (Array.isArray(rawRoles) ? rawRoles : [rawRoles])
+        .map(r => typeof r === 'string' ? r.toLowerCase().trim() : '')
+        .filter(Boolean);
+
+      // 1. ADMIN BYPASS: Full access for all forms of admin
+      const isAdmin = user.isAdmin === true || roles.some(r => ['admin', 'super-admin', 'superadmin'].includes(r));
+      if (isAdmin) {
+        return next();
+      }
+
+      // 2. STAFF: Must have required permissions
+      if (roles.includes('staff')) {
+        if (!requiredPerm) {
+          return res.status(403).json({ success: false, error: 'Forbidden: Thao tác yêu cầu quyền Quản trị viên tối cao' });
+        }
+
+        const userPerms = Array.isArray(user.permissions) ? user.permissions : [];
+        const requiredList = Array.isArray(requiredPerm) ? requiredPerm : [requiredPerm];
+
+        const hasAccess = options.any
+          ? requiredList.some(p => userPerms.includes(p))
+          : requiredList.every(p => userPerms.includes(p));
+
+        if (hasAccess) {
+          return next();
+        }
+
+        return res.status(403).json({
+          success: false,
+          error: `Forbidden: Bạn không có quyền thực hiện thao tác này (${requiredList.join(', ')})`
+        });
+      }
+
+      // 3. CUSTOMER / USER: Denied
+      return res.status(403).json({ success: false, error: 'Forbidden: Yêu cầu quyền quản trị' });
+    } catch (error) {
+      console.error('RBAC Auth Error in admin-server:', error);
+      return res.status(500).json({ success: false, error: 'Lỗi hệ thống xác thực' });
+    }
+  };
+}
+
+const requireHomeAdminAuth = requireAdminPermission('cms:home');
+const requireAboutAdminAuth = requireAdminPermission('cms:about');
+
 
 // ─────────────────────────────────────────────────────────────
 // 1. DASHBOARD OVERVIEW STATS & TIMELINE
@@ -618,8 +712,8 @@ const dashboardHandler = async (req, res) => {
   }
 };
 
-app.get('/api/dashboard/stats', dashboardHandler);
-app.get('/api/admin/dashboard', dashboardHandler);
+app.get('/api/dashboard/stats', requireAdminPermission('dashboard:view'), dashboardHandler);
+app.get('/api/admin/dashboard', requireAdminPermission('dashboard:view'), dashboardHandler);
 
 // ─────────────────────────────────────────────────────────────
 // 2. PRODUCTS API
@@ -3071,7 +3165,7 @@ async function handleCancelOrder(req, res) {
     if (authHeader && authHeader.startsWith('Bearer ')) {
       try {
         const token = authHeader.split(' ')[1];
-        userFromToken = jwt.decode(token);
+        userFromToken = jwt.verify(token, process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789');
       } catch (_) {}
     }
 
@@ -3646,9 +3740,7 @@ app.get('/api/orders', async (req, res) => {
       try {
         userFromToken = jwt.verify(token, process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789');
       } catch (_) {
-        try {
-          userFromToken = jwt.decode(token);
-        } catch (_) {}
+        userFromToken = null;
       }
     }
 
@@ -4844,7 +4936,7 @@ async function handleUpdateReturnRequestWorkflow(req, res) {
     if (authHeader && authHeader.startsWith('Bearer ')) {
       try {
         const token = authHeader.split(' ')[1];
-        adminUser = jwt.decode(token);
+        adminUser = jwt.verify(token, process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789');
       } catch (_) {}
     }
 
@@ -5339,7 +5431,7 @@ async function handleCancelReturnRequest(req, res) {
     if (authHeader && authHeader.startsWith('Bearer ')) {
       try {
         const token = authHeader.split(' ')[1];
-        userFromToken = jwt.decode(token);
+        userFromToken = jwt.verify(token, process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789');
       } catch (_) {}
     }
 
@@ -5622,6 +5714,9 @@ function formatUserResponse(u) {
   const isAdmin = Array.isArray(u.roles)
     ? (u.roles.includes('admin') || u.roles.includes('superadmin'))
     : (u.roles === 'admin' || u.roles === 'superadmin');
+  const isStaff = Array.isArray(u.roles)
+    ? u.roles.includes('staff')
+    : (u.roles === 'staff');
   const isActive = u.status !== false;
 
   let avatarUrl = '';
@@ -5648,7 +5743,10 @@ function formatUserResponse(u) {
     fullName: u.fullName || u.name || '',
     phoneNumber: u.phoneNumber || u.phone || '',
     roles: Array.isArray(u.roles) ? u.roles : (u.roles ? [u.roles] : ['user']),
-    roleText: isAdmin ? 'Admin' : 'Khách hàng',
+    roleText: isAdmin ? 'Admin' : (isStaff ? 'Nhân viên' : 'Khách hàng'),
+    permissions: Array.isArray(u.permissions)
+      ? u.permissions.filter(p => typeof p === 'string' && p.trim()).map(p => p.trim())
+      : [],
     status: isActive,
     statusText: isActive ? 'Hoạt động' : 'Đã khóa',
     statusVariant: isActive ? 'success' : 'danger',
@@ -5667,7 +5765,7 @@ function formatUserResponse(u) {
 }
 
 // 5.1 GET /api/users (List with search, filter, pagination)
-app.get('/api/users', async (req, res) => {
+app.get('/api/users', requireAdminPermission('users:view'), async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.max(1, Math.min(100, parseInt(req.query.limit || req.query.pageSize) || 20));
@@ -5693,6 +5791,8 @@ app.get('/api/users', async (req, res) => {
       const roleVal = req.query.role.trim().toLowerCase();
       if (roleVal === 'admin') {
         query.roles = { $in: ['admin', 'superadmin', 'Admin'] };
+      } else if (roleVal === 'staff' || roleVal === 'nhân viên') {
+        query.roles = { $in: ['staff', 'Staff'] };
       } else if (roleVal === 'user' || roleVal === 'khách hàng' || roleVal === 'customer') {
         query.roles = { $in: ['user', 'customer', 'Khách hàng'] };
       } else {
@@ -5740,7 +5840,7 @@ app.get('/api/users', async (req, res) => {
 });
 
 // 5.2 GET /api/users/:id (Detail without password/salt)
-app.get('/api/users/:id', async (req, res) => {
+app.get('/api/users/:id', requireAdminPermission('users:view'), async (req, res) => {
   try {
     const { id } = req.params;
     if (!ObjectId.isValid(id)) {
@@ -5843,7 +5943,7 @@ app.get('/api/users/:id', async (req, res) => {
 });
 
 // 5.2.1 GET /api/users/:id/orders (Get orders of a specific user)
-app.get('/api/users/:id/orders', async (req, res) => {
+app.get('/api/users/:id/orders', requireAdminPermission('users:view'), async (req, res) => {
   try {
     const { id } = req.params;
     if (!ObjectId.isValid(id)) {
@@ -5888,12 +5988,13 @@ app.get('/api/users/:id/orders', async (req, res) => {
 });
 
 // 5.3 POST /api/users (Add new user)
-app.post('/api/users', async (req, res) => {
+app.post('/api/users', requireAdminPermission('users:create'), async (req, res) => {
   try {
     const {
       email,
       password,
       roles,
+      permissions,
       status,
       fullName,
       name,
@@ -5932,6 +6033,13 @@ app.post('/api/users', async (req, res) => {
     const salt = bcrypt.genSaltSync(10);
     const hashedPassword = bcrypt.hashSync(password, salt);
 
+    // Caller authorization check
+    const callerRoles = Array.isArray(req.adminUser?.roles)
+      ? req.adminUser.roles
+      : (req.adminUser?.role ? [req.adminUser.role] : []);
+    const callerIsAdmin = req.adminUser?.isAdmin === true ||
+      callerRoles.some(r => ['admin', 'super-admin', 'superadmin'].includes(String(r).toLowerCase()));
+
     // Normalize roles
     let roleList = ['user'];
     if (Array.isArray(roles) && roles.length > 0) {
@@ -5939,6 +6047,19 @@ app.post('/api/users', async (req, res) => {
     } else if (typeof roles === 'string' && roles.trim()) {
       roleList = [roles.trim().toLowerCase()];
     }
+
+    if (!callerIsAdmin) {
+      const isPrivileged = roleList.some(r => ['admin', 'staff', 'superadmin'].includes(r));
+      if (isPrivileged || (Array.isArray(permissions) && permissions.length > 0)) {
+        return res.status(403).json({ success: false, message: 'Nhân viên không có quyền tạo tài khoản Quản trị viên hoặc Nhân viên khác' });
+      }
+      roleList = ['user'];
+    }
+
+    const isStaffRole = roleList.includes('staff');
+    const cleanPermissions = (isStaffRole && Array.isArray(permissions))
+      ? permissions.filter(p => typeof p === 'string' && p.trim()).map(p => p.trim())
+      : [];
 
     const nowIso = new Date().toISOString();
     const newUserDoc = {
@@ -5949,6 +6070,7 @@ app.post('/api/users', async (req, res) => {
       fullName: (fullName || '').trim(),
       phoneNumber: (phoneNumber || '').trim(),
       roles: roleList,
+      permissions: cleanPermissions,
       status: status !== undefined ? Boolean(status) : true,
       gender: gender || '',
       dateOfBirth: dateOfBirth || '',
@@ -5994,9 +6116,28 @@ const handleUpdateUser = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản người dùng' });
     }
 
+    const callerRoles = Array.isArray(req.adminUser?.roles)
+      ? req.adminUser.roles
+      : (req.adminUser?.role ? [req.adminUser.role] : []);
+    const callerIsAdmin = req.adminUser?.isAdmin === true ||
+      callerRoles.some(r => ['admin', 'super-admin', 'superadmin'].includes(String(r).toLowerCase()));
+
+    const targetRoles = Array.isArray(existingUser.roles)
+      ? existingUser.roles
+      : (existingUser.role ? [existingUser.role] : []);
+    const targetIsPrivileged = existingUser.isAdmin === true ||
+      targetRoles.some(r => ['admin', 'super-admin', 'superadmin', 'staff'].includes(String(r).toLowerCase()));
+
+    if (!callerIsAdmin) {
+      if (targetIsPrivileged) {
+        return res.status(403).json({ success: false, message: 'Nhân viên không có quyền chỉnh sửa tài khoản Quản trị viên hoặc Nhân viên khác' });
+      }
+    }
+
     const {
       email,
       roles,
+      permissions,
       status,
       fullName,
       name,
@@ -6030,17 +6171,38 @@ const handleUpdateUser = async (req, res) => {
       updateFields.email = cleanEmail;
     }
 
-    if (roles !== undefined) {
-      if (Array.isArray(roles) && roles.length > 0) {
-        updateFields.roles = roles.map(r => String(r).trim().toLowerCase()).filter(Boolean);
-      } else if (typeof roles === 'string' && roles.trim()) {
-        updateFields.roles = [roles.trim().toLowerCase()];
+    if (callerIsAdmin) {
+      if (roles !== undefined) {
+        let newRoleList = [];
+        if (Array.isArray(roles) && roles.length > 0) {
+          newRoleList = roles.map(r => String(r).trim().toLowerCase()).filter(Boolean);
+        } else if (typeof roles === 'string' && roles.trim()) {
+          newRoleList = [roles.trim().toLowerCase()];
+        }
+        if (newRoleList.length > 0) {
+          updateFields.roles = newRoleList;
+        }
+      }
+
+      const activeRoles = updateFields.roles || (Array.isArray(existingUser.roles) ? existingUser.roles : [existingUser.role]);
+      const isStaff = Array.isArray(activeRoles) && activeRoles.includes('staff');
+
+      if (permissions !== undefined) {
+        if (isStaff && Array.isArray(permissions)) {
+          updateFields.permissions = permissions.filter(p => typeof p === 'string' && p.trim()).map(p => p.trim());
+        } else {
+          updateFields.permissions = [];
+        }
+      } else if (updateFields.roles && !isStaff) {
+        // If role was explicitly changed away from staff, clear permissions
+        updateFields.permissions = [];
+      }
+
+      if (status !== undefined) {
+        updateFields.status = Boolean(status);
       }
     }
 
-    if (status !== undefined) {
-      updateFields.status = Boolean(status);
-    }
     if (fullName !== undefined) updateFields.fullName = String(fullName).trim();
     if (name !== undefined) updateFields.name = String(name).trim();
     if (phoneNumber !== undefined) updateFields.phoneNumber = String(phoneNumber).trim();
@@ -6071,8 +6233,54 @@ const handleUpdateUser = async (req, res) => {
   }
 };
 
-app.put('/api/users/:id', handleUpdateUser);
-app.patch('/api/users/:id', handleUpdateUser);
+app.put('/api/users/:id', requireAdminPermission('users:update'), handleUpdateUser);
+app.patch('/api/users/:id', requireAdminPermission('users:update'), handleUpdateUser);
+
+// 5.4.1 PATCH /api/users/:id/permissions (Admin only: update staff permissions)
+app.patch('/api/users/:id/permissions', requireAdminPermission(), async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'ID người dùng không hợp lệ' });
+    }
+    const userObjectId = new ObjectId(id);
+
+    const existingUser = await db.collection('users').findOne({ _id: userObjectId });
+    if (!existingUser) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
+    }
+
+    const { permissions } = req.body;
+    const cleanPermissions = Array.isArray(permissions)
+      ? permissions.filter(p => typeof p === 'string' && p.trim()).map(p => p.trim())
+      : [];
+
+    const nowIso = new Date().toISOString();
+    await db.collection('users').updateOne(
+      { _id: userObjectId },
+      {
+        $set: {
+          permissions: cleanPermissions,
+          updatedAt: nowIso
+        }
+      }
+    );
+
+    const updatedUser = await db.collection('users').findOne(
+      { _id: userObjectId },
+      { projection: { password: 0, salt: 0 } }
+    );
+
+    res.json({
+      success: true,
+      message: 'Cập nhật phân quyền nhân viên thành công',
+      data: formatUserResponse(updatedUser)
+    });
+  } catch (error) {
+    console.error('Error in PATCH /api/users/:id/permissions:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
 // 5.5 PATCH /api/users/:id/status (Lock/Unlock account)
 const handleStatusToggle = async (req, res) => {
@@ -6111,10 +6319,10 @@ const handleStatusToggle = async (req, res) => {
   }
 };
 
-app.patch('/api/users/:id/status', handleStatusToggle);
-app.put('/api/users/:id/toggle-status', handleStatusToggle);
+app.patch('/api/users/:id/status', requireAdminPermission('users:lock'), handleStatusToggle);
+app.put('/api/users/:id/toggle-status', requireAdminPermission('users:lock'), handleStatusToggle);
 
-app.delete('/api/users/:id', async (req, res) => {
+app.delete('/api/users/:id', requireAdminPermission('users:delete'), async (req, res) => {
   try {
     const { id } = req.params;
     if (!ObjectId.isValid(id)) return res.status(400).json({ success: false, message: 'ID không hợp lệ' });
@@ -6126,7 +6334,7 @@ app.delete('/api/users/:id', async (req, res) => {
 });
 
 // Bulk delete users
-app.post('/api/users/bulk-delete', async (req, res) => {
+app.post('/api/users/bulk-delete', requireAdminPermission('users:delete'), async (req, res) => {
   try {
     const { ids } = req.body;
     if (!Array.isArray(ids) || ids.length === 0) {
@@ -6173,7 +6381,7 @@ function formatPaymentMethod(pm) {
 }
 
 // 6.1 GET /api/payment-methods (List with search and pagination)
-app.get('/api/payment-methods', async (req, res) => {
+app.get('/api/payment-methods', requireAdminPermission('payment_methods:view'), async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.max(1, Math.min(100, parseInt(req.query.limit || req.query.pageSize) || 20));
@@ -6233,7 +6441,7 @@ app.get('/api/payment-methods', async (req, res) => {
 });
 
 // 6.2 GET /api/payment-methods/:id (Get single payment method by _id)
-app.get('/api/payment-methods/:id', async (req, res) => {
+app.get('/api/payment-methods/:id', requireAdminPermission('payment_methods:view'), async (req, res) => {
   try {
     const { id } = req.params;
     if (!ObjectId.isValid(id)) {
@@ -6254,7 +6462,7 @@ app.get('/api/payment-methods/:id', async (req, res) => {
 });
 
 // 6.3 POST /api/payment-methods (Create new payment method)
-app.post('/api/payment-methods', async (req, res) => {
+app.post('/api/payment-methods', requireAdminPermission('payment_methods:manage'), async (req, res) => {
   try {
     const { name, code, type, isActive, description, paymentInfo } = req.body;
 
@@ -6399,8 +6607,8 @@ const handleUpdatePaymentMethod = async (req, res) => {
   }
 };
 
-app.put('/api/payment-methods/:id', handleUpdatePaymentMethod);
-app.patch('/api/payment-methods/:id', handleUpdatePaymentMethod);
+app.put('/api/payment-methods/:id', requireAdminPermission('payment_methods:manage'), handleUpdatePaymentMethod);
+app.patch('/api/payment-methods/:id', requireAdminPermission('payment_methods:manage'), handleUpdatePaymentMethod);
 
 // 6.5 PATCH /api/payment-methods/:id/status (Toggle / set active status)
 const handleTogglePaymentMethodStatus = async (req, res) => {
@@ -6454,11 +6662,11 @@ const handleTogglePaymentMethodStatus = async (req, res) => {
   }
 };
 
-app.patch('/api/payment-methods/:id/status', handleTogglePaymentMethodStatus);
-app.put('/api/payment-methods/:id/toggle', handleTogglePaymentMethodStatus);
+app.patch('/api/payment-methods/:id/status', requireAdminPermission('payment_methods:manage'), handleTogglePaymentMethodStatus);
+app.put('/api/payment-methods/:id/toggle', requireAdminPermission('payment_methods:manage'), handleTogglePaymentMethodStatus);
 
 // 6.6 DELETE /api/payment-methods/:id (Delete payment method)
-app.delete('/api/payment-methods/:id', async (req, res) => {
+app.delete('/api/payment-methods/:id', requireAdminPermission('payment_methods:manage'), async (req, res) => {
   try {
     const { id } = req.params;
     if (!ObjectId.isValid(id)) {
@@ -6525,7 +6733,7 @@ function formatShippingMethod(sm) {
 }
 
 // 7.1 GET /api/shipping-methods (List with search, filter, pagination)
-app.get('/api/shipping-methods', async (req, res) => {
+app.get('/api/shipping-methods', requireAdminPermission('shipping_methods:view'), async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.max(1, Math.min(100, parseInt(req.query.limit || req.query.pageSize) || 20));
@@ -6593,7 +6801,7 @@ app.get('/api/shipping-methods', async (req, res) => {
 });
 
 // 7.2 GET /api/shipping-methods/:id
-app.get('/api/shipping-methods/:id', async (req, res) => {
+app.get('/api/shipping-methods/:id', requireAdminPermission('shipping_methods:view'), async (req, res) => {
   try {
     const { id } = req.params;
     let query;
@@ -6619,7 +6827,7 @@ app.get('/api/shipping-methods/:id', async (req, res) => {
 });
 
 // 7.3 POST /api/shipping-methods
-app.post('/api/shipping-methods', async (req, res) => {
+app.post('/api/shipping-methods', requireAdminPermission('shipping_methods:manage'), async (req, res) => {
   try {
     const { name, code, baseCost, estimatedDays, coverageArea, freeShippingThreshold, isActive, description } = req.body;
 
@@ -6782,8 +6990,8 @@ const updateShippingMethodHandler = async (req, res) => {
   }
 };
 
-app.put('/api/shipping-methods/:id', updateShippingMethodHandler);
-app.patch('/api/shipping-methods/:id', updateShippingMethodHandler);
+app.put('/api/shipping-methods/:id', requireAdminPermission('shipping_methods:manage'), updateShippingMethodHandler);
+app.patch('/api/shipping-methods/:id', requireAdminPermission('shipping_methods:manage'), updateShippingMethodHandler);
 
 // 7.5 PATCH /api/shipping-methods/:id/status (and PUT /api/shipping-methods/:id/toggle)
 const toggleShippingMethodStatusHandler = async (req, res) => {
@@ -6837,11 +7045,11 @@ const toggleShippingMethodStatusHandler = async (req, res) => {
   }
 };
 
-app.patch('/api/shipping-methods/:id/status', toggleShippingMethodStatusHandler);
-app.put('/api/shipping-methods/:id/toggle', toggleShippingMethodStatusHandler);
+app.patch('/api/shipping-methods/:id/status', requireAdminPermission('shipping_methods:manage'), toggleShippingMethodStatusHandler);
+app.put('/api/shipping-methods/:id/toggle', requireAdminPermission('shipping_methods:manage'), toggleShippingMethodStatusHandler);
 
 // 7.6 DELETE /api/shipping-methods/:id
-app.delete('/api/shipping-methods/:id', async (req, res) => {
+app.delete('/api/shipping-methods/:id', requireAdminPermission('shipping_methods:manage'), async (req, res) => {
   try {
     const { id } = req.params;
     let query;
@@ -6900,7 +7108,7 @@ function formatCoupon(c) {
 }
 
 // 7.7.1 GET /api/coupons (List with search, filter, pagination)
-app.get('/api/coupons', async (req, res) => {
+app.get('/api/coupons', requireAdminPermission('coupons:view'), async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.max(1, Math.min(100, parseInt(req.query.limit || req.query.pageSize) || 20));
@@ -6952,7 +7160,7 @@ app.get('/api/coupons', async (req, res) => {
 });
 
 // 7.7.2 GET /api/coupons/:id (Get single coupon)
-app.get('/api/coupons/:id', async (req, res) => {
+app.get('/api/coupons/:id', requireAdminPermission('coupons:view'), async (req, res) => {
   try {
     const { id } = req.params;
     let query;
@@ -6978,7 +7186,7 @@ app.get('/api/coupons/:id', async (req, res) => {
 });
 
 // 7.7.3 POST /api/coupons (Create coupon)
-app.post('/api/coupons', async (req, res) => {
+app.post('/api/coupons', requireAdminPermission('coupons:manage'), async (req, res) => {
   try {
     const body = req.body || {};
     const code = String(body.code || '').trim().toUpperCase();
@@ -7050,7 +7258,7 @@ app.post('/api/coupons', async (req, res) => {
 });
 
 // 7.7.4 PUT /api/coupons/:id (Update coupon)
-app.put('/api/coupons/:id', async (req, res) => {
+app.put('/api/coupons/:id', requireAdminPermission('coupons:manage'), async (req, res) => {
   try {
     const { id } = req.params;
     let query;
@@ -7180,11 +7388,11 @@ const handleToggleCouponStatus = async (req, res) => {
   }
 };
 
-app.patch('/api/coupons/:id/status', handleToggleCouponStatus);
-app.put('/api/coupons/:id/toggle', handleToggleCouponStatus);
+app.patch('/api/coupons/:id/status', requireAdminPermission('coupons:manage'), handleToggleCouponStatus);
+app.put('/api/coupons/:id/toggle', requireAdminPermission('coupons:manage'), handleToggleCouponStatus);
 
 // 7.7.6 DELETE /api/coupons/:id (Delete single coupon)
-app.delete('/api/coupons/:id', async (req, res) => {
+app.delete('/api/coupons/:id', requireAdminPermission('coupons:manage'), async (req, res) => {
   try {
     const { id } = req.params;
     let query;
@@ -7210,7 +7418,7 @@ app.delete('/api/coupons/:id', async (req, res) => {
 });
 
 // 7.7.7 POST /api/coupons/bulk-delete (Bulk delete coupons)
-app.post('/api/coupons/bulk-delete', async (req, res) => {
+app.post('/api/coupons/bulk-delete', requireAdminPermission('coupons:manage'), async (req, res) => {
   try {
     const ids = req.body?.ids || [];
     if (!Array.isArray(ids) || ids.length === 0) {
@@ -7309,7 +7517,7 @@ app.post(['/api/orders/coupon/validate', '/api/coupons/validate'], async (req, r
 // ─────────────────────────────────────────────────────────────
 // 8. INVENTORY API (Calculated from products and active orders)
 // ─────────────────────────────────────────────────────────────
-app.get('/api/inventory', async (req, res) => {
+app.get('/api/inventory', requireAdminPermission('inventory:view'), async (req, res) => {
   try {
     const [productsRaw, activeOrders] = await Promise.all([
       db.collection('products').find({}).sort({ updatedAt: -1, _id: -1 }).toArray(),
@@ -7460,7 +7668,7 @@ app.get('/api/inventory', async (req, res) => {
 });
 
 // GET /api/inventory/:id - Lấy chi tiết tồn kho theo ID sản phẩm
-app.get('/api/inventory/:id', async (req, res) => {
+app.get('/api/inventory/:id', requireAdminPermission('inventory:view'), async (req, res) => {
   try {
     const { id } = req.params;
     let query = { _id: id };
@@ -8375,7 +8583,9 @@ function formatAccountResponse(u) {
     phoneNumber: u.phoneNumber || u.phone || '',
     avatar: u.avatar || '',
     role: roleLabel,
+    roles: Array.isArray(u.roles) ? u.roles : (u.roles ? [u.roles] : ['admin']),
     rawRoles: u.roles || [u.role || 'admin'],
+    permissions: Array.isArray(u.permissions) ? u.permissions : [],
     status: statusLabel,
     isActive: u.status !== false,
     lastLogin: u.lastLogin || u.updatedAt || u.dateAdded || new Date().toISOString(),
@@ -8610,7 +8820,7 @@ const DEFAULT_SETTINGS = {
 };
 
 // 11.1 GET /api/settings - Lấy cấu hình hệ thống
-app.get('/api/settings', async (req, res) => {
+app.get('/api/settings', requireAdminPermission('settings:view'), async (req, res) => {
   try {
     let settings = await db.collection('settings').findOne({});
     if (!settings) {
@@ -8647,7 +8857,7 @@ app.get('/api/settings/maintenance', async (req, res) => {
 });
 
 // 11.2 PATCH /api/settings - Cập nhật cấu hình hệ thống
-app.patch('/api/settings', async (req, res) => {
+app.patch('/api/settings', requireAdminPermission('settings:manage'), async (req, res) => {
   try {
     const body = req.body || {};
     let settings = await db.collection('settings').findOne({});
@@ -8935,7 +9145,12 @@ app.post('/api/auth/signin', async (req, res) => {
     if (!isValid) {
       return res.status(401).json({ error: 'Email hoặc mật khẩu không chính xác' });
     }
-    const payload = { email: user.email, id: user._id.toString(), roles: user.roles || ['user'] };
+    const payload = {
+      email: user.email,
+      id: user._id.toString(),
+      roles: user.roles || ['user'],
+      permissions: Array.isArray(user.permissions) ? user.permissions : []
+    };
     const accessToken = jwt.sign(payload, process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789', {
       expiresIn: process.env.JWT_EXPIRATION || '7d'
     });
@@ -8944,6 +9159,7 @@ app.post('/api/auth/signin', async (req, res) => {
       id: user._id.toString(),
       email: user.email,
       roles: user.roles || ['user'],
+      permissions: Array.isArray(user.permissions) ? user.permissions : [],
       name: user.name || user.fullName || user.email.split('@')[0]
     });
   } catch (err) {
@@ -8970,6 +9186,7 @@ app.get('/api/auth', async (req, res) => {
       id: user._id.toString(),
       email: user.email,
       roles: user.roles || ['user'],
+      permissions: Array.isArray(user.permissions) ? user.permissions : [],
       name: user.name || user.fullName || user.email.split('@')[0]
     });
   } catch (err) {
@@ -9066,33 +9283,7 @@ app.post('/api/auth/exchange-token', async (req, res) => {
 // Cấu hình duy nhất, không draft, không versioning
 // ─────────────────────────────────────────────────────────────
 
-// Middleware xác thực quyền Admin cho các endpoint CMS Home
-async function requireHomeAdminAuth(req, res, next) {
-  try {
-    const authHeader = req.headers.authorization || '';
-    if (!authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ success: false, error: 'Unauthorized: Thiếu access token xác thực' });
-    }
-    const token = authHeader.slice(7).trim();
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789');
-    if (!decoded || !decoded.email) {
-      return res.status(401).json({ success: false, error: 'Unauthorized: Token không hợp lệ' });
-    }
-    const user = await db.collection('users').findOne({ email: decoded.email.toLowerCase() });
-    if (!user) {
-      return res.status(401).json({ success: false, error: 'Unauthorized: Người dùng không tồn tại' });
-    }
-    const userRoles = Array.isArray(user.roles) ? user.roles : [user.role || 'user'];
-    const isAdmin = userRoles.some(r => typeof r === 'string' && ['admin', 'superadmin', 'super-admin'].includes(r.toLowerCase())) || user.isAdmin === true;
-    if (!isAdmin) {
-      return res.status(403).json({ success: false, error: 'Forbidden: Bạn không có quyền quản trị viên' });
-    }
-    req.adminUser = user;
-    next();
-  } catch (err) {
-    return res.status(401).json({ success: false, error: 'Unauthorized: Token không hợp lệ hoặc đã hết hạn: ' + (err.message || '') });
-  }
-}
+// Note: requireHomeAdminAuth is provided by centralized requireAdminPermission("cms:home")
 
 // 1. Public API: Lấy cấu hình trang chủ đã xuất bản duy nhất
 app.get('/api/cheri/home', async (req, res) => {
@@ -9196,7 +9387,7 @@ app.get('/api/cheri/about', async (req, res) => {
 });
 
 // 5. Admin API: Lấy cấu hình trang giới thiệu cho Admin CMS
-app.get('/api/cheri/about/admin', requireHomeAdminAuth, async (req, res) => {
+app.get('/api/cheri/about/admin', requireAboutAdminAuth, async (req, res) => {
   try {
     const aboutDoc = await db.collection('pages_about').findOne({ key: 'about_page', status: 'published' });
     if (!aboutDoc || !Array.isArray(aboutDoc.sections)) {
@@ -9215,7 +9406,7 @@ app.get('/api/cheri/about/admin', requireHomeAdminAuth, async (req, res) => {
 });
 
 // 6. Admin API: Xuất bản cấu hình trang giới thiệu (About) lên collection pages_about
-app.post('/api/cheri/about/publish', requireHomeAdminAuth, async (req, res) => {
+app.post('/api/cheri/about/publish', requireAboutAdminAuth, async (req, res) => {
   try {
     const sectionsToPublish = req.body?.sections;
     if (!sectionsToPublish || !Array.isArray(sectionsToPublish) || sectionsToPublish.length === 0) {
@@ -9667,7 +9858,7 @@ async function populateAdminsMap(database, adminIds) {
 }
 
 // 6. Admin: Lấy danh sách hội thoại hỗ trợ (CHỈ LẤY source = SUPPORT_BUTTON)
-app.get('/api/admin/conversations', async (req, res) => {
+app.get('/api/admin/conversations', requireAdminPermission('messages:view'), async (req, res) => {
   try {
     const database = await connectToMongo();
     const { status, search, page = 1, limit = 20 } = req.query;
@@ -9791,7 +9982,7 @@ app.get('/api/admin/conversations', async (req, res) => {
 });
 
 // 7. Admin: Chi tiết hội thoại + CRM Khách hàng
-app.get('/api/admin/conversations/:id', async (req, res) => {
+app.get('/api/admin/conversations/:id', requireAdminPermission('messages:view'), async (req, res) => {
   try {
     const database = await connectToMongo();
     const convId = new ObjectId(req.params.id);
@@ -9866,7 +10057,7 @@ app.get('/api/admin/conversations/:id', async (req, res) => {
 });
 
 // 8. Admin: Danh sách tin nhắn trong hội thoại
-app.get('/api/admin/conversations/:id/messages', async (req, res) => {
+app.get('/api/admin/conversations/:id/messages', requireAdminPermission('messages:view'), async (req, res) => {
   try {
     const database = await connectToMongo();
     const convId = new ObjectId(req.params.id);
@@ -9905,7 +10096,7 @@ app.get('/api/admin/conversations/:id/messages', async (req, res) => {
 });
 
 // 9. Admin: Tiếp nhận hỗ trợ
-app.post('/api/admin/conversations/:id/accept', async (req, res) => {
+app.post('/api/admin/conversations/:id/accept', requireAdminPermission('messages:reply'), async (req, res) => {
   try {
     const database = await connectToMongo();
     const convId = new ObjectId(req.params.id);
@@ -10012,7 +10203,7 @@ app.post('/api/admin/conversations/:id/accept', async (req, res) => {
 });
 
 // 9b. Admin: Trả cuộc trò chuyện về hàng chờ
-app.post('/api/admin/conversations/:id/return', async (req, res) => {
+app.post('/api/admin/conversations/:id/return', requireAdminPermission('messages:reply'), async (req, res) => {
   try {
     const database = await connectToMongo();
     const convId = new ObjectId(req.params.id);
@@ -10113,7 +10304,7 @@ app.post('/api/admin/conversations/:id/return', async (req, res) => {
 });
 
 // 10. Admin: Gửi tin nhắn phản hồi
-app.post('/api/admin/conversations/:id/messages', async (req, res) => {
+app.post('/api/admin/conversations/:id/messages', requireAdminPermission('messages:reply'), async (req, res) => {
   try {
     const database = await connectToMongo();
     const convId = new ObjectId(req.params.id);
@@ -10197,7 +10388,7 @@ app.post('/api/admin/conversations/:id/messages', async (req, res) => {
 });
 
 // 11. Admin: Cập nhật trạng thái
-app.patch('/api/admin/conversations/:id/status', async (req, res) => {
+app.patch('/api/admin/conversations/:id/status', requireAdminPermission('messages:reply'), async (req, res) => {
   try {
     const database = await connectToMongo();
     const convId = new ObjectId(req.params.id);
@@ -10224,7 +10415,7 @@ app.patch('/api/admin/conversations/:id/status', async (req, res) => {
 });
 
 // 12. Admin: Cập nhật ghi chú nội bộ
-app.patch('/api/admin/conversations/:id/notes', async (req, res) => {
+app.patch('/api/admin/conversations/:id/notes', requireAdminPermission('messages:reply'), async (req, res) => {
   try {
     const database = await connectToMongo();
     const convId = new ObjectId(req.params.id);
@@ -10249,7 +10440,7 @@ app.patch('/api/admin/conversations/:id/notes', async (req, res) => {
 });
 
 // 13. Admin: Kết thúc hỗ trợ
-app.post('/api/admin/conversations/:id/close', async (req, res) => {
+app.post('/api/admin/conversations/:id/close', requireAdminPermission('messages:reply'), async (req, res) => {
   try {
     const database = await connectToMongo();
     const convId = new ObjectId(req.params.id);
@@ -10508,7 +10699,7 @@ app.get(['/api/reviews', '/api/admin/reviews'], async (req, res) => {
 });
 
 // 2. Chi tiết 1 đánh giá
-app.get('/api/admin/reviews/:id', async (req, res) => {
+app.get('/api/admin/reviews/:id', requireAdminPermission('reviews:view'), async (req, res) => {
   try {
     const database = await connectToMongo();
     const reviewId = new ObjectId(req.params.id);
@@ -10559,7 +10750,7 @@ app.get('/api/admin/reviews/:id', async (req, res) => {
 });
 
 // 3. Cập nhật trạng thái đánh giá (Ẩn / Hiện / Chờ duyệt)
-app.patch(['/api/admin/reviews/:id/status', '/api/reviews/admin/:id/status'], async (req, res) => {
+app.patch(['/api/admin/reviews/:id/status', '/api/reviews/admin/:id/status'], requireAdminPermission('reviews:manage'), async (req, res) => {
   try {
     const database = await connectToMongo();
     const reviewId = new ObjectId(req.params.id);
@@ -10619,7 +10810,7 @@ app.delete(['/api/admin/reviews/:id', '/api/reviews/:id'], async (req, res) => {
 });
 
 // 5. Xóa hàng loạt đánh giá đã chọn
-app.post('/api/admin/reviews/bulk-delete', async (req, res) => {
+app.post('/api/admin/reviews/bulk-delete', requireAdminPermission('reviews:manage'), async (req, res) => {
   try {
     const database = await connectToMongo();
     const { ids } = req.body || {};
@@ -10783,7 +10974,7 @@ app.post('/api/newsletter/subscribe', async (req, res) => {
 });
 
 // 12.2 GET /api/admin/newsletter-subscribers (Admin - Protected)
-app.get('/api/admin/newsletter-subscribers', async (req, res) => {
+app.get('/api/admin/newsletter-subscribers', requireAdminPermission('subscribers:view'), async (req, res) => {
   try {
     // Xác thực quyền Admin
     let userFromToken = null;
@@ -10793,9 +10984,7 @@ app.get('/api/admin/newsletter-subscribers', async (req, res) => {
       try {
         userFromToken = jwt.verify(token, process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789');
       } catch (_) {
-        try {
-          userFromToken = jwt.decode(token);
-        } catch (_) {}
+        userFromToken = null;
       }
     }
 
@@ -10949,7 +11138,7 @@ app.get('/api/admin/newsletter-subscribers', async (req, res) => {
 });
 
 // 12.2b GET /api/admin/newsletter-subscribers/export (Admin - Protected)
-app.get('/api/admin/newsletter-subscribers/export', async (req, res) => {
+app.get('/api/admin/newsletter-subscribers/export', requireAdminPermission('subscribers:view'), async (req, res) => {
   try {
     let userFromToken = null;
     const authHeader = req.headers.authorization || '';
@@ -10958,9 +11147,7 @@ app.get('/api/admin/newsletter-subscribers/export', async (req, res) => {
       try {
         userFromToken = jwt.verify(token, process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789');
       } catch (_) {
-        try {
-          userFromToken = jwt.decode(token);
-        } catch (_) {}
+        userFromToken = null;
       }
     }
 
@@ -11095,7 +11282,7 @@ app.get('/api/admin/newsletter-subscribers/export', async (req, res) => {
 });
 
 // 12.3 PATCH /api/admin/newsletter-subscribers/:id/status (Admin - Protected)
-app.patch('/api/admin/newsletter-subscribers/:id/status', async (req, res) => {
+app.patch('/api/admin/newsletter-subscribers/:id/status', requireAdminPermission('subscribers:view'), async (req, res) => {
   try {
     let userFromToken = null;
     const authHeader = req.headers.authorization || '';
@@ -11104,9 +11291,7 @@ app.patch('/api/admin/newsletter-subscribers/:id/status', async (req, res) => {
       try {
         userFromToken = jwt.verify(token, process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789');
       } catch (_) {
-        try {
-          userFromToken = jwt.decode(token);
-        } catch (_) {}
+        userFromToken = null;
       }
     }
 
@@ -11192,11 +11377,9 @@ function checkAdminAuth(req) {
     const token = authHeader.slice(7).trim();
     try {
       userFromToken = jwt.verify(token, process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789');
-    } catch (_) {
-      try {
-        userFromToken = jwt.decode(token);
-      } catch (_) {}
-    }
+      } catch (_) {
+        userFromToken = null;
+      }
   }
 
   const userRoles = userFromToken?.roles || userFromToken?.role || [];
@@ -11280,7 +11463,7 @@ const getSocialLinksHandler = async (req, res) => {
 };
 
 app.get('/api/social-links', getSocialLinksHandler);
-app.get('/api/admin/social-links', async (req, res) => {
+app.get('/api/admin/social-links', requireAdminPermission('cms:social_links'), async (req, res) => {
   if (!checkAdminAuth(req)) {
     return res.status(403).json({ success: false, message: 'Truy cập bị từ chối: Yêu cầu quyền quản trị.' });
   }
@@ -11288,7 +11471,7 @@ app.get('/api/admin/social-links', async (req, res) => {
 });
 
 // 13.2 PUT /api/admin/social-links/:platform (Cập nhật đường dẫn URL)
-app.put('/api/admin/social-links/:platform', async (req, res) => {
+app.put('/api/admin/social-links/:platform', requireAdminPermission('cms:social_links'), async (req, res) => {
   try {
     if (!checkAdminAuth(req)) {
       return res.status(403).json({ success: false, message: 'Truy cập bị từ chối: Yêu cầu quyền quản trị.' });
@@ -11337,7 +11520,7 @@ app.put('/api/admin/social-links/:platform', async (req, res) => {
 });
 
 // 13.3 PATCH /api/admin/social-links/:platform/status (Bật / Tắt trạng thái)
-app.patch('/api/admin/social-links/:platform/status', async (req, res) => {
+app.patch('/api/admin/social-links/:platform/status', requireAdminPermission('cms:social_links'), async (req, res) => {
   try {
     if (!checkAdminAuth(req)) {
       return res.status(403).json({ success: false, message: 'Truy cập bị từ chối: Yêu cầu quyền quản trị.' });

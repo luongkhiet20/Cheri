@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { Type } from '@angular/core';
+import { PermissionGuard } from '../../../services/auth.guard';
 
 /**
  * Định nghĩa mã định danh / segment tương đối cho các trang thuộc CMS Pages
@@ -71,15 +72,40 @@ export interface AdminPagesComponents {
 export function createAdminPagesRoutes(components: AdminPagesComponents): Routes {
   return [
     // Quản lý chính sách (Policies)
-    { path: ADMIN_PAGES_ROUTE_PATHS.POLICIES, component: components.policies },
+    {
+      path: ADMIN_PAGES_ROUTE_PATHS.POLICIES,
+      component: components.policies,
+      canActivate: [PermissionGuard],
+      data: { permission: 'cms:policies' },
+    },
     { path: ADMIN_PAGES_ROUTE_PATHS.POLICIES_NEW, redirectTo: ADMIN_PAGES_ROUTE_PATHS.POLICIES, pathMatch: 'full' },
     { path: ADMIN_PAGES_ROUTE_PATHS.POLICIES_ADD, redirectTo: ADMIN_PAGES_ROUTE_PATHS.POLICIES, pathMatch: 'full' },
-    { path: ADMIN_PAGES_ROUTE_PATHS.POLICIES_DETAIL, component: components.policyEdit },
-    { path: ADMIN_PAGES_ROUTE_PATHS.POLICIES_EDIT, component: components.policyForm },
+    {
+      path: ADMIN_PAGES_ROUTE_PATHS.POLICIES_DETAIL,
+      component: components.policyEdit,
+      canActivate: [PermissionGuard],
+      data: { permission: 'cms:policies' },
+    },
+    {
+      path: ADMIN_PAGES_ROUTE_PATHS.POLICIES_EDIT,
+      component: components.policyForm,
+      canActivate: [PermissionGuard],
+      data: { permission: 'cms:policies' },
+    },
 
     // Quản lý trang chủ (Home) & Giới thiệu (About)
-    { path: ADMIN_PAGES_ROUTE_PATHS.PAGE_HOME, component: components.home },
-    { path: ADMIN_PAGES_ROUTE_PATHS.PAGE_ABOUT, component: components.about },
+    {
+      path: ADMIN_PAGES_ROUTE_PATHS.PAGE_HOME,
+      component: components.home,
+      canActivate: [PermissionGuard],
+      data: { permission: 'cms:home' },
+    },
+    {
+      path: ADMIN_PAGES_ROUTE_PATHS.PAGE_ABOUT,
+      component: components.about,
+      canActivate: [PermissionGuard],
+      data: { permission: 'cms:about' },
+    },
 
     // Redirects tương thích ngược và định tuyến phụ trợ
     { path: PAGES_ROUTES.HOME, redirectTo: ADMIN_PAGES_ROUTE_PATHS.PAGE_HOME, pathMatch: 'full' },

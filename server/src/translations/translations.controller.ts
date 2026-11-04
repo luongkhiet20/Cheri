@@ -1,10 +1,9 @@
 import { Controller, Get, Query, UseGuards, Patch, Body } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { AuthGuard } from '@nestjs/passport';
 
 import { Translation } from './translation.model';
-import { RolesGuard } from '../auth/roles.guard';
+import { RolesGuard, AdminJwtAuthGuard, RequirePermissions } from '../auth/roles.guard';
 
 @Controller('api/translations')
 export class TranslationsController {
@@ -21,13 +20,15 @@ export class TranslationsController {
     return doc;
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('settings:view')
   @Get('all')
   async getAllTranslations(): Promise<Translation[]> {
     return await this.translationModel.find({ lang: 'vi' });
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('settings:manage')
   @Patch('all')
   async updateTranslations(@Body() translations: any): Promise<any> {
     const list = Array.isArray(translations) ? translations : [translations];
@@ -42,7 +43,8 @@ export class TranslationsController {
     return null;
   }
 
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('settings:manage')
   @Patch()
   async updateTranslation(
     @Query('lang') lang: string,

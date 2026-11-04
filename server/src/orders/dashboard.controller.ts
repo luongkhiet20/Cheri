@@ -1,12 +1,13 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { OrdersService } from './orders.service';
-import { RolesGuard, AdminJwtAuthGuard } from '../auth/roles.guard';
+import { RolesGuard, AdminJwtAuthGuard, RequirePermissions } from '../auth/roles.guard';
 
 @Controller('api/dashboard')
 export class DashboardController {
   constructor(private ordersService: OrdersService) {}
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('dashboard:view')
   @Get('/stats')
   async getStats(
     @Query('timeRange') timeRange?: string,

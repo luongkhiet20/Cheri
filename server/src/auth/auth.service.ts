@@ -259,6 +259,7 @@ export class AuthService {
     id: string;
     email: string;
     roles?: string[];
+    permissions?: string[];
     name?: string;
     fullName?: string;
     avatar?: string;
@@ -280,7 +281,12 @@ export class AuthService {
 
     await this.userModel.updateOne({ _id: user._id }, { $set: { tokenRevokedAt: null } });
 
-    const payload: JwtPayload = { email: user.email, id: user._id.toString(), roles: user.roles };
+    const payload: JwtPayload = {
+      email: user.email,
+      id: user._id.toString(),
+      roles: user.roles,
+      permissions: Array.isArray((user as any).permissions) ? (user as any).permissions : []
+    };
     const accessToken = await this.jwtService.sign(payload);
 
     const rawAvatar = user.avatar || (user as any).avatarUrl || ((user as any).images?.[0]?.url || (user as any).images?.[0]) || '';
@@ -290,6 +296,7 @@ export class AuthService {
       accessToken,
       id: user._id.toString(),
       roles: user.roles,
+      permissions: Array.isArray((user as any).permissions) ? (user as any).permissions : [],
       email: user.email,
       name: user.name || (user as any).fullName || user.email.split('@')[0],
       fullName: (user as any).fullName || user.name || user.email.split('@')[0],
@@ -441,6 +448,7 @@ export class AuthService {
       email: user.email,
       id: user._id.toString(),
       roles: Array.isArray(user.roles) ? user.roles : ['user'],
+      permissions: Array.isArray((user as any).permissions) ? (user as any).permissions : []
     };
     const accessToken: string = await this.jwtService.sign(payload);
 
@@ -452,6 +460,7 @@ export class AuthService {
       _id: user._id.toString(),
       email: user.email,
       roles: user.roles,
+      permissions: Array.isArray((user as any).permissions) ? (user as any).permissions : [],
       name: user.name || (user as any).fullName || user.email.split('@')[0],
       fullName: (user as any).fullName || user.name || user.email.split('@')[0],
       avatar: rawAvatar,
@@ -513,6 +522,7 @@ export class AuthService {
       description,
       images,
       cart,
+      permissions,
     } = userData;
 
     if (!email || !email.trim()) {
@@ -557,6 +567,7 @@ export class AuthService {
       description: (description || '').trim(),
       images: Array.isArray(images) ? images : avatar ? [avatar] : [],
       cart: cart || { items: [] },
+      permissions: Array.isArray(permissions) ? permissions : [],
     });
 
     const rawPassword = (password && password.trim()) || 'Cheri@123456';

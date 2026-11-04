@@ -31,17 +31,32 @@ export class AccountController {
     return this.formatUser(user);
   }
 
+  private filterProfileFields(body: any): Record<string, any> {
+    const allowed = ['name', 'fullName', 'phoneNumber', 'gender', 'dateOfBirth', 'address', 'avatar', 'description'];
+    const safe: Record<string, any> = {};
+    if (body && typeof body === 'object') {
+      for (const key of allowed) {
+        if (body[key] !== undefined) {
+          safe[key] = body[key];
+        }
+      }
+    }
+    return safe;
+  }
+
   @UseGuards(AuthGuard('jwt'))
   @Patch('/me')
   async updateMe(@GetUser() user: User, @Body() body: any) {
-    const updated = await this.authService.updateUser(user._id.toString(), body);
+    const safeBody = this.filterProfileFields(body);
+    const updated = await this.authService.updateUser(user._id.toString(), safeBody);
     return this.formatUser(updated);
   }
 
   @UseGuards(AuthGuard('jwt'))
   @Put('/me')
   async putMe(@GetUser() user: User, @Body() body: any) {
-    const updated = await this.authService.updateUser(user._id.toString(), body);
+    const safeBody = this.filterProfileFields(body);
+    const updated = await this.authService.updateUser(user._id.toString(), safeBody);
     return this.formatUser(updated);
   }
 
@@ -78,13 +93,16 @@ export class AccountController {
     const rawAvatar = user.avatar || user.avatarUrl || (user.images?.[0]?.url || user.images?.[0]) || '';
     const images = Array.isArray(user.images) && user.images.length > 0 ? user.images : rawAvatar ? [rawAvatar] : [];
     const phone = user.phoneNumber || user.phone || '';
+    const isStaff = roles.includes('staff');
+    const permissions = Array.isArray(user.permissions) ? user.permissions : [];
 
     const formatted = {
       id: user._id?.toString() || user.id,
       _id: user._id?.toString() || user.id,
       email: user.email,
       roles,
-      role: roles.includes('admin') ? 'Quản trị viên' : 'Thành viên',
+      role: roles.includes('admin') ? 'Quản trị viên' : (isStaff ? 'Nhân viên' : 'Thành viên'),
+      permissions,
       name: user.name || user.fullName || (user.email ? user.email.split('@')[0] : ''),
       fullName: user.fullName || user.name || (user.email ? user.email.split('@')[0] : ''),
       phoneNumber: phone,

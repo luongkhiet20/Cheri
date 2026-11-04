@@ -14,7 +14,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
 import multer from 'multer';
 
-import { RolesGuard, AdminJwtAuthGuard } from '../auth/roles.guard';
+import { RolesGuard, AdminJwtAuthGuard, RequireAnyPermissions } from '../auth/roles.guard';
 import { AdminService } from './admin.service';
 import { Images } from './utils/images';
 import { Product } from '../products/models/product.model';
@@ -24,16 +24,27 @@ import { ImageDto } from './dto/image.dto';
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
+const CONTENT_EDIT_PERMS = [
+  'products:create',
+  'products:update',
+  'cms:home',
+  'cms:about',
+  'cms:policies',
+  'settings:manage',
+];
+
 @Controller('api/admin')
 @UseGuards(AdminJwtAuthGuard, RolesGuard)
 export class AdminController {
   constructor(private adminService: AdminService) {}
 
+  @RequireAnyPermissions(...CONTENT_EDIT_PERMS)
   @Get('/images')
   getImages(@Session() session): Promise<Images> {
     return this.adminService.getImages(session.images);
   }
 
+  @RequireAnyPermissions(...CONTENT_EDIT_PERMS)
   @Post('/images/add')
   async addImage(
     @Session() session,
@@ -52,15 +63,17 @@ export class AdminController {
     return result;
   }
 
+  @RequireAnyPermissions(...CONTENT_EDIT_PERMS)
   @Get('/cloudinary-signature')
   getCloudinarySignature(@Query('folder') folder: string) {
     const { generateUploadSignature } = require('../services/cloudinary-service');
     return {
       success: true,
-      data: generateUploadSignature(folder || 'cheri/products')
+      data: generateUploadSignature(folder || 'cheri/products'),
     };
   }
 
+  @RequireAnyPermissions(...CONTENT_EDIT_PERMS)
   @Post('/images/upload')
   @UseInterceptors(FileInterceptor('file', upload.single('file')))
   async uploadImage(
@@ -82,6 +95,7 @@ export class AdminController {
     return result;
   }
 
+  @RequireAnyPermissions(...CONTENT_EDIT_PERMS)
   @Post('/images/remove')
   async removeImage(
     @Session() session,

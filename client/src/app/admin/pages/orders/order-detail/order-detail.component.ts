@@ -3,6 +3,8 @@ import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
+import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
+import { hasPermission } from '../../../../services/auth.guard';
 import { paymentStatusLabel } from '../../../../utils/orders-report-csv.cjs';
 import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
@@ -83,6 +85,19 @@ export class OrderDetailComponent implements OnInit {
   private apiService = inject(AdminService);
   private cdr = inject(ChangeDetectorRef);
   private notificationService = inject(NotificationService);
+  private selectors = inject(SignalStoreSelectors);
+
+  get canUpdateStatus(): boolean {
+    return hasPermission(this.selectors.user(), 'orders:update_status');
+  }
+
+  get canManageReturn(): boolean {
+    return hasPermission(this.selectors.user(), 'orders:return_manage');
+  }
+
+  get canCodReconcile(): boolean {
+    return hasPermission(this.selectors.user(), 'orders:cod_reconcile');
+  }
 
   ngOnInit(): void {
     this.orderId = this.route.snapshot.paramMap.get('id');

@@ -18,7 +18,7 @@ import { GetProductsDto } from './dto/get-products';
 import { ProductsWithPagination, Product } from './models/product.model';
 import { GetProductDto } from './dto/get-product';
 import { Category } from './models/category.model';
-import { RolesGuard, AdminJwtAuthGuard } from '../auth/roles.guard';
+import { RolesGuard, AdminJwtAuthGuard, RequirePermissions } from '../auth/roles.guard';
 import { GetUser } from '../auth/utils/get-user.decorator';
 import { User } from '../auth/models/user.model';
 
@@ -47,6 +47,7 @@ export class ProductsController {
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('products:view')
   @Get('/all')
   getAllProducts(@Headers('lang') lang: string): Promise<Product[]> {
     return this.productService.getAllProducts(lang);
@@ -66,42 +67,49 @@ export class ProductsController {
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('products:delete')
   @Delete('/:name')
   deleteProductByName(@Param('name') name: string): Promise<void> {
     return this.productService.deleteProductByName(name);
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('products:create')
   @Post('/add')
   addProduct(@Body() productReq, @GetUser() user: User): Promise<void> {
     return this.productService.addProduct(productReq, user);
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('products:update')
   @Patch('/edit')
   editProduct(@Body() productReq): Promise<void> {
     return this.productService.editProduct(productReq);
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('products:import')
   @Post('/import-csv')
   importCsvProducts(@Body() body: { products: any[] }, @GetUser() user: User): Promise<{ imported: number; errors: string[] }> {
     return this.productService.importProducts(body.products, user);
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('categories:view')
   @Get('/categories/all')
   getAllCategories(@Headers('lang') lang: string): Promise<any> {
     return this.productService.getAllCategories(lang);
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('categories:manage')
   @Patch('/categories/edit')
   editCategory(@Body() categoryReq): Promise<void> {
     return this.productService.editCategory(categoryReq);
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('categories:manage')
   @Delete('/categories/:name')
   deleteCategoryByName(@Param('name') name: string): Promise<void> {
     return this.productService.deleteCategoryByName(name);

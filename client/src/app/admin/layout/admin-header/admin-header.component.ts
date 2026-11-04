@@ -19,6 +19,7 @@ import { accessTokenKey } from '../../../user/shared/constants';
 import { SettingsService } from '../../pages/settings/settings.service';
 import { NotificationPopupComponent } from '../../shared/notification-popup/notification-popup.component';
 import { NotificationService as UserNotificationService } from '../../../user/shared/notification/notification.service';
+import { checkIsAdmin, checkIsStaff, hasPermission } from '../../../services/auth.guard';
 
 @Component({
   selector: 'app-admin-header',
@@ -159,6 +160,27 @@ export class AdminHeaderComponent implements OnInit, OnDestroy {
     }
     this.isUserMenuOpen = false;
     this.router.navigate([path]);
+  }
+
+  get canViewSettings(): boolean {
+    return hasPermission(this.currentUser, 'settings:view');
+  }
+
+  get canViewNotifications(): boolean {
+    return hasPermission(this.currentUser, 'notifications:view');
+  }
+
+  get isStaff(): boolean {
+    return checkIsStaff(this.currentUser);
+  }
+
+  get roleDisplayName(): string {
+    if (this.currentUser?.role && this.currentUser.role !== 'admin' && this.currentUser.role !== 'staff' && this.currentUser.role !== 'user') {
+      return this.currentUser.role;
+    }
+    if (checkIsAdmin(this.currentUser)) return 'Quản trị viên';
+    if (checkIsStaff(this.currentUser)) return 'Nhân viên';
+    return 'Thành viên';
   }
 
   onLogout(): void {

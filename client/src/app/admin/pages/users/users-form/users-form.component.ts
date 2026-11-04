@@ -2,12 +2,21 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { NotificationService } from '../../../shared/notification/notification.service';
+import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
+import { checkIsAdmin } from '../../../../services/auth.guard';
 import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
+import {
+  PERMISSION_GROUPS,
+  ALL_STAFF_PERMISSIONS,
+  PermissionGroup,
+  PermissionModule,
+} from '../../../shared/constants/permissions.catalog';
 
 interface UserFormData {
   email: string;
   password?: string;
   roles: string[];
+  permissions?: string[];
   status: boolean;
   fullName: string;
   name: string;
@@ -31,10 +40,20 @@ export class UsersFormComponent implements OnInit {
   isLoading = false;
   isSubmitting = false;
 
+  // Vai trò được chọn: 'user' | 'staff' | 'admin'
+  selectedRole: 'user' | 'staff' | 'admin' = 'user';
+  // Quyền hạn nhân viên được chọn
+  selectedPermissions: Set<string> = new Set<string>();
+  // Danh sách vai trò cũ của Admin (ví dụ ['user', 'admin']) để bảo toàn khi chỉnh sửa
+  originalAdminRoles: string[] = [];
+
+  readonly permissionGroups: PermissionGroup[] = PERMISSION_GROUPS;
+
   formData: UserFormData = {
     email: '',
     password: '',
     roles: ['user'],
+    permissions: [],
     status: true,
     fullName: '',
     name: '',
@@ -54,12 +73,17 @@ export class UsersFormComponent implements OnInit {
     { label: 'Thêm tài khoản' }
   ];
 
+  get viewerIsAdmin(): boolean {
+    return checkIsAdmin(this.selectors.user());
+  }
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private apiService: AdminService,
     private cdr: ChangeDetectorRef,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private selectors: SignalStoreSelectors
   ) { }
 
   ngOnInit(): void {
@@ -89,19 +113,43 @@ export class UsersFormComponent implements OnInit {
         this.isLoading = false;
         if (res.success && res.data) {
           const u = res.data;
+
+          // Nhận diện vai trò hiện tại
+          const rawRoles: any = u.roles || (u.role ? [u.role] : []);
+          const rolesArray: string[] = (Array.isArray(rawRoles) ? rawRoles : [rawRoles])
+            .map((r: any) => typeof r === 'string' ? r.toLowerCase().trim() : '');
+
+          const isAdmin = rolesArray.some(r => r === 'admin' || r === 'superadmin' || r === 'super-admin') || u.isAdmin === true;
+          const isStaff = rolesArray.includes('staff');
+
+          if (isAdmin) {
+            this.selectedRole = 'admin';
+            this.originalAdminRoles = Array.isArray(u.roles) ? [...u.roles] : ['admin'];
+          } else if (isStaff) {
+            this.selectedRole = 'staff';
+          } else {
+            this.selectedRole = 'user';
+          }
+
+          // Nạp permissions hiện có từ MongoDB
+          const loadedPermissions = Array.isArray(u.permissions) ? u.permissions : [];
+          this.selectedPermissions = new Set<string>(loadedPermissions);
+
           this.formData = {
             email: u.email || '',
             roles: Array.isArray(u.roles) && u.roles.length > 0 ? u.roles : ['user'],
+            permissions: loadedPermissions,
             status: u.status !== false,
             fullName: u.fullName || u.name || '',
             name: u.name || '',
             phoneNumber: u.phoneNumber || u.phone || '',
             gender: u.gender || 'Nam',
-            dateOfBirth: u.dateOfBirth ? u.dateOfBirth.slice(0, 10) : '',
+            dateOfBirth: u.dateOfBirth ? String(u.dateOfBirth).slice(0, 10) : '',
             address: u.address || '',
             avatar: u.avatar || '',
             description: u.description || ''
           };
+
           const userName = this.formData.fullName || this.formData.name || this.formData.email || '';
           this.breadcrumbItems = [
             { label: 'Quản lý tài khoản', url: '/admin/users' },
@@ -121,22 +169,78 @@ export class UsersFormComponent implements OnInit {
     });
   }
 
-  onRoleChange(role: string, event: Event): void {
-    const isChecked = (event.target as HTMLInputElement).checked;
-    const currentRoles = new Set(this.formData.roles || []);
-    if (isChecked) {
-      currentRoles.add(role);
+  onRoleChange(role: 'user' | 'staff' | 'admin'): void {
+    this.selectedRole = role;
+    if (this.errors['roles']) {
+      delete this.errors['roles'];
+    }
+    this.cdr.markForCheck();
+  }
+
+  // Quản lý Checkbox phân quyền
+  hasPermission(key: string): boolean {
+    return this.selectedPermissions.has(key);
+  }
+
+  togglePermission(key: string): void {
+    if (this.selectedPermissions.has(key)) {
+      this.selectedPermissions.delete(key);
     } else {
-      currentRoles.delete(role);
+      this.selectedPermissions.add(key);
     }
-    // Ensure at least one role remains
-    if (currentRoles.size === 0) {
-      currentRoles.add('user');
+    this.cdr.markForCheck();
+  }
+
+  isModuleFullySelected(module: PermissionModule): boolean {
+    if (!module.permissions || module.permissions.length === 0) return false;
+    return module.permissions.every(p => this.selectedPermissions.has(p.key));
+  }
+
+  isModuleIndeterminate(module: PermissionModule): boolean {
+    if (!module.permissions || module.permissions.length === 0) return false;
+    const selectedCount = module.permissions.filter(p => this.selectedPermissions.has(p.key)).length;
+    return selectedCount > 0 && selectedCount < module.permissions.length;
+  }
+
+  getModuleSelectedCount(module: PermissionModule): number {
+    if (!module.permissions) return 0;
+    return module.permissions.filter(p => this.selectedPermissions.has(p.key)).length;
+  }
+
+  toggleModulePermissions(module: PermissionModule): void {
+    const fullySelected = this.isModuleFullySelected(module);
+    if (fullySelected) {
+      // Bỏ toàn bộ quyền của module
+      for (const p of module.permissions) {
+        this.selectedPermissions.delete(p.key);
+      }
+    } else {
+      // Chọn tất cả quyền của module
+      for (const p of module.permissions) {
+        this.selectedPermissions.add(p.key);
+      }
     }
-    this.formData.roles = Array.from(currentRoles);
-    if (this.formData.roles.length > 0) {
-      this.clearFieldError('roles');
+    this.cdr.markForCheck();
+  }
+
+  selectAllPermissions(): void {
+    for (const key of ALL_STAFF_PERMISSIONS) {
+      this.selectedPermissions.add(key);
     }
+    this.cdr.markForCheck();
+  }
+
+  clearAllPermissions(): void {
+    this.selectedPermissions.clear();
+    this.cdr.markForCheck();
+  }
+
+  getSelectedCount(): number {
+    return this.selectedPermissions.size;
+  }
+
+  getTotalCount(): number {
+    return ALL_STAFF_PERMISSIONS.length;
   }
 
   clearFieldError(field: string): void {
@@ -147,10 +251,6 @@ export class UsersFormComponent implements OnInit {
       }
       this.cdr.markForCheck();
     }
-  }
-
-  isRoleSelected(role: string): boolean {
-    return Array.isArray(this.formData.roles) && this.formData.roles.includes(role);
   }
 
   validate(): boolean {
@@ -178,8 +278,8 @@ export class UsersFormComponent implements OnInit {
     }
 
     // Validate roles
-    if (!this.formData.roles || this.formData.roles.length === 0) {
-      this.errors['roles'] = 'Vui lòng chọn ít nhất một vai trò';
+    if (!this.selectedRole) {
+      this.errors['roles'] = 'Vui lòng chọn vai trò cho tài khoản';
       isValid = false;
     }
 
@@ -190,24 +290,20 @@ export class UsersFormComponent implements OnInit {
     setTimeout(() => {
       let el: HTMLElement | null = null;
 
-      // 1. Direct query by id, name, or field wrapper
       el = document.getElementById(`user-${key}`)
         || document.getElementById(key)
         || document.querySelector<HTMLElement>(`[name="${key}"]`)
         || document.getElementById(`field-${key}`);
 
-      // 2. Specific key targets
       if (!el && key === 'roles') {
-        el = document.getElementById('field-roles') || document.querySelector<HTMLElement>('.checkbox-group');
+        el = document.getElementById('field-roles') || document.querySelector<HTMLElement>('.radio-group');
       }
 
-      // 3. Fallback to first .is-invalid element
       if (!el) {
         el = document.querySelector<HTMLElement>('.is-invalid');
       }
 
       if (el) {
-        // Expand any collapsed ancestor details or hidden containers
         let parent: HTMLElement | null = el.parentElement;
         while (parent) {
           if (parent.tagName === 'DETAILS' && !(parent as HTMLDetailsElement).open) {
@@ -219,10 +315,8 @@ export class UsersFormComponent implements OnInit {
           parent = parent.parentElement;
         }
 
-        // Smooth scroll to the target element, centered in viewport
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-        // Find focusable interactive element
         let focusTarget: HTMLElement | null = null;
         if (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') {
           focusTarget = el;
@@ -255,22 +349,42 @@ export class UsersFormComponent implements OnInit {
     this.isSubmitting = true;
     this.errorMessage = '';
 
+    // Ánh xạ vai trò chính xác
+    let resolvedRoles: string[];
+    let resolvedPermissions: string[] = [];
+
+    if (this.selectedRole === 'admin') {
+      resolvedRoles = this.originalAdminRoles.length > 0 ? this.originalAdminRoles : ['admin'];
+      resolvedPermissions = [];
+    } else if (this.selectedRole === 'staff') {
+      resolvedRoles = ['staff'];
+      resolvedPermissions = Array.from(this.selectedPermissions);
+    } else {
+      resolvedRoles = ['user'];
+      resolvedPermissions = [];
+    }
+
+    const payload: any = {
+      email: this.formData.email.trim(),
+      roles: resolvedRoles,
+      permissions: resolvedPermissions,
+      status: Boolean(this.formData.status),
+      fullName: this.formData.fullName.trim(),
+      name: this.formData.name.trim() || this.formData.fullName.trim() || this.formData.email.trim().split('@')[0],
+      phoneNumber: this.formData.phoneNumber.trim(),
+      gender: this.formData.gender,
+      dateOfBirth: this.formData.dateOfBirth,
+      address: this.formData.address.trim(),
+      avatar: this.formData.avatar.trim(),
+      description: this.formData.description.trim()
+    };
+
+    if (!this.isEditMode) {
+      payload.password = this.formData.password;
+    }
+
     if (this.isEditMode && this.userId) {
       // Edit User -> PUT /api/users/:id
-      const payload = {
-        email: this.formData.email.trim(),
-        roles: this.formData.roles,
-        status: Boolean(this.formData.status),
-        fullName: this.formData.fullName.trim(),
-        name: this.formData.name.trim() || this.formData.fullName.trim(),
-        phoneNumber: this.formData.phoneNumber.trim(),
-        gender: this.formData.gender,
-        dateOfBirth: this.formData.dateOfBirth,
-        address: this.formData.address.trim(),
-        avatar: this.formData.avatar.trim(),
-        description: this.formData.description.trim()
-      };
-
       this.apiService.updateUser(this.userId, payload).subscribe({
         next: (res) => {
           this.isSubmitting = false;
@@ -296,21 +410,6 @@ export class UsersFormComponent implements OnInit {
       });
     } else {
       // Add User -> POST /api/users
-      const payload = {
-        email: this.formData.email.trim(),
-        password: this.formData.password,
-        roles: this.formData.roles,
-        status: Boolean(this.formData.status),
-        fullName: this.formData.fullName.trim(),
-        name: this.formData.name.trim() || this.formData.fullName.trim() || this.formData.email.trim().split('@')[0],
-        phoneNumber: this.formData.phoneNumber.trim(),
-        gender: this.formData.gender,
-        dateOfBirth: this.formData.dateOfBirth,
-        address: this.formData.address.trim(),
-        avatar: this.formData.avatar.trim(),
-        description: this.formData.description.trim()
-      };
-
       this.apiService.createUser(payload).subscribe({
         next: (res) => {
           this.isSubmitting = false;

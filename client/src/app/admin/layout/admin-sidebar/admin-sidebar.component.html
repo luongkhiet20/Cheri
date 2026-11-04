@@ -40,16 +40,25 @@
     <!-- Vùng cuộn menu (Bắt đầu trực tiếp từ TỔNG QUAN như hình mẫu) -->
     <div class="admin-sidebar__scroll-area">
       <div class="admin-sidebar__nav-groups" role="list">
+        <!-- Thông báo khi tài khoản Staff chưa được cấp bất kỳ quyền module nào -->
+        <div class="admin-sidebar__empty-notice" *ngIf="filteredNavGroups.length === 0">
+          <svg class="admin-sidebar__empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          <span class="admin-sidebar__empty-text" *ngIf="!isCollapsed">Chưa có module nào được cấp quyền</span>
+        </div>
+
         <!-- 3 Nhóm đầu: TỔNG QUAN, KINH DOANH, VẬN HÀNH -->
-        <div class="admin-sidebar__group" *ngFor="let group of navGroups">
+        <div class="admin-sidebar__group" *ngFor="let group of filteredNavGroups; trackBy: trackByGroup">
           <div class="admin-sidebar__group-label" *ngIf="!isCollapsed">
             {{ group.title }}
           </div>
           <ul class="admin-sidebar__group-list" role="list">
-            <li class="admin-sidebar__item" *ngFor="let item of group.items">
+            <li class="admin-sidebar__item" *ngFor="let item of group.items; trackBy: trackByItem">
               <a [routerLink]="item.route" routerLinkActive="is-active"
                 [routerLinkActiveOptions]="item.exact ? { exact: true } : { exact: false }" class="admin-sidebar__link"
-                [attr.aria-current]="isActive(item.route) ? 'page' : null" (click)="closeMobile()"
+                [attr.aria-current]="isActive(item.route) ? 'page' : null" (click)="onItemClick(item, $event)"
                 [attr.title]="item.label" [attr.aria-label]="item.label">
                 <span class="admin-sidebar__icon-wrap" aria-hidden="true" [ngSwitch]="item.icon">
                   <!-- Dashboard -->

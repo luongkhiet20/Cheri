@@ -55,6 +55,10 @@ const UserSchema = new Schema(
       required: true,
       default: ['user'],
     },
+    permissions: {
+      type: [String],
+      default: [],
+    },
     status: {
       type: Boolean,
       required: true,

@@ -10,7 +10,7 @@ import { Cart, User, Order } from '../../shared/models';
 import { TranslatePipe } from '../../../pipes/translate.pipe';
 import { SignalStore } from '../../../store/signal.store';
 import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
-import { checkIsAdmin } from '../../../services/auth.guard';
+import { checkIsAdmin, checkIsAdminOrStaff } from '../../../services/auth.guard';
 
 import { MatIconModule } from '@angular/material/icon';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
@@ -192,6 +192,11 @@ export class HeaderComponent implements OnInit {
   isAdmin(): boolean {
     const user = typeof this.user$ === 'function' ? this.user$() : null;
     return checkIsAdmin(user);
+  }
+
+  canAccessAdmin(): boolean {
+    const user = typeof this.user$ === 'function' ? this.user$() : null;
+    return checkIsAdminOrStaff(user);
   }
 
   isRegularUser(): boolean {

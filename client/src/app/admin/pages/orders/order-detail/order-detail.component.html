@@ -83,7 +83,7 @@
     <div class="content-main">
 
       <!-- SECTION 1: CẬP NHẬT TRẠNG THÁI NGHIỆP VỤ -->
-      <div class="card status-action-card">
+      <div class="card status-action-card" *ngIf="canUpdateStatus">
         <!-- A. HEADER -->
         <div class="workflow-header">
           <h2 class="workflow-header-title">
@@ -403,7 +403,7 @@
               </div>
 
               <!-- 4.3. CÁC THAO TÁC XỬ LÝ (CONTEXT ACTIONS) -->
-              <div class="req-header-actions">
+              <div class="req-header-actions" *ngIf="canManageReturn">
                 <!-- Khi PENDING -->
                 <ng-container *ngIf="req.status === 'PENDING'">
                   <button type="button" class="btn btn-sm btn-primary" (click)="openActionModal('APPROVE', req)">
@@ -455,7 +455,7 @@
                     Báo lỗi hoàn tiền
                   </button>
                   <!-- Gợi ý đối soát COD nếu đơn COD chưa thu tiền -->
-                  <button *ngIf="isCodMethod() && !order?.payment?.codCollected" type="button"
+                  <button *ngIf="canCodReconcile && isCodMethod() && !order?.payment?.codCollected" type="button"
                     class="btn btn-sm btn-outline-primary" (click)="openActionModal('COD_RECONCILE', null)"
                     title="Cần đối soát COD xác nhận đã thu tiền trước khi hoàn tiền">
                     Đối soát COD ngay

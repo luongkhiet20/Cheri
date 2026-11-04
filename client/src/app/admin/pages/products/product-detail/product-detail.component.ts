@@ -3,6 +3,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../services/admin.service';
 import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrumb.component';
 import { formatVND } from '../../../../pipes/price.pipe';
+import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
+import { hasPermission } from '../../../../services/auth.guard';
 
 export interface ProductVariant {
   key?: string;
@@ -42,11 +44,19 @@ export class ProductDetailComponent implements OnInit {
   confirmMessage = '';
   isDeleting = false;
 
+  get canUpdate(): boolean {
+    return hasPermission(this.selectors.user(), 'products:update');
+  }
+  get canDelete(): boolean {
+    return hasPermission(this.selectors.user(), 'products:delete');
+  }
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private apiService: AdminService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private selectors: SignalStoreSelectors
   ) { }
 
   ngOnInit(): void {

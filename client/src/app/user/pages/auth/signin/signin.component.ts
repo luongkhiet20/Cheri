@@ -16,7 +16,7 @@ import { SignalStore } from '../../../../store/signal.store';
 import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
 import { ApiService } from '../../../../services/api.service';
 import { accessTokenKey } from '../../../shared/constants';
-import { checkIsAdmin } from '../../../../services/auth.guard';
+import { checkIsAdmin, checkIsAdminOrStaff } from '../../../../services/auth.guard';
 
 @Component({
   selector: 'app-signin',
@@ -45,6 +45,10 @@ export class SignInComponent implements OnInit, OnDestroy {
   isRequestingAdmin = false;
   currentLoggedUser: any = null;
   isSubmitting = false;
+
+  get isPrivilegedUser(): boolean {
+    return checkIsAdminOrStaff(this.currentLoggedUser);
+  }
 
   get isAdminUser(): boolean {
     return checkIsAdmin(this.currentLoggedUser);
@@ -76,7 +80,7 @@ export class SignInComponent implements OnInit, OnDestroy {
       if (hasToken && user && (user.email || user.accessToken)) {
         const returnUrl = this.route.snapshot.queryParams['returnUrl'];
         if (this.isRequestingAdmin) {
-          if (checkIsAdmin(user)) {
+          if (checkIsAdminOrStaff(user)) {
             this.router.navigateByUrl(returnUrl || '/admin');
           }
         } else {
@@ -145,7 +149,7 @@ export class SignInComponent implements OnInit, OnDestroy {
 
     if (hasLocalToken && this.currentLoggedUser && (this.currentLoggedUser.email || this.currentLoggedUser.accessToken)) {
       if (this.isRequestingAdmin) {
-        if (checkIsAdmin(this.currentLoggedUser)) {
+        if (checkIsAdminOrStaff(this.currentLoggedUser)) {
           this.router.navigateByUrl(returnUrl || '/admin');
         }
       } else {
@@ -350,9 +354,9 @@ export class SignInComponent implements OnInit, OnDestroy {
 
     this.apiService.signIn(credentials).pipe(
       switchMap((response: any) => {
-        const isAdmin = checkIsAdmin(response);
+        const isPrivileged = checkIsAdminOrStaff(response);
 
-        if (isRequestingAdmin && !isAdmin) {
+        if (isRequestingAdmin && !isPrivileged) {
           this.selectors.userState.update((state) => ({ ...state, loading: false }));
           return of({ user: response, isDeniedAdmin: true });
         }
@@ -368,7 +372,7 @@ export class SignInComponent implements OnInit, OnDestroy {
       next: ({ user, lang, isDeniedAdmin }: any) => {
         this.isSubmitting = false;
         if (isDeniedAdmin) {
-          this.notify.error('Tài khoản này không có quyền Quản trị viên (Admin).');
+          this.notify.error('Tài khoản này không có quyền truy cập khu vực quản trị.');
           this.signInForm.get('password')?.reset();
           return;
         }

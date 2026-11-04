@@ -4,6 +4,8 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
 import { NotificationService } from '../../shared/notification/notification.service';
+import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
+import { hasPermission } from '../../../services/auth.guard';
 import { escapeCsvTextField, paymentStatusLabel } from '../../../utils/orders-report-csv.cjs';
 import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
 import { formatVND } from '../../../pipes/price.pipe';
@@ -30,10 +32,8 @@ export class OrdersComponent implements OnInit {
     { key: 'createdAt', label: 'Ngày đặt', type: 'date', sortable: true },
   ];
   actions: RowAction[] = [
-    { key: 'edit', label: 'Cập nhật trạng thái' },
+    { key: 'edit', label: 'Cập nhật trạng thái', showWhen: () => this.canUpdateStatus },
     { key: 'view', label: 'Xem' },
-
-
   ];
   filterFields: FilterField[] = [
     {
@@ -95,6 +95,11 @@ export class OrdersComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private cdr = inject(ChangeDetectorRef);
   private notificationService = inject(NotificationService);
+  private selectors = inject(SignalStoreSelectors);
+
+  get canUpdateStatus(): boolean {
+    return hasPermission(this.selectors.user(), 'orders:update_status');
+  }
 
   ngOnInit(): void {
     this.loadPaymentMethods();

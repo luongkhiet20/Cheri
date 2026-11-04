@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { SocialLinksService } from './social-links.service';
 import { UpdateSocialLinkDto, ToggleSocialLinkDto } from './dto/update-social-link.dto';
-import { AdminJwtAuthGuard, RolesGuard } from '../auth/roles.guard';
+import { AdminJwtAuthGuard, RolesGuard, RequirePermissions } from '../auth/roles.guard';
 
 @Controller('api')
 export class SocialLinksController {
@@ -29,6 +29,7 @@ export class SocialLinksController {
    */
   @Get('admin/social-links')
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('cms:social_links')
   async getAdminSocialLinks() {
     return this.socialLinksService.getAll();
   }
@@ -38,6 +39,7 @@ export class SocialLinksController {
    */
   @Put('admin/social-links/:platform')
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('cms:social_links')
   async updateSocialLinkUrl(
     @Param('platform') platform: string,
     @Body(new ValidationPipe({ transform: true, whitelist: true })) dto: UpdateSocialLinkDto,
@@ -50,6 +52,7 @@ export class SocialLinksController {
    */
   @Patch('admin/social-links/:platform/status')
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('cms:social_links')
   async toggleSocialLinkStatus(
     @Param('platform') platform: string,
     @Body(new ValidationPipe({ transform: true, whitelist: true })) dto: ToggleSocialLinkDto,

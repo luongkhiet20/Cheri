@@ -3,6 +3,8 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent, BadgeVariant } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
 import { NotificationService } from '../../shared/notification/notification.service';
+import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
+import { hasPermission } from '../../../services/auth.guard';
 import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
 @Component({
@@ -29,18 +31,18 @@ export class ProductsComponent implements OnInit {
 
   actions: RowAction[] = [
     { key: 'view', label: 'Xem' },
-    { key: 'edit', label: 'Sửa' },
+    { key: 'edit', label: 'Sửa', showWhen: () => this.canUpdate },
     {
       key: 'toggle',
       label: 'Tắt',
-      showWhen: (r: any) => this?.isProductActive ? this.isProductActive(r) : (r?.status !== 'Ẩn' && r?.status !== 'Tạm ẩn' && r?.visibility !== false)
+      showWhen: (r: any) => this.canUpdate && (this?.isProductActive ? this.isProductActive(r) : (r?.status !== 'Ẩn' && r?.status !== 'Tạm ẩn' && r?.visibility !== false))
     },
     {
       key: 'toggle',
       label: 'Bật',
-      showWhen: (r: any) => this?.isProductActive ? !this.isProductActive(r) : (r?.status === 'Ẩn' || r?.status === 'Tạm ẩn' || r?.visibility === false)
+      showWhen: (r: any) => this.canUpdate && (this?.isProductActive ? !this.isProductActive(r) : (r?.status === 'Ẩn' || r?.status === 'Tạm ẩn' || r?.visibility === false))
     },
-    { key: 'delete', label: 'Xóa', variant: 'danger' },
+    { key: 'delete', label: 'Xóa', variant: 'danger', showWhen: () => this.canDelete },
   ];
 
   filterFields: FilterField[] = [
@@ -110,12 +112,26 @@ export class ProductsComponent implements OnInit {
   isBulkDelete = false;
   isProcessing = false;
 
+  get canCreate(): boolean {
+    return hasPermission(this.selectors.user(), 'products:create');
+  }
+  get canImport(): boolean {
+    return hasPermission(this.selectors.user(), 'products:import');
+  }
+  get canUpdate(): boolean {
+    return hasPermission(this.selectors.user(), 'products:update');
+  }
+  get canDelete(): boolean {
+    return hasPermission(this.selectors.user(), 'products:delete');
+  }
+
   constructor(
     private apiService: AdminService,
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private selectors: SignalStoreSelectors
   ) { }
 
   ngOnInit(): void {

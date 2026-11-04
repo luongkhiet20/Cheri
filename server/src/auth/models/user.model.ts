@@ -27,6 +27,7 @@ export interface User extends Document {
   cart?: UserCart | any;
   images?: string[];
   roles: string[];
+  permissions?: string[];
   googleId?: string;
   status: boolean;
   description?: string;

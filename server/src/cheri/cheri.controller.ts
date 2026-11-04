@@ -19,7 +19,7 @@ import { ContactDto } from './dto/contact.dto';
 import { PageDto } from './dto/page.dto';
 import { PublishHomeDto } from './dto/home-page.dto';
 import { PublishAboutDto } from './dto/about-page.dto';
-import { RolesGuard, AdminJwtAuthGuard } from '../auth/roles.guard';
+import { RolesGuard, AdminJwtAuthGuard, RequirePermissions } from '../auth/roles.guard';
 import { Page } from './models/page.model';
 import { Theme } from './models/theme.model';
 import { Config } from './models/config.model';
@@ -34,12 +34,14 @@ export class CheriController {
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('cms:home')
   @Get('/home/admin')
   getHomeAdmin() {
     return this.cheriService.getHomeAdmin();
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('cms:home')
   @Post('/home/publish')
   publishHome(@Body() publishDto: PublishHomeDto, @Req() req: any) {
     const userEmail = req?.user?.email;
@@ -52,12 +54,14 @@ export class CheriController {
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('cms:about')
   @Get('/about/admin')
   getAboutAdmin() {
     return this.cheriService.getAboutAdmin();
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('cms:about')
   @Post('/about/publish')
   publishAbout(@Body() publishDto: PublishAboutDto, @Req() req: any) {
     const userEmail = req?.user?.email;
@@ -87,6 +91,7 @@ export class CheriController {
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('cms:policies')
   @Post('/page')
   addOrEditPage(@Body() pageDto: PageDto): Promise<Page> {
     return this.cheriService.addOrEditPage(pageDto);
@@ -101,6 +106,7 @@ export class CheriController {
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('cms:policies')
   @Delete('/page/:titleUrl')
   deletePage(@Param('titleUrl') titleUrl: string): Promise<void> {
     return this.cheriService.deletePage(titleUrl);
@@ -112,12 +118,14 @@ export class CheriController {
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('settings:manage')
   @Post('/theme')
   addOrEditTheme(@Body() themeDto): Promise<Theme> {
     return this.cheriService.addOrEditTheme(themeDto);
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('settings:manage')
   @Delete('/theme/:titleUrl')
   deleteTheme(@Param('titleUrl') titleUrl: string): Promise<void> {
     return this.cheriService.deleteTheme(titleUrl);
@@ -129,12 +137,14 @@ export class CheriController {
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('settings:manage')
   @Post('/config')
   addOrEditConfig(@Body() configDto): Promise<Config> {
     return this.cheriService.addOrEditConfig(configDto);
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('settings:manage')
   @Delete('/config/:titleUrl')
   deleteConfig(@Param('titleUrl') titleUrl: string): Promise<void> {
     return this.cheriService.deleteConfig(titleUrl);

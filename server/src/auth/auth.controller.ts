@@ -64,6 +64,7 @@ export class AuthController {
     id: string;
     email: string;
     roles: string[];
+    permissions?: string[];
     name?: string;
     fullName?: string;
     phoneNumber?: string;
@@ -80,10 +81,14 @@ export class AuthController {
     const rawAvatar = (user as any).avatar || (user as any).avatarUrl || ((user as any).images?.[0]?.url || (user as any).images?.[0]) || '';
     const images = Array.isArray((user as any).images) && (user as any).images.length > 0 ? (user as any).images : rawAvatar ? [rawAvatar] : [];
     const phone = (user as any).phoneNumber || (user as any).phone || '';
+    const permissions = Array.isArray((user as any).permissions)
+      ? (user as any).permissions
+      : [];
     return {
       id: user._id,
       email: user.email,
       roles,
+      permissions,
       name: user.name || (user as any).fullName || user.email.split('@')[0],
       fullName: (user as any).fullName || user.name || user.email.split('@')[0],
       phoneNumber: phone,
@@ -106,9 +111,15 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt'))
   @Put('/profile')
   async updateProfile(@GetUser() user: User, @Body() body: any) {
-    const safeBody = { ...body };
-    delete safeBody.password;
-    delete safeBody.salt;
+    const allowed = ['name', 'fullName', 'phoneNumber', 'gender', 'dateOfBirth', 'address', 'avatar', 'description'];
+    const safeBody: Record<string, any> = {};
+    if (body && typeof body === 'object') {
+      for (const key of allowed) {
+        if (body[key] !== undefined) {
+          safeBody[key] = body[key];
+        }
+      }
+    }
     const updated = await this.authService.updateUser(user._id.toString(), safeBody);
     const roles = Array.isArray(updated.roles) ? [...updated.roles] : (updated as any).role ? [(updated as any).role] : ['user'];
     const rawAvatar = (updated as any).avatar || (updated as any).avatarUrl || ((updated as any).images?.[0]?.url || (updated as any).images?.[0]) || '';

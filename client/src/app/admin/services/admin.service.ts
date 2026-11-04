@@ -240,6 +240,10 @@ export class AdminService {
     return this.http.patch(`${this.baseUrl}/users/${id}`, data);
   }
 
+  updateUserPermissions(id: string, permissions: string[]): Observable<any> {
+    return this.http.patch(`${this.baseUrl}/users/${id}/permissions`, { permissions });
+  }
+
   updateUserStatus(id: string, status?: boolean): Observable<any> {
     return this.http.patch(`${this.baseUrl}/users/${id}/status`, status !== undefined ? { status } : {});
   }

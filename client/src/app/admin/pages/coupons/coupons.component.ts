@@ -3,6 +3,8 @@ import { Router } from '@angular/router';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
 import { NotificationService } from '../../shared/notification/notification.service';
+import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
+import { hasPermission } from '../../../services/auth.guard';
 import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
 import { formatVND } from '../../../pipes/price.pipe';
 
@@ -31,20 +33,20 @@ export class CouponsComponent implements OnInit {
 
   actions: RowAction[] = [
     { key: 'view', label: 'Xem', variant: 'primary' },
-    { key: 'edit', label: 'Sửa' },
+    { key: 'edit', label: 'Sửa', showWhen: () => this.canManage },
     {
       key: 'toggle_off',
       label: 'Tắt',
       variant: 'warning',
-      showWhen: (r: any) => r.isActive !== false
+      showWhen: (r: any) => this.canManage && r.isActive !== false
     },
     {
       key: 'toggle_on',
       label: 'Bật',
       variant: 'default',
-      showWhen: (r: any) => r.isActive === false
+      showWhen: (r: any) => this.canManage && r.isActive === false
     },
-    { key: 'delete', label: 'Xóa', variant: 'danger' }
+    { key: 'delete', label: 'Xóa', variant: 'danger', showWhen: () => this.canManage }
   ];
 
   filterFields: FilterField[] = [
@@ -90,11 +92,16 @@ export class CouponsComponent implements OnInit {
   pendingAction: { type: 'toggle' | 'delete' | 'bulk_delete'; row?: any; ids?: string[] } | null = null;
   isProcessing = false;
 
+  get canManage(): boolean {
+    return hasPermission(this.selectors.user(), 'coupons:manage');
+  }
+
   constructor(
     private apiService: AdminService,
     private router: Router,
     private cdr: ChangeDetectorRef,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private selectors: SignalStoreSelectors
   ) { }
 
   ngOnInit(): void {

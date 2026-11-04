@@ -48,7 +48,7 @@
     </div>
 
     <!-- 4. Quản trị (chỉ hiển thị khi isAdmin() === true) - CSS giống Giỏ hàng -->
-    @if (isAdmin()) {
+    @if (canAccessAdmin()) {
     <div class="nav-basic nav-admin-wrap">
       <a class="nav-label" [routerLink]="['/admin']" routerLinkActive="active" title="Trang quản trị"
         (click)="scrollToTop()">
@@ -117,7 +117,7 @@
     </button>
 
 
-    @if (isAdmin()) {
+    @if (canAccessAdmin()) {
     <button mat-menu-item [routerLink]="['/admin']" routerLinkActive="active" (click)="scrollToTop()">
       <span class="nav-label">Quản trị</span>
     </button>

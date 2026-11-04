@@ -2,6 +2,8 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { TableColumn, RowAction, FilterField, PaginationConfig, ActionEvent } from '../../shared/models/admin-table.models';
 import { AdminService } from '../../services/admin.service';
 import { NotificationService } from '../../shared/notification/notification.service';
+import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
+import { hasPermission } from '../../../services/auth.guard';
 import { Router } from '@angular/router';
 import { BreadcrumbItem } from '../../shared/admin-breadcrumb/admin-breadcrumb.component';
 
@@ -25,20 +27,20 @@ export class CategoriesComponent implements OnInit {
     { key: 'status', label: 'Trạng thái', type: 'status', sortable: true },
   ];
   actions: RowAction[] = [
-    { key: 'edit', label: 'Sửa' },
+    { key: 'edit', label: 'Sửa', showWhen: () => this.canManage },
     {
       key: 'toggle',
       label: 'Tắt',
       variant: 'warning',
-      showWhen: (r: any) => CategoriesComponent.checkCategoryVisible(r)
+      showWhen: (r: any) => this.canManage && CategoriesComponent.checkCategoryVisible(r)
     },
     {
       key: 'toggle',
       label: 'Bật',
       variant: 'primary',
-      showWhen: (r: any) => !CategoriesComponent.checkCategoryVisible(r)
+      showWhen: (r: any) => this.canManage && !CategoriesComponent.checkCategoryVisible(r)
     },
-    { key: 'delete', label: 'Xóa', variant: 'danger' }
+    { key: 'delete', label: 'Xóa', variant: 'danger', showWhen: () => this.canManage }
   ];
   filterFields: FilterField[] = [
     { key: 'status', label: 'Trạng thái', type: 'select', options: [{ value: 'active', label: 'Hiển thị' }, { value: 'inactive', label: 'Ẩn' }] },
@@ -70,11 +72,16 @@ export class CategoriesComponent implements OnInit {
   pendingToggleNextState = false;
   isToggling = false;
 
+  get canManage(): boolean {
+    return hasPermission(this.selectors.user(), 'categories:manage');
+  }
+
   constructor(
     private apiService: AdminService,
     private router: Router,
     private cdr: ChangeDetectorRef,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private selectors: SignalStoreSelectors
   ) { }
 
   ngOnInit(): void {

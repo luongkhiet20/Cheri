@@ -17,7 +17,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { RolesGuard, AdminJwtAuthGuard, OptionalJwtAuthGuard } from '../auth/roles.guard';
+import { RolesGuard, AdminJwtAuthGuard, OptionalJwtAuthGuard, RequirePermissions } from '../auth/roles.guard';
 import { OrdersService } from './orders.service';
 import { GetUser } from '../auth/utils/get-user.decorator';
 import { User } from '../auth/models/user.model';
@@ -48,6 +48,7 @@ export class OrdersController {
 
   // ─── Admin: lấy tất cả shipping methods ──────────────────────────────────
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('shipping_methods:view')
   @Get('/shipping-methods/all')
   getAllShippingMethods() {
     return this.ordersService.getAllShippingMethods();
@@ -55,6 +56,7 @@ export class OrdersController {
 
   // ─── Admin: tạo/cập nhật shipping method ────────────────────────────────
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('shipping_methods:manage')
   @Post('/shipping-methods')
   upsertShippingMethod(@Body() body: any) {
     return this.ordersService.upsertShippingMethod(body);
@@ -62,6 +64,7 @@ export class OrdersController {
 
   // ─── Admin: xóa shipping method ─────────────────────────────────────────
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('shipping_methods:manage')
   @Delete('/shipping-methods/:id')
   deleteShippingMethod(@Param('id') id: string) {
     return this.ordersService.deleteShippingMethod(id);
@@ -69,6 +72,7 @@ export class OrdersController {
 
   // ─── Admin: lấy tất cả payment methods ───────────────────────────────────
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('payment_methods:view')
   @Get('/payment-methods/all')
   getAllPaymentMethods() {
     return this.ordersService.getAllPaymentMethods();
@@ -76,6 +80,7 @@ export class OrdersController {
 
   // ─── Admin: tạo/cập nhật payment method ─────────────────────────────────
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('payment_methods:manage')
   @Post('/payment-methods')
   upsertPaymentMethod(@Body() body: any) {
     return this.ordersService.upsertPaymentMethod(body);
@@ -83,6 +88,7 @@ export class OrdersController {
 
   // ─── Admin: xóa payment method ───────────────────────────────────────────
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('payment_methods:manage')
   @Delete('/payment-methods/:id')
   deletePaymentMethod(@Param('id') id: string) {
     return this.ordersService.deletePaymentMethod(id);
@@ -95,7 +101,9 @@ export class OrdersController {
     const userRoles = (user as any)?.roles || (user as any)?.role || [];
     const roles = Array.isArray(userRoles) ? userRoles : [userRoles];
     const isAdmin = roles.some((r: any) => typeof r === 'string' && r.toLowerCase().includes('admin'));
-    if (isAdmin || query?.page || query?.status || query?.search) {
+    const isStaffWithView = roles.some((r: any) => typeof r === 'string' && r.toLowerCase().includes('staff')) &&
+      Array.isArray((user as any)?.permissions) && (user as any).permissions.includes('orders:view');
+    if (isAdmin || isStaffWithView) {
       return this.ordersService.getAdminOrders(query);
     }
     return this.ordersService.getOrders(user);
@@ -261,36 +269,42 @@ export class OrdersController {
 
   // ─── Admin: thông báo ──────────────────────────────────────────────────
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('notifications:view')
   @Get('/notifications')
   getNotifications(@Query('recipientId') recipientId?: string) {
     return this.ordersService.getNotifications(recipientId || 'admin');
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('notifications:view')
   @Get('/notifications/unread-count')
   getUnreadCount(@Query('recipientId') recipientId?: string) {
     return this.ordersService.getUnreadNotificationCount(recipientId || 'admin');
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('notifications:manage')
   @Post('/notifications/read-all')
   markAllNotificationsReadPost(@Body('recipientId') recipientId?: string) {
     return this.ordersService.markAllNotificationsRead(recipientId || 'admin');
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('notifications:manage')
   @Patch('/notifications/read-all')
   markAllNotificationsReadPatch(@Body('recipientId') recipientId?: string) {
     return this.ordersService.markAllNotificationsRead(recipientId || 'admin');
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('notifications:manage')
   @Patch('/notifications/:id/read')
   markNotificationReadPatch(@Param('id') id: string, @Body('recipientId') recipientId?: string) {
     return this.ordersService.markNotificationRead(id, recipientId || 'admin');
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('notifications:manage')
   @Post('/notifications/:id/read')
   markNotificationReadPost(@Param('id') id: string, @Body('recipientId') recipientId?: string) {
     return this.ordersService.markNotificationRead(id, recipientId || 'admin');
@@ -298,6 +312,7 @@ export class OrdersController {
 
   // ─── Admin: thống kê dashboard ───────────────────────────────────────────
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('orders:view')
   @Get('/stats')
   getOrderStats(@Query('period') period: 'week' | 'month') {
     return this.ordersService.getOrderStats(period || 'week');
@@ -305,6 +320,7 @@ export class OrdersController {
 
   // ─── Admin: lấy tất cả orders ────────────────────────────────────────────
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('orders:view')
   @Get('/all')
   getAllOrders() {
     return this.ordersService.getAllOrders();
@@ -321,7 +337,10 @@ export class OrdersController {
     const userRoles = (user as any)?.roles || (user as any)?.role || [];
     const roles = Array.isArray(userRoles) ? userRoles : [userRoles];
     const isAdmin = roles.some((r: any) => typeof r === 'string' && r.toLowerCase().includes('admin'));
-    if (!isAdmin) {
+    const isStaffWithView = roles.some((r: any) => typeof r === 'string' && r.toLowerCase().includes('staff')) &&
+      Array.isArray((user as any)?.permissions) && (user as any).permissions.includes('orders:view');
+    const isPrivileged = isAdmin || isStaffWithView;
+    if (!isPrivileged) {
       const userIdStr = user?._id ? user._id.toString() : '';
       const orderUserStr = (order as any)?._user ? (order as any)._user.toString() : '';
       const orderUserIdStr = (order as any)?.userId ? (order as any).userId.toString() : '';
@@ -341,6 +360,7 @@ export class OrdersController {
 
   // ─── Admin: cập nhật riêng trạng thái order (status) ─────────────────────
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('orders:update_status')
   @Patch('/:id/status')
   updateOrderStatus(
     @Param('id') id: string,
@@ -351,6 +371,7 @@ export class OrdersController {
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('orders:update_status')
   @Put('/:id/status')
   updateOrderStatusPut(
     @Param('id') id: string,
@@ -362,24 +383,28 @@ export class OrdersController {
 
   // ─── Admin: cập nhật order (status, tracking...) ─────────────────────────
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('orders:update')
   @Patch()
   updateOrder(@Body() order, @GetUser() user: User) {
     return this.ordersService.updateOrder({ ...order, updatedBy: user?._id || null });
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('orders:update')
   @Put()
   updateOrderPut(@Body() order, @GetUser() user: User) {
     return this.ordersService.updateOrder({ ...order, updatedBy: user?._id || null });
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('orders:update')
   @Patch('/:id')
   updateOrderById(@Param('id') id: string, @Body() order: any, @GetUser() user: User) {
     return this.ordersService.updateOrder({ ...order, orderId: id, updatedBy: user?._id || null });
   }
 
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('orders:update')
   @Put('/:id')
   updateOrderByIdPut(@Param('id') id: string, @Body() order: any, @GetUser() user: User) {
     return this.ordersService.updateOrder({ ...order, orderId: id, updatedBy: user?._id || null });
@@ -387,6 +412,7 @@ export class OrdersController {
 
   // ─── Admin: Xử lý quy trình trả hàng & hoàn tiền ────────────────────────
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('orders:return_manage')
   @Patch('/:id/return-requests/:reqId/status')
   updateReturnRequestWorkflow(
     @Param('id') id: string,
@@ -399,6 +425,7 @@ export class OrdersController {
 
   // ─── Admin: Cập nhật đối soát COD ───────────────────────────────────────
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('orders:cod_reconcile')
   @Patch('/:id/cod-reconciliation')
   updateCodReconciliation(
     @Param('id') id: string,
@@ -410,6 +437,7 @@ export class OrdersController {
 
   // ─── Admin: xóa order (Vô hiệu hóa để bảo vệ dữ liệu nghiệp vụ) ───────────
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @RequirePermissions('orders:delete')
   @Delete('/:id')
   deleteOrder(@Param('id') id: string) {
     throw new MethodNotAllowedException(

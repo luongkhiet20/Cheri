@@ -1301,7 +1301,30 @@ export class ApiService {
 
   
   getSocialLinks(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/api/social-links`);
+    const defaultData = [
+      { platform: 'TIKTOK', url: 'https://www.tiktok.com/@bongbenh_scrunchies', isActive: true },
+      { platform: 'INSTAGRAM', url: 'https://www.instagram.com/bongbenh_scrunchiess?cplk=MWV0bngxaHAwZ2J3eQ%3D%3D&utm_source=qr', isActive: true },
+      { platform: 'FACEBOOK', url: 'https://www.facebook.com/', isActive: true }
+    ];
+
+    const primaryUrl = `${this.apiUrl}/api/social-links`;
+
+    return this.http.get(primaryUrl).pipe(
+      catchError(() => {
+        if (primaryUrl.includes('localhost:4000')) {
+          const ipv4Url = primaryUrl.replace('localhost:4000', '127.0.0.1:4000');
+          return this.http.get(ipv4Url).pipe(
+            catchError(() => {
+              const adminPortUrl = primaryUrl.replace('localhost:4000', '127.0.0.1:5000');
+              return this.http.get(adminPortUrl).pipe(
+                catchError(() => of({ success: true, data: defaultData }))
+              );
+            })
+          );
+        }
+        return of({ success: true, data: defaultData });
+      })
+    );
   }
 
   subscribeNewsletter(email: string, source: string = 'FOOTER'): Observable<any> {

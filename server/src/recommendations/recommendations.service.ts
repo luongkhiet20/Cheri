@@ -226,6 +226,20 @@ export class RecommendationsService {
     const rawProductId = dto.productId ? String(dto.productId).trim() : undefined;
     const contextId = dto.recommendationContextId ? String(dto.recommendationContextId).trim() : undefined;
 
+    let targetProductDoc: any = null;
+    let resolvedProductId: string | undefined = rawProductId;
+    if (rawProductId) {
+      if (isValidObjectId(rawProductId)) {
+        targetProductDoc = await this.productModel.findById(rawProductId).lean();
+      }
+      if (!targetProductDoc) {
+        targetProductDoc = await this.productModel.findOne({ titleUrl: rawProductId }).lean();
+      }
+      if (targetProductDoc) {
+        resolvedProductId = targetProductDoc._id.toString();
+      }
+    }
+
     let userKey: string | undefined = undefined;
     if (user && user._id) {
       userKey = `usr_${user._id.toString()}`;
@@ -235,7 +249,7 @@ export class RecommendationsService {
 
     // Step 1: Try Python CLI inference
     const cliResult = await this.invokePythonCLI({
-      productId: rawProductId,
+      productId: resolvedProductId || rawProductId,
       userKey,
       limit,
       contextId,
@@ -253,7 +267,7 @@ export class RecommendationsService {
         }
       }
 
-      const hydrated = await this.hydrateProducts(candidateIds, lang, rawProductId, metaMap);
+      const hydrated = await this.hydrateProducts(candidateIds, lang, resolvedProductId || rawProductId, metaMap);
 
       if (hydrated.length >= Math.min(limit, 4)) {
         const isML =
@@ -270,7 +284,7 @@ export class RecommendationsService {
           modelUsed: cliResult.model_used || 'None',
           isMachineLearning: isML,
           dataSource: cliResult.data_source || (isML ? 'synthetic_bootstrap' : 'real_data'),
-          currentProductId: rawProductId,
+          currentProductId: resolvedProductId || rawProductId,
           recommendationContextId: contextId,
           candidatePoolSize: cliResult.candidate_pool_size,
           priorityCount: cliResult.priority_count,
@@ -288,9 +302,9 @@ export class RecommendationsService {
       contextId,
     );
 
-    if (rawProductId) {
+    if (resolvedProductId || rawProductId) {
       return this.nativeFallbackByCategory(
-        rawProductId,
+        resolvedProductId || rawProductId!,
         limit,
         lang,
         exposureMap,
@@ -483,7 +497,7 @@ export class RecommendationsService {
     const poolSizeLimit = Math.max(RECOMMENDATION_CONFIG.CANDIDATE_POOL_SIZE, limit);
     const pool = rawCandidates.slice(0, poolSizeLimit).map((c) => {
       const factors = this.computeNativeExposureFactors(c.id, exposureMap);
-      const jitter = Math.random() * 0.012;
+      const jitter = (Math.random() - 0.5) * 0.04;
       const rotatedPriorityScore =
         c.baseScore * (0.55 + 0.45 * factors.priorityDecay) + c.baseScore * jitter;
       return {
@@ -552,7 +566,8 @@ export class RecommendationsService {
         const cCount = catCounts[cat] || 0;
         const suitability = Math.pow(Math.max(item.baseScore, 0.01) / maxPoolScore, 0.75);
         const catBoost = cCount === 0 ? 1.75 : cCount === 1 ? 1.25 : 0.8;
-        return Math.max(1e-6, suitability * item.explorationNovelty * catBoost);
+        const entropy = 0.9 + Math.random() * 0.2;
+        return Math.max(1e-6, suitability * item.explorationNovelty * catBoost * entropy);
       });
 
       const totalWeight = weights.reduce((acc, w) => acc + w, 0);

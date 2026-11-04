@@ -101,6 +101,10 @@ def load_catalog(data_dir: Optional[Path] = None) -> pd.DataFrame:
         df["primary_category"] = df["primary_category"].fillna("Khác").astype(str)
         df["regular_price"] = pd.to_numeric(df.get("regular_price", 0), errors="coerce").fillna(0.0)
         df["sale_price"] = pd.to_numeric(df.get("sale_price", 0), errors="coerce").fillna(0.0)
+        if "title_url" in df.columns:
+            df["title_url"] = df["title_url"].fillna("").astype(str).str.strip()
+        if "sku" in df.columns:
+            df["sku"] = df["sku"].fillna("").astype(str).str.strip()
 
         if "in_stock" in df.columns:
             stock_num = pd.to_numeric(df["in_stock"], errors="coerce")
@@ -476,6 +480,7 @@ def select_priority_and_exploration(
     priority_ratio: float = RECOMMENDATION_PRIORITY_RATIO,
     exposure_map: Optional[Dict[str, Dict[str, Any]]] = None,
     rng_seed: Optional[int] = None,
+    current_category: Optional[str] = None,
 ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
     """
     Executes Candidate Pool Expansion (Top-30) + Diversity Re-ranking (6 Priority + 4 Exploration)
@@ -516,10 +521,14 @@ def select_priority_and_exploration(
     effective_pool_size = max(int(pool_size), int(top_n))
     pool_df = df.head(effective_pool_size).copy().reset_index(drop=True)
 
-    # Step 2: Compute Exposure Rotation factors for each candidate in Top-30
+    # Step 2: Compute Exposure Rotation & Context Affinity factors for each candidate in Top-30
     imp_counts = []
     priority_decays = []
     exp_novelties = []
+    context_affinities = []
+
+    target_cat = str(current_category).strip().lower() if current_category else ""
+
     for _, row in pool_df.iterrows():
         pid = str(row.get("product_id", ""))
         factors = compute_exposure_rotation_factors(pid, exposure_map)
@@ -527,17 +536,35 @@ def select_priority_and_exploration(
         priority_decays.append(factors["priority_decay"])
         exp_novelties.append(factors["exploration_novelty"])
 
+        cat_str = str(row.get("primary_category", "")).strip().lower()
+        if target_cat and cat_str:
+            if cat_str == target_cat:
+                context_affinities.append(1.35)
+            elif (
+                ("váy" in target_cat and "váy" in cat_str)
+                or ("áo" in target_cat and ("quần" in cat_str or "chân váy" in cat_str or "set" in cat_str))
+                or ("đầm" in target_cat and ("váy" in cat_str or "set" in cat_str or "phụ kiện" in cat_str))
+                or ("chân váy" in target_cat and ("áo" in cat_str or "set" in cat_str))
+                or ("quần" in target_cat and ("áo" in cat_str or "set" in cat_str))
+            ):
+                context_affinities.append(1.15)
+            else:
+                context_affinities.append(1.0)
+        else:
+            context_affinities.append(1.0)
+
     pool_df["impression_count_7d"] = imp_counts
     pool_df["priority_decay"] = priority_decays
     pool_df["exploration_novelty"] = exp_novelties
+    pool_df["context_affinity"] = context_affinities
 
-    # Effective priority score balances original relevance (65%) and exposure freshness (35% * base_score)
-    # Plus a slight jitter (0.015) among near-tied items so repeated visits without impression tracking still rotate naturally
+    # Effective priority score balances original relevance (55%), exposure freshness (45%), context affinity,
+    # plus dynamic jitter for organic rotation among similar-tier items
     rng = np.random.default_rng(rng_seed)
-    small_jitter = rng.uniform(0.0, 0.012, size=len(pool_df))
+    dynamic_jitter = rng.uniform(-0.02, 0.02, size=len(pool_df))
     pool_df["rotated_priority_score"] = (
-        pool_df["base_score"] * (0.55 + 0.45 * pool_df["priority_decay"])
-    ) + (pool_df["base_score"] * small_jitter)
+        pool_df["base_score"] * (0.55 + 0.45 * pool_df["priority_decay"]) * pool_df["context_affinity"]
+    ) + (pool_df["base_score"] * dynamic_jitter)
 
     # Determine target counts (exact 6 + 4 when top_n == 10)
     if top_n == RECOMMENDATION_DEFAULT_TOP_N:
@@ -599,13 +626,16 @@ def select_priority_and_exploration(
 
             # Category diversity boost: favor categories not yet heavily represented in Priority group
             if curr_cat_count == 0:
-                cat_boost = 1.75
+                cat_boost = 1.80
             elif curr_cat_count == 1:
-                cat_boost = 1.25
+                cat_boost = 1.30
             else:
-                cat_boost = 0.80
+                cat_boost = 0.75
 
-            w = max(1e-6, suitability_weight * novelty_weight * cat_boost)
+            # Dynamic candidate entropy to ensure active variety across requests
+            entropy = rng.uniform(0.9, 1.1)
+
+            w = max(1e-6, suitability_weight * novelty_weight * cat_boost * entropy)
             eligible_indices.append(int(idx))
             weights.append(w)
 
@@ -861,6 +891,7 @@ def fallback_by_category(
             pool_size=RECOMMENDATION_CANDIDATE_POOL_SIZE,
             max_per_category=RECOMMENDATION_MAX_PER_CATEGORY,
             exposure_map=exposure_map,
+            current_category=target_category,
         )
     else:
         filtered = candidates.head(top_n).copy()
@@ -984,14 +1015,34 @@ def build_candidate_features(
     """
     ref_catalog = catalog if (catalog is not None and not catalog.empty) else candidates_df
     cat_lookup: Dict[str, str] = {}
-    if ref_catalog is not None and not ref_catalog.empty and "product_id" in ref_catalog.columns:
+    id_lookup: Dict[str, str] = {}
+    if ref_catalog is not None and not ref_catalog.empty:
         for _, r in ref_catalog.iterrows():
-            cat_lookup[str(r["product_id"])] = str(r.get("primary_category", "Khác"))
+            pid = str(r["product_id"]).strip()
+            cat = str(r.get("primary_category", "Khác")).strip()
+            if pid:
+                cat_lookup[pid] = cat
+                id_lookup[pid] = pid
+                cat_lookup[pid.lower()] = cat
+                id_lookup[pid.lower()] = pid
+            if "title_url" in r and pd.notna(r["title_url"]):
+                t_slug = str(r["title_url"]).strip().lower()
+                if t_slug:
+                    cat_lookup[t_slug] = cat
+                    id_lookup[t_slug] = pid
+            if "sku" in r and pd.notna(r["sku"]):
+                t_sku = str(r["sku"]).strip().lower()
+                if t_sku:
+                    cat_lookup[t_sku] = cat
+                    id_lookup[t_sku] = pid
 
     curr_cat = None
-    curr_id_clean = normalize_id(current_product_id) if current_product_id else ""
-    if curr_id_clean and curr_id_clean in cat_lookup:
-        curr_cat = cat_lookup[curr_id_clean]
+    curr_id_clean = ""
+    if current_product_id:
+        raw_c = str(current_product_id).strip()
+        raw_c_lower = raw_c.lower()
+        curr_id_clean = id_lookup.get(raw_c, id_lookup.get(raw_c_lower, normalize_id(raw_c)))
+        curr_cat = cat_lookup.get(raw_c, cat_lookup.get(raw_c_lower, cat_lookup.get(curr_id_clean)))
 
     u_key = normalize_user_key(user_id) if user_id else ""
 
@@ -1091,16 +1142,16 @@ def build_candidate_features(
         is_same_cat = 1.0 if (curr_cat and p_cat == curr_cat) else 0.0
 
         if has_user_history:
-            feat_u_total_views = float(u_total_views)
+            feat_u_total_views = float(u_total_views) + (3.0 if curr_cat else 0.0)
             feat_u_distinct = float(u_distinct_products)
             feat_up_views = float(up_views_map.get(p_id, 0))
-            feat_u_cat_views = float(u_cat_views_map.get(p_cat, 0)) + (1.0 if is_same_cat else 0.0)
+            feat_u_cat_views = float(u_cat_views_map.get(p_cat, 0)) + (3.5 if is_same_cat else 0.0)
 
             last_prod_ts = up_last_ts_map.get(p_id)
             if last_prod_ts is not None and pd.notna(last_prod_ts):
                 recency = max(0.0, round((ref_ts - last_prod_ts).total_seconds() / 86400.0, 2))
             elif is_same_cat:
-                recency = 0.5
+                recency = 0.05
             elif p_cat in u_cat_last_ts_map and pd.notna(u_cat_last_ts_map[p_cat]):
                 recency = max(0.5, round((ref_ts - u_cat_last_ts_map[p_cat]).total_seconds() / 86400.0, 2))
             else:
@@ -1109,11 +1160,11 @@ def build_candidate_features(
             feat_u_orders = float(u_total_orders)
             feat_prev_purchased = 1.0 if p_id in purchased_products else 0.0
         else:
-            feat_u_total_views = 1.0 if curr_cat else 0.0
+            feat_u_total_views = 3.0 if curr_cat else 0.0
             feat_u_distinct = 1.0 if curr_cat else 0.0
             feat_up_views = 0.0
-            feat_u_cat_views = 1.0 if is_same_cat else 0.0
-            recency = 1.0 if is_same_cat else 999.0
+            feat_u_cat_views = 3.5 if is_same_cat else 0.0
+            recency = 0.05 if is_same_cat else 999.0
             feat_u_orders = float(u_total_orders)
             feat_prev_purchased = 1.0 if p_id in purchased_products else 0.0
 
@@ -1191,13 +1242,33 @@ def recommend(
     # -------------------------------------------------------------
     if model is not None and metadata is not None:
         try:
-            curr_id_clean = normalize_id(current_product_id) if current_product_id else ""
+            curr_id_clean = ""
+            curr_slug_clean = None
+            curr_cat = None
+            if current_product_id:
+                raw_curr = str(current_product_id).strip()
+                raw_lower = raw_curr.lower()
+                for _, crow in catalog.iterrows():
+                    c_pid = str(crow.get("product_id", "")).strip()
+                    c_slug = str(crow.get("title_url", "")).strip().lower() if pd.notna(crow.get("title_url")) else ""
+                    c_sku = str(crow.get("sku", "")).strip().lower() if pd.notna(crow.get("sku")) else ""
+                    c_cat = str(crow.get("primary_category", "Khác")).strip()
+                    if raw_curr == c_pid or raw_lower == c_pid.lower() or raw_lower == c_slug or raw_lower == c_sku:
+                        curr_id_clean = c_pid
+                        curr_slug_clean = c_slug if c_slug else None
+                        curr_cat = c_cat
+                        break
+                if not curr_id_clean:
+                    curr_id_clean = normalize_id(raw_curr)
+
             candidates = catalog[
                 (catalog["product_id"] != curr_id_clean) &
                 (catalog["visibility"] == True) &
                 (catalog["is_in_stock"] == True) &
                 (~catalog["product_id"].isin(purchased_products))
             ].copy()
+            if curr_slug_clean and "title_url" in candidates.columns:
+                candidates = candidates[candidates["title_url"].str.lower() != curr_slug_clean].copy()
 
             if candidates.empty:
                 candidates = catalog[
@@ -1205,18 +1276,22 @@ def recommend(
                     (catalog["visibility"] == True) &
                     (catalog["is_in_stock"] == True)
                 ].copy()
+                if curr_slug_clean and "title_url" in candidates.columns:
+                    candidates = candidates[candidates["title_url"].str.lower() != curr_slug_clean].copy()
             if candidates.empty:
                 candidates = catalog[
                     (catalog["product_id"] != curr_id_clean) &
                     (catalog["visibility"] == True)
                 ].copy()
+                if curr_slug_clean and "title_url" in candidates.columns:
+                    candidates = candidates[candidates["title_url"].str.lower() != curr_slug_clean].copy()
             if candidates.empty:
                 candidates = catalog.copy()
 
             X_cand = build_candidate_features(
                 candidates,
                 user_id=user_id,
-                current_product_id=current_product_id,
+                current_product_id=curr_id_clean or current_product_id,
                 catalog=catalog,
                 interactions_df=interactions_df,
                 orders_df=orders_df,
@@ -1239,14 +1314,33 @@ def recommend(
             # Record original ML rank before Diversity Re-ranking & Exposure Rotation
             candidates["orig_rank"] = np.arange(1, len(candidates) + 1, dtype=int)
 
+            # Ensure Top-30 candidate pool contains balanced category representation (at most 10 per category in pool)
+            pool_indices = []
+            pool_cat_counts: Dict[str, int] = {}
+            for idx, r in candidates.iterrows():
+                p_cat = str(r.get("primary_category", "Khác"))
+                if pool_cat_counts.get(p_cat, 0) < 10:
+                    pool_indices.append(idx)
+                    pool_cat_counts[p_cat] = pool_cat_counts.get(p_cat, 0) + 1
+                    if len(pool_indices) >= RECOMMENDATION_CANDIDATE_POOL_SIZE:
+                        break
+            if len(pool_indices) < RECOMMENDATION_CANDIDATE_POOL_SIZE:
+                for idx in candidates.index:
+                    if idx not in pool_indices:
+                        pool_indices.append(idx)
+                        if len(pool_indices) >= RECOMMENDATION_CANDIDATE_POOL_SIZE:
+                            break
+            pool_candidates = candidates.loc[pool_indices].reset_index(drop=True)
+
             diverse_cands, div_summary = select_priority_and_exploration(
-                candidates,
+                pool_candidates,
                 top_n=top_n,
                 pool_size=RECOMMENDATION_CANDIDATE_POOL_SIZE,
                 max_per_category=RECOMMENDATION_MAX_PER_CATEGORY,
                 priority_ratio=RECOMMENDATION_PRIORITY_RATIO,
                 exposure_map=exposure_map,
                 rng_seed=rng_seed,
+                current_category=curr_cat,
             )
 
             is_bootstrap = metadata.get("is_bootstrap", False)

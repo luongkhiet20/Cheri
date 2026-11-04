@@ -100,6 +100,7 @@ export class ProductComponent implements OnDestroy {
       const idStr = id ? String(id).trim() : '';
       if (idStr && lastLoadedRouteId !== idStr) {
         lastLoadedRouteId = idStr;
+        this.currentProductId = idStr;
         this.resetScrollToTop();
       }
       this.store.getProduct(id + '?lang=' + lang);

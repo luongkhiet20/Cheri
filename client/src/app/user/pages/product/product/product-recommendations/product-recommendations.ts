@@ -34,6 +34,8 @@ import { formatVND } from '../../../../../pipes/price.pipe';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProductRecommendationsComponent implements OnInit, OnChanges, AfterViewInit, OnDestroy {
+  private lastLoadedProductId: string | null = null;
+  private lastLoadedInputId: string | null = null;
   @Input() productId: string = '';
   @Input() lang: string = 'vi';
   @Input() currency: string = 'đ';

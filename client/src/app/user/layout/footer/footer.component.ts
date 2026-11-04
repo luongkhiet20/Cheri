@@ -1,10 +1,10 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, ChangeDetectorRef, Inject, PLATFORM_ID } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 
 import { TranslateService } from '../../../services/translate.service';
 import { RouterLink } from '@angular/router';
-import { CommonModule } from '@angular/common';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { SettingsService } from '../../../admin/pages/settings/settings.service';
 import { ContactSettings } from '../../../admin/pages/settings/settings.model';
 import { SignalStoreSelectors } from '../../../store/signal.store.selectors';
@@ -33,8 +33,12 @@ export class FooterComponent implements OnDestroy {
   private settingsSub: Subscription;
   private socialLinksSub?: Subscription;
 
-  /** Dữ liệu mạng xã hội đồng bộ từ collection social_links */
-  socialLinks: { [key: string]: { url: string; isActive: boolean } } = {};
+  /** Dữ liệu mạng xã hội đồng bộ từ collection social_links (kèm dữ liệu dự phòng) */
+  socialLinks: { [key: string]: { url: string; isActive: boolean } } = {
+    TIKTOK: { url: 'https://www.tiktok.com/@bongbenh_scrunchies', isActive: true },
+    INSTAGRAM: { url: 'https://www.instagram.com/bongbenh_scrunchiess?cplk=MWV0bngxaHAwZ2J3eQ%3D%3D&utm_source=qr', isActive: true },
+    FACEBOOK: { url: 'https://www.facebook.com/', isActive: true }
+  };
 
   constructor(
     private translate: TranslateService,
@@ -42,7 +46,8 @@ export class FooterComponent implements OnDestroy {
     private settingsService: SettingsService,
     private apiService: ApiService,
     private notify: NotificationService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    @Inject(PLATFORM_ID) private platformId: Object
   ) {
     this.langSub = this.translate.getLang$().subscribe(lang => {
       this.lang = lang || 'vi';
@@ -54,7 +59,9 @@ export class FooterComponent implements OnDestroy {
       this.contact = settings?.contact ?? null;
     });
 
-    this.loadSocialLinks();
+    if (isPlatformBrowser(this.platformId)) {
+      this.loadSocialLinks();
+    }
   }
 
   isPageVisible(slug: string): boolean {
@@ -72,7 +79,7 @@ export class FooterComponent implements OnDestroy {
   loadSocialLinks(): void {
     this.socialLinksSub = this.apiService.getSocialLinks().subscribe({
       next: (res: any) => {
-        if (res?.success && Array.isArray(res.data)) {
+        if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
           const map: { [key: string]: { url: string; isActive: boolean } } = {};
           res.data.forEach((item: any) => {
             const platformKey = String(item.platform || '').toUpperCase();
@@ -85,8 +92,8 @@ export class FooterComponent implements OnDestroy {
           this.cdr.markForCheck();
         }
       },
-      error: (err) => {
-        console.error('Không thể tải liên kết mạng xã hội Footer:', err);
+      error: () => {
+        // Giữ nguyên dữ liệu liên kết mặc định khi không kết nối được server
       }
     });
   }

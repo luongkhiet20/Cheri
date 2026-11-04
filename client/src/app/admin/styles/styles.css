@@ -34,6 +34,8 @@
   --cheri-warning-light: #FEF9EC;
   --cheri-danger: #B42318;
   --cheri-danger-light: #FEF2F2;
+  --cheri-info: #1D4ED8;
+  --cheri-info-light: #EFF6FF;
 
   /* Layout Dimensions */
   --sidebar-width: 240px;

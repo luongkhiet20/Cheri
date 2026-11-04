@@ -183,11 +183,11 @@ export class AdminService {
   }
 
   createOrder(data: any): Observable<any> {
-    return this.http.post(`${this.baseUrl}/admin/orders`, data);
+    return this.http.post(`${this.baseUrl}/orders/add`, data);
   }
 
   updateOrder(id: string, data: any): Observable<any> {
-    return this.http.patch(`${this.baseUrl}/admin/orders/${id}`, data);
+    return this.http.patch(`${this.baseUrl}/orders/${id}`, data);
   }
 
   updateOrderStatus(id: string, status: string, note?: string): Observable<any> {

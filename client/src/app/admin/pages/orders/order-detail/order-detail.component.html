@@ -806,9 +806,9 @@
             <span class="summary-val font-medium">{{ order.payment || '—' }}</span>
           </div>
 
-          <div class="summary-row" *ngIf="order.paymentStatus">
+          <div class="summary-row" *ngIf="order.paymentStatus || order.payment?.status">
             <span class="summary-label">Trạng thái thanh toán:</span>
-            <span class="summary-val">{{ getPaymentStatusLabel(order.paymentStatus) }}</span>
+            <span class="summary-val">{{ getPaymentStatusLabel(order.paymentStatus || order.payment?.status) }}</span>
           </div>
 
           <div class="summary-row" *ngIf="order.paymentProvider">

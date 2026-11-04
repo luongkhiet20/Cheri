@@ -28,16 +28,18 @@ export class UpdateOrderStatusComponent implements OnChanges {
   @Output() returnUpdated = new EventEmitter<{ orderId: string; action: string }>();
 
   readonly statusOptions: StatusOption[] = [
-    { value: 'DELIVERED', label: 'Đã giao' },
-    { value: 'SHIPPING', label: 'Đang giao' },
-    { value: 'PROCESSING', label: 'Đang xử lý' },
     { value: 'PENDING', label: 'Chờ xác nhận' },
+    { value: 'CONFIRMED', label: 'Đã xác nhận' },
+    { value: 'PROCESSING', label: 'Đang xử lý' },
+    { value: 'SHIPPING', label: 'Đang giao hàng' },
+    { value: 'DELIVERED', label: 'Đã giao hàng' },
     { value: 'CANCELLED', label: 'Đã hủy' },
-    { value: 'RETURNED', label: 'Trả hàng' }
+    { value: 'RETURNED', label: 'Đã trả hàng' }
   ];
 
   readonly VALID_TRANSITIONS: Record<string, string[]> = {
-    PENDING: ['PROCESSING', 'CANCELLED'],
+    PENDING: ['CONFIRMED', 'PROCESSING', 'CANCELLED'],
+    CONFIRMED: ['PROCESSING', 'CANCELLED'],
     PROCESSING: ['SHIPPING', 'CANCELLED'],
     SHIPPING: ['DELIVERED', 'CANCELLED'],
     DELIVERED: ['RETURNED'],
@@ -282,10 +284,10 @@ export class UpdateOrderStatusComponent implements OnChanges {
     if (matchByLabel) return matchByLabel.value;
 
     if (trimmed === 'NEW') return 'PENDING';
-    if (trimmed === 'CONFIRMED') return 'PROCESSING';
+    if (trimmed === 'CONFIRMED') return 'CONFIRMED';
     if (trimmed === 'COMPLETED') return 'DELIVERED';
     if (trimmed === 'CANCELED') return 'CANCELLED';
-    if (trimmed === 'RETURN' || trimmed === 'DELIVERY_FAILED') return 'RETURNED';
+    if (trimmed === 'RETURN') return 'RETURNED';
 
     return 'PENDING';
   }
@@ -293,6 +295,16 @@ export class UpdateOrderStatusComponent implements OnChanges {
   getStatusLabel(val: string): string {
     const found = this.statusOptions.find(s => s.value === val);
     return found ? found.label : (val || '—');
+  }
+
+  get isPaidOrder(): boolean {
+    const root = String(this.order?.paymentStatus || '').toUpperCase();
+    const nested = String(this.order?.payment?.status || '').toUpperCase();
+    return root === 'PAID' || nested === 'PAID';
+  }
+
+  get showCancelPaidWarning(): boolean {
+    return this.selectedStatus === 'CANCELLED' && this.isPaidOrder;
   }
 
   get isUnchanged(): boolean {

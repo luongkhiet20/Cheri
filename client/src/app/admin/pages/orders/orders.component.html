@@ -1,4 +1,4 @@
-<div class="page-content">
+<div class="page-content orders-management-page">
   <div class="page-top">
     <div>
       <app-admin-breadcrumb [items]="breadcrumbItems"></app-admin-breadcrumb>
@@ -29,7 +29,7 @@
     [total]="displayTotal" [isLoading]="isLoading" (searchChange)="onSearch($event)"
     (filterChange)="onFilter($event)" (filterReset)="onFilterReset()" (refresh)="onRefresh()"></app-admin-toolbar>
 
-  <app-admin-table [columns]="columns" [data]="data" [loading]="isLoading" [actions]="actions" [pagination]="pagination"
+  <app-admin-table class="orders-table" [columns]="columns" [data]="data" [loading]="isLoading" [actions]="actions" [pagination]="pagination"
     totalLabel="đơn hàng" (actionClick)="onAction($event)" (pageChange)="onPageChange($event)"
     (pageSizeChange)="onPageSizeChange($event)"></app-admin-table>
 

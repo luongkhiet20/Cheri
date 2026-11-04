@@ -1123,7 +1123,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
             );
           }
           if (actualCollected <= 0) {
-            actualCollected = Number(order.totalAmount) || Number(order.total) || 0;
+            actualCollected = Number(order.totalAmount) || Number((order as any).total) || 0;
           }
         } else {
           // Thanh toán trước (BANK_TRANSFER, STRIPE, ONEPAY, MOMO, PAYPAL, etc.)
@@ -1133,7 +1133,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
             );
           }
           if (actualCollected <= 0) {
-            actualCollected = Number(order.totalAmount) || Number(order.total) || 0;
+            actualCollected = Number(order.totalAmount) || Number((order as any).total) || 0;
           }
         }
 
@@ -1296,7 +1296,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
     const methodCode = String(order.payment?.method || order.paymentMethodSnapshot?.code || order.type || '').toUpperCase();
     if (methodCode !== 'COD') throw new BadRequestException('Chỉ đối soát COD cho đơn thanh toán khi nhận hàng.');
     const codCollected = Boolean(body?.codCollected);
-    const orderTotal = Number(order.totalAmount) || Number(order.total) || 0;
+    const orderTotal = Number(order.totalAmount) || Number((order as any).total) || 0;
     const actualCollectedAmount = Number(body?.actualCollectedAmount) >= 0
       ? Number(body.actualCollectedAmount)
       : (codCollected ? orderTotal : 0);
@@ -1368,54 +1368,92 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
     return order;
   }
 
-  // ─── Cập nhật order (admin) ───────────────────────────────────────────────
-  async updateOrder(reqOrder): Promise<Order> {
-    const { orderId, status, updatedBy, note, paymentStatus, ...rest } = reqOrder;
-
-    const updateData: any = { ...rest };
-
-    if (paymentStatus) {
-      updateData.paymentStatus = paymentStatus;
-    }
-
-    // Thêm vào statusHistory nếu có thay đổi status
-    if (status) {
-      let mappedStatus: any = (status || '').toUpperCase();
-      if (mappedStatus === 'NEW') {
-        mappedStatus = OrderStatus.PENDING;
-      } else if (mappedStatus === 'COMPLETED') {
-        mappedStatus = OrderStatus.DELIVERED;
-      } else if (mappedStatus === 'CANCELED') {
-        mappedStatus = OrderStatus.CANCELLED;
-      } else if (mappedStatus === 'PAID') {
-        updateData.paymentStatus = PaymentStatus.PAID;
-        mappedStatus = OrderStatus.PROCESSING;
-      }
-
-      const validStatuses = Object.values(OrderStatus) as string[];
-      if (validStatuses.includes(mappedStatus)) {
-        updateData.status = mappedStatus;
-        updateData.$push = {
-          statusHistory: {
-            status: mappedStatus,
-            updatedAt: new Date(),
-            updatedBy: updatedBy && isValidObjectId(updatedBy) ? new Types.ObjectId(updatedBy) : null,
-            note: note || '',
-          },
-        };
-      }
+  // ─── Cập nhật order (admin) - Whitelist & Bảo vệ dữ liệu nhạy cảm ───────────
+  async updateOrder(reqOrder): Promise<any> {
+    const orderId = reqOrder.orderId || reqOrder.id || reqOrder._id;
+    if (!orderId) {
+      throw new BadRequestException('Mã đơn hàng không được để trống.');
     }
 
     const query = isValidObjectId(orderId)
-      ? { $or: [{ orderId }, { _id: orderId }] }
+      ? { $or: [{ orderId }, { _id: new Types.ObjectId(orderId) }] }
       : { orderId };
 
-    const order = await this.orderModel.findOneAndUpdate(
+    const existingOrder: any = await this.orderModel.findOne(query);
+    if (!existingOrder) {
+      throw new NotFoundException('Không tìm thấy đơn hàng cần cập nhật.');
+    }
+
+    // Whitelist: Chỉ cho phép các trường thông tin chung không nhạy cảm
+    const allowedUpdates: any = {};
+
+    if (typeof reqOrder.notes === 'string') {
+      allowedUpdates.notes = reqOrder.notes.trim();
+    }
+    if (typeof reqOrder.customerPhone === 'string') {
+      allowedUpdates.customerPhone = reqOrder.customerPhone.trim();
+    }
+    if (typeof reqOrder.customerEmail === 'string') {
+      allowedUpdates.customerEmail = reqOrder.customerEmail.trim();
+    }
+    if (typeof reqOrder.shippingProvider === 'string') {
+      allowedUpdates.shippingProvider = reqOrder.shippingProvider.trim();
+    }
+    if (typeof reqOrder.trackingNumber === 'string') {
+      allowedUpdates.trackingNumber = reqOrder.trackingNumber.trim();
+    }
+    if (reqOrder.estimatedDeliveryDate !== undefined) {
+      allowedUpdates.estimatedDeliveryDate = reqOrder.estimatedDeliveryDate
+        ? new Date(reqOrder.estimatedDeliveryDate)
+        : null;
+    }
+
+    // Whitelist thông tin địa chỉ giao hàng
+    if (reqOrder.shippingAddress && typeof reqOrder.shippingAddress === 'object') {
+      const sa = reqOrder.shippingAddress;
+      const currentSa = existingOrder.shippingAddress || {};
+      allowedUpdates.shippingAddress = {
+        fullName: typeof sa.fullName === 'string' ? sa.fullName.trim() : (currentSa.fullName || ''),
+        phone: typeof sa.phone === 'string' ? sa.phone.trim() : (currentSa.phone || ''),
+        address: typeof sa.address === 'string' ? sa.address.trim() : (currentSa.address || ''),
+        ward: typeof sa.ward === 'string' ? sa.ward.trim() : (currentSa.ward || ''),
+        district: typeof sa.district === 'string' ? sa.district.trim() : (currentSa.district || ''),
+        province: typeof sa.province === 'string' ? sa.province.trim() : (currentSa.province || ''),
+      };
+    }
+
+    // NGUYÊN TẮC BẢO VỆ THANH TOÁN:
+    // Tuyệt đối không cho phép ghi đè payment, paymentMethodSnapshot, totalAmount, items qua updateOrder thông thường.
+    // Nếu có chỉ định paymentStatus đặc biệt, đồng bộ cả 2 trường root & nested:
+    if (reqOrder.paymentStatus) {
+      const psUpper = String(reqOrder.paymentStatus).trim().toUpperCase();
+      const validPaymentStatuses = Object.values(PaymentStatus) as string[];
+      if (validPaymentStatuses.includes(psUpper)) {
+        allowedUpdates.paymentStatus = psUpper;
+        allowedUpdates['payment.status'] = psUpper;
+      }
+    }
+
+    // Nếu có thay đổi trạng thái đơn hàng (status), ủy quyền sang updateOrderStatus để kiểm soát transition
+    if (reqOrder.status) {
+      const targetStatus = String(reqOrder.status).trim().toUpperCase();
+      const currentSt = (existingOrder.status || '').toUpperCase();
+      if (targetStatus && targetStatus !== currentSt) {
+        return this.updateOrderStatus(orderId, targetStatus, reqOrder.note, { _id: reqOrder.updatedBy });
+      }
+    }
+
+    const updated = await this.orderModel.findOneAndUpdate(
       query,
-      updateData,
+      { $set: allowedUpdates },
       { new: true },
     );
-    return order;
+
+    return {
+      success: true,
+      message: 'Cập nhật thông tin đơn hàng thành công.',
+      data: updated,
+    };
   }
 
   // ─── Cập nhật riêng trường status (admin) ──────────────────────────────────
@@ -1426,13 +1464,13 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
 
     const targetStatus = status.trim().toUpperCase();
     const VALID_STATUSES: Record<string, string> = {
-      DELIVERED: 'Đã giao',
-      SHIPPING: 'Đang giao',
-      PROCESSING: 'Đang xử lý',
       PENDING: 'Chờ xác nhận',
       CONFIRMED: 'Đã xác nhận',
+      PROCESSING: 'Đang xử lý',
+      SHIPPING: 'Đang giao hàng',
+      DELIVERED: 'Đã giao hàng',
       CANCELLED: 'Đã hủy',
-      RETURNED: 'Đã hoàn trả',
+      RETURNED: 'Đã trả hàng',
     };
 
     if (!VALID_STATUSES[targetStatus]) {
@@ -1458,8 +1496,9 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
+    // Bảng quy tắc chuyển đổi trạng thái đơn hàng thống nhất (Đồng bộ với Frontend)
     const VALID_TRANSITIONS: Record<string, string[]> = {
-      PENDING: ['PROCESSING', 'CANCELLED'],
+      PENDING: ['CONFIRMED', 'PROCESSING', 'CANCELLED'],
       CONFIRMED: ['PROCESSING', 'CANCELLED'],
       PROCESSING: ['SHIPPING', 'CANCELLED'],
       SHIPPING: ['DELIVERED', 'CANCELLED'],
@@ -1476,24 +1515,54 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
+    // RÀNG BUỘC BẢO VỆ THANH TOÁN:
+    // Đơn thanh toán trực tuyến (VNPAY, MoMo, Stripe) chưa hoàn tất (chưa PAID) thì không cho phép chuyển giao hàng
+    const paymentMethodCode = String(
+      order.paymentMethodSnapshot?.code || order.payment?.method || order.payment?.provider || ''
+    ).toUpperCase();
+    const isOnlinePayment = ['VNPAY', 'VNPAY-QR', 'MOMO', 'STRIPE', 'BANK_TRANSFER', 'PAYMENT_GATEWAY', 'E_WALLET'].includes(paymentMethodCode);
+    const isPaid = order.paymentStatus === PaymentStatus.PAID || order.payment?.status === PaymentStatus.PAID;
+
+    if (isOnlinePayment && !isPaid && (targetStatus === OrderStatus.SHIPPING || targetStatus === OrderStatus.DELIVERED)) {
+      throw new BadRequestException(
+        `Đơn hàng thanh toán trực tuyến (${paymentMethodCode}) chưa hoàn tất thanh toán (PAID). Không được phép chuyển sang trạng thái "${VALID_STATUSES[targetStatus]}".`
+      );
+    }
+
+    // CẢNH BÁO KHI HỦY ĐƠN ĐÃ THANH TOÁN:
+    // Không tự động đánh dấu REFUNDED; giữ nguyên PAID; ghi cảnh báo vào lịch sử
+    let cancelWarning: string | null = null;
+    if (targetStatus === OrderStatus.CANCELLED) {
+      if (isPaid) {
+        const orderTotal = (Number(order.totalAmount) || Number((order as any).total) || 0).toLocaleString('vi-VN');
+        cancelWarning = `Đơn hàng đã thanh toán (${orderTotal} đ). Thao tác hủy đơn không tự động hoàn tiền. Vui lòng hoàn tiền cho khách qua cổng thanh toán hoặc ngân hàng.`;
+      }
+      await this.releaseCancelledOrderStock(order);
+    }
+
     const now = new Date();
     order.status = targetStatus as any;
     if (!Array.isArray(order.statusHistory)) {
       order.statusHistory = [];
     }
+
+    const historyNote = note
+      ? note
+      : (cancelWarning ? `Admin hủy đơn: ${cancelWarning}` : `Admin cập nhật trạng thái từ ${VALID_STATUSES[currentStatus] || currentStatus} sang ${VALID_STATUSES[targetStatus] || targetStatus}`);
+
     order.statusHistory.unshift({
       status: targetStatus as any,
       updatedAt: now,
       updatedBy: user?._id && isValidObjectId(user._id) ? new Types.ObjectId(user._id) : null,
-      note: note || `Admin cập nhật trạng thái từ ${VALID_STATUSES[currentStatus] || currentStatus} sang ${VALID_STATUSES[targetStatus] || targetStatus}`,
+      note: historyNote,
     } as any);
 
     await order.save();
-    if (targetStatus === OrderStatus.CANCELLED) await this.releaseCancelledOrderStock(order);
 
     return {
       success: true,
       message: `Đã cập nhật trạng thái đơn hàng thành "${VALID_STATUSES[targetStatus] || targetStatus}"`,
+      warning: cancelWarning,
       data: order,
     };
   }
@@ -3307,7 +3376,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
 
     const isPaid = (o: any) => {
       const st = normalizeStatus(o.status || o.statusHistory?.[0]?.status);
-      if (st === 'CANCELLED' || st === 'RETURNED' || st === 'DELIVERY_FAILED') return false;
+      if (st === 'CANCELLED' || st === 'RETURNED') return false;
       const paySt = String(o.paymentStatus || o.payment?.status || '').toUpperCase();
       return paySt === 'PAID' || st === 'DELIVERED' || paySt === 'COMPLETED';
     };
@@ -3402,7 +3471,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       processing:      fst(periodOrders, OrderStatus.PROCESSING, 'CONFIRMED'),
       pending:         fst(periodOrders, OrderStatus.PENDING, 'NEW'),
       cancelled:       fst(periodOrders, OrderStatus.CANCELLED, 'CANCELED'),
-      returned:        fst(periodOrders, OrderStatus.RETURNED, 'RETURN', 'DELIVERY_FAILED'),
+      returned:        fst(periodOrders, OrderStatus.RETURNED, 'RETURN'),
     };
 
     // UPPERCASE aliases for compatibility
@@ -3530,7 +3599,6 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
         DELIVERED: 'Đã giao',
         CANCELLED: 'Đã hủy',
         RETURNED: 'Đã hoàn trả',
-        DELIVERY_FAILED: 'Giao thất bại',
       };
 
       const statusVariants: Record<string, string> = {
@@ -3541,7 +3609,6 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
         DELIVERED: 'success',
         CANCELLED: 'danger',
         RETURNED: 'neutral',
-        DELIVERY_FAILED: 'danger',
       };
 
       return {
@@ -3603,16 +3670,17 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
     if (query.status) {
       const statusUpper = String(query.status).trim().toUpperCase();
       if (statusUpper === 'PENDING') {
-        filter.$or = [{ status: OrderStatus.PENDING }, { status: 'NEW' }];
+        filter.$or = [{ status: OrderStatus.PENDING }, { status: 'NEW' }, { status: 'PENDING' }];
       } else if (statusUpper === 'CONFIRMED') {
         filter.$or = [
           { status: OrderStatus.CONFIRMED },
-          { status: OrderStatus.PROCESSING },
           { status: 'CONFIRMED' },
-          { status: 'PROCESSING' },
         ];
       } else if (statusUpper === 'PROCESSING') {
-        filter.$or = [{ status: OrderStatus.PROCESSING }, { status: 'PROCESSING' }];
+        filter.$or = [
+          { status: OrderStatus.PROCESSING },
+          { status: 'PROCESSING' },
+        ];
       } else if (statusUpper === 'SHIPPING') {
         filter.status = OrderStatus.SHIPPING;
       } else if (statusUpper === 'DELIVERED') {
@@ -3761,12 +3829,11 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
     const statusMap: Record<string, { label: string; variant: string }> = {
       PENDING: { label: 'Chờ xác nhận', variant: 'warning' },
       CONFIRMED: { label: 'Đã xác nhận', variant: 'info' },
-      PROCESSING: { label: 'Đang xử lý', variant: 'info' },
-      SHIPPING: { label: 'Đang giao', variant: 'primary' },
-      DELIVERED: { label: 'Đã giao', variant: 'success' },
+      PROCESSING: { label: 'Đang xử lý', variant: 'warning' },
+      SHIPPING: { label: 'Đang giao hàng', variant: 'primary' },
+      DELIVERED: { label: 'Đã giao hàng', variant: 'success' },
       CANCELLED: { label: 'Đã hủy', variant: 'danger' },
-      RETURNED: { label: 'Đã hoàn trả', variant: 'neutral' },
-      DELIVERY_FAILED: { label: 'Giao thất bại', variant: 'danger' },
+      RETURNED: { label: 'Đã trả hàng', variant: 'neutral' },
     };
 
     const formatted = orders.map((o: any) => {
@@ -3787,12 +3854,41 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
         : 'Khách vãng lai';
 
       const totalVal = o.totalAmount ?? o.amount ?? o.subtotal ?? o.total ?? 0;
-      const paymentMethodName =
+      const rawMethod =
         o.paymentMethodSnapshot?.name ||
+        o.paymentMethodSnapshot?.code ||
         o.payment?.provider ||
         o.payment?.method ||
         o.type ||
         'COD';
+      const cleanMethod = String(rawMethod).trim().toUpperCase();
+      let displayMethod = cleanMethod;
+      if (cleanMethod.includes('VNPAY')) displayMethod = 'VNPAY-QR';
+      else if (cleanMethod.includes('MOMO')) displayMethod = 'MoMo';
+      else if (cleanMethod.includes('STRIPE')) displayMethod = 'Stripe';
+      else if (cleanMethod.includes('COD')) displayMethod = 'COD';
+      else if (cleanMethod.includes('BANK')) displayMethod = 'Chuyển khoản';
+      else displayMethod = o.paymentMethodSnapshot?.name || rawMethod;
+
+      const rootPs = String(o.paymentStatus || '').toUpperCase();
+      const nestedPs = String(o.payment?.status || '').toUpperCase();
+      const isPaidOrder = rootPs === 'PAID' || nestedPs === 'PAID';
+      const isRefundedOrder = rootPs === 'REFUNDED' || nestedPs === 'REFUNDED';
+      const isFailedOrder = rootPs === 'FAILED' || nestedPs === 'FAILED';
+      const isCod = cleanMethod.includes('COD');
+
+      let displayPaymentStatus = '';
+      if (isRefundedOrder) {
+        displayPaymentStatus = 'Đã hoàn tiền';
+      } else if (isFailedOrder) {
+        displayPaymentStatus = 'Thanh toán thất bại';
+      } else if (isPaidOrder) {
+        displayPaymentStatus = isCod ? 'Đã thu tiền' : 'Đã thanh toán';
+      } else {
+        displayPaymentStatus = isCod ? 'Chưa thu tiền' : 'Đang chờ thanh toán';
+      }
+
+      const formattedPayment = `${displayMethod} / ${displayPaymentStatus}`;
 
       const returnRequests = Array.isArray(o.returnRequests) && o.returnRequests.length > 0
         ? o.returnRequests
@@ -3830,6 +3926,27 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       const activeReq = sortedRequests.length > 0 ? sortedRequests[0] : null;
       const hasPendingReturn = returnRequests.some((r: any) => (r.status || '').toUpperCase() === 'PENDING');
 
+      // Trạng thái yêu cầu (chỉ hiển thị yêu cầu từ khách: hủy đơn / trả hàng)
+      let requestStatusLabel = '—';
+      let requestStatusVariant = 'neutral';
+
+      if (activeReq) {
+        const reqStatus = String(activeReq.status || '').toUpperCase();
+        if (reqStatus === 'PENDING') {
+          requestStatusLabel = 'Chờ duyệt';
+          requestStatusVariant = 'warning';
+        } else if (['APPROVED', 'ACCEPTED', 'COMPLETED'].includes(reqStatus)) {
+          requestStatusLabel = 'Đã chấp nhận';
+          requestStatusVariant = 'success';
+        } else if (['REJECTED', 'REJ'].includes(reqStatus)) {
+          requestStatusLabel = 'Đã từ chối';
+          requestStatusVariant = 'danger';
+        } else if (['CANCELLED', 'CANC', 'WITHDRAWN'].includes(reqStatus)) {
+          requestStatusLabel = 'Đã rút yêu cầu';
+          requestStatusVariant = 'neutral';
+        }
+      }
+
       return {
         ...o,
         id: o._id?.toString() || o.id,
@@ -3838,10 +3955,14 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
         isGuest,
         customerType: isGuest ? 'GUEST' : 'MEMBER',
         total: totalVal,
-        payment: paymentMethodName,
+        payment: formattedPayment,
+        paymentMethodName: displayMethod,
+        paymentStatusText: displayPaymentStatus,
         status: o.status,
         statusText: statusMeta.label,
         statusVariant: statusMeta.variant,
+        returnStatus: requestStatusLabel,
+        returnStatusVariant: requestStatusVariant,
         returnRequests,
         activeReturnRequest: activeReq,
         returnRequestsCount: returnRequests.length,

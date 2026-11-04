@@ -9,7 +9,7 @@ import { BreadcrumbItem } from '../../../shared/admin-breadcrumb/admin-breadcrum
 interface StatusOption {
   code: string;
   label: string;
-  variant: 'neutral' | 'warning' | 'primary' | 'success' | 'danger';
+  variant: 'neutral' | 'warning' | 'primary' | 'success' | 'danger' | 'info';
 }
 
 @Component({
@@ -57,12 +57,12 @@ export class OrderDetailComponent implements OnInit {
   refundForm = { refundAmount: 0, transactionId: '', bankName: '', accountNumber: '', accountHolder: '', notes: '' };
   codForm = { codCollected: true, actualCollectedAmount: 0, codReconciliationStatus: 'RECONCILED', notes: '' };
 
-  // Business state transitions rule
+  // Business state transitions rule - Đồng bộ với Backend & Modal Update
   readonly VALID_TRANSITIONS: Record<string, string[]> = {
-    PENDING: ['PROCESSING', 'CANCELLED'],
+    PENDING: ['CONFIRMED', 'PROCESSING', 'CANCELLED'],
+    CONFIRMED: ['PROCESSING', 'CANCELLED'],
     PROCESSING: ['SHIPPING', 'CANCELLED'],
-    SHIPPING: ['DELIVERY_FAILED', 'DELIVERED', 'CANCELLED'],
-    DELIVERY_FAILED: ['SHIPPING', 'CANCELLED', 'RETURNED'],
+    SHIPPING: ['DELIVERED', 'CANCELLED'],
     DELIVERED: ['RETURNED'],
     CANCELLED: [],
     RETURNED: []
@@ -70,13 +70,12 @@ export class OrderDetailComponent implements OnInit {
 
   readonly ALL_STATUSES: StatusOption[] = [
     { code: 'PENDING', label: 'Chờ xác nhận', variant: 'neutral' },
-
+    { code: 'CONFIRMED', label: 'Đã xác nhận', variant: 'info' },
     { code: 'PROCESSING', label: 'Đang xử lý', variant: 'warning' },
-    { code: 'SHIPPING', label: 'Đang giao', variant: 'primary' },
-
-    { code: 'DELIVERED', label: 'Đã giao', variant: 'success' },
+    { code: 'SHIPPING', label: 'Đang giao hàng', variant: 'primary' },
+    { code: 'DELIVERED', label: 'Đã giao hàng', variant: 'success' },
     { code: 'CANCELLED', label: 'Đã hủy', variant: 'danger' },
-    { code: 'RETURNED', label: 'Trả hàng', variant: 'warning' }
+    { code: 'RETURNED', label: 'Đã trả hàng', variant: 'warning' }
   ];
 
   private route = inject(ActivatedRoute);
@@ -102,6 +101,7 @@ export class OrderDetailComponent implements OnInit {
     this.isLoading = true;
     this.isNotFound = false;
     this.errorMessage = '';
+    this.order = null;
 
     this.apiService.getOrderById(id).subscribe({
       next: (res) => {
@@ -154,7 +154,20 @@ export class OrderDetailComponent implements OnInit {
     return this.getStatusMeta(rawCode)?.label || rawCode || '—';
   }
 
+  get isPaidOrder(): boolean {
+    const root = String(this.order?.paymentStatus || '').toUpperCase();
+    const nested = String(this.order?.payment?.status || '').toUpperCase();
+    return root === 'PAID' || nested === 'PAID';
+  }
+
   getPaymentStatusLabel(status: unknown): string {
+    const root = String(this.order?.paymentStatus || '').toUpperCase();
+    const nested = String(this.order?.payment?.status || '').toUpperCase();
+    if (root === 'PAID' || nested === 'PAID') return 'Đã thanh toán';
+    if (root === 'REFUNDED' || nested === 'REFUNDED') return 'Đã hoàn tiền';
+    if (root === 'FAILED' || nested === 'FAILED') return 'Thanh toán thất bại';
+    const isCod = String(this.order?.payment?.method || this.order?.paymentMethodSnapshot?.code || '').toUpperCase().includes('COD');
+    if (isCod) return 'Chưa thu tiền';
     return paymentStatusLabel(status);
   }
 
@@ -215,6 +228,18 @@ export class OrderDetailComponent implements OnInit {
 
     const fromLabel = this.getStatusMeta(current)?.label || current;
     const toLabel = this.getStatusMeta(this.selectedNextStatus)?.label || this.selectedNextStatus;
+
+    if (this.selectedNextStatus === 'CANCELLED' && this.isPaidOrder) {
+      this.confirmDialogTitle = 'Xác nhận hủy đơn hàng ĐÃ THANH TOÁN';
+      const orderTotal = (Number(this.order?.totalAmount) || Number(this.order?.total) || 0).toLocaleString('vi-VN');
+      this.confirmDialogMessage = `⚠️ CẢNH BÁO: Đơn hàng "${this.order?.orderId || this.order?.code}" đã được thanh toán số tiền ${orderTotal} đ.
+
+Hủy đơn hàng sẽ KHÔNG tự động hoàn tiền. Bạn cần thực hiện quy trình hoàn tiền thực tế cho khách hàng.
+
+Bạn có chắc chắn muốn tiếp tục hủy đơn?`;
+      this.confirmOpen = true;
+      return;
+    }
 
     this.confirmDialogTitle = 'Xác nhận chuyển trạng thái đơn hàng';
     this.confirmDialogMessage = `Bạn có chắc chắn muốn chuyển trạng thái đơn hàng "${this.order?.orderId || this.order?.code}" từ "${fromLabel}" sang "${toLabel}" không?`;
@@ -453,7 +478,6 @@ export class OrderDetailComponent implements OnInit {
     if (['DELIVERED', 'ĐÃ GIAO', 'COMPLETED'].includes(raw)) return 'DELIVERED';
     if (['CANCELLED', 'CANCELED', 'ĐÃ HỦY'].includes(raw)) return 'CANCELLED';
     if (['RETURNED', 'TRẢ HÀNG', 'ĐÃ TRẢ HÀNG', 'ĐÃ HOÀN TRẢ'].includes(raw)) return 'RETURNED';
-    if (['DELIVERY_FAILED', 'GIAO THẤT BẠI'].includes(raw)) return 'DELIVERY_FAILED';
 
     return raw;
   }
@@ -505,7 +529,6 @@ export class OrderDetailComponent implements OnInit {
       case 'CONFIRMED':
       case 'PROCESSING':
       case 'SHIPPING':
-      case 'DELIVERY_FAILED':
         return false;
 
       case 'DELIVERED':

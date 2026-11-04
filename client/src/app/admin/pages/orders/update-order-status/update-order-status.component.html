@@ -60,6 +60,11 @@
         </select>
       </div>
 
+      <!-- Cảnh báo khi chọn hủy đơn đã thanh toán -->
+      <div *ngIf="showCancelPaidWarning" class="status-warning-alert" role="alert" style="background-color: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 10px 14px; border-radius: 6px; margin-bottom: 14px; font-size: 13px; line-height: 1.5;">
+        ⚠️ <strong>Lưu ý quan trọng:</strong> Đơn hàng này <strong>đã thanh toán</strong>. Thao tác hủy đơn <strong>không tự động hoàn tiền</strong>. Bạn cần thực hiện quy trình hoàn tiền thực tế cho khách hàng.
+      </div>
+
       <div class="form-group mb-3">
         <label for="modal-order-status-note" class="form-label">
           Ghi chú cập nhật trạng thái (tùy chọn)

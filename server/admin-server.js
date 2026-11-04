@@ -205,7 +205,6 @@ function normalizeOrderStatus(st) {
   const upper = String(st).trim().toUpperCase();
   if (upper === 'NEW') return 'PENDING';
   if (upper === 'CONFIRMED') return 'PROCESSING';
-  if (upper === 'DELIVERY_FAILED') return 'RETURNED';
   if (upper === 'COMPLETED') return 'DELIVERED';
   if (upper === 'CANCELED') return 'CANCELLED';
   if (upper === 'RETURN') return 'RETURNED';
@@ -232,7 +231,7 @@ function getOrderAmount(o) {
 
 function isOrderRevenueEligible(o) {
   const st = normalizeOrderStatus(o.status || o.statusHistory?.[0]?.status);
-  if (st === 'CANCELLED' || st === 'RETURNED' || st === 'DELIVERY_FAILED') return false;
+  if (st === 'CANCELLED' || st === 'RETURNED') return false;
   const paySt = String(o.paymentStatus || o.payment?.status || '').toUpperCase();
   return paySt === 'PAID' || st === 'DELIVERED' || paySt === 'COMPLETED';
 }
@@ -9309,7 +9308,6 @@ app.post('/api/chat/message', async (req, res) => {
         CONFIRMED: 'Đã xác nhận',
         PROCESSING: 'Đang chuẩn bị hàng',
         SHIPPING: 'Đang giao hàng',
-        DELIVERY_FAILED: 'Giao không thành công',
         DELIVERED: 'Giao hàng thành công',
         CANCELLED: 'Đã hủy',
         RETURNED: 'Đã hoàn trả',

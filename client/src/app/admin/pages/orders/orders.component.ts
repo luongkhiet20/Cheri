@@ -40,27 +40,23 @@ export class OrdersComponent implements OnInit {
       key: 'status', label: 'Trạng thái đơn hàng', type: 'select', value: '', options: [
         { value: '', label: 'Tất cả trạng thái' },
         { value: 'PENDING', label: 'Chờ xác nhận' },
+        { value: 'CONFIRMED', label: 'Đã xác nhận' },
         { value: 'PROCESSING', label: 'Đang xử lý' },
-        { value: 'SHIPPING', label: 'Đang giao' },
-        { value: 'DELIVERED', label: 'Đã giao' },
-        { value: 'RETURNED', label: 'Trả hàng' },
+        { value: 'SHIPPING', label: 'Đang giao hàng' },
+        { value: 'DELIVERED', label: 'Đã giao hàng' },
         { value: 'CANCELLED', label: 'Đã hủy' },
+        { value: 'RETURNED', label: 'Đã trả hàng' },
       ]
     },
     {
       key: 'returnStatus', label: 'Trạng thái yêu cầu', type: 'select', value: '', options: [
         { value: '', label: 'Tất cả yêu cầu' },
-        { value: 'PENDING', label: 'Chờ duyệt trả hàng' },
-        { value: 'APPROVED', label: 'Đã duyệt trả hàng' },
-        { value: 'RETURN_SHIPPED', label: 'Đang trả hàng' },
-        { value: 'RETURN_RECEIVED', label: 'Đã nhận hàng trả' },
-        { value: 'INSPECTED', label: 'Đang xử lý hoàn tiền' },
-        { value: 'COMPLETED', label: 'Đã hoàn tiền' },
-        { value: 'REJECTED', label: 'Yêu cầu bị từ chối' },
-        { value: 'CANCELLED', label: 'Yêu cầu đã hủy' },
-        { value: 'NONE', label: 'Chưa có yêu cầu' },
-      ],
-      showWhen: (values) => values['status'] === 'RETURNED'
+        { value: 'NONE', label: 'Không có yêu cầu' },
+        { value: 'PENDING', label: 'Chờ duyệt' },
+        { value: 'APPROVED', label: 'Đã chấp nhận' },
+        { value: 'REJECTED', label: 'Đã từ chối' },
+        { value: 'CANCELLED', label: 'Đã rút yêu cầu' },
+      ]
     },
     {
       key: 'payment', label: 'Thanh toán', type: 'select', value: '', options: []
@@ -86,10 +82,10 @@ export class OrdersComponent implements OnInit {
   private skipNextResetFilterLoad = false;
   private ordersRequestId = 0;
   private readonly orderStatusCodes = new Set([
-    'DELIVERED', 'SHIPPING', 'PROCESSING', 'PENDING', 'CANCELLED', 'RETURNED'
+    'DELIVERED', 'SHIPPING', 'PROCESSING', 'CONFIRMED', 'PENDING', 'CANCELLED', 'RETURNED'
   ]);
   private readonly returnStatusCodes = new Set([
-    'PENDING', 'APPROVED', 'RETURN_SHIPPED', 'RETURN_RECEIVED', 'INSPECTED', 'COMPLETED', 'REJECTED', 'CANCELLED', 'NONE'
+    'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'NONE'
   ]);
 
   get displayTotal(): number { return this.pagination?.total ?? this.data.length; }
@@ -209,8 +205,8 @@ export class OrdersComponent implements OnInit {
           this.pendingReturnCount = Number(res.pendingReturnCount) || 0;
           this.data = (res.data || []).map((o: any) => {
             const rawStatus = String(o.status || 'PENDING').toUpperCase();
-            const statusText = o.statusText || this.getOrderStatusLabel(rawStatus);
-            const statusVariant = o.statusVariant || this.getOrderStatusVariant(rawStatus);
+            const statusText = this.getOrderStatusLabel(rawStatus);
+            const statusVariant = this.getOrderStatusVariant(rawStatus);
 
             const activeReturn = this.resolveActiveReturnRequest(o);
             const returnInfo = this.mapReturnRequestBadgeInfo(activeReturn);
@@ -218,6 +214,7 @@ export class OrdersComponent implements OnInit {
             return {
               ...o,
               id: o._id || o.id,
+              payment: o.payment || this.formatPaymentCell(o),
               status: statusText,
               statusVariant: statusVariant,
               returnStatus: returnInfo.label,
@@ -712,34 +709,62 @@ export class OrdersComponent implements OnInit {
     return sorted[0];
   }
 
+  formatPaymentCell(o: any): string {
+    const rawMethod =
+      o.paymentMethodSnapshot?.name ||
+      o.paymentMethodSnapshot?.code ||
+      o.payment?.provider ||
+      o.payment?.method ||
+      o.type ||
+      'COD';
+    const cleanMethod = String(rawMethod).trim().toUpperCase();
+    let displayMethod = cleanMethod;
+    if (cleanMethod.includes('VNPAY')) displayMethod = 'VNPAY-QR';
+    else if (cleanMethod.includes('MOMO')) displayMethod = 'MoMo';
+    else if (cleanMethod.includes('STRIPE')) displayMethod = 'Stripe';
+    else if (cleanMethod.includes('COD')) displayMethod = 'COD';
+    else if (cleanMethod.includes('BANK')) displayMethod = 'Chuyển khoản';
+    else displayMethod = o.paymentMethodSnapshot?.name || rawMethod;
+
+    const rootPs = String(o.paymentStatus || '').toUpperCase();
+    const nestedPs = String(o.payment?.status || '').toUpperCase();
+    const isPaidOrder = rootPs === 'PAID' || nestedPs === 'PAID';
+    const isRefundedOrder = rootPs === 'REFUNDED' || nestedPs === 'REFUNDED';
+    const isFailedOrder = rootPs === 'FAILED' || nestedPs === 'FAILED';
+    const isCod = cleanMethod.includes('COD');
+
+    let displayPaymentStatus = '';
+    if (isRefundedOrder) {
+      displayPaymentStatus = 'Đã hoàn tiền';
+    } else if (isFailedOrder) {
+      displayPaymentStatus = 'Thanh toán thất bại';
+    } else if (isPaidOrder) {
+      displayPaymentStatus = isCod ? 'Đã thu tiền' : 'Đã thanh toán';
+    } else {
+      displayPaymentStatus = isCod ? 'Chưa thu tiền' : 'Đang chờ thanh toán';
+    }
+
+    return `${displayMethod} / ${displayPaymentStatus}`;
+  }
+
   mapReturnRequestBadgeInfo(req: any): { label: string; variant: string } {
     if (!req) return { label: '—', variant: 'neutral' };
     const s = String(req.status || '').toUpperCase();
-    const refundStatus = String(req.refund?.status || '').toUpperCase();
 
     switch (s) {
       case 'PENDING':
-        return { label: 'Chờ duyệt trả hàng', variant: 'pending' };
+        return { label: 'Chờ duyệt', variant: 'warning' };
       case 'APPROVED':
-        return { label: 'Đã duyệt trả hàng', variant: 'approved' };
-      case 'WAITING_FOR_RETURN_SHIPMENT':
-      case 'RETURN_SHIPPED':
-        return { label: 'Đang trả hàng', variant: 'shipping' };
-      case 'RETURN_RECEIVED':
-        return { label: 'Đã nhận hàng trả', variant: 'received' };
-      case 'INSPECTED':
-        if (refundStatus === 'COMPLETED') {
-          return { label: 'Đã hoàn tiền', variant: 'completed' };
-        }
-        return { label: 'Đang xử lý hoàn tiền', variant: 'refunding' };
+      case 'ACCEPTED':
       case 'COMPLETED':
-        return { label: 'Đã hoàn tiền', variant: 'completed' };
+        return { label: 'Đã chấp nhận', variant: 'success' };
       case 'REJECTED':
       case 'REJ':
-        return { label: 'Yêu cầu bị từ chối', variant: 'rejected' };
+        return { label: 'Đã từ chối', variant: 'danger' };
       case 'CANCELLED':
       case 'CANC':
-        return { label: 'Yêu cầu đã hủy', variant: 'cancelled' };
+      case 'WITHDRAWN':
+        return { label: 'Đã rút yêu cầu', variant: 'neutral' };
       default:
         return { label: '—', variant: 'neutral' };
     }
@@ -768,11 +793,10 @@ export class OrdersComponent implements OnInit {
       PENDING: 'Chờ xác nhận',
       CONFIRMED: 'Đã xác nhận',
       PROCESSING: 'Đang xử lý',
-      SHIPPING: 'Đang giao',
-      DELIVERED: 'Đã giao',
+      SHIPPING: 'Đang giao hàng',
+      DELIVERED: 'Đã giao hàng',
       CANCELLED: 'Đã hủy',
-      RETURNED: 'Trả hàng',
-      DELIVERY_FAILED: 'Giao thất bại',
+      RETURNED: 'Đã trả hàng',
     };
     return map[s] || status || 'Không rõ';
   }
@@ -782,12 +806,11 @@ export class OrdersComponent implements OnInit {
     const map: Record<string, string> = {
       PENDING: 'warning',
       CONFIRMED: 'info',
-      PROCESSING: 'info',
+      PROCESSING: 'warning',
       SHIPPING: 'primary',
       DELIVERED: 'success',
       CANCELLED: 'danger',
       RETURNED: 'neutral',
-      DELIVERY_FAILED: 'danger',
     };
     return map[s] || 'neutral';
   }

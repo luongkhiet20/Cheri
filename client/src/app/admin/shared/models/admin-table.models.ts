@@ -64,6 +64,8 @@ export type BadgeVariant =
   | 'danger'
   | 'neutral'
   | 'primary'
+  | 'info'
+  | 'confirmed'
   | 'pending'
   | 'approved'
   | 'shipping'

@@ -229,7 +229,6 @@ export class ChatbotService {
       CONFIRMED: 'Đã xác nhận',
       PROCESSING: 'Đang chuẩn bị hàng',
       SHIPPING: 'Đang giao hàng',
-      DELIVERY_FAILED: 'Giao không thành công',
       DELIVERED: 'Giao hàng thành công',
       CANCELLED: 'Đã hủy',
       RETURNED: 'Đã hoàn trả',

@@ -278,8 +278,6 @@ export class OrderComponent implements OnInit, OnDestroy {
         return 'Đang xử lý';
       case 'SHIPPING':
         return 'Đang giao hàng';
-      case 'DELIVERY_FAILED':
-        return 'Giao hàng không thành công';
       case 'DELIVERED':
         return 'Đã giao hàng';
       case 'CANCELLED':
@@ -301,7 +299,6 @@ export class OrderComponent implements OnInit, OnDestroy {
     if (['CONFIRMED', 'ĐÃ XÁC NHẬN'].includes(s)) return 'CONFIRMED';
     if (['PROCESSING', 'ĐANG XỬ LÝ'].includes(s)) return 'PROCESSING';
     if (['SHIPPING', 'SHIPPED', 'ĐANG GIAO', 'ĐANG GIAO HÀNG'].includes(s)) return 'SHIPPING';
-    if (['DELIVERY_FAILED', 'GIAO THẤT BẠI', 'GIAO HÀNG KHÔNG THÀNH CÔNG'].includes(s)) return 'DELIVERY_FAILED';
     if (['DELIVERED', 'COMPLETED', 'ĐÃ GIAO', 'ĐÃ GIAO HÀNG'].includes(s)) return 'DELIVERED';
     if (['CANCELLED', 'CANCELED', 'ĐÃ HỦY'].includes(s)) return 'CANCELLED';
     if (['RETURNED', 'REFUNDED', 'TRẢ HÀNG', 'ĐÃ HOÀN TRẢ', 'HOÀN TRẢ', 'ĐÃ TRẢ HÀNG'].includes(s)) return 'RETURNED';
@@ -311,7 +308,7 @@ export class OrderComponent implements OnInit, OnDestroy {
   /**
    * Kiểm tra xem đơn hàng có thực sự thuộc mục "Đã giao" (DELIVERED) hay không.
    * Chặn tuyệt đối các trường hợp:
-   * 1. Trạng thái chưa giao: PENDING, CONFIRMED, PROCESSING, SHIPPING, DELIVERY_FAILED...
+   * 1. Trạng thái chưa giao: PENDING, CONFIRMED, PROCESSING, SHIPPING...
    * 2. Đơn hàng đã hủy: CANCELLED
    * 3. Đơn hàng đang hoặc đã qua quy trình trả hàng/hoàn tiền:
    *    (PENDING, APPROVED, WAITING_FOR_RETURN_SHIPMENT, RETURN_SHIPPED, RETURN_RECEIVED, INSPECTED, COMPLETED)
@@ -372,8 +369,6 @@ export class OrderComponent implements OnInit, OnDestroy {
         return 'status-shipping';
       case 'DELIVERED':
         return 'status-delivered';
-      case 'DELIVERY_FAILED':
-        return 'status-failed';
       case 'CANCELLED':
       case 'RETURNED':
         return 'status-cancelled';

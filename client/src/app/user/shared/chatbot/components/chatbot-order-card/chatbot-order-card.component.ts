@@ -46,7 +46,7 @@ export class ChatbotOrderCardComponent {
     if (s === 'DELIVERED') return 'status-delivered';
     if (s === 'SHIPPING') return 'status-shipping';
     if (s === 'PROCESSING' || s === 'CONFIRMED') return 'status-processing';
-    if (s === 'CANCELLED' || s === 'DELIVERY_FAILED' || s === 'RETURNED') return 'status-cancelled';
+    if (s === 'CANCELLED' || s === 'RETURNED') return 'status-cancelled';
     return 'status-pending';
   }
 

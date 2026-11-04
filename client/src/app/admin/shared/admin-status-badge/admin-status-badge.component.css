@@ -46,6 +46,17 @@
 }
 .status-badge--neutral .status-badge__dot { background-color: var(--cheri-text-light); }
 
+.status-badge--info,
+.status-badge--confirmed {
+  background-color: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
+}
+.status-badge--info .status-badge__dot,
+.status-badge--confirmed .status-badge__dot {
+  background-color: #2563EB;
+}
+
 /* Return & Refund Request Status Badges */
 .status-badge--pending {
   background-color: rgba(116, 7, 14, 0.08);

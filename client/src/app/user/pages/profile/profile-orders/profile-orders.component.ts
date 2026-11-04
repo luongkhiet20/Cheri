@@ -192,7 +192,6 @@ export class ProfileOrdersComponent {
     if (['CONFIRMED', 'ĐÃ XÁC NHẬN'].includes(s)) return 'CONFIRMED';
     if (['PROCESSING', 'ĐANG XỬ LÝ'].includes(s)) return 'PROCESSING';
     if (['SHIPPING', 'SHIPPED', 'ĐANG GIAO', 'ĐANG GIAO HÀNG'].includes(s)) return 'SHIPPING';
-    if (['DELIVERY_FAILED', 'GIAO THẤT BẠI', 'GIAO HÀNG KHÔNG THÀNH CÔNG'].includes(s)) return 'DELIVERY_FAILED';
     if (['DELIVERED', 'COMPLETED', 'ĐÃ GIAO', 'ĐÃ GIAO HÀNG'].includes(s)) return 'DELIVERED';
     if (['CANCELLED', 'CANCELED', 'ĐÃ HỦY'].includes(s)) return 'CANCELLED';
     if (['RETURNED', 'REFUNDED', 'TRẢ HÀNG', 'ĐÃ HOÀN TRẢ', 'HOÀN TRẢ', 'ĐÃ TRẢ HÀNG'].includes(s)) return 'RETURNED';
@@ -220,7 +219,6 @@ export class ProfileOrdersComponent {
       case 'CONFIRMED': return 'status-confirmed';
       case 'PROCESSING': return 'status-processing';
       case 'SHIPPING': return 'status-shipping';
-      case 'DELIVERY_FAILED': return 'status-cancelled';
       case 'DELIVERED': return 'status-delivered';
       case 'CANCELLED': return 'status-cancelled';
       case 'RETURNED': return 'status-returned';

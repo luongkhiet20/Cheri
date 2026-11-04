@@ -373,6 +373,18 @@ export class OrdersController {
     return this.ordersService.updateOrder({ ...order, updatedBy: user?._id || null });
   }
 
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @Patch('/:id')
+  updateOrderById(@Param('id') id: string, @Body() order: any, @GetUser() user: User) {
+    return this.ordersService.updateOrder({ ...order, orderId: id, updatedBy: user?._id || null });
+  }
+
+  @UseGuards(AdminJwtAuthGuard, RolesGuard)
+  @Put('/:id')
+  updateOrderByIdPut(@Param('id') id: string, @Body() order: any, @GetUser() user: User) {
+    return this.ordersService.updateOrder({ ...order, orderId: id, updatedBy: user?._id || null });
+  }
+
   // ─── Admin: Xử lý quy trình trả hàng & hoàn tiền ────────────────────────
   @UseGuards(AdminJwtAuthGuard, RolesGuard)
   @Patch('/:id/return-requests/:reqId/status')

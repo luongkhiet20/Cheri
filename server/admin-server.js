@@ -1,3 +1,9 @@
+const dns = require('node:dns');
+dns.setServers(['8.8.8.8', '8.8.4.4']); // Ép Node.js dùng DNS Google để phân giải SRV
+
+// Sau đó mới tới các đoạn require('mongoose') hay express...
+const mongoose = require('mongoose');
+
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -9,6 +15,15 @@ const fs = require('fs');
 const multer = require('multer');
 const os = require('os');
 const { trackingNumberUpdateFields } = require('./src/orders/tracking-update.cjs');
+const {
+  RESERVED_ORDER_STATUSES,
+  checkOrderStockAvailability,
+  reserveOrderInventory,
+  releaseOrderInventory,
+  restoreOrderInventory,
+  buildInventoryList,
+  buildInventoryDetail
+} = require('./src/orders/inventory-sync.util.cjs');
 const {
   getGoogleCallbackUrl,
   getFrontendOrigin,
@@ -44,7 +59,7 @@ try {
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
-  } catch (_) {}
+  } catch (_) { }
 }
 
 const paymentImageStorage = multer.diskStorage({
@@ -178,7 +193,7 @@ async function connectToMongo() {
     await client.connect();
     db = client.db('cheri');
     console.log(' Successfully connected to MongoDB Database: cheri');
-    db.collection('newsletter_subscribers').createIndex({ email: 1 }, { unique: true }).catch(() => {});
+    db.collection('newsletter_subscribers').createIndex({ email: 1 }, { unique: true }).catch(() => { });
     return db;
   } catch (err) {
     console.error(' MongoDB Connection Error:', err);
@@ -298,11 +313,13 @@ const ORDER_STATUS_CONFIG = [
 function normalizeOrderStatus(st) {
   if (!st) return 'PENDING';
   const upper = String(st).trim().toUpperCase();
-  if (upper === 'NEW') return 'PENDING';
-  if (upper === 'CONFIRMED') return 'PROCESSING';
-  if (upper === 'COMPLETED') return 'DELIVERED';
-  if (upper === 'CANCELED') return 'CANCELLED';
-  if (upper === 'RETURN') return 'RETURNED';
+  if (upper === 'NEW' || upper === 'CHỜ XÁC NHẬN') return 'PENDING';
+  if (upper === 'CONFIRMED' || upper === 'ĐÃ XÁC NHẬN') return 'CONFIRMED';
+  if (upper === 'PROCESSING' || upper === 'ĐANG XỬ LÝ') return 'PROCESSING';
+  if (upper === 'SHIPPING' || upper === 'ĐANG GIAO' || upper === 'ĐANG GIAO HÀNG') return 'SHIPPING';
+  if (upper === 'COMPLETED' || upper === 'DELIVERED' || upper === 'ĐÃ GIAO' || upper === 'ĐÃ GIAO HÀNG') return 'DELIVERED';
+  if (upper === 'CANCELED' || upper === 'CANCELLED' || upper === 'ĐÃ HỦY') return 'CANCELLED';
+  if (upper === 'RETURN' || upper === 'RETURNED' || upper === 'ĐÃ HOÀN TRẢ' || upper === 'ĐÃ TRẢ HÀNG') return 'RETURNED';
   return upper;
 }
 const normalizeStatus = normalizeOrderStatus;
@@ -724,11 +741,11 @@ function formatProduct(p, lang = 'vi') {
   const fallbackData = p.en || p.vi || {};
 
   const name = langData.title || fallbackData.title || p.title || (p.titleUrl ? p.titleUrl.replace(/-/g, ' ') : 'Sản phẩm chưa đặt tên');
-  
+
   const regularPrice = Number(langData.regularPrice || fallbackData.regularPrice || p.regularPrice) || 0;
   const salePrice = Number(langData.salePrice || fallbackData.salePrice || p.salePrice) || regularPrice;
   const price = salePrice || regularPrice || 0;
-  
+
   let quantity = 0;
   if (p.variants && Array.isArray(p.variants) && p.variants.length > 0) {
     quantity = p.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
@@ -1949,14 +1966,14 @@ app.post('/api/products', async (req, res) => {
 
     const normalizedVariants = Array.isArray(body.variants)
       ? body.variants.map((v, idx) => ({
-          classification: v.classification ? String(v.classification).trim() : '',
-          color: v.color ? String(v.color).trim() : '',
-          size: v.size ? String(v.size).trim() : '',
-          sku: v.sku ? String(v.sku).trim().toUpperCase() : `SKU-${idx + 1}`,
-          price: Number(v.price || 0),
-          discountPrice: Number(v.discountPrice !== undefined ? v.discountPrice : (v.price || 0)),
-          stock: Number(v.stock !== undefined ? v.stock : 0)
-        }))
+        classification: v.classification ? String(v.classification).trim() : '',
+        color: v.color ? String(v.color).trim() : '',
+        size: v.size ? String(v.size).trim() : '',
+        sku: v.sku ? String(v.sku).trim().toUpperCase() : `SKU-${idx + 1}`,
+        price: Number(v.price || 0),
+        discountPrice: Number(v.discountPrice !== undefined ? v.discountPrice : (v.price || 0)),
+        stock: Number(v.stock !== undefined ? v.stock : 0)
+      }))
       : [];
 
     // Validation: Price rules
@@ -2113,14 +2130,14 @@ app.put('/api/products/:id', async (req, res) => {
 
     const normalizedVariants = Array.isArray(body.variants)
       ? body.variants.map((v, idx) => ({
-          classification: v.classification ? String(v.classification).trim() : '',
-          color: v.color ? String(v.color).trim() : '',
-          size: v.size ? String(v.size).trim() : '',
-          sku: v.sku ? String(v.sku).trim().toUpperCase() : `SKU-${idx + 1}`,
-          price: Number(v.price || 0),
-          discountPrice: Number(v.discountPrice !== undefined ? v.discountPrice : (v.price || 0)),
-          stock: Number(v.stock !== undefined ? v.stock : 0)
-        }))
+        classification: v.classification ? String(v.classification).trim() : '',
+        color: v.color ? String(v.color).trim() : '',
+        size: v.size ? String(v.size).trim() : '',
+        sku: v.sku ? String(v.sku).trim().toUpperCase() : `SKU-${idx + 1}`,
+        price: Number(v.price || 0),
+        discountPrice: Number(v.discountPrice !== undefined ? v.discountPrice : (v.price || 0)),
+        stock: Number(v.stock !== undefined ? v.stock : 0)
+      }))
       : (existing.variants || []);
 
     // Validation: Price rules
@@ -3168,7 +3185,7 @@ async function handleCancelOrder(req, res) {
       try {
         const token = authHeader.split(' ')[1];
         userFromToken = jwt.verify(token, process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789');
-      } catch (_) {}
+      } catch (_) { }
     }
 
     const query = ObjectId.isValid(id)
@@ -3258,7 +3275,7 @@ app.patch('/api/orders/:id/cancel', handleCancelOrder);
 // 4.0 POST /api/admin/orders (Create normalized guest order from Admin)
 const ADMIN_ORDER_ID_MAX_ATTEMPTS = 5;
 
-class AdminOrderValidationError extends Error {}
+class AdminOrderValidationError extends Error { }
 
 function requireAdminOrderString(value, message) {
   if (typeof value !== 'string' || !value.trim()) {
@@ -3688,28 +3705,30 @@ app.post('/api/admin/orders', async (req, res) => {
       throw new Error('ADMIN_ORDER_ID_GENERATION_EXHAUSTED');
     }
 
-    for (const request of inventoryRequests.values()) {
-      let updateResult;
-      if (request.type === 'collection') {
-        updateResult = await db.collection('product_variants').updateOne(
-          { _id: new ObjectId(request.variantId) },
-          { $inc: { stock: -request.quantity } }
-        );
-      } else if (request.type === 'embedded') {
-        const identifier = request.variantIdentifier;
-        updateResult = await db.collection('products').updateOne(
-          { _id: new ObjectId(request.productId) },
-          { $inc: { 'variants.$[variant].stock': -request.quantity } },
-          { arrayFilters: [{ [`variant.${identifier.field}`]: identifier.rawValue }] }
-        );
-      } else {
-        updateResult = await db.collection('products').updateOne(
-          { _id: new ObjectId(request.productId) },
-          { $inc: { [request.stockPath]: -request.quantity } }
-        );
-      }
-      if (!updateResult?.matchedCount || !updateResult?.modifiedCount) {
-        throw new Error('ADMIN_ORDER_STOCK_UPDATE_FAILED');
+    if (baseOrder.status !== 'PENDING') {
+      for (const request of inventoryRequests.values()) {
+        let updateResult;
+        if (request.type === 'collection') {
+          updateResult = await db.collection('product_variants').updateOne(
+            { _id: new ObjectId(request.variantId) },
+            { $inc: { stock: -request.quantity } }
+          );
+        } else if (request.type === 'embedded') {
+          const identifier = request.variantIdentifier;
+          updateResult = await db.collection('products').updateOne(
+            { _id: new ObjectId(request.productId) },
+            { $inc: { 'variants.$[variant].stock': -request.quantity } },
+            { arrayFilters: [{ [`variant.${identifier.field}`]: identifier.rawValue }] }
+          );
+        } else {
+          updateResult = await db.collection('products').updateOne(
+            { _id: new ObjectId(request.productId) },
+            { $inc: { [request.stockPath]: -request.quantity } }
+          );
+        }
+        if (!updateResult?.matchedCount || !updateResult?.modifiedCount) {
+          throw new Error('ADMIN_ORDER_STOCK_UPDATE_FAILED');
+        }
       }
     }
 
@@ -4269,7 +4288,7 @@ app.get('/api/orders/payment-methods', async (req, res) => {
         paymentType: pm.paymentType || pm.type || 'Online',
         description: pm.description || '',
         paymentInfo: pm.paymentInfo || '',
-            logo: pm.logo || '',
+        logo: pm.logo || '',
         status: isAct ? 'ACTIVE' : 'INACTIVE',
         isActive: isAct,
         statusText: isAct ? 'Đang hoạt động' : 'Tạm khóa'
@@ -4846,6 +4865,65 @@ const handleUpdateOrderStatus = async (req, res) => {
       });
     }
 
+    // Không cho phép chuyển thẳng từ DELIVERED sang CANCELLED
+    if (currentStatus === 'DELIVERED' && targetStatus === 'CANCELLED') {
+      return res.status(400).json({
+        success: false,
+        message: 'Đơn hàng đã giao thành công không thể hủy trực tiếp. Vui lòng sử dụng trạng thái "Đã trả hàng" nếu khách hàng trả lại sản phẩm.'
+      });
+    }
+
+    // Đồng bộ tồn kho theo trạng thái
+    let inventoryUpdateFields = {};
+    let inventoryAdjustmentEntry = null;
+
+    if (targetStatus === 'CONFIRMED') {
+      try {
+        const reserveRes = await reserveOrderInventory(db, order);
+        if (reserveRes.updateDoc) {
+          inventoryUpdateFields = { ...inventoryUpdateFields, ...reserveRes.updateDoc };
+        }
+        if (reserveRes.historyEntry) {
+          inventoryAdjustmentEntry = reserveRes.historyEntry;
+        }
+      } catch (reserveErr) {
+        return res.status(400).json({
+          success: false,
+          message: reserveErr.message || 'Không đủ số lượng sản phẩm có thể bán để xác nhận đơn hàng.'
+        });
+      }
+    } else if (targetStatus === 'RETURNED') {
+      try {
+        const restoreRes = await restoreOrderInventory(db, order);
+        if (restoreRes.updateDoc) {
+          inventoryUpdateFields = { ...inventoryUpdateFields, ...restoreRes.updateDoc };
+        }
+        if (restoreRes.historyEntry) {
+          inventoryAdjustmentEntry = restoreRes.historyEntry;
+        }
+      } catch (restoreErr) {
+        return res.status(400).json({
+          success: false,
+          message: restoreErr.message || 'Lỗi khi hoàn trả tồn kho đơn hàng.'
+        });
+      }
+    } else if (targetStatus === 'CANCELLED') {
+      try {
+        const releaseRes = await releaseOrderInventory(db, order);
+        if (releaseRes.updateDoc) {
+          inventoryUpdateFields = { ...inventoryUpdateFields, ...releaseRes.updateDoc };
+        }
+        if (releaseRes.historyEntry) {
+          inventoryAdjustmentEntry = releaseRes.historyEntry;
+        }
+      } catch (releaseErr) {
+        return res.status(400).json({
+          success: false,
+          message: releaseErr.message || 'Lỗi khi giải phóng tồn kho giữ chỗ.'
+        });
+      }
+    }
+
     const nowIso = new Date().toISOString();
     const updateEntry = {
       status: targetStatus,
@@ -4853,20 +4931,27 @@ const handleUpdateOrderStatus = async (req, res) => {
       note: note || `Admin cập nhật trạng thái từ ${ORDER_STATUS_MAP[currentStatus]?.label || currentStatus} sang ${ORDER_STATUS_MAP[targetStatus]?.label || targetStatus}`
     };
 
-    await db.collection('orders').updateOne(
-      { _id: order._id },
-      {
-        $set: {
-          status: targetStatus,
-          updatedAt: nowIso
-        },
-        $push: {
-          statusHistory: {
-            $each: [updateEntry],
-            $position: 0
-          }
+    const updateOps = {
+      $set: {
+        status: targetStatus,
+        updatedAt: nowIso,
+        ...inventoryUpdateFields
+      },
+      $push: {
+        statusHistory: {
+          $each: [updateEntry],
+          $position: 0
         }
       }
+    };
+
+    if (inventoryAdjustmentEntry) {
+      updateOps.$push.inventoryAdjustmentHistory = inventoryAdjustmentEntry;
+    }
+
+    await db.collection('orders').updateOne(
+      { _id: order._id },
+      updateOps
     );
 
     const updatedOrder = await db.collection('orders').findOne({ _id: order._id });
@@ -4939,7 +5024,7 @@ async function handleUpdateReturnRequestWorkflow(req, res) {
       try {
         const token = authHeader.split(' ')[1];
         adminUser = jwt.verify(token, process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789');
-      } catch (_) {}
+      } catch (_) { }
     }
 
     const now = new Date();
@@ -5434,7 +5519,7 @@ async function handleCancelReturnRequest(req, res) {
       try {
         const token = authHeader.split(' ')[1];
         userFromToken = jwt.verify(token, process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789');
-      } catch (_) {}
+      } catch (_) { }
     }
 
     const now = new Date();
@@ -7521,150 +7606,13 @@ app.post(['/api/orders/coupon/validate', '/api/coupons/validate'], async (req, r
 // ─────────────────────────────────────────────────────────────
 app.get('/api/inventory', requireAdminPermission('inventory:view'), async (req, res) => {
   try {
-    const [productsRaw, activeOrders] = await Promise.all([
-      db.collection('products').find({}).sort({ updatedAt: -1, _id: -1 }).toArray(),
-      db.collection('orders').find({
-        status: { $nin: ['DELIVERED', 'CANCELLED', 'RETURNED', 'Đã giao', 'Đã hủy', 'Đã hoàn trả'] }
-      }).toArray()
-    ]);
-
-    // Build reservation maps for variant and product
-    const variantReservedMap = new Map();
-    const prodReservedMap = new Map();
-
-    for (const order of activeOrders) {
-      const items = order.cart?.items || order.items || [];
-      for (const item of items) {
-        const itemObj = item.item || {};
-        const prodId = (itemObj._id || itemObj.id || item.productId || item.id)?.toString();
-        if (!prodId) continue;
-
-        const qty = Number(item.qty || item.quantity) || 1;
-        prodReservedMap.set(prodId, (prodReservedMap.get(prodId) || 0) + qty);
-
-        const vSku = itemObj.variant?.sku || itemObj.variantSku || item.variantSku || item.sku || itemObj.sku;
-        const vColor = (itemObj.variant?.color || '').toLowerCase().trim();
-        const vSize = (itemObj.variant?.size || '').toLowerCase().trim();
-
-        if (vSku) {
-          const key = `${prodId}__sku__${vSku.toLowerCase().trim()}`;
-          variantReservedMap.set(key, (variantReservedMap.get(key) || 0) + qty);
-        }
-        if (vColor || vSize) {
-          const key = `${prodId}__attrs__${vColor}__${vSize}`;
-          variantReservedMap.set(key, (variantReservedMap.get(key) || 0) + qty);
-        }
-      }
-    }
-
-    const data = productsRaw.map(p => {
-      const vi = p.vi || {};
-      const name = vi.title || p.title || p.titleUrl?.replace(/-/g, ' ') || 'Sản phẩm';
-      const prodIdStr = p._id.toString();
-      const hasVariants = Array.isArray(p.variants) && p.variants.length > 0;
-
-      let stock = 0;
-      let reserved = 0;
-      let available = 0;
-      let sku = '';
-      let calculatedVariants = [];
-
-      if (hasVariants) {
-        calculatedVariants = p.variants.map((v, idx) => {
-          const vStock = Math.max(0, Number(v.stock) || 0);
-          const vColor = (v.color || '').toLowerCase().trim();
-          const vSize = (v.size || '').toLowerCase().trim();
-          const vSku = (v.sku || '').trim();
-
-          let vReserved = 0;
-          if (vSku && variantReservedMap.has(`${prodIdStr}__sku__${vSku.toLowerCase()}`)) {
-            vReserved = variantReservedMap.get(`${prodIdStr}__sku__${vSku.toLowerCase()}`);
-          } else if (variantReservedMap.has(`${prodIdStr}__attrs__${vColor}__${vSize}`)) {
-            vReserved = variantReservedMap.get(`${prodIdStr}__attrs__${vColor}__${vSize}`);
-          }
-
-          const vAvailable = Math.max(0, vStock - vReserved);
-
-          let vStatus = 'Còn hàng';
-          let vStatusVariant = 'success';
-          if (vAvailable <= 0) {
-            vStatus = 'Hết hàng';
-            vStatusVariant = 'danger';
-          } else if (vAvailable <= LOW_STOCK_THRESHOLD) {
-            vStatus = 'Sắp hết';
-            vStatusVariant = 'warning';
-          }
-
-          return {
-            ...v,
-            id: v.id || v._id || vSku || String(idx),
-            sku: vSku,
-            stock: vStock,
-            reserved: vReserved,
-            available: vAvailable,
-            status: vStatus,
-            statusVariant: vStatusVariant
-          };
-        });
-
-        stock = calculatedVariants.reduce((sum, v) => sum + v.stock, 0);
-        reserved = calculatedVariants.reduce((sum, v) => sum + v.reserved, 0);
-        available = calculatedVariants.reduce((sum, v) => sum + v.available, 0);
-
-        const variantSkus = calculatedVariants.map(v => v.sku).filter(Boolean);
-        sku = variantSkus.length > 0 ? variantSkus.join(', ') : '';
-      } else {
-        // Single product without variants: SKU from product.sku or vi.sku
-        let s = 0;
-        if (p.stock !== undefined && p.stock !== null && !isNaN(Number(p.stock))) {
-          s = Number(p.stock);
-        } else if (vi.stock !== undefined && vi.stock !== null && !isNaN(Number(vi.stock))) {
-          s = Number(vi.stock);
-        } else if (vi.quantity !== undefined && vi.quantity !== null && !isNaN(Number(vi.quantity))) {
-          s = Number(vi.quantity);
-        } else if (p.quantity !== undefined && p.quantity !== null && !isNaN(Number(p.quantity))) {
-          s = Number(p.quantity);
-        }
-        stock = Math.max(0, s);
-        reserved = prodReservedMap.get(prodIdStr) || 0;
-        available = Math.max(0, stock - reserved);
-        sku = (p.sku || vi.sku || '').trim();
-      }
-
-      let status = 'Còn hàng';
-      let statusVariant = 'success';
-      if (available <= 0) {
-        status = 'Hết hàng';
-        statusVariant = 'danger';
-      } else if (available <= LOW_STOCK_THRESHOLD) {
-        status = 'Sắp hết';
-        statusVariant = 'warning';
-      }
-
-      return {
-        id: prodIdStr,
-        _id: prodIdStr,
-        name,
-        image: p.mainImage?.url || (Array.isArray(p.images) && p.images[0]) || '',
-        sku,
-        hasVariants,
-        quantity: stock,
-        stock,
-        reserved,
-        available,
-        status,
-        statusVariant,
-        variants: calculatedVariants,
-        raw: p
-      };
-    });
-
+    const result = await buildInventoryList(db);
     res.json({
-      success: true,
-      data,
-      pagination: { page: 1, pageSize: data.length, total: data.length }
+      ...result,
+      pagination: { page: 1, pageSize: result.data.length, total: result.data.length }
     });
   } catch (error) {
+    console.error('Error in GET /api/inventory:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -7673,164 +7621,13 @@ app.get('/api/inventory', requireAdminPermission('inventory:view'), async (req, 
 app.get('/api/inventory/:id', requireAdminPermission('inventory:view'), async (req, res) => {
   try {
     const { id } = req.params;
-    let query = { _id: id };
-    if (ObjectId.isValid(id)) {
-      query = { $or: [{ _id: new ObjectId(id) }, { _id: id }, { id }] };
+    const result = await buildInventoryDetail(db, id);
+    if (!result.success) {
+      return res.status(404).json(result);
     }
-
-    const [product, activeOrders] = await Promise.all([
-      db.collection('products').findOne(query),
-      db.collection('orders').find({
-        status: { $nin: ['DELIVERED', 'CANCELLED', 'RETURNED', 'Đã giao', 'Đã hủy', 'Đã hoàn trả'] }
-      }).toArray()
-    ]);
-
-    if (!product) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin sản phẩm trong kho.' });
-    }
-
-    const variantReservedMap = new Map();
-    let prodReserved = 0;
-    const prodIdStr = product._id.toString();
-
-    for (const order of activeOrders) {
-      const items = order.cart?.items || order.items || [];
-      for (const item of items) {
-        const itemObj = item.item || {};
-        const itemId = (itemObj._id || itemObj.id || item.productId || item.id)?.toString();
-        if (!itemId || itemId !== prodIdStr) continue;
-
-        const qty = Number(item.qty || item.quantity) || 1;
-        prodReserved += qty;
-
-        const vSku = itemObj.variant?.sku || itemObj.variantSku || item.variantSku || item.sku || itemObj.sku;
-        const vColor = (itemObj.variant?.color || '').toLowerCase().trim();
-        const vSize = (itemObj.variant?.size || '').toLowerCase().trim();
-
-        if (vSku) {
-          const key = `${prodIdStr}__sku__${vSku.toLowerCase().trim()}`;
-          variantReservedMap.set(key, (variantReservedMap.get(key) || 0) + qty);
-        }
-        if (vColor || vSize) {
-          const key = `${prodIdStr}__attrs__${vColor}__${vSize}`;
-          variantReservedMap.set(key, (variantReservedMap.get(key) || 0) + qty);
-        }
-      }
-    }
-
-    const LOW_STOCK_THRESHOLD = 5;
-    const vi = product.vi || {};
-    const name = vi.title || product.title || product.titleUrl?.replace(/-/g, ' ') || 'Sản phẩm';
-    const hasVariants = Array.isArray(product.variants) && product.variants.length > 0;
-
-    let stock = 0;
-    let reserved = 0;
-    let available = 0;
-    let sku = '';
-    let calculatedVariants = [];
-
-    if (hasVariants) {
-      calculatedVariants = product.variants.map((v, idx) => {
-        const vStock = Math.max(0, Number(v.stock) || 0);
-        const vColor = (v.color || '').toLowerCase().trim();
-        const vSize = (v.size || '').toLowerCase().trim();
-        const vSku = (v.sku || '').trim();
-
-        let vReserved = 0;
-        if (vSku && variantReservedMap.has(`${prodIdStr}__sku__${vSku.toLowerCase()}`)) {
-          vReserved = variantReservedMap.get(`${prodIdStr}__sku__${vSku.toLowerCase()}`);
-        } else if (variantReservedMap.has(`${prodIdStr}__attrs__${vColor}__${vSize}`)) {
-          vReserved = variantReservedMap.get(`${prodIdStr}__attrs__${vColor}__${vSize}`);
-        }
-
-        const vAvailable = Math.max(0, vStock - vReserved);
-
-        let vStatus = 'Còn hàng';
-        let vStatusVariant = 'success';
-        if (vAvailable <= 0) {
-          vStatus = 'Hết hàng';
-          vStatusVariant = 'danger';
-        } else if (vAvailable <= LOW_STOCK_THRESHOLD) {
-          vStatus = 'Sắp hết';
-          vStatusVariant = 'warning';
-        }
-
-        return {
-          ...v,
-          id: v.id || v._id || vSku || String(idx),
-          sku: vSku,
-          color: v.color || '',
-          size: v.size || '',
-          classification: v.classification || '',
-          price: v.price !== undefined ? v.price : (product.price || 0),
-          stock: vStock,
-          reserved: vReserved,
-          available: vAvailable,
-          status: vStatus,
-          statusVariant: vStatusVariant
-        };
-      });
-
-      stock = calculatedVariants.reduce((sum, v) => sum + v.stock, 0);
-      reserved = calculatedVariants.reduce((sum, v) => sum + v.reserved, 0);
-      available = calculatedVariants.reduce((sum, v) => sum + v.available, 0);
-
-      const variantSkus = calculatedVariants.map(v => v.sku).filter(Boolean);
-      sku = variantSkus.length > 0 ? variantSkus.join(', ') : '';
-    } else {
-      let s = 0;
-      if (product.stock !== undefined && product.stock !== null && !isNaN(Number(product.stock))) {
-        s = Number(product.stock);
-      } else if (vi.stock !== undefined && vi.stock !== null && !isNaN(Number(vi.stock))) {
-        s = Number(vi.stock);
-      } else if (vi.quantity !== undefined && vi.quantity !== null && !isNaN(Number(vi.quantity))) {
-        s = Number(vi.quantity);
-      } else if (product.quantity !== undefined && product.quantity !== null && !isNaN(Number(product.quantity))) {
-        s = Number(product.quantity);
-      }
-      stock = Math.max(0, s);
-      reserved = prodReserved;
-      available = Math.max(0, stock - reserved);
-      sku = (product.sku || vi.sku || '').trim();
-    }
-
-    let status = 'Còn hàng';
-    let statusVariant = 'success';
-    if (available <= 0) {
-      status = 'Hết hàng';
-      statusVariant = 'danger';
-    } else if (available <= LOW_STOCK_THRESHOLD) {
-      status = 'Sắp hết';
-      statusVariant = 'warning';
-    }
-
-    res.json({
-      success: true,
-      data: {
-        id: prodIdStr,
-        _id: prodIdStr,
-        productId: prodIdStr,
-        name,
-        image: product.mainImage?.url || (Array.isArray(product.images) && product.images[0]) || '',
-        sku,
-        hasVariants,
-        quantity: stock,
-        stock,
-        reserved,
-        available,
-        status,
-        statusVariant,
-        variants: calculatedVariants,
-        category: product.category || vi.category || vi.categoryLevel1 || vi.categoryLevel2 || '',
-        price: product.price || vi.regularPrice || vi.salePrice || 0,
-        originalPrice: product.originalPrice || vi.regularPrice || 0,
-        unit: product.unit || vi.unit || 'Cái',
-        updatedAt: product.updatedAt,
-        createdAt: product.createdAt,
-        raw: product
-      }
-    });
+    res.json(result);
   } catch (error) {
+    console.error('Error in GET /api/inventory/:id:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -8290,8 +8087,8 @@ const updatePageHandler = async (req, res) => {
     const isPublished = body.isPublished !== undefined
       ? !!body.isPublished
       : (body.status !== undefined
-          ? (body.status === 'published' || body.status === 'active' || body.status === 'Đã xuất bản')
-          : (existing.status === 'published' || existing.vi?.visibility !== false));
+        ? (body.status === 'published' || body.status === 'active' || body.status === 'Đã xuất bản')
+        : (existing.status === 'published' || existing.vi?.visibility !== false));
 
     const viVisibility = vi.visibility !== undefined ? !!vi.visibility : isPublished;
     const enVisibility = existing.en?.visibility !== undefined
@@ -8821,8 +8618,8 @@ const DEFAULT_SETTINGS = {
   updatedAt: new Date().toISOString()
 };
 
-// 11.1 GET /api/settings - Lấy cấu hình hệ thống
-app.get('/api/settings', requireAdminPermission('settings:view'), async (req, res) => {
+// 11.1 GET /api/settings - Lấy cấu hình hệ thống (Public cho Storefront & SSR)
+app.get('/api/settings', async (req, res) => {
   try {
     let settings = await db.collection('settings').findOne({});
     if (!settings) {
@@ -9128,7 +8925,7 @@ app.post('/api/auth/signout', async (req, res) => {
         await db.collection('users').updateOne(query, { $set: { tokenRevokedAt: new Date() } });
       }
     }
-  } catch (_) {}
+  } catch (_) { }
   return res.json({ success: true, message: 'Đăng xuất thành công' });
 });
 
@@ -9461,7 +9258,7 @@ app.post('/api/chat/message', async (req, res) => {
       try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789');
         user = decoded;
-      } catch (_) {}
+      } catch (_) { }
     }
 
     const isOrderTracking =
@@ -9604,7 +9401,7 @@ app.post('/api/chat/support/request', async (req, res) => {
 
     let userObjId = null;
     if (userId) {
-      try { userObjId = new ObjectId(userId); } catch (_) {}
+      try { userObjId = new ObjectId(userId); } catch (_) { }
     }
 
     const resolvedGuest = (!userObjId && (guestId || sessionId)) ? String(guestId || sessionId).trim() : null;
@@ -9688,7 +9485,7 @@ app.get('/api/chat/support/current', async (req, res) => {
 
     let userObjId = null;
     if (userId) {
-      try { userObjId = new ObjectId(userId); } catch (_) {}
+      try { userObjId = new ObjectId(userId); } catch (_) { }
     }
     const resolvedGuest = (!userObjId && (guestId || sessionId)) ? String(guestId || sessionId).trim() : null;
 
@@ -11379,9 +11176,9 @@ function checkAdminAuth(req) {
     const token = authHeader.slice(7).trim();
     try {
       userFromToken = jwt.verify(token, process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789');
-      } catch (_) {
-        userFromToken = null;
-      }
+    } catch (_) {
+      userFromToken = null;
+    }
   }
 
   const userRoles = userFromToken?.roles || userFromToken?.role || [];

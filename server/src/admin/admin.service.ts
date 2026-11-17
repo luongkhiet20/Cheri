@@ -16,7 +16,7 @@ cloudinary.v2.config({
 
 @Injectable()
 export class AdminService {
-  constructor(@InjectModel('Product') private productModel: ProductModel) {}
+  constructor(@InjectModel('Product') private productModel: ProductModel) { }
 
   async getImages(images: Images) {
     return (await images) || new Images({ all: [] });
@@ -32,10 +32,10 @@ export class AdminService {
     const existImages = await new Images(images || { all: [] });
     const product = titleUrl
       ? await this.productModel.findOneAndUpdate(
-          { titleUrl },
-          { $push: { images: image } },
-          { new: true },
-        )
+        { titleUrl },
+        { $push: { images: image } },
+        { new: true },
+      )
       : null;
 
     if (!product) {
@@ -80,10 +80,10 @@ export class AdminService {
 
     const product = titleUrl
       ? await this.productModel.findOneAndUpdate(
-          { titleUrl },
-          { $push: { images: image } },
-          { new: true },
-        )
+        { titleUrl },
+        { $push: { images: image } },
+        { new: true },
+      )
       : null;
 
     if (!product) {
@@ -109,10 +109,10 @@ export class AdminService {
     const existImages = await new Images(images || { all: [] });
     const product = titleUrl
       ? await this.productModel.findOneAndUpdate(
-          { titleUrl },
-          { $pull: { images: image } },
-          { new: true },
-        )
+        { titleUrl },
+        { $pull: { images: image } },
+        { new: true },
+      )
       : null;
 
     existImages.remove(image);

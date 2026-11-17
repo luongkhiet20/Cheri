@@ -234,6 +234,12 @@ export interface Order extends Document {
   returnRequests?: ReturnRequest[];
   returnRequest?: any;
 
+  // Trạng thái giữ chỗ và điều chỉnh tồn kho
+  inventoryReservedAt?: Date | null;
+  inventoryReleasedAt?: Date | null;
+  inventoryRestoredAt?: Date | null;
+  inventoryAdjustmentHistory?: any[];
+
   // Timestamps
   createdAt: Date;
   updatedAt: Date;

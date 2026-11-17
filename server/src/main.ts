@@ -1,6 +1,10 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
 
+import * as dns from 'node:dns';
+
+dns.setServers(['8.8.8.8', '1.1.1.1']);
+
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';

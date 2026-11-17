@@ -536,7 +536,8 @@ export class ProductComponent implements OnDestroy {
         eventType: 'ADD_TO_CART',
       }).subscribe();
 
-      this.router.navigate(['/' + this.currentLang + '/cart']);
+      const targetLang = this.currentLang || 'vi';
+      this.router.navigate(['/' + targetLang + '/cart']);
     };
 
     const currentCart = this.selectors.cart();
@@ -546,7 +547,8 @@ export class ProductComponent implements OnDestroy {
     if (existingItem && this.maxStock > 0 && existingQty + qty > this.maxStock) {
       const targetQty = Math.min(this.maxStock, Math.max(existingQty, qty));
       const targetId = String(existingItem.id || expectedCartItemId);
-      this.store.updateCartQuantity(targetId, targetQty, this.currentLang).subscribe({
+      const targetLang = this.currentLang || 'vi';
+      this.store.updateCartQuantity(targetId, targetQty, targetLang).subscribe({
         next: (res: any) => {
           if (res && res.error) {
             const errMsg = res.error?.error?.message || res.error?.message || 'Không thể cập nhật giỏ hàng';
@@ -566,7 +568,8 @@ export class ProductComponent implements OnDestroy {
     this.store.addToCart(params, (res: any) => {
       if (res && res.error) {
         // Fallback: nếu item đã tồn tại trong giỏ trên server và chạm trần tồn kho, vẫn cho phép BUY_NOW item đó
-        this.store.getCart(this.currentLang, (latestCart: any) => {
+        const targetLang = this.currentLang || 'vi';
+        this.store.getCart(targetLang, (latestCart: any) => {
           const foundInLatest = this.findMatchingCartItemFromResponse(latestCart, productId, variantId, expectedCartItemId);
           if (foundInLatest) {
             completeBuyNowNavigation(latestCart);
@@ -588,10 +591,11 @@ export class ProductComponent implements OnDestroy {
   }
 
   goBack(): void {
-    if (window.history.length > 1) {
+    if (typeof window !== 'undefined' && window.history && window.history.length > 1) {
       this.location.back();
     } else {
-      this.router.navigate(['/' + this.currentLang + '/product/all']);
+      const targetLang = this.currentLang || 'vi';
+      this.router.navigate(['/' + targetLang + '/product/all']);
     }
   }
 

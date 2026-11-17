@@ -24,11 +24,22 @@ export class CartController {
 
   private async persistSession(session: any, newCart: any, guestCartId?: string): Promise<void> {
     if (!session) return;
-    const key = guestCartId ? `cart_${guestCartId}` : 'cart';
-    session[key] = newCart;
-    session.cart = newCart;
-    if (typeof session.save === 'function') {
-      await new Promise<void>((resolve) => session.save(() => resolve()));
+    try {
+      const key = guestCartId ? `cart_${guestCartId}` : 'cart';
+      session[key] = newCart;
+      session.cart = newCart;
+      if (typeof session.save === 'function') {
+        await new Promise<void>((resolve) => {
+          session.save((err?: any) => {
+            if (err) {
+              console.error('[CartController] Error saving session cart:', err);
+            }
+            resolve();
+          });
+        });
+      }
+    } catch (saveErr) {
+      console.error('[CartController] Failed to persist session cart:', saveErr);
     }
   }
 

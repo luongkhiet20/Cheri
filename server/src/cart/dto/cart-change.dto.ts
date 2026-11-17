@@ -23,5 +23,11 @@ export class GetCartChangeDto {
   @IsOptional()
   @Type(() => Number)
   qty?: number;
+
+  @IsOptional()
+  random?: any;
+
+  @IsOptional()
+  _?: any;
 }
 

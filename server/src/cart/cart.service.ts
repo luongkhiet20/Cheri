@@ -201,7 +201,10 @@ export class CartService {
     const currentLang = lang || 'vi';
 
     const productId = this.extractProductId(id);
-    const product = await this.productModel.findById(productId);
+    if (!productId || !isValidObjectId(productId)) {
+      throw new BadRequestException('Mã sản phẩm không hợp lệ');
+    }
+    const product = await this.productModel.findById(productId).lean();
     if (!product) {
       throw new NotFoundException('Sản phẩm không tồn tại');
     }

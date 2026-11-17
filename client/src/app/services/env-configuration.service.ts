@@ -1,8 +1,8 @@
 import { AnalyticsService } from './analytics.service';
 import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { Observable } from 'rxjs';
-import { shareReplay, map, filter, take } from 'rxjs/operators';
+import { Observable, of } from 'rxjs';
+import { shareReplay, map, filter, take, catchError } from 'rxjs/operators';
 
 import { ApiService } from './api.service';
 import { ThemeService } from './theme.service';
@@ -80,10 +80,20 @@ export class EnvConfigurationService {
   }
 
   load(): Observable<Config> {
+    if (!isPlatformBrowser(this.platformId)) {
+      this.config = {};
+      return of({});
+    }
     if (!this.configuration$) {
       this.configuration$ = this.apiService.getConfig().pipe(
-        filter(() => isPlatformBrowser(this.platformId)),
-        map((response: { config: string }) => (response.config ? JSON.parse(atob(response.config)) : {})),
+        map((response: any) => {
+          try {
+            return (response && response.config) ? JSON.parse(atob(response.config)) : {};
+          } catch {
+            return {};
+          }
+        }),
+        catchError(() => of({})),
         shareReplay(1)
       );
       this.configuration$

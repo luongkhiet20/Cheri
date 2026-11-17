@@ -353,6 +353,12 @@ const OrderSchema = new Schema(
     // Yêu cầu đổi trả / hoàn tiền gần nhất (đồng bộ tương thích ngược)
     returnRequest: { type: Schema.Types.Mixed, default: null },
 
+    // Trạng thái giữ chỗ và điều chỉnh tồn kho
+    inventoryReservedAt: { type: Date, default: null },
+    inventoryReleasedAt: { type: Date, default: null },
+    inventoryRestoredAt: { type: Date, default: null },
+    inventoryAdjustmentHistory: { type: [Schema.Types.Mixed], default: [] },
+
     // Trạng thái đánh giá sản phẩm của đơn hàng
     isReviewed: { type: Boolean, default: false },
     reviewedAt: { type: Date, default: null },

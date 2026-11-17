@@ -2,6 +2,11 @@ import { Logger, Injectable, NotFoundException, BadRequestException, ForbiddenEx
 import { InjectModel } from '@nestjs/mongoose';
 import { ClientSession, Model, Types, isValidObjectId } from 'mongoose';
 import { buildPublicTrackingResponse } from './tracking-response.cjs';
+import {
+  reserveOrderInventory,
+  releaseOrderInventory,
+  restoreOrderInventory,
+} from './inventory-sync.util.cjs';
 
 import { Order, OrderStatus, PaymentStatus, ReturnRequestStatus, RefundStatus } from './models/order.model';
 import * as fs from 'fs';
@@ -28,6 +33,10 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
     districts: new Map<string, any[]>(),
     wards: new Map<string, any[]>(),
   };
+
+  private getNativeDb() {
+    return (this.orderModel.db as any).db || (this.orderModel.db as any).getClient().db();
+  }
 
   constructor(
     @InjectModel('Order') private orderModel: Model<Order>,
@@ -433,8 +442,29 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       note: fullCancelNote,
     });
 
+    const nativeDb = this.getNativeDb();
+    const plainOrder = order.toObject ? order.toObject() : order;
+    try {
+      const releaseRes = await releaseOrderInventory(nativeDb, plainOrder);
+      if (releaseRes.updateDoc?.inventoryReleasedAt) {
+        order.inventoryReleasedAt = releaseRes.updateDoc.inventoryReleasedAt;
+      }
+      if (releaseRes.historyEntry) {
+        if (!Array.isArray(order.inventoryAdjustmentHistory)) order.inventoryAdjustmentHistory = [];
+        order.inventoryAdjustmentHistory.push(releaseRes.historyEntry);
+      }
+    } catch (err) {
+      this.logger.error(`Lỗi giải phóng tồn kho cho đơn ${order.orderId}: ${err.message}`);
+    }
+
+    if (order.couponCode) {
+      await this.couponModel.updateOne(
+        { code: order.couponCode, usedCount: { $gt: 0 } },
+        { $inc: { usedCount: -1 } },
+      );
+    }
+
     await order.save();
-    await this.releaseCancelledOrderStock(order);
     return {
       success: true,
       message: 'Hủy đơn hàng thành công.',
@@ -1515,6 +1545,13 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
+    // Không cho phép chuyển thẳng từ DELIVERED sang CANCELLED
+    if (currentStatus === OrderStatus.DELIVERED && targetStatus === OrderStatus.CANCELLED) {
+      throw new BadRequestException(
+        'Đơn hàng đã giao thành công không thể hủy trực tiếp. Vui lòng sử dụng trạng thái "Đã trả hàng" nếu khách hàng trả lại sản phẩm.'
+      );
+    }
+
     // RÀNG BUỘC BẢO VỆ THANH TOÁN:
     // Đơn thanh toán trực tuyến (VNPAY, MoMo, Stripe) chưa hoàn tất (chưa PAID) thì không cho phép chuyển giao hàng
     const paymentMethodCode = String(
@@ -1532,12 +1569,63 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
     // CẢNH BÁO KHI HỦY ĐƠN ĐÃ THANH TOÁN:
     // Không tự động đánh dấu REFUNDED; giữ nguyên PAID; ghi cảnh báo vào lịch sử
     let cancelWarning: string | null = null;
-    if (targetStatus === OrderStatus.CANCELLED) {
-      if (isPaid) {
-        const orderTotal = (Number(order.totalAmount) || Number((order as any).total) || 0).toLocaleString('vi-VN');
-        cancelWarning = `Đơn hàng đã thanh toán (${orderTotal} đ). Thao tác hủy đơn không tự động hoàn tiền. Vui lòng hoàn tiền cho khách qua cổng thanh toán hoặc ngân hàng.`;
+    if (targetStatus === OrderStatus.CANCELLED && isPaid) {
+      const orderTotal = (Number(order.totalAmount) || Number((order as any).total) || 0).toLocaleString('vi-VN');
+      cancelWarning = `Đơn hàng đã thanh toán (${orderTotal} đ). Thao tác hủy đơn không tự động hoàn tiền. Vui lòng hoàn tiền cho khách qua cổng thanh toán hoặc ngân hàng.`;
+    }
+
+    // Đồng bộ tồn kho theo trạng thái
+    const nativeDb = this.getNativeDb();
+    const plainOrder = order.toObject ? order.toObject() : order;
+
+    if (targetStatus === OrderStatus.CONFIRMED) {
+      try {
+        const reserveRes = await reserveOrderInventory(nativeDb, plainOrder);
+        if (reserveRes.updateDoc) {
+          if (reserveRes.updateDoc.inventoryReservedAt) order.inventoryReservedAt = reserveRes.updateDoc.inventoryReservedAt;
+          order.inventoryReleasedAt = reserveRes.updateDoc.inventoryReleasedAt;
+          order.inventoryRestoredAt = reserveRes.updateDoc.inventoryRestoredAt;
+        }
+        if (reserveRes.historyEntry) {
+          if (!Array.isArray(order.inventoryAdjustmentHistory)) order.inventoryAdjustmentHistory = [];
+          order.inventoryAdjustmentHistory.push(reserveRes.historyEntry);
+        }
+      } catch (err) {
+        throw new BadRequestException(err.message || 'Không đủ số lượng sản phẩm có thể bán để xác nhận đơn hàng.');
       }
-      await this.releaseCancelledOrderStock(order);
+    } else if (targetStatus === OrderStatus.RETURNED) {
+      try {
+        const restoreRes = await restoreOrderInventory(nativeDb, plainOrder);
+        if (restoreRes.updateDoc) {
+          if (restoreRes.updateDoc.inventoryRestoredAt) order.inventoryRestoredAt = restoreRes.updateDoc.inventoryRestoredAt;
+          if (restoreRes.updateDoc.inventoryReleasedAt) order.inventoryReleasedAt = restoreRes.updateDoc.inventoryReleasedAt;
+        }
+        if (restoreRes.historyEntry) {
+          if (!Array.isArray(order.inventoryAdjustmentHistory)) order.inventoryAdjustmentHistory = [];
+          order.inventoryAdjustmentHistory.push(restoreRes.historyEntry);
+        }
+      } catch (err) {
+        throw new BadRequestException(err.message || 'Lỗi khi hoàn trả tồn kho đơn hàng.');
+      }
+    } else if (targetStatus === OrderStatus.CANCELLED) {
+      try {
+        const releaseRes = await releaseOrderInventory(nativeDb, plainOrder);
+        if (releaseRes.updateDoc) {
+          if (releaseRes.updateDoc.inventoryReleasedAt) order.inventoryReleasedAt = releaseRes.updateDoc.inventoryReleasedAt;
+        }
+        if (releaseRes.historyEntry) {
+          if (!Array.isArray(order.inventoryAdjustmentHistory)) order.inventoryAdjustmentHistory = [];
+          order.inventoryAdjustmentHistory.push(releaseRes.historyEntry);
+        }
+      } catch (err) {
+        throw new BadRequestException(err.message || 'Lỗi khi giải phóng tồn kho giữ chỗ.');
+      }
+      if (order.couponCode) {
+        await this.couponModel.updateOne(
+          { code: order.couponCode, usedCount: { $gt: 0 } },
+          { $inc: { usedCount: -1 } },
+        );
+      }
     }
 
     const now = new Date();
@@ -2013,7 +2101,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
     order.paymentStatus = PaymentStatus.PAID;
     order.paidAt = paidAt;
     const cancelled = order.status === OrderStatus.CANCELLED;
-    if (!cancelled) order.status = OrderStatus.CONFIRMED;
+    if (!cancelled) order.status = OrderStatus.PENDING;
     order.transactionId = String(query.vnp_TransactionNo || txnRef);
     order.payment = {
       ...(order.payment || {}),
@@ -2028,10 +2116,9 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       status: order.status,
       updatedAt: paidAt,
       updatedBy: null,
-      note: cancelled ? 'Đã nhận tiền VNPAY cho đơn đã hủy; cần đối soát hoàn tiền.' : 'Thanh toán VNPAY thành công',
+      note: cancelled ? 'Đã nhận tiền VNPAY cho đơn đã hủy; cần đối soát hoàn tiền.' : 'Thanh toán VNPAY thành công (chờ xác nhận đơn)',
     });
     await order.save({ session });
-    if (!cancelled) await this.decreaseStock(order.items, session);
     if (!cancelled && order.couponCode) {
       await this.couponModel.updateOne(
         { code: order.couponCode },
@@ -2099,20 +2186,19 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
         status: newOrder.payment?.status || PaymentStatus.PENDING,
         transactionId: String(transaction._id),
       };
-      newOrder.status = OrderStatus.CONFIRMED;
+      newOrder.status = OrderStatus.PENDING;
       newOrder.statusHistory.push({
-        status: OrderStatus.CONFIRMED,
+        status: OrderStatus.PENDING,
         updatedAt: new Date(),
         updatedBy: null,
-        note: 'Đơn COD đã được xác nhận, chờ thu tiền khi giao hàng',
+        note: 'Đơn hàng mới được tạo (chờ xác nhận)',
       });
       await newOrder.save();
 
       // Ghi nhận tương tác mua hàng cho mô hình ML
       await this.recordPurchaseInteractions(newOrder, resolvedSessionId);
 
-      // Giảm tồn kho sản phẩm/biến thể
-      await this.decreaseStock(newOrder.items);
+      // Đơn hàng mới ở trạng thái PENDING: Không trừ kho, không tăng đã đặt, không đổi có thể bán
 
       // Xóa các sản phẩm đã đặt khỏi giỏ hàng của user
       let updatedGuestCart: any = null;
@@ -2223,19 +2309,19 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
           paidAt: newOrder.paidAt,
           provider: 'STRIPE',
         };
-        newOrder.status = OrderStatus.CONFIRMED;
+        newOrder.status = OrderStatus.PENDING;
         newOrder.statusHistory.push({
-          status: OrderStatus.CONFIRMED,
+          status: OrderStatus.PENDING,
           updatedAt: newOrder.paidAt,
           updatedBy: null,
-          note: 'Thanh toán Stripe thành công',
+          note: 'Thanh toán Stripe thành công (chờ xác nhận đơn)',
         });
         await newOrder.save();
 
         // Ghi nhận tương tác mua hàng cho mô hình ML
         await this.recordPurchaseInteractions(newOrder, resolvedSessionId);
 
-        await this.decreaseStock(newOrder.items);
+        // Đơn hàng mới ở trạng thái PENDING: Không trừ kho, không tăng đã đặt, không đổi có thể bán
 
         if (user) {
           if (body.selectedItemIds && body.selectedItemIds.length > 0) {

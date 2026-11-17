@@ -273,20 +273,26 @@ export const prepareCart = (cart, lang: string, config): CartModel => {
     (item) => item.shipingCostType === shippingTypes[1],
   );
   const shippingType = shippingTypeCheck ? shippingTypes[1] : shippingTypes[0];
+  const effectiveLang = (lang && typeof lang === 'string') ? lang.toLowerCase().trim() : 'vi';
+  const fallbackShipping = (shippingCost as any)[effectiveLang] || (shippingCost as any)['vi'] || (shippingCost as any)['default'] || {
+    basic: { cost: 30000, limit: 500000 },
+    extended: { cost: 50000, limit: 1000000 },
+  };
   const shippingByLang =
     config &&
-    config[lang] &&
-    config[lang].shippingCost &&
-    config[lang].shippingCost[shippingType]
-      ? config[lang].shippingCost[shippingType]
-      : shippingCost[lang || 'en'][shippingType];
-  const shippingTypeCost =
-    totalPrice >= shippingByLang.limit ? 0 : shippingByLang.cost;
+    config[effectiveLang] &&
+    config[effectiveLang].shippingCost &&
+    config[effectiveLang].shippingCost[shippingType]
+      ? config[effectiveLang].shippingCost[shippingType]
+      : (fallbackShipping[shippingType] || fallbackShipping['basic'] || { cost: 30000, limit: 500000 });
+  const shippingLimit = Number(shippingByLang?.limit) || 500000;
+  const shippingUnitCost = Number(shippingByLang?.cost) || 30000;
+  const shippingTypeCost = totalPrice >= shippingLimit ? 0 : shippingUnitCost;
 
   return {
     items: deduplicatedItems,
     shippingCost: totalPrice ? shippingTypeCost : 0,
-    shippingLimit: shippingByLang.limit,
+    shippingLimit: shippingLimit,
     shippingType: totalPrice ? (shippingTypeCost ? shippingType : 'free') : '',
     totalPrice: totalPrice ? totalPrice + shippingTypeCost : totalPrice,
     totalQty,

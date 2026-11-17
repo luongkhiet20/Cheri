@@ -289,6 +289,7 @@ const ORDER_STATUS_CONFIG = [
   { code: 'DELIVERED', label: 'Đã giao', key: 'delivered', queryParam: 'Đã giao', variant: 'success' },
   { code: 'SHIPPING', label: 'Đang giao', key: 'shipping', queryParam: 'Đang giao', variant: 'primary' },
   { code: 'PROCESSING', label: 'Đang xử lý', key: 'processing', queryParam: 'Đang xử lý', variant: 'warning' },
+  { code: 'CONFIRMED', label: 'Đã xác nhận', key: 'confirmed', queryParam: 'Đã xác nhận', variant: 'info' },
   { code: 'PENDING', label: 'Chờ xác nhận', key: 'pending', queryParam: 'Chờ xác nhận', variant: 'neutral' },
   { code: 'CANCELLED', label: 'Đã hủy', key: 'cancelled', queryParam: 'Đã hủy', variant: 'danger' },
   { code: 'RETURNED', label: 'Đã hoàn trả', key: 'returned', queryParam: 'Đã hoàn trả', variant: 'neutral' },
@@ -2766,7 +2767,8 @@ app.post('/api/categories/bulk-delete', async (req, res) => {
 // 4. ORDERS API
 // ─────────────────────────────────────────────────────────────
 const VALID_ORDER_TRANSITIONS = {
-  PENDING: ['PROCESSING', 'CANCELLED'],
+  PENDING: ['CONFIRMED', 'PROCESSING', 'CANCELLED'],
+  CONFIRMED: ['PROCESSING', 'CANCELLED'],
   PROCESSING: ['SHIPPING', 'CANCELLED'],
   SHIPPING: ['DELIVERED', 'CANCELLED'],
   DELIVERED: ['RETURNED'], // Final delivery can be marked as returned

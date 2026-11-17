@@ -44,7 +44,7 @@ const {
 } = require('./src/services/cloudinary-service');
 
 const app = express();
-const PORT = process.env.ADMIN_PORT || process.env.PORT_ADMIN || 5000;
+const PORT = process.env.ADMIN_PORT || process.env.PORT_ADMIN || 5001;
 const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://tinhvttk24411_db_user:gZ7aJJyCWgYffiXa@cluster0.cbvni8r.mongodb.net/cheri?retryWrites=true&w=majority";
 
 // Uploads directory setup for static serving (Serverless / read-only filesystem safe)
@@ -11384,8 +11384,19 @@ app.patch('/api/admin/social-links/:platform/status', requireAdminPermission('cm
 // Start Server (Chỉ listen khi chạy trực tiếp file này bằng node server/admin-server.js)
 if (require.main === module) {
   connectToMongo().then(() => {
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       console.log(` Backend API server running on http://localhost:${PORT}`);
+    });
+    server.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        const fallbackPort = Number(PORT) === 5000 ? 5001 : 5002;
+        console.warn(`[Admin Server] Port ${PORT} is already in use (e.g. AirPlay on macOS). Retrying on ${fallbackPort}...`);
+        app.listen(fallbackPort, () => {
+          console.log(` Backend API server running on http://localhost:${fallbackPort}`);
+        });
+      } else {
+        console.error('Server listen error:', err);
+      }
     });
   });
 }

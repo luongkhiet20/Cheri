@@ -115,7 +115,7 @@ export class UsersDetailComponent implements OnInit {
     // If it's a relative path to uploads, prepend backend origin if needed
     if (raw.startsWith('/uploads') || raw.startsWith('uploads/')) {
       const cleanPath = raw.startsWith('/') ? raw : `/${raw}`;
-      const origin = (environment.adminApiUrl || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
+      const origin = (environment.adminApiUrl || 'http://localhost:5001/api').replace(/\/api\/?$/, '');
       return `${origin}${cleanPath}`;
     }
 

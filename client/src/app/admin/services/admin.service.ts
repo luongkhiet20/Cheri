@@ -8,7 +8,7 @@ import { environment } from '../../../environments/environment';
   providedIn: 'root'
 })
 export class AdminService {
-  private baseUrl = environment.adminApiUrl || 'http://localhost:5000/api';
+  private baseUrl = environment.adminApiUrl || 'http://localhost:5001/api';
 
   currentUser$ = new BehaviorSubject<any>(null);
 

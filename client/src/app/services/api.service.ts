@@ -323,7 +323,7 @@ export class ApiService {
       }),
       catchError((error: Error) => {
         if (productsUrl.includes('localhost:4000')) {
-          const fallbackUrl = productsUrl.replace('localhost:4000', 'localhost:5000');
+          const fallbackUrl = productsUrl.replace('localhost:4000', 'localhost:5001');
           return this.http.get(fallbackUrl, this.getRequestOptions()).pipe(
             map((data: any) => {
               const productList = (data?.all || data?.data || (Array.isArray(data) ? data : [])).map((product: any) => ({
@@ -358,7 +358,7 @@ export class ApiService {
       }),
       catchError((error: Error) => {
         if (categoriesUrl.includes('localhost:4000')) {
-          const fallbackUrl = categoriesUrl.replace('localhost:4000', 'localhost:5000');
+          const fallbackUrl = categoriesUrl.replace('localhost:4000', 'localhost:5001');
           return this.http.get(fallbackUrl, this.getRequestOptions()).pipe(
             map((res: any) => {
               if (Array.isArray(res)) return res;
@@ -387,7 +387,7 @@ export class ApiService {
       map((response: any) => response?.data || response?.raw || response),
       catchError((error: Error) => {
         if (productUrl.includes('localhost:4000')) {
-          const fallbackUrl = productUrl.replace('localhost:4000', 'localhost:5000');
+          const fallbackUrl = productUrl.replace('localhost:4000', 'localhost:5001');
           return this.http.get(fallbackUrl, this.getRequestOptions()).pipe(
             map((res: any) => res?.data || res?.raw || res),
             catchError((err2: Error) => of({ error: err2 })),
@@ -628,7 +628,7 @@ export class ApiService {
         };
       }),
       catchError(() => {
-        const fallbackUrl = (environment.adminApiUrl || 'http://localhost:5000/api') + '/settings';
+        const fallbackUrl = (environment.adminApiUrl || 'http://localhost:5001/api') + '/settings';
         return this.http.get<any>(fallbackUrl).pipe(
           map((res: any) => {
             const contact = res?.data?.contact || res?.contact || {};
@@ -1315,7 +1315,7 @@ export class ApiService {
           const ipv4Url = primaryUrl.replace('localhost:4000', '127.0.0.1:4000');
           return this.http.get(ipv4Url).pipe(
             catchError(() => {
-              const adminPortUrl = primaryUrl.replace('localhost:4000', '127.0.0.1:5000');
+              const adminPortUrl = primaryUrl.replace('localhost:4000', '127.0.0.1:5001');
               return this.http.get(adminPortUrl).pipe(
                 catchError(() => of({ success: true, data: defaultData }))
               );

@@ -9,7 +9,7 @@ import { environment } from '../../../../environments/environment';
   providedIn: 'root'
 })
 export class SettingsService {
-  private baseUrl = environment.adminApiUrl || 'http://localhost:5000/api';
+  private baseUrl = environment.adminApiUrl || 'http://localhost:5001/api';
 
   private settingsSubject = new BehaviorSubject<AppSettings | null>(null);
   public settings$ = this.settingsSubject.asObservable();

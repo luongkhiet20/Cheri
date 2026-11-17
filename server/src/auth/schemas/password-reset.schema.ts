@@ -35,6 +35,18 @@ const PasswordResetSchema = new Schema(
       type: Date,
       default: null,
     },
+    lastRequestedAt: {
+      type: Date,
+      default: null,
+    },
+    requestCount: {
+      type: Number,
+      default: 0,
+    },
+    windowStart: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

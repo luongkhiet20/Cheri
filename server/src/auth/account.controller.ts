@@ -8,6 +8,7 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -32,13 +33,22 @@ export class AccountController {
   }
 
   private filterProfileFields(body: any): Record<string, any> {
+    if (!body || typeof body !== 'object') {
+      throw new BadRequestException('Dữ liệu cập nhật không hợp lệ');
+    }
+    const forbiddenFields = ['role', 'roles', 'status', 'isActive', 'isAdmin', 'permissions', 'isBlocked', 'salt', 'password'];
+    for (const field of forbiddenFields) {
+      if (body[field] !== undefined) {
+        throw new BadRequestException(
+          `Người dùng không được phép thay đổi trường "${field}" (quyền hoặc trạng thái tài khoản) qua API cập nhật hồ sơ.`,
+        );
+      }
+    }
     const allowed = ['name', 'fullName', 'phoneNumber', 'gender', 'dateOfBirth', 'address', 'avatar', 'description'];
     const safe: Record<string, any> = {};
-    if (body && typeof body === 'object') {
-      for (const key of allowed) {
-        if (body[key] !== undefined) {
-          safe[key] = body[key];
-        }
+    for (const key of allowed) {
+      if (body[key] !== undefined) {
+        safe[key] = body[key];
       }
     }
     return safe;

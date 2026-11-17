@@ -41,6 +41,8 @@ export class SignInComponent implements OnInit, OnDestroy {
   confirmNewPassword = '';
   resetToken = '';
   isPasswordResetBusy = false;
+  resendCooldown = 0;
+  private resendTimer: any = null;
 
   isRequestingAdmin = false;
   currentLoggedUser: any = null;
@@ -164,6 +166,27 @@ export class SignInComponent implements OnInit, OnDestroy {
     if (this.userSub) {
       this.userSub.unsubscribe();
     }
+    this.stopResendCooldown();
+  }
+
+  startResendCooldown(seconds = 60): void {
+    this.stopResendCooldown();
+    this.resendCooldown = seconds;
+    this.resendTimer = setInterval(() => {
+      this.resendCooldown--;
+      if (this.resendCooldown <= 0) {
+        this.stopResendCooldown();
+      }
+      this.cdr.detectChanges();
+    }, 1000);
+  }
+
+  stopResendCooldown(): void {
+    if (this.resendTimer) {
+      clearInterval(this.resendTimer);
+      this.resendTimer = null;
+    }
+    this.resendCooldown = 0;
   }
 
   private getSafeReturnUrl(url: string | null | undefined, fallback: string): string {
@@ -195,6 +218,7 @@ export class SignInComponent implements OnInit, OnDestroy {
 
   setIsForgotPassword(val: boolean): void {
     this.isForgotPassword = val;
+    this.stopResendCooldown();
     if (val) {
       this.forgotStep = 'request';
       this.forgotEmail = this.signInForm.get('email')?.value || '';
@@ -217,6 +241,7 @@ export class SignInComponent implements OnInit, OnDestroy {
         this.isPasswordResetBusy = false;
         this.forgotEmail = email;
         this.forgotStep = 'verify';
+        this.startResendCooldown(60);
         this.cdr.detectChanges();
         this.notify.success(`✨${response.message || 'Đã gửi mã xác minh đặt lại mật khẩu'}✨`);
       },
@@ -226,6 +251,31 @@ export class SignInComponent implements OnInit, OnDestroy {
         this.showPasswordResetError(
           error,
           'Không thể gửi mã xác minh. Vui lòng thử lại sau.',
+        );
+      },
+    });
+  }
+
+  onResendOtp(): void {
+    const email = this.forgotEmail.trim();
+    if (this.isPasswordResetBusy || !email || this.resendCooldown > 0) {
+      return;
+    }
+
+    this.isPasswordResetBusy = true;
+    this.apiService.requestPasswordReset(email).subscribe({
+      next: (response) => {
+        this.isPasswordResetBusy = false;
+        this.startResendCooldown(60);
+        this.cdr.detectChanges();
+        this.notify.success(`✨${response.message || 'Đã gửi lại mã OTP mới'}✨`);
+      },
+      error: (error: unknown) => {
+        this.isPasswordResetBusy = false;
+        this.cdr.detectChanges();
+        this.showPasswordResetError(
+          error,
+          'Không thể gửi lại mã OTP. Vui lòng thử lại sau.',
         );
       },
     });
@@ -242,6 +292,7 @@ export class SignInComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (response) => {
           this.isPasswordResetBusy = false;
+          this.stopResendCooldown();
           this.resetToken = response.resetToken;
           this.forgotStep = 'reset';
           this.cdr.detectChanges();
@@ -258,12 +309,23 @@ export class SignInComponent implements OnInit, OnDestroy {
   }
 
   onResetPassword(): void {
-    if (this.isPasswordResetBusy || this.newPassword.length < 8) {
+    if (this.isPasswordResetBusy) {
+      return;
+    }
+
+    if (this.newPassword.length < 8) {
+      this.notify.warning('Mật khẩu mới phải có ít nhất 8 ký tự.');
       return;
     }
 
     if (this.newPassword !== this.confirmNewPassword) {
       this.notify.warning('✨Mật khẩu xác nhận không khớp. Vui lòng kiểm tra lại✨');
+      return;
+    }
+
+    const secError = this.validateNewPasswordSecurity(this.newPassword, this.forgotEmail);
+    if (secError) {
+      this.notify.warning(secError);
       return;
     }
 
@@ -292,6 +354,44 @@ export class SignInComponent implements OnInit, OnDestroy {
           );
         },
       });
+  }
+
+  private validateNewPasswordSecurity(password: string, email: string): string | null {
+    const trimmed = (password || '').trim();
+    const lower = trimmed.toLowerCase();
+
+    const commonPasswords = new Set([
+      '12345678', '123456789', '1234567890', '87654321', '01234567', '98765432',
+      'password', 'passwords', 'password1', 'password12', 'password123', 'p@ssword', 'p@ssw0rd',
+      'qwerty123', 'qwertyui', 'qwertyuiop', 'asdfghjk', 'zxcvbnm1',
+      '11111111', '00000000', '12341234', '11223344',
+      'admin123', 'administrator', 'iloveyou', 'iloveyou1', 'cheri123', 'cheri12345',
+      'welcome1', 'welcome123', 'monkey123', 'dragon123', 'master123',
+      'sunshine', 'princess', 'football', 'abcdefgh'
+    ]);
+
+    if (commonPasswords.has(lower)) {
+      return 'Mật khẩu quá đơn giản hoặc phổ biến. Vui lòng chọn mật khẩu khó đoán hơn.';
+    }
+
+    if (/^(.)\1+$/.test(trimmed)) {
+      return 'Mật khẩu không được chỉ gồm các ký tự lặp lại giống nhau.';
+    }
+
+    const seqNumbers = '01234567890123456789';
+    const revSeqNumbers = '98765432109876543210';
+    if (lower.length >= 8 && (seqNumbers.includes(lower) || revSeqNumbers.includes(lower))) {
+      return 'Mật khẩu là chuỗi số liên tiếp dễ đoán. Vui lòng chọn mật khẩu khó đoán hơn.';
+    }
+
+    if (email) {
+      const emailPrefix = email.split('@')[0].toLowerCase().trim();
+      if (emailPrefix.length >= 3 && (lower === emailPrefix || lower === `${emailPrefix}123`)) {
+        return 'Mật khẩu không nên trùng hoặc quá giống với tên tài khoản email của bạn.';
+      }
+    }
+
+    return null;
   }
 
   private showPasswordResetError(error: unknown, fallback: string): void {

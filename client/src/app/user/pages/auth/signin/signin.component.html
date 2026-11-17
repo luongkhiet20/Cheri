@@ -73,9 +73,14 @@
             [disabled]="!forgotOtp.match('^[0-9]{6}$') || isPasswordResetBusy">
             <span>{{ isPasswordResetBusy ? 'ĐANG XÁC MINH...' : 'XÁC MINH OTP' }}</span>
           </button>
-          <button type="button" class="auth-link-btn" (click)="forgotStep = 'request'">
-            Đổi địa chỉ email
-          </button>
+          <div class="auth-otp-actions" style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; gap: 8px;">
+            <button type="button" class="auth-link-btn" (click)="onResendOtp()" [disabled]="resendCooldown > 0 || isPasswordResetBusy" [style.opacity]="resendCooldown > 0 ? '0.6' : '1'" [style.cursor]="resendCooldown > 0 ? 'not-allowed' : 'pointer'">
+              {{ resendCooldown > 0 ? ('Gửi lại OTP (' + resendCooldown + 's)') : 'Gửi lại mã OTP' }}
+            </button>
+            <button type="button" class="auth-link-btn" (click)="forgotStep = 'request'">
+              Đổi email
+            </button>
+          </div>
         </form>
         } @else {
         <form class="auth-inner-form" (ngSubmit)="onResetPassword()">

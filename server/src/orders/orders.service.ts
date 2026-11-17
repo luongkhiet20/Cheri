@@ -1915,6 +1915,21 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
         body?.sessionId?.trim() ||
         (session?.id ? String(session.id) : null);
       const orderData = await this.buildOrderData(body, user, 'VNPAY', resolvedSessionId);
+
+      // Chống đơn hàng trùng (Duplicate Order Prevention) trong vòng 30s
+      const duplicateOrder = await this.checkDuplicateOrder(
+        user,
+        orderData.customerEmail,
+        orderData.customerPhone,
+        orderData.totalAmount,
+        orderData.items,
+      );
+      if (duplicateOrder) {
+        throw new BadRequestException(
+          `Bạn vừa tạo đơn hàng tương tự #${duplicateOrder.orderId}. Vui lòng chờ vài phút hoặc kiểm tra lại lịch sử đơn hàng.`,
+        );
+      }
+
       const newOrder = new this.orderModel(orderData);
       await newOrder.save();
 
@@ -2119,12 +2134,23 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       note: cancelled ? 'Đã nhận tiền VNPAY cho đơn đã hủy; cần đối soát hoàn tiền.' : 'Thanh toán VNPAY thành công (chờ xác nhận đơn)',
     });
     await order.save({ session });
-    if (!cancelled && order.couponCode) {
-      await this.couponModel.updateOne(
-        { code: order.couponCode },
-        { $inc: { usedCount: 1 } },
-        { session },
-      );
+    if (!cancelled) {
+      // Giảm tồn kho khi thanh toán VNPAY thành công
+      await this.decreaseStock(order.items, session);
+
+      if (order.couponCode) {
+        const cleanCouponCode = String(order.couponCode).trim().toUpperCase();
+        await this.couponModel.updateOne(
+          {
+            $or: [
+              { code: cleanCouponCode },
+              { code: new RegExp(`^${cleanCouponCode}$`, 'i') },
+            ],
+          },
+          { $inc: { usedCount: 1, quantity: -1 } },
+          { session },
+        );
+      }
     }
     const ownerId = order.userId || order._user;
     if (!cancelled && ownerId) {
@@ -2153,6 +2179,54 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
     return { success: true, order, rspCode: '00', message: 'Thanh toán VNPAY thành công.' };
   }
 
+  private async checkDuplicateOrder(
+    user: User | null,
+    customerEmail: string,
+    customerPhone: string,
+    totalAmount: number,
+    orderItems: any[],
+  ): Promise<any | null> {
+    const thirtySecondsAgo = new Date(Date.now() - 30 * 1000);
+    const query: any = {
+      createdAt: { $gte: thirtySecondsAgo },
+      totalAmount,
+      status: { $in: [OrderStatus.PENDING, OrderStatus.CONFIRMED] },
+    };
+    if (user && user._id) {
+      query.$or = [
+        { _user: new Types.ObjectId(String(user._id)) },
+        { customerEmail: (customerEmail || '').trim().toLowerCase() },
+      ];
+    } else if (customerEmail) {
+      query.customerEmail = customerEmail.trim().toLowerCase();
+    } else if (customerPhone) {
+      query.customerPhone = customerPhone.trim();
+    } else {
+      return null;
+    }
+
+    try {
+      const recentOrders = await this.orderModel.find(query).sort({ createdAt: -1 }).limit(3).lean();
+      for (const recent of recentOrders) {
+        const recentItems = recent.items || [];
+        if (recentItems.length === orderItems.length) {
+          const match = orderItems.every((it: any, idx: number) => {
+            const rit = recentItems[idx];
+            return (
+              rit &&
+              String(rit.productId || '') === String(it.productId || '') &&
+              Number(rit.quantity) === Number(it.quantity)
+            );
+          });
+          if (match) {
+            return recent;
+          }
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
   async addOrder(
     orderDto: OrderDto,
     user: User | null,
@@ -2169,6 +2243,21 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
         (orderDto as any)?.sessionId?.trim() ||
         (session?.id ? String(session.id) : null);
       const orderData = await this.buildOrderData(orderDto, user, 'COD', resolvedSessionId);
+
+      // Chống đơn hàng trùng (Duplicate Order Prevention) trong vòng 30s
+      const duplicateOrder = await this.checkDuplicateOrder(
+        user,
+        orderData.customerEmail,
+        orderData.customerPhone,
+        orderData.totalAmount,
+        orderData.items,
+      );
+      if (duplicateOrder) {
+        throw new BadRequestException(
+          `Bạn vừa tạo đơn hàng tương tự #${duplicateOrder.orderId}. Vui lòng chờ vài phút hoặc kiểm tra lại lịch sử đơn hàng.`,
+        );
+      }
+
       const newOrder = new this.orderModel(orderData);
       await newOrder.save();
       const transaction = await this.paymentService.createPending({
@@ -2198,7 +2287,8 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       // Ghi nhận tương tác mua hàng cho mô hình ML
       await this.recordPurchaseInteractions(newOrder, resolvedSessionId);
 
-      // Đơn hàng mới ở trạng thái PENDING: Không trừ kho, không tăng đã đặt, không đổi có thể bán
+      // Trừ tồn kho sản phẩm khi đặt hàng thành công
+      await this.decreaseStock(newOrder.items);
 
       // Xóa các sản phẩm đã đặt khỏi giỏ hàng của user
       let updatedGuestCart: any = null;
@@ -2239,9 +2329,17 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       }
 
       if (newOrder.couponCode) {
+        const cleanCouponCode = String(newOrder.couponCode).trim().toUpperCase();
         await this.couponModel.updateOne(
-          { code: newOrder.couponCode },
-          { $inc: { usedCount: 1 } }
+          {
+            $or: [
+              { code: cleanCouponCode },
+              { code: new RegExp(`^${cleanCouponCode}$`, 'i') },
+            ],
+          },
+          {
+            $inc: { usedCount: 1, quantity: -1 },
+          },
         );
       }
 
@@ -2274,6 +2372,21 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
         body?.sessionId?.trim() ||
         (session?.id ? String(session.id) : null);
       const orderData = await this.buildOrderData(body, user, 'STRIPE', resolvedSessionId);
+
+      // Chống đơn hàng trùng (Duplicate Order Prevention) trong vòng 30s
+      const duplicateOrder = await this.checkDuplicateOrder(
+        user,
+        orderData.customerEmail,
+        orderData.customerPhone,
+        orderData.totalAmount,
+        orderData.items,
+      );
+      if (duplicateOrder) {
+        throw new BadRequestException(
+          `Bạn vừa tạo đơn hàng tương tự #${duplicateOrder.orderId}. Vui lòng chờ vài phút hoặc kiểm tra lại lịch sử đơn hàng.`,
+        );
+      }
+
       const newOrder = new this.orderModel(orderData);
       await newOrder.save();
       const transaction = await this.paymentService.createPending({
@@ -2321,7 +2434,8 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
         // Ghi nhận tương tác mua hàng cho mô hình ML
         await this.recordPurchaseInteractions(newOrder, resolvedSessionId);
 
-        // Đơn hàng mới ở trạng thái PENDING: Không trừ kho, không tăng đã đặt, không đổi có thể bán
+        // Trừ tồn kho sản phẩm khi đặt hàng thành công
+        await this.decreaseStock(newOrder.items);
 
         if (user) {
           if (body.selectedItemIds && body.selectedItemIds.length > 0) {
@@ -2359,9 +2473,15 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
         }
 
         if (newOrder.couponCode) {
+          const cleanCouponCode = String(newOrder.couponCode).trim().toUpperCase();
           await this.couponModel.updateOne(
-            { code: newOrder.couponCode },
-            { $inc: { usedCount: 1 } }
+            {
+              $or: [
+                { code: cleanCouponCode },
+                { code: new RegExp(`^${cleanCouponCode}$`, 'i') },
+              ],
+            },
+            { $inc: { usedCount: 1, quantity: -1 } }
           );
         }
 
@@ -2651,6 +2771,17 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
     }
 
     const totalAmount = Math.max(0, subtotal + shippingFee + paymentFee - couponDiscount);
+
+    // Kiểm tra chống sửa đổi tổng tiền từ client
+    const clientSubtotal = (orderDto as any).subtotal !== undefined ? Number((orderDto as any).subtotal) : null;
+    if (clientSubtotal !== null && Number.isFinite(clientSubtotal) && Math.abs(clientSubtotal - subtotal) > 10) {
+      throw new BadRequestException('Tạm tính đơn hàng không chính xác hoặc giá sản phẩm đã thay đổi. Vui lòng làm mới giỏ hàng.');
+    }
+    const clientTotal = (orderDto as any).totalAmount !== undefined ? Number((orderDto as any).totalAmount) : null;
+    if (clientTotal !== null && Number.isFinite(clientTotal) && Math.abs(clientTotal - totalAmount) > 10) {
+      throw new BadRequestException('Tổng tiền đơn hàng không chính xác hoặc đã thay đổi. Vui lòng làm mới trang thanh toán.');
+    }
+
     const orderId = `CHE${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
     // Chuẩn hóa shippingAddress đảm bảo lưu đầy đủ code + name + addressDetail
@@ -2778,12 +2909,14 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
 
       // Chặn nếu sản phẩm bị Ẩn (Case 3 & 4)
       if (product.visibility === false || product.vi?.visibility === false) {
-        throw new Error(`Sản phẩm "${product.title || product.vi?.title || 'Sản phẩm'}" hiện đang tạm ẩn, không thể đặt hàng.`);
+        throw new BadRequestException(`Sản phẩm "${product.title || product.vi?.title || 'Sản phẩm'}" hiện đang tạm ẩn, không thể đặt hàng.`);
       }
 
-      let availableQty = product.quantity !== undefined ? product.quantity : (product.vi?.quantity || 0);
+      let availableQty = product.vi?.stock !== undefined && !isNaN(Number(product.vi?.stock))
+        ? Number(product.vi?.stock)
+        : (product.quantity !== undefined ? Number(product.quantity) : (Number(product.vi?.quantity) || 0));
 
-      let unitPrice = product.salePrice || product.regularPrice || product.price || 0;
+      let unitPrice = Number(product.vi?.salePrice ?? product.vi?.regularPrice ?? product.salePrice ?? product.regularPrice ?? product.price ?? 0);
       const snapshot: any = {
         title: product.title || product.name || product.vi?.title || 'Sản phẩm Chéri',
         sku: product.sku || product.vi?.sku || (product.code ? String(product.code) : `SKU-${product._id}`),
@@ -2831,8 +2964,8 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
           if (variant._id && isValidObjectId(String(variant._id))) {
             matchedVariantDocId = new Types.ObjectId(String(variant._id));
           }
-          availableQty = variant.stock !== undefined ? variant.stock : (variant.quantity || 0);
-          unitPrice = variant.discountPrice || variant.price || unitPrice;
+          availableQty = variant.stock !== undefined ? Number(variant.stock) : (Number(variant.quantity) || 0);
+          unitPrice = Number(variant.discountPrice ?? variant.salePrice ?? variant.price ?? unitPrice);
           snapshot.variant = {
             color: variant.color || '',
             size: variant.size || '',
@@ -2844,15 +2977,23 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
         }
       }
 
+      // 4. Chống giá giả mạo: Nếu client gửi unitPrice hoặc price khác giá niêm yết DB -> từ chối
+      const clientPrice = cartItem.unitPrice !== undefined ? Number(cartItem.unitPrice) : (cartItem.price !== undefined ? Number(cartItem.price) : null);
+      if (clientPrice !== null && Number.isFinite(clientPrice) && Math.abs(clientPrice - unitPrice) > 1) {
+        throw new BadRequestException(
+          `Giá của sản phẩm "${snapshot.title}" không khớp với giá niêm yết hệ thống. Giá hiện hành: ${unitPrice.toLocaleString('vi-VN')} ₫. Vui lòng làm mới giỏ hàng.`
+        );
+      }
+
       // Chặn nếu hết hàng hoặc số lượng đặt vượt quá tồn kho (Case 2 & 4)
       if (!Number.isFinite(Number(unitPrice)) || Number(unitPrice) <= 0) {
         throw new BadRequestException('Giá sản phẩm không hợp lệ.');
       }
       if (availableQty <= 0) {
-        throw new Error(`Sản phẩm "${snapshot.title || 'Sản phẩm'}" đã hết hàng.`);
+        throw new BadRequestException(`Sản phẩm "${snapshot.title || 'Sản phẩm'}" đã hết hàng.`);
       }
       if (quantity > availableQty) {
-        throw new Error(`Sản phẩm "${snapshot.title || 'Sản phẩm'}" chỉ còn ${availableQty} sản phẩm trong kho.`);
+        throw new BadRequestException(`Sản phẩm "${snapshot.title || 'Sản phẩm'}" chỉ còn ${availableQty} sản phẩm trong kho.`);
       }
 
       const finalVariantId = matchedVariantDocId

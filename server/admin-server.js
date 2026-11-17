@@ -4501,7 +4501,7 @@ app.post('/api/orders/coupon/validate', async (req, res) => {
       return res.json({ valid: false, message: `Mã giảm giá đã hết hạn sử dụng (hết hạn ngày ${endFormatted})` });
     }
 
-    if (coupon.usageLimit > 0 && (coupon.usedCount || 0) >= coupon.usageLimit) {
+    if ((coupon.usageLimit > 0 && (coupon.usedCount || 0) >= coupon.usageLimit) || (coupon.quantity !== undefined && coupon.quantity <= 0)) {
       return res.json({ valid: false, message: 'Mã giảm giá đã hết lượt sử dụng' });
     }
 
@@ -7172,6 +7172,7 @@ function formatCoupon(c) {
   const id = c._id ? c._id.toString() : c.id;
   const usageLimit = Number(c.usageLimit) || 0;
   const usedCount = Number(c.usedCount) || 0;
+  const quantity = c.quantity !== undefined && c.quantity !== null ? Number(c.quantity) : Math.max(0, usageLimit - usedCount);
   const remainingUsage = Math.max(0, usageLimit - usedCount);
 
   return {
@@ -7187,6 +7188,7 @@ function formatCoupon(c) {
     endDate: c.endDate ? new Date(c.endDate).toISOString() : null,
     usageLimit,
     usedCount,
+    quantity,
     remainingUsage,
     isActive: c.isActive !== false,
     createdAt: c.createdAt,
@@ -7312,6 +7314,7 @@ app.post('/api/coupons', requireAdminPermission('coupons:manage'), async (req, r
     if (!usageLimit || usageLimit <= 0) {
       return res.status(400).json({ success: false, message: 'Số lượt sử dụng tối đa phải lớn hơn 0' });
     }
+    const quantity = body.quantity !== undefined && body.quantity !== null ? Number(body.quantity) : usageLimit;
 
     const now = new Date();
     const newDoc = {
@@ -7324,6 +7327,7 @@ app.post('/api/coupons', requireAdminPermission('coupons:manage'), async (req, r
       startDate,
       endDate,
       usageLimit,
+      quantity,
       usedCount: 0, // Backend guarantees 0 on creation
       isActive: body.isActive !== false,
       createdAt: now,
@@ -7415,6 +7419,7 @@ app.put('/api/coupons/:id', requireAdminPermission('coupons:manage'), async (req
         startDate,
         endDate,
         usageLimit,
+        ...(body.quantity !== undefined ? { quantity: Number(body.quantity) } : {}),
         isActive: body.isActive !== undefined ? (body.isActive === true || body.isActive === 'true') : existing.isActive,
         updatedAt: new Date()
       }
@@ -7559,7 +7564,7 @@ app.post(['/api/orders/coupon/validate', '/api/coupons/validate'], async (req, r
     if (coupon.endDate && new Date(coupon.endDate) < now) {
       return res.json({ valid: false, message: 'Mã giảm giá đã hết hạn sử dụng' });
     }
-    if (coupon.usageLimit > 0 && coupon.usedCount >= coupon.usageLimit) {
+    if ((coupon.usageLimit > 0 && coupon.usedCount >= coupon.usageLimit) || (coupon.quantity !== undefined && coupon.quantity <= 0)) {
       return res.json({ valid: false, message: 'Mã giảm giá đã hết lượt sử dụng' });
     }
     if (coupon.minOrderValue > 0 && orderSubtotal < coupon.minOrderValue) {

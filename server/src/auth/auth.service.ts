@@ -169,10 +169,10 @@ export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
   constructor(
-  @InjectModel('User') private userModel: Model<User>,
-  @InjectModel('PasswordReset') private passwordResetModel: Model<any>,
-  private jwtService: JwtService,
-) {}
+    @InjectModel('User') private userModel: Model<User>,
+    @InjectModel('PasswordReset') private passwordResetModel: Model<any>,
+    private jwtService: JwtService,
+  ) { }
 
   async signUp(authCredentialsDto: AuthCredentialDto): Promise<{
     accessToken: string;
@@ -311,6 +311,7 @@ export class AuthService {
     string,
     { accessToken: string; user: any; isNewUser: boolean; expiresAt: number }
   >();
+  private readonly usedOAuthCodes = new Set<string>();
 
   createExchangeCode(accessToken: string, user: any, isNewUser: boolean = false): string {
     const code = randomBytes(32).toString('hex');
@@ -332,17 +333,24 @@ export class AuthService {
       throw new BadRequestException('Mã trao đổi xác thực không hợp lệ');
     }
 
+    // Bảo đảm mã xác thực chỉ dùng một lần (Single-Use)
+    if (this.usedOAuthCodes.has(code)) {
+      throw new UnauthorizedException('Mã xác thực đã được sử dụng hoặc không hợp lệ');
+    }
+
     // 1. Hỗ trợ giải mã JWT Exchange Code (Stateless / Serverless trên Vercel)
     try {
       const decoded: any = this.jwtService.verify(code);
       if (decoded && decoded.type === 'oauth_exchange' && decoded.accessToken) {
+        this.usedOAuthCodes.add(code);
+        setTimeout(() => this.usedOAuthCodes.delete(code), 15 * 60 * 1000);
         return {
           accessToken: decoded.accessToken,
           user: decoded.user,
           isNewUser: decoded.isNewUser || false,
         };
       }
-    } catch (_) {}
+    } catch (_) { }
 
     // 2. Fallback sang In-Memory Store (Local development)
     const record = this.exchangeCodeStore.get(code);
@@ -351,6 +359,8 @@ export class AuthService {
     }
     // Xóa ngay lập tức -> Sử dụng 1 lần duy nhất (Single-Use)
     this.exchangeCodeStore.delete(code);
+    this.usedOAuthCodes.add(code);
+    setTimeout(() => this.usedOAuthCodes.delete(code), 15 * 60 * 1000);
 
     if (Date.now() > record.expiresAt) {
       throw new UnauthorizedException('Mã xác thực đã hết hạn');
@@ -550,8 +560,8 @@ export class AuthService {
     const resolvedRoles = Array.isArray(roles) && roles.length
       ? roles
       : typeof roles === 'string' && roles
-      ? [roles]
-      : ['user'];
+        ? [roles]
+        : ['user'];
 
     const user = new this.userModel({
       email: cleanEmail,
@@ -654,6 +664,12 @@ export class AuthService {
     const user = await this.userModel.findById(userId).exec();
     if (!user) {
       throw new NotFoundException('Không tìm thấy tài khoản người dùng');
+    }
+
+    // Kiểm tra độ an toàn của mật khẩu mới thống nhất toàn hệ thống
+    const passCheck = validatePasswordSecurity(newPassword, user.email);
+    if (!passCheck.valid) {
+      throw new BadRequestException(passCheck.message);
     }
 
     // 1. Nhận diện tài khoản Google OAuth không sử dụng mật khẩu
@@ -836,8 +852,8 @@ export class AuthService {
     const roles = Array.isArray(updated.roles)
       ? [...updated.roles]
       : (updated as any).role
-      ? [(updated as any).role]
-      : ['user'];
+        ? [(updated as any).role]
+        : ['user'];
 
     return {
       id: updated._id,
@@ -853,261 +869,258 @@ export class AuthService {
     };
   }
 
-async requestPasswordReset(email: string): Promise<{ message: string }> {
-  const cleanEmail = (email || '').trim().toLowerCase();
-  const message =
-    'Nếu email này đã đăng ký, hướng dẫn đặt lại mật khẩu sẽ được gửi nếu đủ điều kiện.';
+  async requestPasswordReset(email: string): Promise<{ message: string }> {
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const message =
+      'Nếu email này đã đăng ký, hướng dẫn đặt lại mật khẩu sẽ được gửi nếu đủ điều kiện.';
 
-  if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
-    throw new BadRequestException('Email không hợp lệ');
-  }
+    if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      throw new BadRequestException('Email không hợp lệ');
+    }
 
-  const user = await this.userModel.findOne({ email: cleanEmail });
+    const user = await this.userModel.findOne({ email: cleanEmail });
 
-  // Trả thông báo giống nhau để hạn chế dò tìm email có tài khoản.
-  if (!user) {
-    return { message };
-  }
+    // Trả thông báo giống nhau để hạn chế dò tìm email có tài khoản.
+    if (!user) {
+      return { message };
+    }
 
-  const existing = await this.passwordResetModel.findOne({
-    email: cleanEmail,
-  });
+    const existing = await this.passwordResetModel.findOne({
+      email: cleanEmail,
+    });
 
-  // Giới hạn gửi lại: mỗi email chỉ được yêu cầu OTP mới sau 60 giây.
-  if (
-    existing &&
-    existing.createdAt &&
-    Date.now() - new Date(existing.createdAt).getTime() < 60_000
-  ) {
-    return { message };
-  }
+    // 1. Giới hạn gửi lại: mỗi email chỉ được yêu cầu OTP mới sau 60 giây
+    if (existing && existing.lastRequestedAt) {
+      const elapsed = Date.now() - new Date(existing.lastRequestedAt).getTime();
+      if (elapsed < 60_000) {
+        const waitSec = Math.ceil((60_000 - elapsed) / 1000);
+        throw new BadRequestException(
+          `Vui lòng đợi ${waitSec} giây trước khi yêu cầu gửi lại mã OTP mới.`,
+        );
+      }
+    } else if (existing && existing.createdAt) {
+      const elapsed = Date.now() - new Date(existing.createdAt).getTime();
+      if (elapsed < 60_000) {
+        const waitSec = Math.ceil((60_000 - elapsed) / 1000);
+        throw new BadRequestException(
+          `Vui lòng đợi ${waitSec} giây trước khi yêu cầu gửi lại mã OTP mới.`,
+        );
+      }
+    }
 
-  const secret = process.env.PASSWORD_RESET_SECRET;
-  if (!secret || secret.length < 32) {
-    throw new InternalServerErrorException(
-      'Password reset is not configured',
-    );
-  }
+    // 2. Giới hạn tần suất (Rate limit): tối đa 5 lần gửi mã trong 15 phút
+    const now = new Date();
+    const fifteenMinAgo = new Date(now.getTime() - 15 * 60_000);
+    let requestCount = 1;
+    let windowStart = now;
 
-  const otp = randomInt(0, 1_000_000).toString().padStart(6, '0');
-  const otpHash = createHmac('sha256', secret)
-    .update(`${cleanEmail}:${otp}`)
-    .digest('hex');
+    if (existing && existing.windowStart && new Date(existing.windowStart) > fifteenMinAgo) {
+      if (existing.requestCount >= 5) {
+        throw new BadRequestException(
+          'Bạn đã yêu cầu gửi mã xác thực quá số lần cho phép (tối đa 5 lần trong 15 phút). Vui lòng thử lại sau.',
+        );
+      }
+      requestCount = (existing.requestCount || 0) + 1;
+      windowStart = existing.windowStart;
+    }
 
-  // Lưu OTP trước khi gửi; OTP hết hạn sau 5 phút.
-  await this.passwordResetModel.findOneAndUpdate(
-    { email: cleanEmail },
-    {
-      $set: {
-        otpHash,
-        expiresAt: new Date(Date.now() + 5 * 60_000),
-        attempts: 0,
-        verified: false,
-        resetTokenHash: null,
-        resetTokenExpiresAt: null,
+    const secret = process.env.PASSWORD_RESET_SECRET;
+    if (!secret || secret.length < 32) {
+      throw new InternalServerErrorException(
+        'Password reset is not configured',
+      );
+    }
+
+    const otp = randomInt(0, 1_000_000).toString().padStart(6, '0');
+    const otpHash = createHmac('sha256', secret)
+      .update(`${cleanEmail}:${otp}`)
+      .digest('hex');
+
+    // Lưu OTP trước khi gửi; OTP hết hạn sau 5 phút. Cập nhật lastRequestedAt và rate limit
+    await this.passwordResetModel.findOneAndUpdate(
+      { email: cleanEmail },
+      {
+        $set: {
+          otpHash,
+          expiresAt: new Date(Date.now() + 5 * 60_000),
+          attempts: 0,
+          verified: false,
+          resetTokenHash: null,
+          resetTokenExpiresAt: null,
+          lastRequestedAt: now,
+          requestCount,
+          windowStart,
+        },
+        $setOnInsert: { email: cleanEmail },
       },
-      $setOnInsert: { email: cleanEmail },
-    },
-    { upsert: true, new: true, setDefaultsOnInsert: true },
-  );
-
-  try {
-    await sendPasswordResetOtp(cleanEmail, otp);
-  } catch (error) {
-    const sendGridError =
-      error && typeof error === 'object'
-        ? (error as {
-            response?: {
-              statusCode?: number;
-              body?: { errors?: Array<{ message?: string }> };
-            };
-          })
-        : undefined;
-    const statusCode = sendGridError?.response?.statusCode;
-    const providerMessages = sendGridError?.response?.body?.errors
-      ?.map(({ message }) => message)
-      .filter((message): message is string => Boolean(message));
-    const configurationMessage =
-      error instanceof Error &&
-      (error.message.startsWith('SendGrid is not configured:') ||
-        error.message.startsWith('SendGrid API key must start with'))
-        ? error.message
-        : undefined;
-    const diagnostic =
-      providerMessages?.join('; ') ||
-      configurationMessage ||
-      (error instanceof Error ? error.name : 'Unknown SendGrid error');
-
-    this.logger.error(
-      `Password reset email delivery failed${
-        statusCode ? ` (SendGrid HTTP ${statusCode})` : ''
-      }: ${diagnostic}`,
+      { upsert: true, new: true, setDefaultsOnInsert: true },
     );
 
-    // Không để OTP vừa tạo tiếp tục được sử dụng nếu email gửi thất bại.
-    await this.passwordResetModel.deleteOne({ email: cleanEmail });
-    throw new InternalServerErrorException(
-      'Không thể gửi email xác minh lúc này',
-    );
+    try {
+      await sendPasswordResetOtp(cleanEmail, otp);
+    } catch (error) {
+      this.logger.error('Lỗi khi gửi email xác thực qua SendGrid:', error);
+      // Không để OTP vừa tạo tiếp tục được sử dụng nếu email gửi thất bại.
+      await this.passwordResetModel.deleteOne({ email: cleanEmail });
+      throw new InternalServerErrorException(
+        'Không thể gửi email xác minh lúc này. Vui lòng kiểm tra lại cấu hình SendGrid.',
+      );
+    }
+
+    return { message };
   }
-
-  return { message };
-}
 async verifyPasswordResetOtp(
   email: string,
   otp: string,
 ): Promise<{ message: string; resetToken: string }> {
   const cleanEmail = (email || '').trim().toLowerCase();
 
-  if (!/^\d{6}$/.test(otp || '')) {
-    throw new BadRequestException('Mã OTP không hợp lệ');
-  }
+    const record = await this.passwordResetModel.findOne({
+      email: cleanEmail,
+    });
 
-  const record = await this.passwordResetModel.findOne({
-    email: cleanEmail,
-  });
+    if (!record || record.verified) {
+      throw new BadRequestException(
+        'OTP không hợp lệ hoặc đã hết hạn',
+      );
+    }
 
-  if (!record || record.verified) {
-    throw new BadRequestException(
-      'OTP không hợp lệ hoặc đã hết hạn',
-    );
-  }
+    if (new Date(record.expiresAt).getTime() <= Date.now()) {
+      await this.passwordResetModel.deleteOne({ email: cleanEmail });
+      throw new BadRequestException('Mã OTP đã hết hạn');
+    }
 
-  if (new Date(record.expiresAt).getTime() <= Date.now()) {
-    await this.passwordResetModel.deleteOne({ email: cleanEmail });
-    throw new BadRequestException('Mã OTP đã hết hạn');
-  }
+    if (record.attempts >= 5) {
+      await this.passwordResetModel.deleteOne({ email: cleanEmail });
+      throw new BadRequestException(
+        'Bạn đã nhập sai OTP quá số lần cho phép. Vui lòng yêu cầu mã mới.',
+      );
+    }
 
-  if (record.attempts >= 5) {
-    await this.passwordResetModel.deleteOne({ email: cleanEmail });
-    throw new BadRequestException(
-      'Bạn đã nhập sai OTP quá số lần cho phép. Vui lòng yêu cầu mã mới.',
-    );
-  }
+    const secret = process.env.PASSWORD_RESET_SECRET;
 
-  const secret = process.env.PASSWORD_RESET_SECRET;
+    if (!secret || secret.length < 32) {
+      throw new InternalServerErrorException(
+        'Password reset is not configured',
+      );
+    }
 
-  if (!secret || secret.length < 32) {
-    throw new InternalServerErrorException(
-      'Password reset is not configured',
-    );
-  }
+    const submittedHash = createHmac('sha256', secret)
+      .update(`${cleanEmail}:${otp}`)
+      .digest('hex');
 
-  const submittedHash = createHmac('sha256', secret)
-    .update(`${cleanEmail}:${otp}`)
-    .digest('hex');
+    const expected = Buffer.from(record.otpHash, 'hex');
+    const submitted = Buffer.from(submittedHash, 'hex');
 
-  const expected = Buffer.from(record.otpHash, 'hex');
-  const submitted = Buffer.from(submittedHash, 'hex');
+    const isValid =
+      expected.length === submitted.length &&
+      timingSafeEqual(expected, submitted);
 
-  const isValid =
-    expected.length === submitted.length &&
-    timingSafeEqual(expected, submitted);
+    if (!isValid) {
+      await this.passwordResetModel.updateOne(
+        { _id: record._id },
+        { $inc: { attempts: 1 } },
+      );
 
-  if (!isValid) {
+      throw new BadRequestException('Mã OTP không chính xác');
+    }
+
+    const resetToken = randomBytes(32).toString('hex');
+    const resetTokenExpiresAt = new Date(Date.now() + 15 * 60_000);
+
+    const resetTokenHash = createHmac('sha256', secret)
+      .update(`${cleanEmail}:${resetToken}`)
+      .digest('hex');
+
     await this.passwordResetModel.updateOne(
       { _id: record._id },
-      { $inc: { attempts: 1 } },
-    );
-
-    throw new BadRequestException('Mã OTP không chính xác');
-  }
-
-  const resetToken = randomBytes(32).toString('hex');
-
-  const resetTokenHash = createHmac('sha256', secret)
-    .update(`${cleanEmail}:${resetToken}`)
-    .digest('hex');
-
-  await this.passwordResetModel.updateOne(
-    { _id: record._id },
-    {
-      $set: {
-        verified: true,
-        resetTokenHash,
-        resetTokenExpiresAt: new Date(Date.now() + 10 * 60_000),
+      {
+        $set: {
+          verified: true,
+          resetTokenHash,
+          resetTokenExpiresAt,
+          expiresAt: resetTokenExpiresAt,
+        },
       },
-    },
-  );
-
-  return {
-    message: 'Xác minh OTP thành công',
-    resetToken,
-  };
-}
-async resetPassword(
-  email: string,
-  resetToken: string,
-  newPassword: string,
-): Promise<{ message: string }> {
-  const cleanEmail = (email || '').trim().toLowerCase();
-
-  if (!cleanEmail || !resetToken || !newPassword) {
-    throw new BadRequestException('Vui lòng nhập đầy đủ thông tin');
-  }
-
-  if (newPassword.length < 8) {
-    throw new BadRequestException(
-      'Mật khẩu mới phải có ít nhất 8 ký tự',
     );
+
+    return {
+      message: 'Xác minh OTP thành công',
+      resetToken,
+    };
   }
+  async resetPassword(
+    email: string,
+    resetToken: string,
+    newPassword: string,
+  ): Promise<{ message: string }> {
+    const cleanEmail = (email || '').trim().toLowerCase();
 
-  const secret = process.env.PASSWORD_RESET_SECRET;
+    if (!cleanEmail || !resetToken || !newPassword) {
+      throw new BadRequestException('Vui lòng nhập đầy đủ thông tin');
+    }
 
-  if (!secret || secret.length < 32) {
-    throw new InternalServerErrorException(
-      'Password reset is not configured',
-    );
+    const passCheck = validatePasswordSecurity(newPassword, cleanEmail);
+    if (!passCheck.valid) {
+      throw new BadRequestException(passCheck.message);
+    }
+
+    const secret = process.env.PASSWORD_RESET_SECRET;
+
+    if (!secret || secret.length < 32) {
+      throw new InternalServerErrorException(
+        'Password reset is not configured',
+      );
+    }
+
+    const record = await this.passwordResetModel.findOne({
+      email: cleanEmail,
+      verified: true,
+    });
+
+    if (
+      !record ||
+      !record.resetTokenHash ||
+      !record.resetTokenExpiresAt ||
+      new Date(record.resetTokenExpiresAt).getTime() <= Date.now()
+    ) {
+      throw new BadRequestException(
+        'Phiên đặt lại mật khẩu không hợp lệ hoặc đã hết hạn',
+      );
+    }
+
+    const submittedHash = createHmac('sha256', secret)
+      .update(`${cleanEmail}:${resetToken}`)
+      .digest('hex');
+
+    const expected = Buffer.from(record.resetTokenHash, 'hex');
+    const submitted = Buffer.from(submittedHash, 'hex');
+
+    const isValid =
+      expected.length === submitted.length &&
+      timingSafeEqual(expected, submitted);
+
+    if (!isValid) {
+      throw new BadRequestException('Phiên đặt lại mật khẩu không hợp lệ');
+    }
+
+    const user = await this.userModel.findOne({ email: cleanEmail });
+
+    if (!user) {
+      throw new BadRequestException('Không tìm thấy tài khoản');
+    }
+
+    const salt = await bcrypt.genSalt();
+    const hashedPassword = await this.hashPassword(newPassword, salt);
+
+    user.salt = salt;
+    user.password = hashedPassword;
+    await user.save();
+
+    await this.passwordResetModel.deleteOne({ _id: record._id });
+
+    return { message: 'Đặt lại mật khẩu thành công' };
   }
-
-  const record = await this.passwordResetModel.findOne({
-    email: cleanEmail,
-    verified: true,
-  });
-
-  if (
-    !record ||
-    !record.resetTokenHash ||
-    !record.resetTokenExpiresAt ||
-    new Date(record.resetTokenExpiresAt).getTime() <= Date.now()
-  ) {
-    throw new BadRequestException(
-      'Phiên đặt lại mật khẩu không hợp lệ hoặc đã hết hạn',
-    );
-  }
-
-  const submittedHash = createHmac('sha256', secret)
-    .update(`${cleanEmail}:${resetToken}`)
-    .digest('hex');
-
-  const expected = Buffer.from(record.resetTokenHash, 'hex');
-  const submitted = Buffer.from(submittedHash, 'hex');
-
-  const isValid =
-    expected.length === submitted.length &&
-    timingSafeEqual(expected, submitted);
-
-  if (!isValid) {
-    throw new BadRequestException('Phiên đặt lại mật khẩu không hợp lệ');
-  }
-
-  const user = await this.userModel.findOne({ email: cleanEmail });
-
-  if (!user) {
-    throw new BadRequestException('Không tìm thấy tài khoản');
-  }
-
-  const salt = await bcrypt.genSalt();
-  const hashedPassword = await this.hashPassword(newPassword, salt);
-
-  user.salt = salt;
-  user.password = hashedPassword;
-  await user.save();
-
-  await this.passwordResetModel.deleteOne({ _id: record._id });
-
-  return { message: 'Đặt lại mật khẩu thành công' };
-}
 
   async revokeUserToken(req: any): Promise<void> {
     try {

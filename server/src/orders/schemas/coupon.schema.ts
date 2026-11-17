@@ -23,6 +23,7 @@ export const CouponSchema = new Schema(
     endDate: { type: Date, default: null },
     usageLimit: { type: Number, default: 0 }, // 0 = unlimited
     usedCount: { type: Number, default: 0 },
+    quantity: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true },

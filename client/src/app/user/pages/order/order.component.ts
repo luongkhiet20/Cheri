@@ -78,6 +78,23 @@ export class OrderComponent implements OnInit, OnDestroy {
       })
     );
 
+    this.sub.add(
+      this.apiService.currentUser$.subscribe((user) => {
+        if (!user && this.currentOrder) {
+          const orderUserId = this.currentOrder.userId || this.currentOrder.user;
+          if (orderUserId) {
+            this.currentOrder = null;
+            this.errorMessage = 'Vui lòng đăng nhập để xem thông tin đơn hàng.';
+            if (typeof window !== 'undefined' && window.sessionStorage) {
+              window.sessionStorage.removeItem('cheri_last_order');
+              window.sessionStorage.removeItem('cheri_last_order_contact');
+            }
+            this.cdr.markForCheck();
+          }
+        }
+      })
+    );
+
     this.loadStoreContact();
 
     let lastOrderId: string | null = null;
@@ -132,10 +149,17 @@ export class OrderComponent implements OnInit, OnDestroy {
         const cachedRaw = window.sessionStorage.getItem('cheri_last_order');
         if (cachedRaw && !paymentReturn) {
           const cached = JSON.parse(cachedRaw);
+          const currentUser = this.selectors.user();
           if (cached && (!queryOrderId || cached.orderId === queryOrderId || cached._id === queryOrderId)) {
-            this.currentOrder = cached;
-            this.errorMessage = '';
-            hasSessionCache = true;
+            const cachedUserId = cached.userId || cached.user;
+            if (cachedUserId && (!currentUser || (currentUser._id && currentUser._id !== cachedUserId))) {
+              window.sessionStorage.removeItem('cheri_last_order');
+              window.sessionStorage.removeItem('cheri_last_order_contact');
+            } else {
+              this.currentOrder = cached;
+              this.errorMessage = '';
+              hasSessionCache = true;
+            }
           }
         }
       } catch (_) {}
@@ -450,10 +474,10 @@ export class OrderComponent implements OnInit, OnDestroy {
   }
 
   goToTracking(): void {
-    const code = this.currentOrder?.orderId || '';
+    const code = this.currentOrder?.orderId || this.currentOrder?._id || '';
     if (code) {
       this.router.navigate(['/' + this.currentLang + '/tracking'], {
-        queryParams: { code }
+        queryParams: { orderId: code, code }
       });
     } else {
       this.router.navigate(['/' + this.currentLang + '/tracking']);

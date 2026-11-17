@@ -288,17 +288,29 @@ function createTokensAndExchangeCode(jwt, user, isNewUser = false) {
 }
 
 /**
- * Verify Exchange Code and return user credentials
+ * Used exchange codes memory set to enforce single-use
+ */
+const usedOAuthCodes = new Set();
+
+/**
+ * Verify Exchange Code and return user credentials (Enforces Single-Use)
  */
 function verifyExchangeCode(jwt, code) {
   if (!code || typeof code !== 'string') {
     throw new Error('Mã trao đổi xác thực không hợp lệ');
+  }
+  if (usedOAuthCodes.has(code)) {
+    throw new Error('Mã xác thực đã được sử dụng hoặc không hợp lệ');
   }
   const jwtSecret = process.env.JWT_SECRET || 'dev_jwt_secret_eshop_123456789';
   const decoded = jwt.verify(code, jwtSecret);
   if (!decoded || decoded.type !== 'oauth_exchange' || !decoded.accessToken) {
     throw new Error('Mã trao đổi xác thực không hợp lệ');
   }
+  // Single-use: Mark code as consumed immediately
+  usedOAuthCodes.add(code);
+  setTimeout(() => usedOAuthCodes.delete(code), 15 * 60 * 1000);
+
   return {
     accessToken: decoded.accessToken,
     user: decoded.user,

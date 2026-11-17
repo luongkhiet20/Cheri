@@ -13,6 +13,8 @@ import {
   Res,
   UseInterceptors,
   UploadedFile,
+  BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -111,15 +113,38 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt'))
   @Put('/profile')
   async updateProfile(@GetUser() user: User, @Body() body: any) {
-    const allowed = ['name', 'fullName', 'phoneNumber', 'gender', 'dateOfBirth', 'address', 'avatar', 'description'];
-    const safeBody: Record<string, any> = {};
-    if (body && typeof body === 'object') {
-      for (const key of allowed) {
-        if (body[key] !== undefined) {
-          safeBody[key] = body[key];
-        }
+    return this.handleProfileUpdate(user, body);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Patch('/profile')
+  async patchProfile(@GetUser() user: User, @Body() body: any) {
+    return this.handleProfileUpdate(user, body);
+  }
+
+  private async handleProfileUpdate(user: User, body: any) {
+    if (!body || typeof body !== 'object') {
+      throw new BadRequestException('Dữ liệu cập nhật hồ sơ không hợp lệ');
+    }
+
+    // Bảo mật: Tuyệt đối không cho phép tự thay đổi quyền hoặc trạng thái tài khoản
+    const forbiddenFields = ['role', 'roles', 'status', 'isActive', 'isAdmin', 'permissions', 'isBlocked', 'salt', 'password'];
+    for (const field of forbiddenFields) {
+      if (body[field] !== undefined) {
+        throw new BadRequestException(
+          `Người dùng không được phép thay đổi trường "${field}" (quyền hoặc trạng thái tài khoản) qua API cập nhật hồ sơ.`,
+        );
       }
     }
+
+    const allowed = ['name', 'fullName', 'phoneNumber', 'gender', 'dateOfBirth', 'address', 'avatar', 'description'];
+    const safeBody: Record<string, any> = {};
+    for (const key of allowed) {
+      if (body[key] !== undefined) {
+        safeBody[key] = body[key];
+      }
+    }
+
     const updated = await this.authService.updateUser(user._id.toString(), safeBody);
     const roles = Array.isArray(updated.roles) ? [...updated.roles] : (updated as any).role ? [(updated as any).role] : ['user'];
     const rawAvatar = (updated as any).avatar || (updated as any).avatarUrl || ((updated as any).images?.[0]?.url || (updated as any).images?.[0]) || '';

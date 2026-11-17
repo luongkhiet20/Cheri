@@ -1,5 +1,5 @@
 function getTrackingIdentifierFromQuery(params) {
-  const value = params.orderId || params.id || params.trackingNumber;
+  const value = params.code || params.orderCode || params.orderId || params.id || params.trackingNumber;
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
@@ -10,7 +10,7 @@ function hasSensitiveTrackingQueryParams(params) {
 function findOwnedTrackingOrder(orders, identifier) {
   if (!Array.isArray(orders) || !identifier) return null;
   return orders.find((order) =>
-    order.orderId === identifier || order._id === identifier || order.trackingNumber === identifier
+    order.code === identifier || order.orderId === identifier || order._id === identifier || order.trackingNumber === identifier
   ) || null;
 }
 

@@ -52,6 +52,39 @@ export class PaymentService {
     return result.modifiedCount === 1;
   }
 
+  async supersedePendingTransactionsForOrder(
+    orderId: Types.ObjectId,
+    reason = 'SUPERSEDED_BY_RETRY',
+    excludeTransactionId?: Types.ObjectId,
+    session?: ClientSession,
+  ): Promise<number> {
+    const filter: Record<string, any> = {
+      orderId,
+      status: PaymentTransactionStatus.PENDING,
+    };
+    if (excludeTransactionId) {
+      filter._id = { $ne: excludeTransactionId };
+    }
+    const result = await this.transactionModel.updateMany(
+      filter,
+      {
+        $set: {
+          status: PaymentTransactionStatus.FAILED,
+          failureReason: reason.slice(0, 500),
+        },
+      },
+      { session },
+    );
+    return result.modifiedCount || 0;
+  }
+
+  async hasPaidTransactionForOrder(orderId: Types.ObjectId, session?: ClientSession): Promise<boolean> {
+    const existing = await this.transactionModel
+      .findOne({ orderId, status: PaymentTransactionStatus.PAID }, { _id: 1 }, { session })
+      .lean();
+    return Boolean(existing);
+  }
+
   async chargeCard(
     amount: number,
     currency: string,
@@ -118,6 +151,7 @@ export class PaymentService {
   async createVnpayPayment(
     input: CreateTransactionInput,
     clientIp: string,
+    maxExpireAt?: Date,
   ): Promise<{ transaction: any; paymentUrl: string }> {
     const tmnCode = process.env.VNPAY_TMN_CODE?.trim();
     const hashSecret = process.env.VNPAY_HASH_SECRET?.trim();
@@ -138,12 +172,23 @@ export class PaymentService {
       throw new BadRequestException('VNPAY yêu cầu số tiền VND nguyên dương.');
     }
 
+    const now = new Date();
+    if (maxExpireAt && maxExpireAt.getTime() <= now.getTime()) {
+      throw new BadRequestException('Đơn hàng đã hết thời gian thanh toán VNPay (30 phút).');
+    }
+
     const transaction = await this.createPending({
       ...input,
       provider: 'VNPAY',
     });
     const txnRef = String(transaction._id);
-    const createdAt = new Date();
+    const createdAt = transaction.createdAt ? new Date(transaction.createdAt) : now;
+    const defaultUrlExpireMs = createdAt.getTime() + 15 * 60 * 1000;
+    const finalExpireMs = maxExpireAt
+      ? Math.min(defaultUrlExpireMs, maxExpireAt.getTime())
+      : defaultUrlExpireMs;
+    const expireDate = new Date(Math.max(createdAt.getTime() + 1000, finalExpireMs));
+
     const params: Record<string, string> = {
       vnp_Version: '2.1.0',
       vnp_Command: 'pay',
@@ -157,7 +202,7 @@ export class PaymentService {
       vnp_ReturnUrl: returnUrl,
       vnp_IpAddr: this.normalizeClientIp(clientIp),
       vnp_CreateDate: this.formatVnpayDate(createdAt),
-      vnp_ExpireDate: this.formatVnpayDate(new Date(createdAt.getTime() + 15 * 60 * 1000)),
+      vnp_ExpireDate: this.formatVnpayDate(expireDate),
     };
 
     const query = this.buildVnpayQuery(params);
@@ -211,6 +256,13 @@ export class PaymentService {
       status: PaymentTransactionStatus.PENDING,
       createdAt: { $lte: before, $gte: after },
     }).sort({ createdAt: 1 }).limit(10).lean();
+  }
+
+  async getVnpayTransactionsForOrder(orderId: Types.ObjectId, session?: ClientSession): Promise<any[]> {
+    return this.transactionModel
+      .find({ orderId, provider: 'VNPAY' }, null, { session })
+      .sort({ createdAt: -1 })
+      .lean();
   }
 
   async queryVnpayTransaction(transaction: any): Promise<Record<string, string>> {
@@ -293,6 +345,20 @@ export class PaymentService {
     const pad = (value: number) => String(value).padStart(2, '0');
     return `${vietnamTime.getUTCFullYear()}${pad(vietnamTime.getUTCMonth() + 1)}${pad(vietnamTime.getUTCDate())}` +
       `${pad(vietnamTime.getUTCHours())}${pad(vietnamTime.getUTCMinutes())}${pad(vietnamTime.getUTCSeconds())}`;
+  }
+
+  public parseVnpayDate(vnpPayDate?: string): Date | null {
+    const raw = String(vnpPayDate || '').trim();
+    if (!/^\d{14}$/.test(raw)) return null;
+    const yyyy = Number(raw.slice(0, 4));
+    const mm = Number(raw.slice(4, 6)) - 1;
+    const dd = Number(raw.slice(6, 8));
+    const hh = Number(raw.slice(8, 10));
+    const mi = Number(raw.slice(10, 12));
+    const ss = Number(raw.slice(12, 14));
+    const utcMs = Date.UTC(yyyy, mm, dd, hh, mi, ss) - 7 * 60 * 60 * 1000;
+    const parsed = new Date(utcMs);
+    return isNaN(parsed.getTime()) ? null : parsed;
   }
 
   private normalizeClientIp(value: string): string {

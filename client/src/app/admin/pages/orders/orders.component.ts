@@ -28,7 +28,7 @@ export class OrdersComponent implements OnInit {
     { key: 'total', label: 'Tổng tiền', type: 'currency', sortable: true, align: 'right' },
     { key: 'payment', label: 'Thanh toán', type: 'text', sortable: true },
     { key: 'status', label: 'Trạng thái', type: 'status', sortable: true },
-    { key: 'returnStatus', label: 'Trạng thái yêu cầu', type: 'status', sortable: true },
+    { key: 'returnStatus', label: 'Trạng thái trả hàng', type: 'status', sortable: true },
     { key: 'createdAt', label: 'Ngày đặt', type: 'date', sortable: true },
   ];
   actions: RowAction[] = [

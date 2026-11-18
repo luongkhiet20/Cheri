@@ -101,6 +101,56 @@
 
       <div class="order-card-divider"></div>
 
+      <!-- 2.5. VNPay Pending Payment Countdown & Retry Banner -->
+      <div class="vnpay-pending-payment-box"
+        *ngIf="shouldShowVnpayPaymentBox(order)"
+        [class.is-warning]="isCountdownWarning(order) && !isCountdownCritical(order) && !isVnpayCountdownExpired(order)"
+        [class.is-critical]="isCountdownCritical(order) && !isVnpayCountdownExpired(order)"
+        [class.is-expired]="isVnpayCountdownExpired(order)">
+        <div class="vnpay-payment-main">
+          <div class="vnpay-payment-info">
+            <div class="vnpay-payment-status-row">
+              <span class="vnpay-awaiting-badge">Chờ thanh toán</span>
+              <span class="vnpay-method-tag">VNPay</span>
+            </div>
+            <div class="vnpay-reminder-text" *ngIf="!isVnpayCountdownExpired(order)">
+              Vui lòng hoàn tất thanh toán trước thời hạn để hệ thống giữ đơn hàng của bạn.
+            </div>
+            <div class="vnpay-expired-notice" *ngIf="isVnpayCountdownExpired(order)">
+              Đã hết thời gian thanh toán. Hệ thống đang cập nhật trạng thái hủy đơn hàng.
+            </div>
+            <div class="vnpay-retry-error" *ngIf="getRetryError(order)">
+              {{ getRetryError(order) }}
+            </div>
+          </div>
+
+          <div class="vnpay-payment-actions">
+            <div class="vnpay-countdown-group" *ngIf="!isVnpayCountdownExpired(order)">
+              <span class="vnpay-countdown-label">Thời gian thanh toán còn lại</span>
+              <span class="vnpay-countdown-timer"
+                [class.timer-warning]="isCountdownWarning(order) && !isCountdownCritical(order)"
+                [class.timer-critical]="isCountdownCritical(order)">
+                {{ formatRemainingCountdown(order) }}
+              </span>
+            </div>
+
+            <div class="vnpay-countdown-group is-expired-group" *ngIf="isVnpayCountdownExpired(order)">
+              <span class="vnpay-countdown-label">Thời gian thanh toán còn lại</span>
+              <span class="vnpay-countdown-timer timer-expired">00:00</span>
+            </div>
+
+            <button type="button"
+              class="btn-vnpay-retry"
+              *ngIf="canShowVnpayRetryAction(order)"
+              [disabled]="isRetryingVnpay(order) || getRemainingPaymentMs(order) <= 0"
+              (click)="onRetryVnpayPayment(order)">
+              <span class="retry-spinner" *ngIf="isRetryingVnpay(order)"></span>
+              <span>{{ isRetryingVnpay(order) ? 'Đang chuyển hướng VNPay...' : 'Thanh toán tiếp qua VNPay' }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- 3. Summary & Action Buttons Row (No icons) -->
       <div class="order-action-summary-row">
         <div class="summary-left-info">

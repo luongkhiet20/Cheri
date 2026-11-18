@@ -555,6 +555,23 @@ export class ApiService {
     );
   }
 
+  retryVnpayPayment(orderId: string): Observable<any> {
+    const retryUrl = `${this.apiUrl}/api/orders/${encodeURIComponent(orderId)}/payment/vnpay/retry`;
+    return this.http.post(retryUrl, {}, this.getRequestOptions()).pipe(
+      map((response: any) => response),
+      catchError((error: any) =>
+        of({
+          error:
+            error?.error?.message ||
+            (typeof error?.error === 'string' ? error.error : '') ||
+            error?.message ||
+            'Không thể tạo liên kết thanh toán tiếp VNPay. Vui lòng thử lại.',
+          statusCode: error?.status || error?.error?.statusCode || 400,
+        }),
+      ),
+    );
+  }
+
 
   trackOrder(payload: { trackingCode?: string; authContact?: string; orderId?: string; trackingNumber?: string; email?: string; phone?: string }) {
     const trackUrl = this.apiUrl + '/api/orders/track';

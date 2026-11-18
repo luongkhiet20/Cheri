@@ -19,14 +19,18 @@ import { prepareCart } from '../shared/utils/prepareUtils';
 import { Cart } from '../cart/utils/cart';
 import { PaymentService } from './payment.service';
 
-// Link VNPAY hết hạn sau 15 phút; chờ thêm 15 phút trước khi coi là khách bỏ dở.
+// Link VNPAY hết hạn sau 15 phút; hạn cuối thanh toán của toàn bộ Order là 30 phút kể từ order.createdAt.
 const VNPAY_ABANDON_AFTER_MS = 30 * 60 * 1000;
+const VNPAY_ORDER_PAYMENT_DEADLINE_MS = 30 * 60 * 1000;
+const VNPAY_TIMEOUT_CHECK_INTERVAL_MS = 60 * 1000;
 
 @Injectable()
 export class OrdersService implements OnModuleInit, OnModuleDestroy {
   private logger = new Logger('OrdersService');
   private vnpayReconcileTimer?: NodeJS.Timeout;
   private vnpayReconcileRunning = false;
+  private vnpayExpirationTimer?: NodeJS.Timeout;
+  private vnpayExpirationRunning = false;
 
   private addressCache = {
     provinces: null as any[] | null,
@@ -53,6 +57,20 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
   ) { }
 
   onModuleInit(): void {
+    // Scheduler tự động kiểm tra và hủy các đơn hàng VNPay quá hạn thanh toán 30 phút (chạy mỗi 1 phút)
+    this.vnpayExpirationTimer = setInterval(async () => {
+      if (this.vnpayExpirationRunning) return;
+      this.vnpayExpirationRunning = true;
+      try {
+        await this.cancelExpiredVnpayOrders();
+      } catch (error) {
+        this.logger.error(`VNPAY expired order check failed: ${error.message}`);
+      } finally {
+        this.vnpayExpirationRunning = false;
+      }
+    }, VNPAY_TIMEOUT_CHECK_INTERVAL_MS);
+    this.vnpayExpirationTimer.unref();
+
     if (process.env.VNPAY_RECONCILE_ENABLED !== 'true') return;
     this.vnpayReconcileTimer = setInterval(async () => {
       if (this.vnpayReconcileRunning) return;
@@ -70,6 +88,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
 
   onModuleDestroy(): void {
     if (this.vnpayReconcileTimer) clearInterval(this.vnpayReconcileTimer);
+    if (this.vnpayExpirationTimer) clearInterval(this.vnpayExpirationTimer);
   }
 
   /**
@@ -318,6 +337,13 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
 
   // ─── Lấy orders của user ──────────────────────────────────────────────────
   async getOrders(user: User): Promise<Order[]> {
+    // Trước khi trả danh sách đơn hàng cho user, xử lý nhanh các đơn VNPay đã quá hạn 30 phút (nếu có)
+    try {
+      await this.cancelExpiredVnpayOrders();
+    } catch (err) {
+      this.logger.warn(`Auto-check expired VNPay orders on getOrders warning: ${err.message}`);
+    }
+
     const userConditions: any[] = [{ _user: user._id }, { userId: user._id }];
     if (isValidObjectId(user._id)) {
       const objId = new Types.ObjectId(user._id);
@@ -350,7 +376,64 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       }
     } catch (_) { }
 
-    return orders;
+    return orders.map((ord) => this.enrichOrderPaymentInfo(ord));
+  }
+
+  public getOrderCreatedAtDate(order: any): Date | null {
+    if (!order) return null;
+    const rawCreated = order.createdAt || order.dateAdded;
+    if (rawCreated) {
+      const d = new Date(rawCreated);
+      if (!isNaN(d.getTime())) return d;
+    }
+    if (order._id && typeof order._id.getTimestamp === 'function') {
+      const d = order._id.getTimestamp();
+      if (d && !isNaN(d.getTime())) return d;
+    }
+    if (order._id && isValidObjectId(String(order._id))) {
+      const d = new Types.ObjectId(String(order._id)).getTimestamp();
+      if (d && !isNaN(d.getTime())) return d;
+    }
+    return null;
+  }
+
+  public getOrderPaymentDeadline(order: any): Date | null {
+    const createdDate = this.getOrderCreatedAtDate(order);
+    if (!createdDate) return null;
+    return new Date(createdDate.getTime() + VNPAY_ORDER_PAYMENT_DEADLINE_MS);
+  }
+
+  private enrichOrderPaymentInfo(order: any): any {
+    if (!order) return order;
+    const plain = order.toObject ? order.toObject() : order;
+    const rawStatus = String(plain.status || '').trim().toUpperCase();
+    const methodCode = String(
+      plain.payment?.method ||
+      plain.paymentMethodSnapshot?.code ||
+      plain.payment?.provider ||
+      plain.paymentProvider ||
+      plain.paymentMethod ||
+      ''
+    ).trim().toUpperCase();
+    const rootPs = String(plain.paymentStatus || '').trim().toUpperCase();
+    const nestedPs = String(plain.payment?.status || '').trim().toUpperCase();
+    const isPaidOrRefunded = [
+      PaymentStatus.PAID,
+      PaymentStatus.REFUNDED,
+      PaymentStatus.PARTIALLY_REFUNDED,
+    ].some((st) => rootPs === st || nestedPs === st);
+    const isVnpay = methodCode === 'VNPAY' || methodCode === 'VNPAY-QR';
+    const deadlineDate = isVnpay ? this.getOrderPaymentDeadline(plain) : null;
+    const nowMs = Date.now();
+    const isNotExpired = Boolean(deadlineDate && deadlineDate.getTime() > nowMs);
+
+    plain.paymentDeadlineAt = deadlineDate ? deadlineDate.toISOString() : null;
+    plain.canRetryVnpayPayment =
+      rawStatus === OrderStatus.PENDING &&
+      isVnpay &&
+      !isPaidOrRefunded &&
+      isNotExpired;
+    return plain;
   }
 
   // ─── Hủy đơn hàng (User / Khách hàng sở hữu đơn hàng) ──────────────────────
@@ -461,6 +544,14 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       await this.couponModel.updateOne(
         { code: order.couponCode, usedCount: { $gt: 0 } },
         { $inc: { usedCount: -1 } },
+      );
+    }
+
+    // Nếu đơn hàng sử dụng VNPAY và đang chờ thanh toán, vô hiệu hóa các giao dịch PENDING để không còn thanh toán được sau khi hủy
+    if (methodCode === 'VNPAY' || methodCode === 'VNPAY-QR') {
+      await this.paymentService.supersedePendingTransactionsForOrder(
+        new Types.ObjectId(String(order._id)),
+        'ORDER_CANCELLED',
       );
     }
 
@@ -1395,7 +1486,8 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
   async getOrderById(id: string): Promise<Order> {
     const query = isValidObjectId(id) ? { $or: [{ orderId: id }, { _id: id }] } : { orderId: id };
     const order = await this.orderModel.findOne(query);
-    return order;
+    if (!order) return null;
+    return this.enrichOrderPaymentInfo(order);
   }
 
   // ─── Cập nhật order (admin) - Whitelist & Bảo vệ dữ liệu nhạy cảm ───────────
@@ -1612,6 +1704,15 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
         await this.couponModel.updateOne(
           { code: order.couponCode, usedCount: { $gt: 0 } },
           { $inc: { usedCount: -1 } },
+        );
+      }
+      const cancelMethodCode = String(
+        order.payment?.method || order.paymentMethodSnapshot?.code || order.payment?.provider || ''
+      ).trim().toUpperCase();
+      if (cancelMethodCode === 'VNPAY' || cancelMethodCode === 'VNPAY-QR') {
+        await this.paymentService.supersedePendingTransactionsForOrder(
+          new Types.ObjectId(String(order._id)),
+          'ORDER_CANCELLED',
         );
       }
     }
@@ -1921,6 +2022,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       const newOrder = new this.orderModel(orderData);
       await newOrder.save();
 
+      const deadlineDate = this.getOrderPaymentDeadline(newOrder);
       const payment = await this.paymentService.createVnpayPayment(
         {
           orderId: new Types.ObjectId(String(newOrder._id)),
@@ -1931,6 +2033,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
           currency: 'VND',
         },
         clientIp,
+        deadlineDate || undefined,
       );
 
       newOrder.transactionId = String(payment.transaction._id);
@@ -1945,18 +2048,218 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
 
       return {
         error: '',
-        result: newOrder,
+        result: this.enrichOrderPaymentInfo(newOrder),
         payment: {
           provider: 'VNPAY',
           status: PaymentStatus.PENDING,
           transactionId: String(payment.transaction._id),
           paymentUrl: payment.paymentUrl,
+          paymentDeadlineAt: deadlineDate ? deadlineDate.toISOString() : null,
         },
       };
     } catch (err) {
       this.logger.error(err.stack || err.message);
       return { error: err.message || 'VNPAY_PAYMENT_CREATION_FAILED', result: null };
     }
+  }
+
+  async retryVnpayPayment(
+    id: string,
+    user: User,
+    clientIp = '127.0.0.1',
+  ): Promise<{
+    success: boolean;
+    error: string;
+    message: string;
+    orderId: string;
+    transactionId: string;
+    paymentUrl: string;
+    paymentDeadlineAt?: string | null;
+    result: Order;
+    payment: {
+      provider: string;
+      method: string;
+      status: string;
+      transactionId: string;
+      amount: number;
+      currency: string;
+      paymentUrl: string;
+      paymentDeadlineAt?: string | null;
+    };
+  }> {
+    const trimmedId = String(id || '').trim();
+    if (!trimmedId) {
+      throw new BadRequestException('Mã đơn hàng không hợp lệ.');
+    }
+
+    const idQuery = isValidObjectId(trimmedId)
+      ? { $or: [{ orderId: trimmedId }, { _id: new Types.ObjectId(trimmedId) }] }
+      : { orderId: trimmedId };
+
+    const order: any = await this.orderModel.findOne(idQuery);
+    if (!order) {
+      throw new NotFoundException('Không tìm thấy đơn hàng.');
+    }
+
+    // 1. Kiểm tra quyền sở hữu đơn hàng
+    const orderUserId = (order.userId || order._user)?.toString();
+    const currentUserId = user?._id?.toString();
+    const orderEmail = String(order.customerEmail || order.customer?.email || '').toLowerCase().trim();
+    const userEmail = String(user?.email || '').toLowerCase().trim();
+
+    const isOwner =
+      (Boolean(orderUserId) && Boolean(currentUserId) && orderUserId === currentUserId) ||
+      (Boolean(orderEmail) && Boolean(userEmail) && orderEmail === userEmail);
+
+    if (!isOwner) {
+      throw new ForbiddenException('Bạn không có quyền thực hiện thanh toán cho đơn hàng này.');
+    }
+
+    // 2. Kiểm tra trạng thái đơn hàng (chưa bị hủy, phải đang ở PENDING)
+    const rawOrderStatus = String(order.status || '').trim().toUpperCase();
+    if (rawOrderStatus === OrderStatus.CANCELLED) {
+      throw new BadRequestException('Đơn hàng đã bị hủy, không thể tiếp tục thanh toán.');
+    }
+    if (rawOrderStatus !== OrderStatus.PENDING) {
+      throw new BadRequestException(
+        `Đơn hàng hiện ở trạng thái "${order.status}", không còn đủ điều kiện thanh toán tiếp.`,
+      );
+    }
+
+    // 3. Kiểm tra phương thức thanh toán phải là VNPAY
+    const methodCode = String(
+      order.payment?.method ||
+      order.paymentMethodSnapshot?.code ||
+      order.payment?.provider ||
+      order.paymentProvider ||
+      ''
+    ).trim().toUpperCase();
+
+    if (methodCode !== 'VNPAY' && methodCode !== 'VNPAY-QR') {
+      throw new BadRequestException(
+        'Chức năng thanh toán tiếp VNPay chỉ áp dụng cho đơn hàng sử dụng phương thức thanh toán VNPay.',
+      );
+    }
+
+    // 4. Kiểm tra đơn hàng chưa được thanh toán thành công
+    const rootPs = String(order.paymentStatus || '').trim().toUpperCase();
+    const nestedPs = String(order.payment?.status || '').trim().toUpperCase();
+    const paidStatuses = [
+      PaymentStatus.PAID,
+      PaymentStatus.REFUNDED,
+      PaymentStatus.PARTIALLY_REFUNDED,
+    ] as string[];
+
+    if (paidStatuses.includes(rootPs) || paidStatuses.includes(nestedPs)) {
+      throw new BadRequestException('Đơn hàng này đã được thanh toán thành công, không thể thanh toán lại.');
+    }
+
+    const orderObjectId = new Types.ObjectId(String(order._id));
+    const alreadyPaidInTx = await this.paymentService.hasPaidTransactionForOrder(orderObjectId);
+    if (alreadyPaidInTx) {
+      throw new BadRequestException('Đơn hàng này đã có giao dịch thanh toán thành công.');
+    }
+
+    // 4.5. Kiểm tra thời hạn thanh toán 30 phút (paymentDeadlineAt = order.createdAt + 30 phút)
+    const deadlineDate = this.getOrderPaymentDeadline(order);
+    if (!deadlineDate || Date.now() >= deadlineDate.getTime()) {
+      // Nếu đơn đã quá hạn 30 phút mà chưa được scheduler xử lý kịp, xử lý tự động hủy ngay
+      await this.processSingleExpiredVnpayOrder(order).catch(() => {});
+      throw new BadRequestException(
+        'Đơn hàng đã hết thời gian thanh toán VNPay (quá 30 phút kể từ khi tạo đơn). Vui lòng đặt lại đơn hàng mới.',
+      );
+    }
+
+    // 5. Lấy và xác minh số tiền thanh toán từ dữ liệu đơn hàng đã lưu (không nhận từ client)
+    const totalAmount = Number(order.totalAmount);
+    const currency = String(order.currency || 'VND').trim().toUpperCase();
+    if (currency !== 'VND' || !Number.isSafeInteger(totalAmount) || totalAmount <= 0) {
+      throw new BadRequestException('Tổng tiền đơn hàng không hợp lệ để tạo giao dịch VNPay.');
+    }
+
+    const previousActiveTxId = String(order.payment?.transactionId || order.transactionId || '').trim();
+
+    // 6. Tạo PaymentTransaction mới và URL VNPay mới TRƯỚC khi đóng giao dịch cũ.
+    //    Thời gian hết hạn của URL mới bị giới hạn bởi min(transaction.createdAt + 15 phút, order.createdAt + 30 phút).
+    const payment = await this.paymentService.createVnpayPayment(
+      {
+        orderId: orderObjectId,
+        orderCode: order.orderId,
+        provider: 'VNPAY',
+        method: 'VNPAY',
+        amount: totalAmount,
+        currency: 'VND',
+      },
+      clientIp,
+      deadlineDate,
+    );
+
+    const newTxObjectId = new Types.ObjectId(String(payment.transaction._id));
+    const newTxIdStr = String(newTxObjectId);
+
+    // 7. Cập nhật thông tin giao dịch hiện hành trên Order một cách NGUYÊN TỬ (CAS trên previousActiveTxId)
+    //    Chống race condition khi 2 request retry được gửi đồng thời gần deadline.
+    const casFilter: any = {
+      _id: orderObjectId,
+      status: OrderStatus.PENDING,
+      paymentStatus: { $nin: [PaymentStatus.PAID, PaymentStatus.REFUNDED, PaymentStatus.PARTIALLY_REFUNDED] },
+      'payment.status': { $nin: [PaymentStatus.PAID, PaymentStatus.REFUNDED, PaymentStatus.PARTIALLY_REFUNDED] },
+    };
+    if (previousActiveTxId) {
+      casFilter.$or = [
+        { 'payment.transactionId': previousActiveTxId },
+        { transactionId: previousActiveTxId },
+      ];
+    }
+
+    const updatedOrder: any = await this.orderModel.findOneAndUpdate(
+      casFilter,
+      {
+        $set: {
+          transactionId: newTxIdStr,
+          paymentStatus: PaymentStatus.PENDING,
+          'payment.method': 'VNPAY',
+          'payment.provider': 'VNPAY',
+          'payment.status': PaymentStatus.PENDING,
+          'payment.transactionId': newTxIdStr,
+        },
+      },
+      { new: true },
+    );
+
+    if (!updatedOrder) {
+      await this.paymentService.markFailed(newTxObjectId, 'SUPERSEDED_BY_CONCURRENT_RETRY_OR_STATE_CHANGE');
+      throw new ConflictException('Đơn hàng đang có giao dịch thanh toán mới hơn hoặc trạng thái đã thay đổi. Vui lòng tải lại đơn hàng.');
+    }
+
+    // 8. Vô hiệu hóa các giao dịch PENDING cũ của đơn hàng (ngoại trừ giao dịch mới vừa CAS thành công)
+    await this.paymentService.supersedePendingTransactionsForOrder(
+      orderObjectId,
+      'SUPERSEDED_BY_RETRY',
+      newTxObjectId,
+    );
+
+    const enrichedResult = this.enrichOrderPaymentInfo(updatedOrder);
+    return {
+      success: true,
+      error: '',
+      message: 'Đã tạo liên kết thanh toán VNPay mới cho đơn hàng.',
+      orderId: updatedOrder.orderId,
+      transactionId: newTxIdStr,
+      paymentUrl: payment.paymentUrl,
+      paymentDeadlineAt: deadlineDate.toISOString(),
+      result: enrichedResult,
+      payment: {
+        provider: 'VNPAY',
+        method: 'VNPAY',
+        status: PaymentStatus.PENDING,
+        transactionId: newTxIdStr,
+        amount: totalAmount,
+        currency: 'VND',
+        paymentUrl: payment.paymentUrl,
+        paymentDeadlineAt: deadlineDate.toISOString(),
+      },
+    };
   }
 
   async handleVnpayResult(query: Record<string, string>): Promise<{
@@ -2036,11 +2339,229 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
         this.logger.warn(`VNPAY query failed for transaction ${transaction._id}: ${error.message}`);
       }
     }
+
+    // Đồng thời kiểm tra và tự động hủy các đơn hàng VNPay đã quá hạn 30 phút
+    try {
+      await this.cancelExpiredVnpayOrders();
+    } catch (error) {
+      this.logger.warn(`Expired VNPAY orders cleanup in reconcile failed: ${error.message}`);
+    }
+
     return summary;
   }
 
+  /**
+   * Tự động kiểm tra và hủy các đơn hàng VNPay đang ở trạng thái PENDING nhưng đã quá hạn 30 phút
+   * kể từ order.createdAt mà chưa hoàn tất thanh toán.
+   * Tìm trực tiếp trên bảng Order (bao gồm cả các đơn không còn PaymentTransaction PENDING).
+   */
+  async cancelExpiredVnpayOrders(): Promise<{
+    checked: number;
+    cancelled: number;
+    paidRecovered: number;
+    errors: number;
+  }> {
+    const summary = { checked: 0, cancelled: 0, paidRecovered: 0, errors: 0 };
+    const cutoffDate = new Date(Date.now() - VNPAY_ORDER_PAYMENT_DEADLINE_MS);
+    const paidStatuses = [
+      PaymentStatus.PAID,
+      PaymentStatus.REFUNDED,
+      PaymentStatus.PARTIALLY_REFUNDED,
+    ];
+
+    const expiredCandidates: any[] = await this.orderModel
+      .find({
+        status: OrderStatus.PENDING,
+        paymentStatus: { $nin: paidStatuses },
+        'payment.status': { $nin: paidStatuses },
+        $and: [
+          {
+            $or: [
+              { 'payment.method': { $in: ['VNPAY', 'VNPAY-QR'] } },
+              { 'paymentMethodSnapshot.code': { $in: ['VNPAY', 'VNPAY-QR'] } },
+              { 'payment.provider': { $in: ['VNPAY', 'VNPAY-QR'] } },
+              { paymentProvider: { $in: ['VNPAY', 'VNPAY-QR'] } },
+              { paymentMethod: { $in: ['VNPAY', 'VNPAY-QR'] } },
+            ],
+          },
+          {
+            $or: [
+              { createdAt: { $lte: cutoffDate } },
+              { createdAt: { $exists: false }, dateAdded: { $lte: cutoffDate } },
+            ],
+          },
+        ],
+      })
+      .sort({ createdAt: 1 })
+      .limit(50)
+      .lean();
+
+    for (const order of expiredCandidates) {
+      summary.checked++;
+      try {
+        const outcome = await this.processSingleExpiredVnpayOrder(order);
+        if (outcome === 'CANCELLED') summary.cancelled++;
+        else if (outcome === 'PAID') summary.paidRecovered++;
+      } catch (err) {
+        summary.errors++;
+        this.logger.error(`Failed to process expired VNPay order ${order?.orderId}: ${err.message}`);
+      }
+    }
+
+    return summary;
+  }
+
+  public async processSingleExpiredVnpayOrder(orderInput: any): Promise<'CANCELLED' | 'PAID' | 'SKIPPED'> {
+    if (!orderInput || !orderInput._id) return 'SKIPPED';
+    const orderObjectId = new Types.ObjectId(String(orderInput._id));
+    const order: any = await this.orderModel.findById(orderObjectId).lean();
+    if (!order) return 'SKIPPED';
+
+    const rawStatus = String(order.status || '').trim().toUpperCase();
+    if (rawStatus !== OrderStatus.PENDING) return 'SKIPPED';
+
+    const methodCode = String(
+      order.payment?.method ||
+      order.paymentMethodSnapshot?.code ||
+      order.payment?.provider ||
+      order.paymentProvider ||
+      order.paymentMethod ||
+      ''
+    ).trim().toUpperCase();
+    if (methodCode !== 'VNPAY' && methodCode !== 'VNPAY-QR') {
+      return 'SKIPPED';
+    }
+
+    const paidStatuses = [
+      PaymentStatus.PAID,
+      PaymentStatus.REFUNDED,
+      PaymentStatus.PARTIALLY_REFUNDED,
+    ] as string[];
+    const rootPs = String(order.paymentStatus || '').trim().toUpperCase();
+    const nestedPs = String(order.payment?.status || '').trim().toUpperCase();
+    if (paidStatuses.includes(rootPs) || paidStatuses.includes(nestedPs)) {
+      return 'SKIPPED';
+    }
+
+    const deadlineDate = this.getOrderPaymentDeadline(order);
+    if (!deadlineDate || Date.now() < deadlineDate.getTime()) {
+      return 'SKIPPED';
+    }
+
+    // 1. Kiểm tra trong DB xem đã có giao dịch PAID nào của đơn hàng này chưa
+    const txs = await this.paymentService.getVnpayTransactionsForOrder(orderObjectId);
+    const paidTx = txs.find((t: any) => t.status === 'PAID');
+    if (paidTx) {
+      return 'PAID';
+    }
+
+    // 2. Với các giao dịch còn PENDING (chưa rõ kết quả), gọi QueryDr tới VNPay (nếu môi trường hỗ trợ) để xác minh trước khi hủy
+    const pendingTxs = txs.filter((t: any) => t.status === 'PENDING');
+    for (const pTx of pendingTxs) {
+      try {
+        const queryResult = await this.paymentService.queryVnpayTransaction(pTx);
+        if (
+          queryResult.vnp_ResponseCode === '00' &&
+          queryResult.vnp_TransactionType === '01' &&
+          queryResult.vnp_TransactionStatus === '00'
+        ) {
+          const committed = await this.commitVerifiedVnpayResult({
+            ...queryResult,
+            vnp_TxnRef: String(pTx._id),
+            vnp_Amount: queryResult.vnp_Amount || String(Number(pTx.amount) * 100),
+            vnp_ResponseCode: '00',
+            vnp_TransactionStatus: '00',
+          });
+          if (committed.success) {
+            return 'PAID';
+          }
+        }
+      } catch (queryErr) {
+        // Trong môi trường sandbox/local hoặc khi VNPay querydr không phản hồi, ghi nhận warning và tiếp tục đóng đơn quá hạn
+        this.logger.debug(
+          `QueryDr verification before timeout cancel for tx ${pTx._id} skipped/failed: ${queryErr.message}`,
+        );
+      }
+    }
+
+    // 3. Kiểm tra lại lần cuối trước khi hủy nguyên tử
+    const alreadyPaidNow = await this.paymentService.hasPaidTransactionForOrder(orderObjectId);
+    if (alreadyPaidNow) {
+      return 'PAID';
+    }
+
+    // 4. Đóng toàn bộ các PaymentTransaction còn PENDING của Order thành FAILED với failureReason = 'PAYMENT_TIMEOUT'
+    await this.paymentService.supersedePendingTransactionsForOrder(
+      orderObjectId,
+      'PAYMENT_TIMEOUT',
+    );
+
+    const cancelledAt = new Date();
+    const cancelReasonText = 'Quá hạn thanh toán VNPay (30 phút)';
+    const cancelNote = `[Tự động hủy]: ${cancelReasonText}`;
+
+    // 5. Cập nhật nguyên tử (Atomic Conditional Update) chuyển Order từ PENDING sang CANCELLED
+    const cancelledOrder: any = await this.orderModel.findOneAndUpdate(
+      {
+        _id: orderObjectId,
+        status: OrderStatus.PENDING,
+        paymentStatus: { $nin: paidStatuses },
+        'payment.status': { $nin: paidStatuses },
+      },
+      {
+        $set: {
+          status: OrderStatus.CANCELLED,
+          cancelReason: cancelReasonText,
+          cancelReasonDetail: 'Hệ thống tự động hủy đơn do quá thời hạn thanh toán 30 phút.',
+          cancelledAt,
+          cancelledBy: null,
+          paymentStatus: PaymentStatus.FAILED,
+          'payment.status': PaymentStatus.FAILED,
+          'payment.failureReason': 'PAYMENT_TIMEOUT',
+          notes: order.notes ? `${order.notes}\n${cancelNote}` : cancelNote,
+        },
+        $push: {
+          statusHistory: {
+            status: OrderStatus.CANCELLED,
+            updatedAt: cancelledAt,
+            updatedBy: null,
+            note: cancelReasonText,
+          },
+        },
+      },
+      { new: true },
+    );
+
+    if (!cancelledOrder) {
+      return 'SKIPPED';
+    }
+
+    // 6. Giải phóng tồn kho giữ chỗ (nếu có) một cách idempotent
+    try {
+      const nativeDb = this.getNativeDb();
+      const plainOrder = cancelledOrder.toObject ? cancelledOrder.toObject() : cancelledOrder;
+      const releaseRes = await releaseOrderInventory(nativeDb, plainOrder);
+      if (releaseRes?.updateDoc?.inventoryReleasedAt || releaseRes?.historyEntry) {
+        const invUpdate: any = {};
+        if (releaseRes.updateDoc?.inventoryReleasedAt) {
+          invUpdate.$set = { inventoryReleasedAt: releaseRes.updateDoc.inventoryReleasedAt };
+        }
+        if (releaseRes.historyEntry) {
+          invUpdate.$push = { inventoryAdjustmentHistory: releaseRes.historyEntry };
+        }
+        if (Object.keys(invUpdate).length > 0) {
+          await this.orderModel.updateOne({ _id: orderObjectId }, invUpdate);
+        }
+      }
+    } catch (invErr) {
+      this.logger.warn(`Inventory release check on expired VNPay order ${order.orderId}: ${invErr.message}`);
+    }
+
+    return 'CANCELLED';
+  }
+
   private async applyVnpayResult(query: Record<string, string>, session: ClientSession) {
-    const txnRef = String(query.vnp_TxnRef || '');
+    const txnRef = String(query.vnp_TxnRef || '').trim();
     const transaction: any = await this.paymentService.getTransactionByProviderId(txnRef, session);
     if (!transaction) {
       return { success: false, rspCode: '01', message: 'Không tìm thấy giao dịch VNPAY.' };
@@ -2056,38 +2577,232 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       return { success: false, rspCode: '01', message: 'Không tìm thấy đơn hàng của giao dịch VNPAY.' };
     }
 
+    const rootPs = String(order.paymentStatus || '').trim().toUpperCase();
+    const nestedPs = String(order.payment?.status || '').trim().toUpperCase();
+    const paidStatuses = [
+      PaymentStatus.PAID,
+      PaymentStatus.REFUNDED,
+      PaymentStatus.PARTIALLY_REFUNDED,
+    ] as string[];
+    const isOrderAlreadyPaid = paidStatuses.includes(rootPs) || paidStatuses.includes(nestedPs);
+    const isOrderCancelled = String(order.status || '').trim().toUpperCase() === OrderStatus.CANCELLED;
+    const activeOrderTxId = String(order.payment?.transactionId || order.transactionId || '').trim();
+    const isSupersededTransaction = Boolean(activeOrderTxId && activeOrderTxId !== txnRef);
+    const responseCode = String(query.vnp_ResponseCode || '');
+    const transactionStatus = query.vnp_TransactionStatus || responseCode;
+    const isVnpaySuccessCallback = responseCode === '00' && transactionStatus === '00';
+
+    // 1. Nếu giao dịch này đã PAID trước đó -> trả về idempotent
     if (transaction.status === 'PAID') {
       return { success: true, order, rspCode: '02', message: 'Thanh toán VNPAY đã được ghi nhận.' };
     }
-    if (transaction.status !== 'PENDING') {
-      return { success: false, order, rspCode: '02', message: 'Giao dịch VNPAY đã kết thúc trước đó.' };
+
+    // 2. Nếu đơn hàng đã PAID qua một giao dịch khác (ví dụ T2 đã thanh toán thành công trước đó)
+    //    -> Đóng giao dịch cũ T1 (nếu còn PENDING) và tuyệt đối không ghi đè trạng thái Order hay trừ kho lần 2.
+    if (isOrderAlreadyPaid) {
+      if (transaction.status === 'PENDING') {
+        await this.paymentService.markFailed(transaction._id, 'ORDER_ALREADY_PAID', session);
+      }
+      return {
+        success: true,
+        order,
+        rspCode: '02',
+        message: 'Đơn hàng đã được thanh toán thành công trước đó.',
+      };
     }
 
-    const responseCode = String(query.vnp_ResponseCode || '');
-    if (responseCode !== '00' || query.vnp_TransactionStatus !== '00') {
+    // 3. Nếu giao dịch này đã bị thay thế bởi một giao dịch retry mới hơn (activeOrderTxId !== txnRef)
+    //    -> Callback cũ đã bị supersede tuyệt đối không được thực hiện side effect thanh toán.
+    if (isSupersededTransaction || transaction.failureReason === 'SUPERSEDED_BY_RETRY') {
+      if (transaction.status === 'PENDING') {
+        await this.paymentService.markFailed(transaction._id, 'SUPERSEDED_BY_RETRY', session);
+      }
+      return {
+        success: false,
+        order,
+        rspCode: '02',
+        message: 'Giao dịch VNPAY cũ đã được thay thế bởi giao dịch mới.',
+      };
+    }
+
+    // 4. Xử lý khi VNPay trả về kết quả thất bại (responseCode !== '00')
+    if (!isVnpaySuccessCallback) {
+      if (isOrderCancelled) {
+        if (transaction.status === 'PENDING') {
+          await this.paymentService.markFailed(transaction._id, 'ORDER_CANCELLED', session);
+        }
+        return {
+          success: false,
+          order,
+          rspCode: '02',
+          message: 'Đơn hàng đã bị hủy trước đó.',
+        };
+      }
+
+      if (transaction.status !== 'PENDING') {
+        return { success: false, order, rspCode: '02', message: 'Giao dịch VNPAY đã kết thúc trước đó.' };
+      }
+
       await this.paymentService.markFailed(
         transaction._id,
         String(query.vnp_TransactionNo || `VNPAY_${responseCode}`),
         session,
       );
-      order.paymentStatus = PaymentStatus.FAILED;
-      order.payment = {
-        ...(order.payment || {}),
-        method: 'VNPAY',
-        provider: 'VNPAY',
-        status: PaymentStatus.FAILED,
-        transactionId: txnRef,
+
+      // Cập nhật có điều kiện: chỉ chuyển Order sang FAILED nếu Order chưa PAID, chưa CANCELLED và vẫn đang gắn với txnRef này
+      const failedOrder = await this.orderModel.findOneAndUpdate(
+        {
+          _id: order._id,
+          status: { $ne: OrderStatus.CANCELLED },
+          paymentStatus: { $nin: paidStatuses },
+          'payment.status': { $nin: paidStatuses },
+          $or: [
+            { 'payment.transactionId': txnRef },
+            { transactionId: txnRef },
+          ],
+        },
+        {
+          $set: {
+            paymentStatus: PaymentStatus.FAILED,
+            'payment.method': 'VNPAY',
+            'payment.provider': 'VNPAY',
+            'payment.status': PaymentStatus.FAILED,
+            'payment.transactionId': txnRef,
+          },
+        },
+        { new: true, session },
+      );
+
+      return {
+        success: false,
+        order: failedOrder || order,
+        rspCode: '00',
+        message: 'Thanh toán VNPAY không thành công.',
       };
-      await order.save({ session });
-      return { success: false, order, rspCode: '00', message: 'Thanh toán VNPAY không thành công.' };
     }
 
-    const markedPaid = await this.paymentService.markPaid(
-      transaction._id,
-      String(query.vnp_TransactionNo || txnRef),
-      '',
-      session,
+    // 5. Nhánh VNPay xác nhận THANH TOÁN THÀNH CÔNG (responseCode === '00' && transactionStatus === '00'):
+    //    Kiểm tra thời điểm thanh toán thực tế do VNPay cung cấp (vnp_PayDate) so với paymentDeadlineAt = order.createdAt + 30 phút.
+    const deadlineDate = this.getOrderPaymentDeadline(order);
+    const vnpayPayDate = this.paymentService.parseVnpayDate(query.vnp_PayDate);
+    const isAutoTimeoutCancelled =
+      isOrderCancelled &&
+      (transaction.failureReason === 'PAYMENT_TIMEOUT' ||
+        order.payment?.failureReason === 'PAYMENT_TIMEOUT' ||
+        String(order.cancelReason || '').includes('Quá hạn thanh toán'));
+
+    // 5a. Nếu đơn hàng đã bị hủy chủ động bởi khách hàng hoặc Admin (KHÔNG phải do auto-timeout):
+    if (isOrderCancelled && !isAutoTimeoutCancelled) {
+      if (transaction.status === 'PENDING') {
+        await this.paymentService.markFailed(transaction._id, 'ORDER_CANCELLED', session);
+      }
+      return {
+        success: false,
+        order,
+        rspCode: '02',
+        message: 'Đơn hàng đã bị hủy, không thể ghi nhận thanh toán.',
+      };
+    }
+
+    // 5b. Kiểm tra xem giao dịch thanh toán thành công trước/tại deadline hay sau deadline:
+    const paidAfterDeadline = Boolean(
+      deadlineDate &&
+      vnpayPayDate &&
+      vnpayPayDate.getTime() > deadlineDate.getTime(),
     );
+    const paidWithoutPayDateAfterCancel = Boolean(
+      isAutoTimeoutCancelled && !vnpayPayDate && deadlineDate && Date.now() > deadlineDate.getTime(),
+    );
+
+    if (paidAfterDeadline || paidWithoutPayDateAfterCancel) {
+      // Ngoại lệ: Giao dịch thực sự hoàn tất trên VNPay SAU deadline 30 phút.
+      // Không âm thầm bỏ qua giao dịch đã thu tiền: ghi log cảnh báo đối soát/hoàn tiền và lưu thông tin ngoại lệ lên transaction & order.
+      const providerTxNoLate = String(query.vnp_TransactionNo || txnRef);
+      const lateAlertNote = `[CẢNH BÁO ĐỐI SOÁT VNPAY]: Giao dịch ${providerTxNoLate} (TxnRef: ${txnRef}) báo thanh toán thành công lúc ${query.vnp_PayDate || 'N/A'} SAU thời hạn 30 phút của đơn hàng (${deadlineDate?.toISOString()}). Đơn hàng giữ trạng thái ĐÃ HỦY, cần đối soát và hoàn tiền cho khách hàng.`;
+      this.logger.warn(lateAlertNote);
+
+      await this.orderModel.db.collection('payment_transactions').updateOne(
+        { _id: transaction._id },
+        {
+          $set: {
+            status: 'FAILED',
+            providerTransactionId: providerTxNoLate,
+            failureReason: 'PAID_AFTER_ORDER_DEADLINE_REQUIRES_REFUND',
+            latePaidAt: vnpayPayDate || new Date(),
+            rawCallback: query,
+          },
+        },
+        { session },
+      );
+
+      const flaggedOrder = await this.orderModel.findOneAndUpdate(
+        { _id: order._id },
+        {
+          $set: {
+            status: OrderStatus.CANCELLED,
+            'payment.latePaymentDetected': true,
+            'payment.latePaymentTransactionNo': providerTxNoLate,
+            'payment.latePaymentPayDate': query.vnp_PayDate || null,
+            'payment.reconciliationRequired': true,
+            notes: order.notes ? `${order.notes}\n${lateAlertNote}` : lateAlertNote,
+          },
+          $push: {
+            statusHistory: {
+              status: OrderStatus.CANCELLED,
+              updatedAt: new Date(),
+              updatedBy: null,
+              note: lateAlertNote,
+            },
+          },
+        },
+        { new: true, session },
+      );
+
+      return {
+        success: false,
+        order: flaggedOrder || order,
+        rspCode: '02',
+        message: 'Giao dịch hoàn tất sau thời hạn thanh toán của đơn hàng. Hệ thống đã ghi nhận để đối soát hoàn tiền.',
+      };
+    }
+
+    // 5c. Giao dịch thanh toán thành công TRƯỚC hoặc TẠI deadline (hoặc đơn đang PENDING hợp lệ):
+    //     Nếu scheduler vừa chuyển đơn sang CANCELLED (PAYMENT_TIMEOUT) trước khi IPN kịp đến,
+    //     cho phép khôi phục và ghi nhận thanh toán hợp lệ!
+    const canRecoverTimedOutTx =
+      isAutoTimeoutCancelled &&
+      transaction.status === 'FAILED' &&
+      transaction.failureReason === 'PAYMENT_TIMEOUT';
+
+    if (transaction.status !== 'PENDING' && !canRecoverTimedOutTx) {
+      return { success: false, order, rspCode: '02', message: 'Giao dịch VNPAY đã kết thúc trước đó.' };
+    }
+
+    const providerTxNo = String(query.vnp_TransactionNo || txnRef);
+    let markedPaid = false;
+    if (canRecoverTimedOutTx) {
+      const recoverTxRes = await this.orderModel.db.collection('payment_transactions').updateOne(
+        { _id: transaction._id, status: 'FAILED', failureReason: 'PAYMENT_TIMEOUT' },
+        {
+          $set: {
+            status: 'PAID',
+            providerTransactionId: providerTxNo,
+            paidAt: vnpayPayDate || new Date(),
+            failureReason: '',
+          },
+        },
+        { session },
+      );
+      markedPaid = recoverTxRes.modifiedCount === 1;
+    } else {
+      markedPaid = await this.paymentService.markPaid(
+        transaction._id,
+        providerTxNo,
+        '',
+        session,
+      );
+    }
+
     if (!markedPaid) {
       const currentTransaction = await this.paymentService.getTransactionByProviderId(txnRef, session);
       return {
@@ -2100,51 +2815,96 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       };
     }
 
-    const paidAt = new Date();
+    const paidAt = vnpayPayDate || new Date();
     const collectedAmt = Number(order.totalAmount) || Number(transaction.amount) || 0;
-    order.paymentStatus = PaymentStatus.PAID;
-    order.paidAt = paidAt;
-    order.actualCollectedAmount = collectedAmt;
-    const cancelled = order.status === OrderStatus.CANCELLED;
-    if (!cancelled) order.status = OrderStatus.PENDING;
-    order.transactionId = String(query.vnp_TransactionNo || txnRef);
-    order.payment = {
-      ...(order.payment || {}),
-      method: 'VNPAY',
-      provider: 'VNPAY',
-      status: PaymentStatus.PAID,
-      transactionId: order.transactionId,
-      paidAt,
-      actualCollectedAmount: collectedAmt,
-    };
-    if (!Array.isArray(order.statusHistory)) order.statusHistory = [];
-    order.statusHistory.push({
-      status: order.status,
-      updatedAt: paidAt,
-      updatedBy: null,
-      note: cancelled ? 'Đã nhận tiền VNPAY cho đơn đã hủy; cần đối soát hoàn tiền.' : 'Thanh toán VNPAY thành công (chờ xác nhận đơn)',
-    });
-    await order.save({ session });
-    if (!cancelled) {
-      // Giảm tồn kho khi thanh toán VNPAY thành công
-      await this.decreaseStock(order.items, session);
 
-      if (order.couponCode) {
-        const cleanCouponCode = String(order.couponCode).trim().toUpperCase();
-        await this.couponModel.updateOne(
-          {
-            $or: [
-              { code: cleanCouponCode },
-              { code: new RegExp(`^${cleanCouponCode}$`, 'i') },
-            ],
+    // 6. Cập nhật nguyên tử (Atomic Conditional Update) trên Order:
+    //    Cho phép chuyển Order sang PAID nếu Order đang khác CANCELLED, HOẶC nếu Order vừa bị auto-cancel do PAYMENT_TIMEOUT nhưng khách đã trả tiền trước deadline.
+    const orderClaimFilter: any = {
+      _id: order._id,
+      paymentStatus: { $nin: paidStatuses },
+      'payment.status': { $nin: paidStatuses },
+      $or: [
+        { status: { $ne: OrderStatus.CANCELLED } },
+        ...(isAutoTimeoutCancelled ? [{ status: OrderStatus.CANCELLED }] : []),
+      ],
+    };
+
+    const claimedOrder: any = await this.orderModel.findOneAndUpdate(
+      orderClaimFilter,
+      {
+        $set: {
+          status: isAutoTimeoutCancelled ? OrderStatus.PENDING : (order.status || OrderStatus.PENDING),
+          cancelReason: isAutoTimeoutCancelled ? null : order.cancelReason,
+          cancelReasonDetail: isAutoTimeoutCancelled ? null : order.cancelReasonDetail,
+          cancelledAt: isAutoTimeoutCancelled ? null : order.cancelledAt,
+          paymentStatus: PaymentStatus.PAID,
+          paidAt,
+          actualCollectedAmount: collectedAmt,
+          transactionId: providerTxNo,
+          'payment.method': 'VNPAY',
+          'payment.provider': 'VNPAY',
+          'payment.status': PaymentStatus.PAID,
+          'payment.transactionId': providerTxNo,
+          'payment.paidAt': paidAt,
+          'payment.actualCollectedAmount': collectedAmt,
+          'payment.failureReason': null,
+        },
+        $push: {
+          statusHistory: {
+            status: isAutoTimeoutCancelled ? OrderStatus.PENDING : (order.status || OrderStatus.PENDING),
+            updatedAt: new Date(),
+            updatedBy: null,
+            note: isAutoTimeoutCancelled
+              ? `Khôi phục đơn hàng & ghi nhận thanh toán VNPAY thành công (khách thanh toán lúc ${query.vnp_PayDate} trước thời hạn 30 phút)`
+              : 'Thanh toán VNPAY thành công (chờ xác nhận đơn)',
           },
-          { $inc: { usedCount: 1, quantity: -1 } },
-          { session },
-        );
-      }
+        },
+      },
+      { new: true, session },
+    );
+
+    if (!claimedOrder) {
+      const latestOrder: any = await this.orderModel.findById(order._id).session(session);
+      const isNowPaid =
+        paidStatuses.includes(String(latestOrder?.paymentStatus || '').toUpperCase()) ||
+        paidStatuses.includes(String(latestOrder?.payment?.status || '').toUpperCase());
+      return {
+        success: isNowPaid,
+        order: latestOrder || order,
+        rspCode: '02',
+        message: isNowPaid
+          ? 'Đơn hàng đã được thanh toán thành công trước đó.'
+          : 'Đơn hàng đã kết thúc hoặc bị hủy trước đó.',
+      };
     }
-    const ownerId = order.userId || order._user;
-    if (!cancelled && ownerId) {
+
+    // Vô hiệu hóa mọi giao dịch PENDING khác còn sót lại của đơn hàng này (nếu có)
+    await this.paymentService.supersedePendingTransactionsForOrder(
+      new Types.ObjectId(String(order._id)),
+      'ORDER_ALREADY_PAID',
+      transaction._id,
+      session,
+    );
+
+    // 7. Thực thi các tác động phụ sau thanh toán ĐÚNG MỘT LẦN DUY NHẤT khi claimedOrder thành công
+    await this.decreaseStock(claimedOrder.items, session);
+    if (claimedOrder.couponCode) {
+      const cleanCouponCode = String(claimedOrder.couponCode).trim().toUpperCase();
+      await this.couponModel.updateOne(
+        {
+          $or: [
+            { code: cleanCouponCode },
+            { code: new RegExp(`^${cleanCouponCode}$`, 'i') },
+          ],
+        },
+        { $inc: { usedCount: 1, quantity: -1 } },
+        { session },
+      );
+    }
+
+    const ownerId = claimedOrder.userId || claimedOrder._user;
+    if (ownerId) {
       const user: any = await this.userModel.findById(ownerId).session(session).lean();
       const purchased = new Map<string, number>();
       const itemKey = (item: any) => {
@@ -2152,7 +2912,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
         const parts = raw.split('_');
         return `${parts[0]}_${item.variantId || parts.slice(1).join('_') || ''}`;
       };
-      for (const item of order.items) {
+      for (const item of claimedOrder.items) {
         const key = itemKey(item);
         purchased.set(key, (purchased.get(key) || 0) + Number(item.quantity));
       }
@@ -2167,7 +2927,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       });
       await this.userModel.updateOne({ _id: ownerId }, { $set: { 'cart.items': remaining } }, { session });
     }
-    return { success: true, order, rspCode: '00', message: 'Thanh toán VNPAY thành công.' };
+    return { success: true, order: claimedOrder, rspCode: '00', message: 'Thanh toán VNPAY thành công.' };
   }
 
   private async checkDuplicateOrder(

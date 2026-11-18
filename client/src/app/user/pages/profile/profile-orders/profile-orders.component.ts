@@ -1,9 +1,12 @@
-import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, ChangeDetectorRef, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, ChangeDetectorRef, Inject, PLATFORM_ID, OnInit, OnDestroy, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { User, Order } from '../../../shared/models';
 import { formatVND, PriceFormatPipe } from '../../../../pipes/price.pipe';
 import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
+import { SignalStore } from '../../../../store/signal.store';
+import { ApiService } from '../../../../services/api.service';
+import { NotificationService } from '../../../shared/notification/notification.service';
 
 @Component({
   selector: 'app-profile-orders',
@@ -13,7 +16,7 @@ import { SignalStoreSelectors } from '../../../../store/signal.store.selectors';
   styleUrl: './profile-orders.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ProfileOrdersComponent {
+export class ProfileOrdersComponent implements OnInit, OnChanges, OnDestroy {
   @Input() orders: Order[] | null = null;
   @Input() user: User | null = null;
   @Input() lang: string | null = 'vi';
@@ -45,12 +48,227 @@ export class ProfileOrdersComponent {
   // Quản lý giai đoạn trả hàng / hoàn tiền đang được chọn xem chi tiết
   selectedReturnStep: { [key: string]: number } = {};
 
+  // ── Quản lý đồng hồ đếm ngược 30 phút & Thanh toán tiếp VNPay ──
+  private countdownTimer: ReturnType<typeof setInterval> | null = null;
+  nowMs: number = Date.now();
+  retryingOrderMap: { [orderKey: string]: boolean } = {};
+  retryErrorMap: { [orderKey: string]: string } = {};
+  private expiredRefreshTriggered: Set<string> = new Set();
+
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
     private router: Router,
     private selectors: SignalStoreSelectors,
+    private store: SignalStore,
+    private apiService: ApiService,
+    private notify: NotificationService,
     private cdr: ChangeDetectorRef
   ) {}
+
+  ngOnInit(): void {
+    this.nowMs = Date.now();
+    this.syncCountdownTimer();
+  }
+
+  ngOnChanges(_changes: SimpleChanges): void {
+    this.nowMs = Date.now();
+    this.syncCountdownTimer();
+  }
+
+  ngOnDestroy(): void {
+    this.clearCountdownTimer();
+  }
+
+  private clearCountdownTimer(): void {
+    if (this.countdownTimer !== null) {
+      clearInterval(this.countdownTimer);
+      this.countdownTimer = null;
+    }
+  }
+
+  private syncCountdownTimer(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    const rawOrders = this.getRawOrders();
+    const hasPendingVnpayWithDeadline = rawOrders.some((o: any) => this.isPendingUnpaidVnpayOrder(o));
+    if (hasPendingVnpayWithDeadline && this.countdownTimer === null) {
+      this.countdownTimer = setInterval(() => {
+        this.nowMs = Date.now();
+        this.checkExpiredVnpayOrdersOnTick();
+        this.cdr.markForCheck();
+      }, 1000);
+    } else if (!hasPendingVnpayWithDeadline && this.countdownTimer !== null) {
+      this.clearCountdownTimer();
+    }
+  }
+
+  private checkExpiredVnpayOrdersOnTick(): void {
+    const rawOrders = this.getRawOrders();
+    let shouldRefreshFromBackend = false;
+    for (const ord of rawOrders) {
+      if (!this.isPendingUnpaidVnpayOrder(ord)) continue;
+      const key = this.getOrderKey(ord);
+      const remaining = this.getRemainingPaymentMs(ord);
+      if (remaining <= 0 && !this.expiredRefreshTriggered.has(key)) {
+        this.expiredRefreshTriggered.add(key);
+        shouldRefreshFromBackend = true;
+      }
+    }
+    if (shouldRefreshFromBackend && isPlatformBrowser(this.platformId)) {
+      this.store.getUserOrders();
+    }
+  }
+
+  getOrderKey(order: any): string {
+    return String(order?.orderId || order?._id || '');
+  }
+
+  isVnpayMethod(order: any): boolean {
+    if (!order) return false;
+    const methodCode = String(
+      order.payment?.method ||
+      order.paymentMethodSnapshot?.code ||
+      order.payment?.provider ||
+      order.paymentProvider ||
+      order.paymentMethod ||
+      ''
+    ).trim().toUpperCase();
+    return methodCode === 'VNPAY' || methodCode === 'VNPAY-QR';
+  }
+
+  isOrderPaid(order: any): boolean {
+    if (!order) return false;
+    const rootPs = String(order.paymentStatus || '').trim().toUpperCase();
+    const nestedPs = String(order.payment?.status || '').trim().toUpperCase();
+    const paidSet = ['PAID', 'REFUNDED', 'PARTIALLY_REFUNDED', 'COMPLETED'];
+    return paidSet.includes(rootPs) || paidSet.includes(nestedPs);
+  }
+
+  isPendingUnpaidVnpayOrder(order: any): boolean {
+    if (!order) return false;
+    const st = this.normalizeStatus(order.statusCode || order.rawStatus || order.status);
+    return st === 'PENDING' && this.isVnpayMethod(order) && !this.isOrderPaid(order);
+  }
+
+  getOrderDeadlineMs(order: any): number | null {
+    if (!order || !this.isVnpayMethod(order)) return null;
+    if (order.paymentDeadlineAt) {
+      const parsed = new Date(order.paymentDeadlineAt).getTime();
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+    const createdRaw = order.createdAt || order.dateAdded;
+    if (createdRaw) {
+      const createdMs = new Date(createdRaw).getTime();
+      if (!isNaN(createdMs) && createdMs > 0) {
+        return createdMs + 30 * 60 * 1000;
+      }
+    }
+    return null;
+  }
+
+  getRemainingPaymentMs(order: any): number {
+    const deadlineMs = this.getOrderDeadlineMs(order);
+    if (!deadlineMs) return 0;
+    return Math.max(0, deadlineMs - this.nowMs);
+  }
+
+  formatRemainingCountdown(order: any): string {
+    const remainingMs = this.getRemainingPaymentMs(order);
+    const totalSeconds = Math.max(0, Math.floor(remainingMs / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }
+
+  isCountdownWarning(order: any): boolean {
+    const remainingMs = this.getRemainingPaymentMs(order);
+    return remainingMs > 0 && remainingMs <= 5 * 60 * 1000;
+  }
+
+  isCountdownCritical(order: any): boolean {
+    const remainingMs = this.getRemainingPaymentMs(order);
+    return remainingMs > 0 && remainingMs <= 60 * 1000;
+  }
+
+  shouldShowVnpayPaymentBox(order: any): boolean {
+    if (!this.isPendingUnpaidVnpayOrder(order)) return false;
+    const deadlineMs = this.getOrderDeadlineMs(order);
+    return deadlineMs !== null;
+  }
+
+  canShowVnpayRetryAction(order: any): boolean {
+    if (!this.shouldShowVnpayPaymentBox(order)) return false;
+    if (order.canRetryVnpayPayment !== true) return false;
+    return this.getRemainingPaymentMs(order) > 0;
+  }
+
+  isVnpayCountdownExpired(order: any): boolean {
+    if (!this.shouldShowVnpayPaymentBox(order)) return false;
+    return this.getRemainingPaymentMs(order) <= 0 || order.canRetryVnpayPayment === false;
+  }
+
+  isRetryingVnpay(order: any): boolean {
+    return !!this.retryingOrderMap[this.getOrderKey(order)];
+  }
+
+  getRetryError(order: any): string {
+    return this.retryErrorMap[this.getOrderKey(order)] || '';
+  }
+
+  isOrderCancelledDueToTimeout(order: any): boolean {
+    if (!order) return false;
+    const st = this.normalizeStatus(order.statusCode || order.rawStatus || order.status);
+    if (st !== 'CANCELLED') return false;
+    const reason = String(order.cancelReason || order.payment?.failureReason || order.notes || '').toUpperCase();
+    return reason.includes('QUÁ HẠN THANH TOÁN') || reason.includes('PAYMENT_TIMEOUT');
+  }
+
+  onRetryVnpayPayment(order: Order | any): void {
+    if (!order || !this.canShowVnpayRetryAction(order)) return;
+    const key = this.getOrderKey(order);
+    if (!key || this.retryingOrderMap[key]) return;
+
+    if (this.getRemainingPaymentMs(order) <= 0) {
+      this.retryErrorMap[key] = 'Đã hết thời gian thanh toán.';
+      this.store.getUserOrders();
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.retryingOrderMap[key] = true;
+    this.retryErrorMap[key] = '';
+    this.cdr.markForCheck();
+
+    this.apiService.retryVnpayPayment(key).subscribe({
+      next: (res: any) => {
+        const paymentUrl = res?.paymentUrl || res?.payment?.paymentUrl;
+        if (res && !res.error && paymentUrl && typeof paymentUrl === 'string') {
+          if (isPlatformBrowser(this.platformId) && typeof window !== 'undefined') {
+            window.location.assign(paymentUrl);
+            return;
+          }
+        }
+
+        this.retryingOrderMap[key] = false;
+        const errMsg =
+          typeof res?.error === 'string'
+            ? res.error
+            : (res?.error?.message || res?.message || 'Không thể tạo liên kết thanh toán tiếp VNPay.');
+        this.retryErrorMap[key] = errMsg;
+        this.notify.error(errMsg);
+        this.store.getUserOrders();
+        this.cdr.markForCheck();
+      },
+      error: (err: any) => {
+        this.retryingOrderMap[key] = false;
+        const errMsg =
+          err?.error?.message || err?.message || 'Không thể kết nối máy chủ để thanh toán tiếp. Vui lòng thử lại.';
+        this.retryErrorMap[key] = errMsg;
+        this.notify.error(errMsg);
+        this.store.getUserOrders();
+        this.cdr.markForCheck();
+      }
+    });
+  }
 
   // ── Tab logic ──
   setTab(tab: string): void {
@@ -211,6 +429,9 @@ export class ProfileOrdersComponent {
       if (this.isOrderReturnCompleted(orderOrStatus)) {
         return 'status-returned';
       }
+      if (this.isPendingUnpaidVnpayOrder(orderOrStatus)) {
+        return 'status-pending status-awaiting-payment';
+      }
       return this.getStatusClass(orderOrStatus.statusCode || orderOrStatus.rawStatus || orderOrStatus.status);
     }
 
@@ -230,6 +451,12 @@ export class ProfileOrdersComponent {
     if (orderOrStatus && typeof orderOrStatus === 'object') {
       if (this.isOrderReturnCompleted(orderOrStatus)) {
         return 'Trả hàng';
+      }
+      if (this.isPendingUnpaidVnpayOrder(orderOrStatus)) {
+        return 'Chờ thanh toán';
+      }
+      if (this.isOrderCancelledDueToTimeout(orderOrStatus)) {
+        return 'Đã hủy – Quá hạn thanh toán';
       }
       return this.getStatusLabel(orderOrStatus.statusCode || orderOrStatus.rawStatus || orderOrStatus.status);
     }

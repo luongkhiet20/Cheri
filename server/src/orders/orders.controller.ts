@@ -229,6 +229,21 @@ export class OrdersController {
     );
   }
 
+  // ─── Khách hàng: Thanh toán tiếp VNPay cho đơn hàng PENDING hiện có ────────
+  @UseGuards(AuthGuard('jwt'))
+  @Post('/:id/payment/vnpay/retry')
+  async retryVnpayPayment(
+    @Param('id') id: string,
+    @GetUser() user: User,
+    @Headers('x-forwarded-for') forwardedFor?: string,
+  ) {
+    return this.ordersService.retryVnpayPayment(
+      id,
+      user,
+      forwardedFor || '127.0.0.1',
+    );
+  }
+
   @Get('/payment/vnpay/return')
   async vnpayReturn(@Query() query: Record<string, string>, @Res() res: any) {
     const result = await this.ordersService.handleVnpayResult(query);

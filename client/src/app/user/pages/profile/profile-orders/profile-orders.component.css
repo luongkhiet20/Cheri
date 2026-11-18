@@ -1276,7 +1276,7 @@
 .vnpay-pending-payment-box {
   background: #fdf8f8;
   border: 1px solid #f0d5d7;
-  border-left: 3.5px solid var(--cheri-primary, #74070E);
+
   border-radius: 8px;
   padding: 14px 16px;
   margin-bottom: 16px;
@@ -1293,7 +1293,7 @@
 .vnpay-pending-payment-box.is-critical {
   background: #fef2f2;
   border-color: #fecaca;
-  border-left-color: #dc2626;
+
 }
 
 .vnpay-pending-payment-box.is-expired {

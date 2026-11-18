@@ -234,7 +234,11 @@ export class OrdersController {
     const result = await this.ordersService.handleVnpayResult(query);
     const orderId = result.order?.orderId || '';
     const status = result.success ? 'success' : 'failed';
-    const origin = (process.env.ORIGIN || 'http://localhost:3000').replace(/\/+$/, '');
+    const rawOrigin = process.env.ORIGIN || 'http://localhost:3000';
+    const origins = rawOrigin.split(',').map((o) => o.trim()).filter(Boolean);
+    const isLocalDev = process.env.NODE_ENV !== 'production';
+    const selectedOrigin = (isLocalDev ? origins.find((o) => o.includes('localhost')) : null) || origins[0] || 'http://localhost:3000';
+    const origin = selectedOrigin.replace(/\/+$/, '');
     return res.redirect(
       `${origin}/vi/order?orderId=${encodeURIComponent(orderId)}&payment=${status}`,
     );

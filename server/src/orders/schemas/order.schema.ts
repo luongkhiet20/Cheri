@@ -230,6 +230,7 @@ const ReturnRequestSchema = new Schema(
       notes: { type: String, default: '' },
     },
 
+    completedAt: { type: Date, default: null },
     history: { type: [ReturnHistorySchema], default: [] },
   },
   { _id: false },
@@ -305,7 +306,7 @@ const OrderSchema = new Schema(
       codReconciliationStatus: {
         type: String,
         default: 'NOT_APPLICABLE',
-        enum: ['NOT_APPLICABLE', 'UNRECONCILED', 'RECONCILED'],
+        enum: ['NOT_APPLICABLE', 'UNCOLLECTED', 'UNRECONCILED', 'COLLECTED_UNRECONCILED', 'RECONCILED'],
       },
       codReconciledAt: { type: Date, default: null },
     },

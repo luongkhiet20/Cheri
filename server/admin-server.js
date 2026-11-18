@@ -3005,8 +3005,16 @@ function formatOrder(o) {
     paymentMethodCode,
     paymentMethodId: o.paymentMethodId ?? null,
     paymentMethodSnapshot: o.paymentMethodSnapshot ?? null,
-    paymentStatus: o.paymentStatus ?? null,
-    transactionId: o.transactionId || null,
+    paymentStatus: (() => {
+      const rPs = getNonEmptyString(o.paymentStatus)?.toUpperCase();
+      const nPs = getNonEmptyString(o.payment?.status)?.toUpperCase();
+      if (rPs === 'REFUNDED' || nPs === 'REFUNDED') return 'REFUNDED';
+      if (rPs === 'PARTIALLY_REFUNDED' || nPs === 'PARTIALLY_REFUNDED') return 'PARTIALLY_REFUNDED';
+      if (rPs === 'PAID' || nPs === 'PAID') return 'PAID';
+      if (rPs === 'FAILED' || nPs === 'FAILED') return 'FAILED';
+      return rPs || nPs || null;
+    })(),
+    transactionId: o.transactionId || o.payment?.transactionId || null,
     paymentProvider: o.paymentProvider || null,
     paymentFee,
     paidAt: o.paidAt ?? null,
@@ -4873,6 +4881,8 @@ const handleUpdateOrderStatus = async (req, res) => {
       });
     }
 
+
+
     // Đồng bộ tồn kho theo trạng thái
     let inventoryUpdateFields = {};
     let inventoryAdjustmentEntry = null;
@@ -5038,8 +5048,8 @@ async function handleUpdateReturnRequestWorkflow(req, res) {
             message: `Chỉ có thể duyệt yêu cầu khi đang ở trạng thái Chờ duyệt (PENDING). Trạng thái hiện tại: ${returnReq.status}`
           });
         }
-        const requestedAmt = Number(returnReq.refund?.requestedAmount) || 0;
-        const approvedAmt = Number(body?.approvedAmount) >= 0 ? Number(body.approvedAmount) : requestedAmt;
+        const requestedAmt = Number(returnReq.refund?.requestedAmount) || Number(order.totalAmount) || Number(order.total) || 0;
+        const approvedAmt = Number(body?.approvedAmount) > 0 ? Number(body.approvedAmount) : requestedAmt;
 
         returnReq.status = 'APPROVED';
         returnReq.approvedAt = now;
@@ -5178,9 +5188,9 @@ async function handleUpdateReturnRequestWorkflow(req, res) {
         };
 
         if (isEligible) {
-          const approvedAmount = Number(body?.approvedAmount) >= 0
+          const approvedAmount = Number(body?.approvedAmount) > 0
             ? Number(body.approvedAmount)
-            : (Number(returnReq.refund?.approvedAmount) || Number(returnReq.refund?.requestedAmount) || 0);
+            : (Number(returnReq.refund?.approvedAmount) || Number(returnReq.refund?.requestedAmount) || Number(order.totalAmount) || Number(order.total) || 0);
           returnReq.refund.approvedAmount = approvedAmount;
           returnReq.refund.status = 'PENDING';
 
@@ -5227,31 +5237,27 @@ async function handleUpdateReturnRequestWorkflow(req, res) {
       }
 
       case 'PROCESS_REFUND': {
-        const paymentMethod = (order.payment?.method || order.paymentMethodSnapshot?.method || order.paymentMethodCode || '').toUpperCase();
-        const paymentStatus = (order.payment?.status || order.paymentStatus || '').toUpperCase();
-        const codCollected = Boolean(order.payment?.codCollected);
+        if (returnReq.status === 'COMPLETED' || returnReq.refund?.status === 'COMPLETED') {
+          return res.status(400).json({
+            success: false,
+            message: 'Yêu cầu trả hàng này đã hoàn tất hoàn tiền trước đó. Không thể thực hiện hoàn tiền lần hai.'
+          });
+        }
+        if (returnReq.status !== 'INSPECTED') {
+          return res.status(400).json({
+            success: false,
+            message: `Chỉ có thể xử lý hoàn tiền khi yêu cầu trả hàng đã ở trạng thái Đã kiểm tra hàng (INSPECTED). Trạng thái hiện tại: ${returnReq.status}`
+          });
+        }
 
-        let actualCollected = Number(order.payment?.actualCollectedAmount) || 0;
-        if (paymentMethod === 'COD') {
-          if (!codCollected && paymentStatus !== 'PAID') {
-            return res.status(400).json({
-              success: false,
-              message: 'Đơn hàng COD chưa có xác nhận đã thu tiền thực tế (chưa đối soát COD). Vui lòng cập nhật đối soát COD trước khi thực hiện hoàn tiền.'
-            });
-          }
-          if (actualCollected <= 0) {
-            actualCollected = Number(order.totalAmount) || Number(order.total) || 0;
-          }
-        } else {
-          if (paymentStatus !== 'PAID' && paymentStatus !== 'PARTIALLY_REFUNDED') {
-            return res.status(400).json({
-              success: false,
-              message: `Đơn hàng thanh toán trực tuyến chưa hoàn tất thanh toán thành công (Trạng thái: ${paymentStatus || 'UNPAID'}). Không thể thực hiện hoàn tiền.`
-            });
-          }
-          if (actualCollected <= 0) {
-            actualCollected = Number(order.totalAmount) || Number(order.total) || 0;
-          }
+        let actualCollected = Number(order.payment?.actualCollectedAmount) || Number(order.actualCollectedAmount) || 0;
+        if (actualCollected <= 0) {
+          actualCollected =
+            Number(order.totalAmount) ||
+            Number(order.total) ||
+            Number(returnReq.refund?.approvedAmount) ||
+            Number(returnReq.refund?.requestedAmount) ||
+            0;
         }
 
         const totalRefundedSoFar = Number(order.payment?.refundedAmount) || Number(order.refundedAmount) || 0;
@@ -5259,16 +5265,16 @@ async function handleUpdateReturnRequestWorkflow(req, res) {
 
         const refundAmt = Number(body?.refundAmount) > 0
           ? Number(body.refundAmount)
-          : (Number(returnReq.refund?.approvedAmount) || Number(returnReq.refund?.requestedAmount) || 0);
+          : (Number(returnReq.refund?.approvedAmount) || Number(returnReq.refund?.requestedAmount) || actualCollected);
 
         if (refundAmt <= 0) {
           return res.status(400).json({ success: false, message: 'Số tiền hoàn phải lớn hơn 0.' });
         }
 
-        if (refundAmt > remainingRefundable) {
+        if (remainingRefundable > 0 && refundAmt > remainingRefundable) {
           return res.status(400).json({
             success: false,
-            message: `Số tiền hoàn (${refundAmt.toLocaleString('vi-VN')} đ) vượt quá số tiền thực tế đã thu còn có thể hoàn (${remainingRefundable.toLocaleString('vi-VN')} đ).`
+            message: `Số tiền hoàn (${refundAmt.toLocaleString('vi-VN')} đ) vượt quá số tiền còn có thể hoàn (${remainingRefundable.toLocaleString('vi-VN')} đ).`
           });
         }
 
@@ -5288,6 +5294,7 @@ async function handleUpdateReturnRequestWorkflow(req, res) {
         returnReq.refund.refundedAt = now;
         returnReq.refund.notes = notes;
         returnReq.status = 'COMPLETED';
+        returnReq.completedAt = now;
 
         order.payment = order.payment || {};
         const newTotalRefunded = totalRefundedSoFar + refundAmt;
@@ -5417,13 +5424,22 @@ async function handleUpdateCodReconciliation(req, res) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
     }
 
-    const methodCode = String(order.payment?.method || order.paymentMethodSnapshot?.code || order.type || '').toUpperCase();
-    if (methodCode !== 'COD') {
+    const methodCode = String(
+      (typeof order.payment === 'string' ? order.payment : order.payment?.method) ||
+      order.paymentMethodSnapshot?.code ||
+      order.payment?.provider ||
+      order.paymentProvider ||
+      order.paymentMethodCode ||
+      order.paymentMethod ||
+      order.type ||
+      ''
+    ).trim().toUpperCase();
+    if (!methodCode.includes('COD')) {
       return res.status(400).json({ success: false, message: 'Chỉ đối soát COD cho đơn thanh toán khi nhận hàng.' });
     }
     const codCollected = Boolean(body.codCollected);
     const orderTotal = Number(order.totalAmount) || Number(order.total) || 0;
-    const actualCollectedAmount = Number(body.actualCollectedAmount) >= 0
+    const actualCollectedAmount = Number(body.actualCollectedAmount) > 0
       ? Number(body.actualCollectedAmount)
       : (codCollected ? orderTotal : 0);
     const codReconciliationStatus = String(body.codReconciliationStatus || (codCollected ? 'COLLECTED_UNRECONCILED' : 'UNCOLLECTED'));

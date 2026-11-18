@@ -124,9 +124,12 @@ export class PaymentService {
     const paymentUrl =
       process.env.VNPAY_PAYMENT_URL?.trim() ||
       'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html';
-    const returnUrl =
-      process.env.VNPAY_RETURN_URL?.trim() ||
-      `${process.env.SERVER_URL || 'http://localhost:4000'}/api/orders/payment/vnpay/return`;
+    const isLocalDev = process.env.NODE_ENV !== 'production';
+    const configuredReturnUrl = process.env.VNPAY_RETURN_URL?.trim();
+    const localReturnUrl = `${process.env.LOCAL_SERVER_URL?.trim() || `http://localhost:${process.env.PORT || 4000}`}/api/orders/payment/vnpay/return`;
+    const returnUrl = (isLocalDev && configuredReturnUrl?.includes('onrender.com'))
+      ? localReturnUrl
+      : (configuredReturnUrl || localReturnUrl);
 
     if (!tmnCode || !hashSecret) {
       throw new BadRequestException('Thanh toán VNPAY chưa được cấu hình.');

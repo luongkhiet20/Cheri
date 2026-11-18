@@ -1,12 +1,12 @@
 {
   "database": "cheri",
-  "updatedAt": "2026-10-23T13:22:05.664Z",
-  "totalCollections": 34,
+  "updatedAt": "2026-11-04T11:33:21.441Z",
+  "totalCollections": 37,
   "collections": [
     {
       "name": "users",
-      "documentCount": 31,
-      "sampledCount": 31,
+      "documentCount": 36,
+      "sampledCount": 36,
       "fields": [
         {
           "name": "__v",
@@ -15,7 +15,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "20/31"
+          "frequency": "24/36"
         },
         {
           "name": "_id",
@@ -24,7 +24,7 @@
             "ObjectId"
           ],
           "type": "ObjectId",
-          "frequency": "31/31"
+          "frequency": "36/36"
         },
         {
           "name": "address",
@@ -33,7 +33,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "29/31"
+          "frequency": "33/36"
         },
         {
           "name": "avatar",
@@ -42,16 +42,17 @@
             "String"
           ],
           "type": "String",
-          "frequency": "26/31"
+          "frequency": "31/36"
         },
         {
           "name": "cart",
           "path": "cart",
           "types": [
+            "Array",
             "Object"
           ],
-          "type": "Object",
-          "frequency": "31/31"
+          "type": "Array | Object",
+          "frequency": "36/36"
         },
         {
           "name": "items",
@@ -60,7 +61,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "31/31"
+          "frequency": "35/36"
         },
         {
           "name": "items[]",
@@ -69,45 +70,16 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "5/31"
-        },
-        {
-          "name": "id",
-          "path": "cart.items[].id",
-          "types": [
-            "Null",
-            "String"
-          ],
-          "type": "Null | String",
-          "frequency": "1/31"
-        },
-        {
-          "name": "isSelected",
-          "path": "cart.items[].isSelected",
-          "types": [
-            "Boolean"
-          ],
-          "type": "Boolean",
-          "frequency": "1/31"
+          "frequency": "6/36"
         },
         {
           "name": "productId",
           "path": "cart.items[].productId",
           "types": [
-            "ObjectId",
-            "String"
+            "ObjectId"
           ],
-          "type": "ObjectId | String",
-          "frequency": "5/31"
-        },
-        {
-          "name": "qty",
-          "path": "cart.items[].qty",
-          "types": [
-            "Number"
-          ],
-          "type": "Number",
-          "frequency": "1/31"
+          "type": "ObjectId",
+          "frequency": "6/36"
         },
         {
           "name": "quantity",
@@ -116,7 +88,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "4/31"
+          "frequency": "6/36"
         },
         {
           "name": "selectedClassification",
@@ -126,7 +98,7 @@
             "String"
           ],
           "type": "Null | String",
-          "frequency": "5/31"
+          "frequency": "6/36"
         },
         {
           "name": "selectedColor",
@@ -136,7 +108,7 @@
             "String"
           ],
           "type": "Null | String",
-          "frequency": "5/31"
+          "frequency": "6/36"
         },
         {
           "name": "selectedSize",
@@ -146,7 +118,7 @@
             "String"
           ],
           "type": "Null | String",
-          "frequency": "5/31"
+          "frequency": "6/36"
         },
         {
           "name": "variantId",
@@ -156,7 +128,7 @@
             "String"
           ],
           "type": "Null | String",
-          "frequency": "5/31"
+          "frequency": "6/36"
         },
         {
           "name": "totalPrice",
@@ -165,7 +137,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "1/31"
+          "frequency": "1/36"
         },
         {
           "name": "createdAt",
@@ -175,7 +147,7 @@
             "String"
           ],
           "type": "Date | String",
-          "frequency": "28/31"
+          "frequency": "33/36"
         },
         {
           "name": "dateAdded",
@@ -185,7 +157,7 @@
             "String"
           ],
           "type": "Date | String",
-          "frequency": "29/31"
+          "frequency": "33/36"
         },
         {
           "name": "dateOfBirth",
@@ -195,7 +167,7 @@
             "String"
           ],
           "type": "Null | String",
-          "frequency": "26/31"
+          "frequency": "30/36"
         },
         {
           "name": "description",
@@ -204,7 +176,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "30/31"
+          "frequency": "34/36"
         },
         {
           "name": "email",
@@ -213,7 +185,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "31/31"
+          "frequency": "36/36"
         },
         {
           "name": "facebookId",
@@ -222,7 +194,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/31"
+          "frequency": "1/36"
         },
         {
           "name": "fullName",
@@ -231,7 +203,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "30/31"
+          "frequency": "35/36"
         },
         {
           "name": "gender",
@@ -240,16 +212,17 @@
             "String"
           ],
           "type": "String",
-          "frequency": "26/31"
+          "frequency": "30/36"
         },
         {
           "name": "googleId",
           "path": "googleId",
           "types": [
+            "Null",
             "String"
           ],
-          "type": "String",
-          "frequency": "5/31"
+          "type": "Null | String",
+          "frequency": "11/36"
         },
         {
           "name": "images",
@@ -258,7 +231,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "30/31"
+          "frequency": "35/36"
         },
         {
           "name": "images[]",
@@ -267,7 +240,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/31"
+          "frequency": "10/36"
         },
         {
           "name": "name",
@@ -276,7 +249,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "31/31"
+          "frequency": "36/36"
         },
         {
           "name": "password",
@@ -285,7 +258,16 @@
             "String"
           ],
           "type": "String",
-          "frequency": "28/31"
+          "frequency": "32/36"
+        },
+        {
+          "name": "permissions",
+          "path": "permissions",
+          "types": [
+            "Array"
+          ],
+          "type": "Array",
+          "frequency": "1/36"
         },
         {
           "name": "phoneNumber",
@@ -294,7 +276,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "29/31"
+          "frequency": "33/36"
         },
         {
           "name": "provider",
@@ -303,7 +285,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "2/31"
+          "frequency": "2/36"
         },
         {
           "name": "role",
@@ -312,7 +294,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "1/31"
+          "frequency": "1/36"
         },
         {
           "name": "role[]",
@@ -321,7 +303,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/31"
+          "frequency": "1/36"
         },
         {
           "name": "roles",
@@ -330,7 +312,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "31/31"
+          "frequency": "36/36"
         },
         {
           "name": "roles[]",
@@ -339,7 +321,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "31/31"
+          "frequency": "36/36"
         },
         {
           "name": "salt",
@@ -348,7 +330,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "28/31"
+          "frequency": "32/36"
         },
         {
           "name": "status",
@@ -357,7 +339,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "31/31"
+          "frequency": "36/36"
         },
         {
           "name": "tokenRevokedAt",
@@ -367,7 +349,7 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "5/31"
+          "frequency": "8/36"
         },
         {
           "name": "updatedAt",
@@ -377,14 +359,14 @@
             "String"
           ],
           "type": "Date | String",
-          "frequency": "31/31"
+          "frequency": "36/36"
         }
       ]
     },
     {
       "name": "orders",
-      "documentCount": 50,
-      "sampledCount": 50,
+      "documentCount": 74,
+      "sampledCount": 74,
       "fields": [
         {
           "name": "__v",
@@ -393,7 +375,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "24/50"
+          "frequency": "48/74"
         },
         {
           "name": "_id",
@@ -402,7 +384,7 @@
             "ObjectId"
           ],
           "type": "ObjectId",
-          "frequency": "50/50"
+          "frequency": "74/74"
         },
         {
           "name": "_user",
@@ -412,7 +394,7 @@
             "ObjectId"
           ],
           "type": "Null | ObjectId",
-          "frequency": "50/50"
+          "frequency": "74/74"
         },
         {
           "name": "actualCollectedAmount",
@@ -421,7 +403,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "12/50"
+          "frequency": "36/74"
         },
         {
           "name": "addresses",
@@ -430,7 +412,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "29/50"
+          "frequency": "53/74"
         },
         {
           "name": "addresses[]",
@@ -439,7 +421,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "25/50"
+          "frequency": "49/74"
         },
         {
           "name": "address",
@@ -448,7 +430,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "19/50"
+          "frequency": "43/74"
         },
         {
           "name": "addressDetail",
@@ -457,7 +439,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "19/50"
+          "frequency": "43/74"
         },
         {
           "name": "city",
@@ -466,7 +448,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "country",
@@ -475,7 +457,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "district",
@@ -484,7 +466,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "19/50"
+          "frequency": "43/74"
         },
         {
           "name": "districtCode",
@@ -493,7 +475,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "19/50"
+          "frequency": "43/74"
         },
         {
           "name": "districtName",
@@ -502,7 +484,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "19/50"
+          "frequency": "43/74"
         },
         {
           "name": "fullAddress",
@@ -511,7 +493,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "19/50"
+          "frequency": "43/74"
         },
         {
           "name": "fullName",
@@ -520,7 +502,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "19/50"
+          "frequency": "43/74"
         },
         {
           "name": "line1",
@@ -529,7 +511,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "line2",
@@ -538,7 +520,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "name",
@@ -547,7 +529,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "phone",
@@ -556,7 +538,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "24/50"
+          "frequency": "48/74"
         },
         {
           "name": "province",
@@ -565,7 +547,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "19/50"
+          "frequency": "43/74"
         },
         {
           "name": "provinceCode",
@@ -574,7 +556,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "19/50"
+          "frequency": "43/74"
         },
         {
           "name": "provinceName",
@@ -583,7 +565,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "19/50"
+          "frequency": "43/74"
         },
         {
           "name": "ward",
@@ -592,7 +574,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "19/50"
+          "frequency": "43/74"
         },
         {
           "name": "wardCode",
@@ -601,7 +583,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "19/50"
+          "frequency": "43/74"
         },
         {
           "name": "wardName",
@@ -610,7 +592,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "19/50"
+          "frequency": "43/74"
         },
         {
           "name": "zip",
@@ -619,7 +601,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "amount",
@@ -629,7 +611,7 @@
             "Number"
           ],
           "type": "Null | Number",
-          "frequency": "36/50"
+          "frequency": "60/74"
         },
         {
           "name": "cancelReason",
@@ -639,7 +621,7 @@
             "String"
           ],
           "type": "Null | String",
-          "frequency": "7/50"
+          "frequency": "31/74"
         },
         {
           "name": "cancelReasonDetail",
@@ -648,7 +630,7 @@
             "Null"
           ],
           "type": "Null",
-          "frequency": "5/50"
+          "frequency": "29/74"
         },
         {
           "name": "cancelledAt",
@@ -658,7 +640,7 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "7/50"
+          "frequency": "31/74"
         },
         {
           "name": "cancelledBy",
@@ -668,7 +650,7 @@
             "ObjectId"
           ],
           "type": "Null | ObjectId",
-          "frequency": "7/50"
+          "frequency": "31/74"
         },
         {
           "name": "cart",
@@ -678,7 +660,7 @@
             "Object"
           ],
           "type": "Null | Object",
-          "frequency": "25/50"
+          "frequency": "49/74"
         },
         {
           "name": "items",
@@ -687,7 +669,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "items[]",
@@ -696,7 +678,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "id",
@@ -705,7 +687,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "item",
@@ -714,7 +696,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "_id",
@@ -723,7 +705,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "_user",
@@ -732,7 +714,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "categoryLevel1",
@@ -741,7 +723,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "categoryLevel2",
@@ -750,7 +732,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "colors",
@@ -759,7 +741,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "dateAdded",
@@ -768,7 +750,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "description",
@@ -777,7 +759,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "descriptionFull",
@@ -786,7 +768,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "hasClassification",
@@ -795,7 +777,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "hasColors",
@@ -804,7 +786,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "hasSizes",
@@ -813,7 +795,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "id",
@@ -822,7 +804,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "images",
@@ -831,7 +813,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "images[]",
@@ -840,7 +822,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "mainImage",
@@ -849,7 +831,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "name",
@@ -858,7 +840,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "url",
@@ -867,7 +849,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "onSale",
@@ -876,7 +858,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "price",
@@ -885,7 +867,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "5/50"
+          "frequency": "5/74"
         },
         {
           "name": "productType",
@@ -894,7 +876,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "quantity",
@@ -903,7 +885,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "rating",
@@ -912,7 +894,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "regularPrice",
@@ -921,7 +903,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "salePrice",
@@ -930,7 +912,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "shipping",
@@ -939,7 +921,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "shippingBasic",
@@ -948,7 +930,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "shippingBasicCost",
@@ -957,7 +939,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "shippingCost",
@@ -966,7 +948,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "shippingExtended",
@@ -975,7 +957,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "shippingExtendedCost",
@@ -984,7 +966,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "sizes",
@@ -993,7 +975,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "sizes[]",
@@ -1002,7 +984,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "stock",
@@ -1011,7 +993,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "stockDate",
@@ -1020,7 +1002,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "tags",
@@ -1029,7 +1011,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "title",
@@ -1038,7 +1020,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "titleUrl",
@@ -1047,7 +1029,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "variant",
@@ -1056,7 +1038,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "5/50"
+          "frequency": "5/74"
         },
         {
           "name": "classification",
@@ -1065,7 +1047,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "5/50"
+          "frequency": "5/74"
         },
         {
           "name": "color",
@@ -1074,7 +1056,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "5/50"
+          "frequency": "5/74"
         },
         {
           "name": "size",
@@ -1083,7 +1065,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "5/50"
+          "frequency": "5/74"
         },
         {
           "name": "variants",
@@ -1092,7 +1074,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "visibility",
@@ -1101,7 +1083,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "price",
@@ -1110,7 +1092,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "qty",
@@ -1119,7 +1101,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "shipingCostType",
@@ -1128,7 +1110,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "shippingCost",
@@ -1137,7 +1119,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "shippingLimit",
@@ -1146,7 +1128,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "shippingType",
@@ -1155,7 +1137,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "totalPrice",
@@ -1164,7 +1146,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "totalQty",
@@ -1173,7 +1155,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "couponCode",
@@ -1183,7 +1165,7 @@
             "String"
           ],
           "type": "Null | String",
-          "frequency": "43/50"
+          "frequency": "67/74"
         },
         {
           "name": "couponDiscount",
@@ -1192,7 +1174,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "43/50"
+          "frequency": "67/74"
         },
         {
           "name": "createdAt",
@@ -1201,7 +1183,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "50/50"
+          "frequency": "74/74"
         },
         {
           "name": "currency",
@@ -1210,7 +1192,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "43/50"
+          "frequency": "67/74"
         },
         {
           "name": "customer",
@@ -1219,7 +1201,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "42/50"
+          "frequency": "66/74"
         },
         {
           "name": "email",
@@ -1228,7 +1210,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "42/50"
+          "frequency": "66/74"
         },
         {
           "name": "name",
@@ -1237,7 +1219,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "42/50"
+          "frequency": "66/74"
         },
         {
           "name": "phone",
@@ -1246,7 +1228,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "42/50"
+          "frequency": "66/74"
         },
         {
           "name": "customerEmail",
@@ -1255,7 +1237,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "50/50"
+          "frequency": "74/74"
         },
         {
           "name": "customerPhone",
@@ -1264,7 +1246,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "49/50"
+          "frequency": "73/74"
         },
         {
           "name": "dateAdded",
@@ -1274,7 +1256,7 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "25/50"
+          "frequency": "49/74"
         },
         {
           "name": "deliveredAt",
@@ -1283,7 +1265,7 @@
             "Null"
           ],
           "type": "Null",
-          "frequency": "25/50"
+          "frequency": "49/74"
         },
         {
           "name": "discountAmount",
@@ -1292,7 +1274,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "43/50"
+          "frequency": "67/74"
         },
         {
           "name": "estimatedDeliveryDate",
@@ -1302,7 +1284,7 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "25/50"
+          "frequency": "49/74"
         },
         {
           "name": "isReviewed",
@@ -1311,7 +1293,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "18/50"
+          "frequency": "43/74"
         },
         {
           "name": "items",
@@ -1320,7 +1302,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "50/50"
+          "frequency": "74/74"
         },
         {
           "name": "items[]",
@@ -1329,7 +1311,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "50/50"
+          "frequency": "74/74"
         },
         {
           "name": "image",
@@ -1339,7 +1321,7 @@
             "String"
           ],
           "type": "Object | String",
-          "frequency": "34/50"
+          "frequency": "58/74"
         },
         {
           "name": "name",
@@ -1348,7 +1330,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "7/50"
+          "frequency": "7/74"
         },
         {
           "name": "url",
@@ -1357,7 +1339,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "7/50"
+          "frequency": "7/74"
         },
         {
           "name": "name",
@@ -1366,7 +1348,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "34/50"
+          "frequency": "58/74"
         },
         {
           "name": "productId",
@@ -1376,7 +1358,7 @@
             "String"
           ],
           "type": "ObjectId | String",
-          "frequency": "50/50"
+          "frequency": "74/74"
         },
         {
           "name": "productSnapshot",
@@ -1385,7 +1367,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "50/50"
+          "frequency": "74/74"
         },
         {
           "name": "brand",
@@ -1394,7 +1376,7 @@
             "Null"
           ],
           "type": "Null",
-          "frequency": "10/50"
+          "frequency": "34/74"
         },
         {
           "name": "category",
@@ -1404,7 +1386,7 @@
             "String"
           ],
           "type": "Null | String",
-          "frequency": "10/50"
+          "frequency": "34/74"
         },
         {
           "name": "image",
@@ -1414,7 +1396,7 @@
             "String"
           ],
           "type": "Object | String",
-          "frequency": "50/50"
+          "frequency": "74/74"
         },
         {
           "name": "name",
@@ -1423,7 +1405,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "7/50"
+          "frequency": "7/74"
         },
         {
           "name": "url",
@@ -1432,7 +1414,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "7/50"
+          "frequency": "7/74"
         },
         {
           "name": "name",
@@ -1441,7 +1423,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "21/50"
+          "frequency": "45/74"
         },
         {
           "name": "price",
@@ -1450,7 +1432,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "21/50"
+          "frequency": "45/74"
         },
         {
           "name": "sku",
@@ -1459,7 +1441,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "50/50"
+          "frequency": "74/74"
         },
         {
           "name": "title",
@@ -1468,7 +1450,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "45/50"
+          "frequency": "69/74"
         },
         {
           "name": "variant",
@@ -1477,7 +1459,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "43/50"
+          "frequency": "67/74"
         },
         {
           "name": "classification",
@@ -1486,7 +1468,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "43/50"
+          "frequency": "67/74"
         },
         {
           "name": "color",
@@ -1495,7 +1477,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "43/50"
+          "frequency": "67/74"
         },
         {
           "name": "size",
@@ -1504,7 +1486,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "43/50"
+          "frequency": "67/74"
         },
         {
           "name": "quantity",
@@ -1513,7 +1495,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "50/50"
+          "frequency": "74/74"
         },
         {
           "name": "sku",
@@ -1522,7 +1504,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "34/50"
+          "frequency": "58/74"
         },
         {
           "name": "subtotal",
@@ -1531,7 +1513,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "50/50"
+          "frequency": "74/74"
         },
         {
           "name": "unitPrice",
@@ -1540,7 +1522,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "50/50"
+          "frequency": "74/74"
         },
         {
           "name": "variant",
@@ -1550,7 +1532,7 @@
             "Object"
           ],
           "type": "Null | Object",
-          "frequency": "34/50"
+          "frequency": "58/74"
         },
         {
           "name": "classification",
@@ -1559,7 +1541,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "24/50"
+          "frequency": "24/74"
         },
         {
           "name": "color",
@@ -1568,7 +1550,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "30/50"
+          "frequency": "30/74"
         },
         {
           "name": "size",
@@ -1577,7 +1559,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "30/50"
+          "frequency": "30/74"
         },
         {
           "name": "variantId",
@@ -1587,7 +1569,7 @@
             "String"
           ],
           "type": "Null | String",
-          "frequency": "33/50"
+          "frequency": "57/74"
         },
         {
           "name": "notes",
@@ -1596,7 +1578,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "43/50"
+          "frequency": "67/74"
         },
         {
           "name": "orderId",
@@ -1605,7 +1587,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "50/50"
+          "frequency": "74/74"
         },
         {
           "name": "outcome",
@@ -1615,7 +1597,7 @@
             "Object"
           ],
           "type": "Null | Object",
-          "frequency": "20/50"
+          "frequency": "44/74"
         },
         {
           "name": "seller_message",
@@ -1624,7 +1606,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "paidAt",
@@ -1634,7 +1616,7 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "33/50"
+          "frequency": "57/74"
         },
         {
           "name": "payment",
@@ -1643,7 +1625,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "49/50"
+          "frequency": "73/74"
         },
         {
           "name": "actualCollectedAmount",
@@ -1652,7 +1634,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "20/50"
+          "frequency": "44/74"
         },
         {
           "name": "codCollected",
@@ -1661,7 +1643,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "12/50"
+          "frequency": "36/74"
         },
         {
           "name": "codCollectedAt",
@@ -1670,7 +1652,7 @@
             "Null"
           ],
           "type": "Null",
-          "frequency": "5/50"
+          "frequency": "29/74"
         },
         {
           "name": "codReconciledAt",
@@ -1679,7 +1661,7 @@
             "Null"
           ],
           "type": "Null",
-          "frequency": "5/50"
+          "frequency": "29/74"
         },
         {
           "name": "codReconciliationStatus",
@@ -1688,7 +1670,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "36/74"
         },
         {
           "name": "method",
@@ -1697,7 +1679,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "49/50"
+          "frequency": "73/74"
         },
         {
           "name": "paidAt",
@@ -1707,7 +1689,7 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "49/50"
+          "frequency": "73/74"
         },
         {
           "name": "provider",
@@ -1716,7 +1698,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "49/50"
+          "frequency": "73/74"
         },
         {
           "name": "refundedAmount",
@@ -1725,7 +1707,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "48/50"
+          "frequency": "72/74"
         },
         {
           "name": "refundedAt",
@@ -1735,7 +1717,7 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "44/50"
+          "frequency": "68/74"
         },
         {
           "name": "status",
@@ -1744,7 +1726,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "49/50"
+          "frequency": "73/74"
         },
         {
           "name": "transactionId",
@@ -1754,7 +1736,7 @@
             "String"
           ],
           "type": "Null | String",
-          "frequency": "49/50"
+          "frequency": "73/74"
         },
         {
           "name": "paymentFee",
@@ -1763,7 +1745,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "43/50"
+          "frequency": "67/74"
         },
         {
           "name": "paymentMethodId",
@@ -1773,7 +1755,7 @@
             "ObjectId"
           ],
           "type": "Null | ObjectId",
-          "frequency": "39/50"
+          "frequency": "63/74"
         },
         {
           "name": "paymentMethodSnapshot",
@@ -1783,7 +1765,7 @@
             "Object"
           ],
           "type": "Null | Object",
-          "frequency": "39/50"
+          "frequency": "63/74"
         },
         {
           "name": "code",
@@ -1792,7 +1774,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "38/50"
+          "frequency": "62/74"
         },
         {
           "name": "name",
@@ -1801,7 +1783,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "38/50"
+          "frequency": "62/74"
         },
         {
           "name": "paymentFee",
@@ -1810,7 +1792,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "38/50"
+          "frequency": "62/74"
         },
         {
           "name": "paymentType",
@@ -1819,7 +1801,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "38/50"
+          "frequency": "62/74"
         },
         {
           "name": "paymentProvider",
@@ -1828,7 +1810,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "38/50"
+          "frequency": "62/74"
         },
         {
           "name": "paymentStatus",
@@ -1837,7 +1819,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "43/50"
+          "frequency": "67/74"
         },
         {
           "name": "refundedAmount",
@@ -1846,7 +1828,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "39/50"
+          "frequency": "63/74"
         },
         {
           "name": "refundedAt",
@@ -1856,7 +1838,7 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "37/50"
+          "frequency": "61/74"
         },
         {
           "name": "returnRequest",
@@ -1866,7 +1848,7 @@
             "Object"
           ],
           "type": "Null | Object",
-          "frequency": "18/50"
+          "frequency": "42/74"
         },
         {
           "name": "approveNote",
@@ -1875,7 +1857,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "approvedAt",
@@ -1884,7 +1866,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "2/50"
+          "frequency": "2/74"
         },
         {
           "name": "description",
@@ -1893,7 +1875,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "history",
@@ -1902,7 +1884,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "history[]",
@@ -1911,7 +1893,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "action",
@@ -1920,7 +1902,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "fromStatus",
@@ -1930,7 +1912,7 @@
             "String"
           ],
           "type": "Null | String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "note",
@@ -1939,7 +1921,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "toStatus",
@@ -1948,7 +1930,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "updatedAt",
@@ -1957,7 +1939,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "updatedBy",
@@ -1968,7 +1950,7 @@
             "String"
           ],
           "type": "Null | ObjectId | String",
-          "frequency": "7/50"
+          "frequency": "7/74"
         },
         {
           "name": "images",
@@ -1977,7 +1959,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "images[]",
@@ -1986,7 +1968,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "name",
@@ -1995,7 +1977,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "url",
@@ -2004,7 +1986,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "inspection",
@@ -2013,7 +1995,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "conditionNotes",
@@ -2022,7 +2004,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "inspectedAt",
@@ -2032,7 +2014,7 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "inspectedBy",
@@ -2043,7 +2025,7 @@
             "String"
           ],
           "type": "Null | ObjectId | String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "isEligible",
@@ -2053,7 +2035,7 @@
             "Null"
           ],
           "type": "Boolean | Null",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "restocked",
@@ -2062,7 +2044,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "items",
@@ -2071,7 +2053,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "items[]",
@@ -2080,7 +2062,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "boughtQuantity",
@@ -2089,7 +2071,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "conditionNotes",
@@ -2098,7 +2080,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "10/50"
+          "frequency": "10/74"
         },
         {
           "name": "damagedQuantity",
@@ -2107,7 +2089,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "10/50"
+          "frequency": "10/74"
         },
         {
           "name": "eligibleQuantity",
@@ -2116,7 +2098,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "10/50"
+          "frequency": "10/74"
         },
         {
           "name": "inspectedQuantity",
@@ -2125,7 +2107,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "10/50"
+          "frequency": "10/74"
         },
         {
           "name": "isEligible",
@@ -2135,7 +2117,7 @@
             "Null"
           ],
           "type": "Boolean | Null",
-          "frequency": "10/50"
+          "frequency": "10/74"
         },
         {
           "name": "productId",
@@ -2145,7 +2127,7 @@
             "String"
           ],
           "type": "ObjectId | String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "productName",
@@ -2154,7 +2136,7 @@
             "Null"
           ],
           "type": "Null",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "productSnapshot",
@@ -2163,7 +2145,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "brand",
@@ -2172,7 +2154,7 @@
             "Null"
           ],
           "type": "Null",
-          "frequency": "4/50"
+          "frequency": "4/74"
         },
         {
           "name": "category",
@@ -2181,7 +2163,7 @@
             "Null"
           ],
           "type": "Null",
-          "frequency": "4/50"
+          "frequency": "4/74"
         },
         {
           "name": "image",
@@ -2191,7 +2173,7 @@
             "String"
           ],
           "type": "Object | String",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "name",
@@ -2200,7 +2182,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "url",
@@ -2209,7 +2191,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "name",
@@ -2218,7 +2200,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "price",
@@ -2227,7 +2209,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "5/50"
+          "frequency": "5/74"
         },
         {
           "name": "sku",
@@ -2236,7 +2218,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "title",
@@ -2245,7 +2227,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "variant",
@@ -2254,7 +2236,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "5/50"
+          "frequency": "5/74"
         },
         {
           "name": "classification",
@@ -2263,7 +2245,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "5/50"
+          "frequency": "5/74"
         },
         {
           "name": "color",
@@ -2272,7 +2254,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "5/50"
+          "frequency": "5/74"
         },
         {
           "name": "size",
@@ -2281,7 +2263,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "5/50"
+          "frequency": "5/74"
         },
         {
           "name": "quantity",
@@ -2290,7 +2272,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "reason",
@@ -2299,7 +2281,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "subtotal",
@@ -2308,7 +2290,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "unitPrice",
@@ -2317,7 +2299,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "variantId",
@@ -2326,7 +2308,7 @@
             "Null"
           ],
           "type": "Null",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "orderId",
@@ -2335,7 +2317,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "reason",
@@ -2344,7 +2326,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "refund",
@@ -2353,7 +2335,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "accountHolder",
@@ -2362,7 +2344,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "accountNumber",
@@ -2371,7 +2353,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "approvedAmount",
@@ -2380,7 +2362,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "bankName",
@@ -2389,7 +2371,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "failureReason",
@@ -2398,7 +2380,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "notes",
@@ -2407,7 +2389,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "refundedAmount",
@@ -2416,7 +2398,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "refundedAt",
@@ -2426,7 +2408,7 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "requestedAmount",
@@ -2435,7 +2417,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "status",
@@ -2444,7 +2426,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "transactionId",
@@ -2453,7 +2435,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "refundMethod",
@@ -2462,7 +2444,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "rejectionReason",
@@ -2471,7 +2453,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "requestId",
@@ -2480,7 +2462,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "requestedAt",
@@ -2489,7 +2471,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "returnShipping",
@@ -2498,7 +2480,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "carrier",
@@ -2507,7 +2489,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "instructions",
@@ -2516,7 +2498,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "notes",
@@ -2525,7 +2507,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "receivedAt",
@@ -2535,7 +2517,7 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "receivedNote",
@@ -2544,7 +2526,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "shippedAt",
@@ -2554,7 +2536,7 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "trackingCode",
@@ -2563,7 +2545,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "status",
@@ -2572,7 +2554,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "returnRequests",
@@ -2581,7 +2563,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "20/50"
+          "frequency": "44/74"
         },
         {
           "name": "returnRequests[]",
@@ -2590,7 +2572,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "approveNote",
@@ -2599,7 +2581,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "approvedAt",
@@ -2608,7 +2590,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "2/50"
+          "frequency": "2/74"
         },
         {
           "name": "description",
@@ -2617,7 +2599,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "history",
@@ -2626,7 +2608,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "history[]",
@@ -2635,7 +2617,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "action",
@@ -2644,7 +2626,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "fromStatus",
@@ -2654,7 +2636,7 @@
             "String"
           ],
           "type": "Null | String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "note",
@@ -2663,7 +2645,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "toStatus",
@@ -2672,7 +2654,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "updatedAt",
@@ -2681,7 +2663,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "updatedBy",
@@ -2692,7 +2674,7 @@
             "String"
           ],
           "type": "Null | ObjectId | String",
-          "frequency": "7/50"
+          "frequency": "7/74"
         },
         {
           "name": "images",
@@ -2701,7 +2683,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "images[]",
@@ -2710,7 +2692,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "name",
@@ -2719,7 +2701,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "url",
@@ -2728,7 +2710,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "inspection",
@@ -2737,7 +2719,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "conditionNotes",
@@ -2746,7 +2728,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "inspectedAt",
@@ -2756,7 +2738,7 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "inspectedBy",
@@ -2767,7 +2749,7 @@
             "String"
           ],
           "type": "Null | ObjectId | String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "isEligible",
@@ -2777,7 +2759,7 @@
             "Null"
           ],
           "type": "Boolean | Null",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "restocked",
@@ -2786,7 +2768,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "items",
@@ -2795,7 +2777,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "items[]",
@@ -2804,7 +2786,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "boughtQuantity",
@@ -2813,7 +2795,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "conditionNotes",
@@ -2822,7 +2804,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "damagedQuantity",
@@ -2831,7 +2813,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "eligibleQuantity",
@@ -2840,7 +2822,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "inspectedQuantity",
@@ -2849,7 +2831,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "isEligible",
@@ -2859,7 +2841,7 @@
             "Null"
           ],
           "type": "Boolean | Null",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "productId",
@@ -2869,7 +2851,7 @@
             "String"
           ],
           "type": "ObjectId | String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "productName",
@@ -2878,7 +2860,7 @@
             "Null"
           ],
           "type": "Null",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "productSnapshot",
@@ -2887,7 +2869,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "brand",
@@ -2896,7 +2878,7 @@
             "Null"
           ],
           "type": "Null",
-          "frequency": "5/50"
+          "frequency": "5/74"
         },
         {
           "name": "category",
@@ -2905,7 +2887,7 @@
             "Null"
           ],
           "type": "Null",
-          "frequency": "5/50"
+          "frequency": "5/74"
         },
         {
           "name": "image",
@@ -2915,7 +2897,7 @@
             "String"
           ],
           "type": "Object | String",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "name",
@@ -2924,7 +2906,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "url",
@@ -2933,7 +2915,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "name",
@@ -2942,7 +2924,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "price",
@@ -2951,7 +2933,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "5/50"
+          "frequency": "5/74"
         },
         {
           "name": "sku",
@@ -2960,7 +2942,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "title",
@@ -2969,7 +2951,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "variant",
@@ -2978,7 +2960,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "5/50"
+          "frequency": "5/74"
         },
         {
           "name": "classification",
@@ -2987,7 +2969,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "5/50"
+          "frequency": "5/74"
         },
         {
           "name": "color",
@@ -2996,7 +2978,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "5/50"
+          "frequency": "5/74"
         },
         {
           "name": "size",
@@ -3005,7 +2987,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "5/50"
+          "frequency": "5/74"
         },
         {
           "name": "quantity",
@@ -3014,7 +2996,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "reason",
@@ -3023,7 +3005,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "subtotal",
@@ -3032,7 +3014,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "unitPrice",
@@ -3041,7 +3023,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "variantId",
@@ -3050,7 +3032,7 @@
             "Null"
           ],
           "type": "Null",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "orderId",
@@ -3059,7 +3041,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "reason",
@@ -3068,7 +3050,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "refund",
@@ -3077,7 +3059,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "accountHolder",
@@ -3086,7 +3068,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "accountNumber",
@@ -3095,7 +3077,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "approvedAmount",
@@ -3104,7 +3086,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "bankName",
@@ -3113,7 +3095,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "failureReason",
@@ -3122,7 +3104,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "notes",
@@ -3131,7 +3113,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "refundedAmount",
@@ -3140,7 +3122,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "refundedAt",
@@ -3150,7 +3132,7 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "requestedAmount",
@@ -3159,7 +3141,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "status",
@@ -3168,7 +3150,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "transactionId",
@@ -3177,7 +3159,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "refundMethod",
@@ -3186,7 +3168,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "rejectionReason",
@@ -3195,7 +3177,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/50"
+          "frequency": "11/74"
         },
         {
           "name": "requestId",
@@ -3204,7 +3186,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "requestedAt",
@@ -3213,7 +3195,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "returnShipping",
@@ -3222,7 +3204,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "carrier",
@@ -3231,7 +3213,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "instructions",
@@ -3240,7 +3222,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "notes",
@@ -3249,7 +3231,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "receivedAt",
@@ -3259,7 +3241,7 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "receivedNote",
@@ -3268,7 +3250,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/50"
+          "frequency": "1/74"
         },
         {
           "name": "shippedAt",
@@ -3278,7 +3260,7 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "trackingCode",
@@ -3287,7 +3269,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "status",
@@ -3296,7 +3278,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/50"
+          "frequency": "12/74"
         },
         {
           "name": "reviewedAt",
@@ -3306,7 +3288,16 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "6/50"
+          "frequency": "31/74"
+        },
+        {
+          "name": "sessionId",
+          "path": "sessionId",
+          "types": [
+            "String"
+          ],
+          "type": "String",
+          "frequency": "5/74"
         },
         {
           "name": "shippedAt",
@@ -3316,7 +3307,7 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "25/50"
+          "frequency": "49/74"
         },
         {
           "name": "shipping",
@@ -3325,7 +3316,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "43/50"
+          "frequency": "67/74"
         },
         {
           "name": "carrier",
@@ -3334,7 +3325,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "5/50"
+          "frequency": "5/74"
         },
         {
           "name": "deliveredAt",
@@ -3344,7 +3335,7 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "43/50"
+          "frequency": "67/74"
         },
         {
           "name": "estimatedDeliveryDate",
@@ -3354,7 +3345,7 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "38/50"
+          "frequency": "62/74"
         },
         {
           "name": "fee",
@@ -3363,7 +3354,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "5/50"
+          "frequency": "5/74"
         },
         {
           "name": "method",
@@ -3372,7 +3363,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "43/50"
+          "frequency": "67/74"
         },
         {
           "name": "provider",
@@ -3381,7 +3372,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "42/50"
+          "frequency": "66/74"
         },
         {
           "name": "shippedAt",
@@ -3391,7 +3382,7 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "38/50"
+          "frequency": "62/74"
         },
         {
           "name": "trackingCode",
@@ -3400,7 +3391,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "5/50"
+          "frequency": "5/74"
         },
         {
           "name": "trackingNumber",
@@ -3409,7 +3400,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "42/50"
+          "frequency": "66/74"
         },
         {
           "name": "shippingAddress",
@@ -3418,7 +3409,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "50/50"
+          "frequency": "74/74"
         },
         {
           "name": "address",
@@ -3427,7 +3418,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "50/50"
+          "frequency": "74/74"
         },
         {
           "name": "addressDetail",
@@ -3436,7 +3427,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "24/50"
+          "frequency": "48/74"
         },
         {
           "name": "city",
@@ -3445,7 +3436,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "30/50"
+          "frequency": "30/74"
         },
         {
           "name": "country",
@@ -3454,7 +3445,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "25/50"
+          "frequency": "25/74"
         },
         {
           "name": "district",
@@ -3463,7 +3454,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "50/50"
+          "frequency": "74/74"
         },
         {
           "name": "districtCode",
@@ -3472,7 +3463,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "24/50"
+          "frequency": "48/74"
         },
         {
           "name": "districtName",
@@ -3481,7 +3472,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "24/50"
+          "frequency": "48/74"
         },
         {
           "name": "fullName",
@@ -3490,7 +3481,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "50/50"
+          "frequency": "74/74"
         },
         {
           "name": "phone",
@@ -3499,7 +3490,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "50/50"
+          "frequency": "74/74"
         },
         {
           "name": "province",
@@ -3508,7 +3499,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "50/50"
+          "frequency": "74/74"
         },
         {
           "name": "provinceCode",
@@ -3517,7 +3508,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "24/50"
+          "frequency": "48/74"
         },
         {
           "name": "provinceName",
@@ -3526,7 +3517,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "24/50"
+          "frequency": "48/74"
         },
         {
           "name": "ward",
@@ -3535,7 +3526,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "50/50"
+          "frequency": "74/74"
         },
         {
           "name": "wardCode",
@@ -3544,7 +3535,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "24/50"
+          "frequency": "48/74"
         },
         {
           "name": "wardName",
@@ -3553,7 +3544,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "24/50"
+          "frequency": "48/74"
         },
         {
           "name": "zip",
@@ -3562,7 +3553,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "25/50"
+          "frequency": "25/74"
         },
         {
           "name": "shippingFee",
@@ -3571,7 +3562,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "50/50"
+          "frequency": "74/74"
         },
         {
           "name": "shippingLogs",
@@ -3580,7 +3571,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "28/50"
+          "frequency": "52/74"
         },
         {
           "name": "shippingLogs[]",
@@ -3589,7 +3580,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "2/50"
+          "frequency": "2/74"
         },
         {
           "name": "description",
@@ -3598,7 +3589,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "2/50"
+          "frequency": "2/74"
         },
         {
           "name": "location",
@@ -3607,7 +3598,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "2/50"
+          "frequency": "2/74"
         },
         {
           "name": "status",
@@ -3616,7 +3607,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "2/50"
+          "frequency": "2/74"
         },
         {
           "name": "timestamp",
@@ -3625,7 +3616,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "2/50"
+          "frequency": "2/74"
         },
         {
           "name": "shippingMethodId",
@@ -3635,7 +3626,7 @@
             "ObjectId"
           ],
           "type": "Null | ObjectId",
-          "frequency": "39/50"
+          "frequency": "63/74"
         },
         {
           "name": "shippingMethodSnapshot",
@@ -3645,7 +3636,7 @@
             "Object"
           ],
           "type": "Null | Object",
-          "frequency": "39/50"
+          "frequency": "63/74"
         },
         {
           "name": "code",
@@ -3654,7 +3645,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "37/50"
+          "frequency": "61/74"
         },
         {
           "name": "estimatedDeliveryTime",
@@ -3663,7 +3654,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "37/50"
+          "frequency": "61/74"
         },
         {
           "name": "fee",
@@ -3672,7 +3663,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "37/50"
+          "frequency": "61/74"
         },
         {
           "name": "name",
@@ -3681,7 +3672,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "37/50"
+          "frequency": "61/74"
         },
         {
           "name": "shippingProvider",
@@ -3690,7 +3681,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "42/50"
+          "frequency": "66/74"
         },
         {
           "name": "status",
@@ -3699,7 +3690,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "50/50"
+          "frequency": "74/74"
         },
         {
           "name": "statusHistory",
@@ -3708,7 +3699,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "45/50"
+          "frequency": "69/74"
         },
         {
           "name": "statusHistory[]",
@@ -3717,7 +3708,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "45/50"
+          "frequency": "69/74"
         },
         {
           "name": "changedAt",
@@ -3726,7 +3717,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "5/50"
+          "frequency": "5/74"
         },
         {
           "name": "note",
@@ -3735,7 +3726,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "45/50"
+          "frequency": "69/74"
         },
         {
           "name": "status",
@@ -3744,7 +3735,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "45/50"
+          "frequency": "69/74"
         },
         {
           "name": "updatedAt",
@@ -3754,7 +3745,7 @@
             "String"
           ],
           "type": "Date | String",
-          "frequency": "44/50"
+          "frequency": "68/74"
         },
         {
           "name": "updatedBy",
@@ -3765,7 +3756,7 @@
             "String"
           ],
           "type": "Null | ObjectId | String",
-          "frequency": "40/50"
+          "frequency": "64/74"
         },
         {
           "name": "subtotal",
@@ -3774,7 +3765,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "50/50"
+          "frequency": "74/74"
         },
         {
           "name": "taxAmount",
@@ -3783,7 +3774,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "43/50"
+          "frequency": "67/74"
         },
         {
           "name": "totalAmount",
@@ -3792,7 +3783,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "50/50"
+          "frequency": "74/74"
         },
         {
           "name": "trackingNumber",
@@ -3801,7 +3792,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "42/50"
+          "frequency": "66/74"
         },
         {
           "name": "trackingUrl",
@@ -3810,7 +3801,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "28/50"
+          "frequency": "52/74"
         },
         {
           "name": "transactionId",
@@ -3819,7 +3810,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "38/50"
+          "frequency": "62/74"
         },
         {
           "name": "type",
@@ -3828,7 +3819,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/50"
+          "frequency": "6/74"
         },
         {
           "name": "updatedAt",
@@ -3838,7 +3829,7 @@
             "String"
           ],
           "type": "Date | String",
-          "frequency": "50/50"
+          "frequency": "74/74"
         },
         {
           "name": "userId",
@@ -3848,15 +3839,24 @@
             "ObjectId"
           ],
           "type": "Null | ObjectId",
-          "frequency": "49/50"
+          "frequency": "73/74"
         }
       ]
     },
     {
       "name": "products",
-      "documentCount": 98,
-      "sampledCount": 98,
+      "documentCount": 99,
+      "sampledCount": 99,
       "fields": [
+        {
+          "name": "IdF",
+          "path": "IdF",
+          "types": [
+            "Number"
+          ],
+          "type": "Number",
+          "frequency": "98/99"
+        },
         {
           "name": "__v",
           "path": "__v",
@@ -3864,7 +3864,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "_id",
@@ -3873,7 +3873,7 @@
             "ObjectId"
           ],
           "type": "ObjectId",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "attributes",
@@ -3882,7 +3882,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "98/98"
+          "frequency": "98/99"
         },
         {
           "name": "classifications",
@@ -3891,7 +3891,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "98/98"
+          "frequency": "98/99"
         },
         {
           "name": "classifications[]",
@@ -3900,7 +3900,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "97/98"
+          "frequency": "97/99"
         },
         {
           "name": "colors",
@@ -3909,7 +3909,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "98/98"
+          "frequency": "98/99"
         },
         {
           "name": "colors[]",
@@ -3918,7 +3918,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "97/98"
+          "frequency": "97/99"
         },
         {
           "name": "hex",
@@ -3927,7 +3927,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "97/98"
+          "frequency": "97/99"
         },
         {
           "name": "name",
@@ -3936,7 +3936,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "97/98"
+          "frequency": "97/99"
         },
         {
           "name": "sizes",
@@ -3945,7 +3945,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "98/98"
+          "frequency": "98/99"
         },
         {
           "name": "sizes[]",
@@ -3954,7 +3954,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "97/98"
+          "frequency": "97/99"
         },
         {
           "name": "cs",
@@ -3963,7 +3963,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "visibility",
@@ -3972,7 +3972,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "dateAdded",
@@ -3981,7 +3981,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "en",
@@ -3990,7 +3990,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "visibility",
@@ -3999,7 +3999,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "images",
@@ -4008,7 +4008,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "images[]",
@@ -4017,7 +4017,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "mainImage",
@@ -4026,7 +4026,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "name",
@@ -4035,7 +4035,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "url",
@@ -4044,7 +4044,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "quantity",
@@ -4053,7 +4053,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "10/98"
+          "frequency": "13/99"
         },
         {
           "name": "rating",
@@ -4062,7 +4062,16 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "3/98"
+          "frequency": "99/99"
+        },
+        {
+          "name": "reviewCount",
+          "path": "reviewCount",
+          "types": [
+            "Number"
+          ],
+          "type": "Number",
+          "frequency": "99/99"
         },
         {
           "name": "sk",
@@ -4071,7 +4080,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "visibility",
@@ -4080,7 +4089,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "stock",
@@ -4089,7 +4098,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "4/98"
+          "frequency": "5/99"
         },
         {
           "name": "tags",
@@ -4098,7 +4107,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "tags[]",
@@ -4107,7 +4116,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "98/98"
+          "frequency": "98/99"
         },
         {
           "name": "titleUrl",
@@ -4116,7 +4125,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "updatedAt",
@@ -4126,7 +4135,7 @@
             "String"
           ],
           "type": "Date | String",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "variants",
@@ -4135,7 +4144,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "variants[]",
@@ -4144,7 +4153,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "97/98"
+          "frequency": "98/99"
         },
         {
           "name": "classification",
@@ -4153,7 +4162,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "97/98"
+          "frequency": "98/99"
         },
         {
           "name": "color",
@@ -4162,7 +4171,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "97/98"
+          "frequency": "98/99"
         },
         {
           "name": "discountPrice",
@@ -4171,7 +4180,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "97/98"
+          "frequency": "98/99"
         },
         {
           "name": "price",
@@ -4180,7 +4189,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "97/98"
+          "frequency": "98/99"
         },
         {
           "name": "size",
@@ -4189,7 +4198,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "97/98"
+          "frequency": "98/99"
         },
         {
           "name": "sku",
@@ -4198,7 +4207,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "97/98"
+          "frequency": "98/99"
         },
         {
           "name": "stock",
@@ -4207,7 +4216,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "97/98"
+          "frequency": "98/99"
         },
         {
           "name": "vi",
@@ -4216,7 +4225,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "categoryLevel1",
@@ -4225,7 +4234,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "categoryLevel2",
@@ -4234,7 +4243,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "classifications",
@@ -4243,7 +4252,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "classifications[]",
@@ -4252,7 +4261,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "97/98"
+          "frequency": "98/99"
         },
         {
           "name": "colors",
@@ -4261,7 +4270,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "colors[]",
@@ -4270,7 +4279,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "97/98"
+          "frequency": "98/99"
         },
         {
           "name": "hex",
@@ -4279,7 +4288,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "97/98"
+          "frequency": "98/99"
         },
         {
           "name": "name",
@@ -4288,7 +4297,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "97/98"
+          "frequency": "98/99"
         },
         {
           "name": "description",
@@ -4297,7 +4306,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "descriptionFull",
@@ -4306,7 +4315,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "descriptionFull[]",
@@ -4315,7 +4324,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "98/98"
+          "frequency": "98/99"
         },
         {
           "name": "hasClassification",
@@ -4324,7 +4333,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "hasColors",
@@ -4333,7 +4342,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "hasSizes",
@@ -4342,7 +4351,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "onSale",
@@ -4351,7 +4360,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "productType",
@@ -4360,7 +4369,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "quantity",
@@ -4369,7 +4378,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "regularPrice",
@@ -4378,7 +4387,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "salePrice",
@@ -4387,7 +4396,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "sizes",
@@ -4396,7 +4405,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "sizes[]",
@@ -4405,7 +4414,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "97/98"
+          "frequency": "98/99"
         },
         {
           "name": "stock",
@@ -4415,7 +4424,7 @@
             "String"
           ],
           "type": "Number | String",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "stockDate",
@@ -4424,7 +4433,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "title",
@@ -4433,7 +4442,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "visibility",
@@ -4442,7 +4451,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "98/98"
+          "frequency": "99/99"
         },
         {
           "name": "visibility",
@@ -4451,14 +4460,14 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "98/98"
+          "frequency": "99/99"
         }
       ]
     },
     {
       "name": "categories",
-      "documentCount": 5,
-      "sampledCount": 5,
+      "documentCount": 4,
+      "sampledCount": 4,
       "fields": [
         {
           "name": "__v",
@@ -4467,7 +4476,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "5/5"
+          "frequency": "4/4"
         },
         {
           "name": "_id",
@@ -4476,7 +4485,7 @@
             "ObjectId"
           ],
           "type": "ObjectId",
-          "frequency": "5/5"
+          "frequency": "4/4"
         },
         {
           "name": "cs",
@@ -4485,7 +4494,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "5/5"
+          "frequency": "4/4"
         },
         {
           "name": "visibility",
@@ -4494,7 +4503,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "5/5"
+          "frequency": "4/4"
         },
         {
           "name": "dateAdded",
@@ -4503,7 +4512,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "5/5"
+          "frequency": "4/4"
         },
         {
           "name": "en",
@@ -4512,7 +4521,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "5/5"
+          "frequency": "4/4"
         },
         {
           "name": "description",
@@ -4521,7 +4530,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "5/5"
+          "frequency": "4/4"
         },
         {
           "name": "title",
@@ -4530,7 +4539,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "5/5"
+          "frequency": "4/4"
         },
         {
           "name": "visibility",
@@ -4539,7 +4548,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "5/5"
+          "frequency": "4/4"
         },
         {
           "name": "mainImage",
@@ -4548,7 +4557,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "5/5"
+          "frequency": "4/4"
         },
         {
           "name": "name",
@@ -4557,7 +4566,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "5/5"
+          "frequency": "4/4"
         },
         {
           "name": "url",
@@ -4566,7 +4575,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "5/5"
+          "frequency": "4/4"
         },
         {
           "name": "parentId",
@@ -4575,7 +4584,7 @@
             "Null"
           ],
           "type": "Null",
-          "frequency": "5/5"
+          "frequency": "4/4"
         },
         {
           "name": "sk",
@@ -4584,7 +4593,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "5/5"
+          "frequency": "4/4"
         },
         {
           "name": "visibility",
@@ -4593,7 +4602,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "5/5"
+          "frequency": "4/4"
         },
         {
           "name": "subCategories",
@@ -4602,7 +4611,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "5/5"
+          "frequency": "4/4"
         },
         {
           "name": "titleUrl",
@@ -4611,7 +4620,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "5/5"
+          "frequency": "4/4"
         },
         {
           "name": "updatedAt",
@@ -4620,7 +4629,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "5/5"
+          "frequency": "4/4"
         },
         {
           "name": "vi",
@@ -4629,7 +4638,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "5/5"
+          "frequency": "4/4"
         },
         {
           "name": "description",
@@ -4638,7 +4647,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "5/5"
+          "frequency": "4/4"
         },
         {
           "name": "menuHidden",
@@ -4647,7 +4656,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "5/5"
+          "frequency": "4/4"
         },
         {
           "name": "position",
@@ -4656,7 +4665,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "5/5"
+          "frequency": "4/4"
         },
         {
           "name": "title",
@@ -4665,7 +4674,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "5/5"
+          "frequency": "4/4"
         },
         {
           "name": "visibility",
@@ -4674,7 +4683,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "5/5"
+          "frequency": "4/4"
         },
         {
           "name": "visibility",
@@ -4683,7 +4692,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "2/5"
+          "frequency": "2/4"
         }
       ]
     },
@@ -5009,8 +5018,8 @@
     },
     {
       "name": "payment_methods",
-      "documentCount": 11,
-      "sampledCount": 11,
+      "documentCount": 2,
+      "sampledCount": 2,
       "fields": [
         {
           "name": "_id",
@@ -5019,7 +5028,7 @@
             "ObjectId"
           ],
           "type": "ObjectId",
-          "frequency": "11/11"
+          "frequency": "2/2"
         },
         {
           "name": "code",
@@ -5028,7 +5037,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/11"
+          "frequency": "2/2"
         },
         {
           "name": "createdAt",
@@ -5037,7 +5046,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/11"
+          "frequency": "2/2"
         },
         {
           "name": "description",
@@ -5046,7 +5055,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/11"
+          "frequency": "2/2"
         },
         {
           "name": "isActive",
@@ -5055,7 +5064,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "11/11"
+          "frequency": "2/2"
         },
         {
           "name": "name",
@@ -5064,7 +5073,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/11"
+          "frequency": "2/2"
         },
         {
           "name": "paymentInfo",
@@ -5073,16 +5082,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/11"
-        },
-        {
-          "name": "paymentProofImage",
-          "path": "paymentProofImage",
-          "types": [
-            "String"
-          ],
-          "type": "String",
-          "frequency": "11/11"
+          "frequency": "2/2"
         },
         {
           "name": "paymentType",
@@ -5091,7 +5091,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/11"
+          "frequency": "2/2"
         },
         {
           "name": "status",
@@ -5100,7 +5100,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/11"
+          "frequency": "2/2"
         },
         {
           "name": "type",
@@ -5109,7 +5109,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/11"
+          "frequency": "2/2"
         },
         {
           "name": "updatedAt",
@@ -5118,7 +5118,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/11"
+          "frequency": "2/2"
         }
       ]
     },
@@ -5347,8 +5347,8 @@
     },
     {
       "name": "session",
-      "documentCount": 40,
-      "sampledCount": 40,
+      "documentCount": 44,
+      "sampledCount": 44,
       "fields": [
         {
           "name": "_id",
@@ -5357,7 +5357,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "40/40"
+          "frequency": "44/44"
         },
         {
           "name": "expires",
@@ -5366,7 +5366,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "40/40"
+          "frequency": "44/44"
         },
         {
           "name": "session",
@@ -5375,14 +5375,14 @@
             "String"
           ],
           "type": "String",
-          "frequency": "40/40"
+          "frequency": "44/44"
         }
       ]
     },
     {
       "name": "notification-popup",
-      "documentCount": 11,
-      "sampledCount": 11,
+      "documentCount": 10,
+      "sampledCount": 10,
       "fields": [
         {
           "name": "_id",
@@ -5391,7 +5391,7 @@
             "ObjectId"
           ],
           "type": "ObjectId",
-          "frequency": "11/11"
+          "frequency": "10/10"
         },
         {
           "name": "count",
@@ -5400,7 +5400,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "11/11"
+          "frequency": "10/10"
         },
         {
           "name": "createdAt",
@@ -5409,7 +5409,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "11/11"
+          "frequency": "10/10"
         },
         {
           "name": "group",
@@ -5418,7 +5418,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/11"
+          "frequency": "10/10"
         },
         {
           "name": "icon",
@@ -5427,7 +5427,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/11"
+          "frequency": "10/10"
         },
         {
           "name": "id",
@@ -5436,7 +5436,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/11"
+          "frequency": "10/10"
         },
         {
           "name": "isRead",
@@ -5445,7 +5445,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "11/11"
+          "frequency": "10/10"
         },
         {
           "name": "items",
@@ -5454,7 +5454,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "11/11"
+          "frequency": "10/10"
         },
         {
           "name": "items[]",
@@ -5463,7 +5463,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/11"
+          "frequency": "1/10"
         },
         {
           "name": "level",
@@ -5472,7 +5472,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/11"
+          "frequency": "10/10"
         },
         {
           "name": "message",
@@ -5481,7 +5481,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/11"
+          "frequency": "10/10"
         },
         {
           "name": "readAt",
@@ -5491,7 +5491,7 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "11/11"
+          "frequency": "10/10"
         },
         {
           "name": "recipientId",
@@ -5500,7 +5500,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/11"
+          "frequency": "10/10"
         },
         {
           "name": "targetUrl",
@@ -5509,7 +5509,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/11"
+          "frequency": "10/10"
         },
         {
           "name": "time",
@@ -5518,7 +5518,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "11/11"
+          "frequency": "10/10"
         },
         {
           "name": "title",
@@ -5527,7 +5527,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/11"
+          "frequency": "10/10"
         },
         {
           "name": "type",
@@ -5536,7 +5536,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "11/11"
+          "frequency": "10/10"
         },
         {
           "name": "updatedAt",
@@ -5545,7 +5545,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "11/11"
+          "frequency": "10/10"
         }
       ]
     },
@@ -9178,6 +9178,15 @@
           "frequency": "1/1"
         },
         {
+          "name": "textAlign",
+          "path": "sections[].typography.body.textAlign",
+          "types": [
+            "String"
+          ],
+          "type": "String",
+          "frequency": "1/1"
+        },
+        {
           "name": "button",
           "path": "sections[].typography.button",
           "types": [
@@ -9216,6 +9225,15 @@
         {
           "name": "letterSpacing",
           "path": "sections[].typography.button.letterSpacing",
+          "types": [
+            "Number"
+          ],
+          "type": "Number",
+          "frequency": "1/1"
+        },
+        {
+          "name": "lineHeight",
+          "path": "sections[].typography.button.lineHeight",
           "types": [
             "Number"
           ],
@@ -9340,6 +9358,15 @@
           "frequency": "1/1"
         },
         {
+          "name": "textAlign",
+          "path": "sections[].typography.heading.textAlign",
+          "types": [
+            "String"
+          ],
+          "type": "String",
+          "frequency": "1/1"
+        },
+        {
           "name": "preset",
           "path": "sections[].typography.preset",
           "types": [
@@ -9385,12 +9412,30 @@
           "frequency": "1/1"
         },
         {
+          "name": "letterSpacing",
+          "path": "sections[].typography.quote.letterSpacing",
+          "types": [
+            "Number"
+          ],
+          "type": "Number",
+          "frequency": "1/1"
+        },
+        {
           "name": "lineHeight",
           "path": "sections[].typography.quote.lineHeight",
           "types": [
             "Number"
           ],
           "type": "Number",
+          "frequency": "1/1"
+        },
+        {
+          "name": "textAlign",
+          "path": "sections[].typography.quote.textAlign",
+          "types": [
+            "String"
+          ],
+          "type": "String",
           "frequency": "1/1"
         },
         {
@@ -10705,8 +10750,8 @@
     },
     {
       "name": "product_reviews",
-      "documentCount": 3,
-      "sampledCount": 3,
+      "documentCount": 4,
+      "sampledCount": 4,
       "fields": [
         {
           "name": "__v",
@@ -10715,7 +10760,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "3/3"
+          "frequency": "4/4"
         },
         {
           "name": "_id",
@@ -10724,7 +10769,7 @@
             "ObjectId"
           ],
           "type": "ObjectId",
-          "frequency": "3/3"
+          "frequency": "4/4"
         },
         {
           "name": "comment",
@@ -10733,7 +10778,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "3/3"
+          "frequency": "4/4"
         },
         {
           "name": "createdAt",
@@ -10742,7 +10787,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "3/3"
+          "frequency": "4/4"
         },
         {
           "name": "isVerifiedPurchase",
@@ -10751,7 +10796,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "3/3"
+          "frequency": "4/4"
         },
         {
           "name": "orderId",
@@ -10760,7 +10805,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "3/3"
+          "frequency": "4/4"
         },
         {
           "name": "productId",
@@ -10769,7 +10814,7 @@
             "ObjectId"
           ],
           "type": "ObjectId",
-          "frequency": "3/3"
+          "frequency": "4/4"
         },
         {
           "name": "rating",
@@ -10778,7 +10823,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "3/3"
+          "frequency": "4/4"
         },
         {
           "name": "status",
@@ -10787,7 +10832,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "3/3"
+          "frequency": "4/4"
         },
         {
           "name": "updatedAt",
@@ -10796,7 +10841,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "3/3"
+          "frequency": "4/4"
         },
         {
           "name": "userAvatar",
@@ -10805,7 +10850,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "3/3"
+          "frequency": "4/4"
         },
         {
           "name": "userId",
@@ -10814,7 +10859,7 @@
             "ObjectId"
           ],
           "type": "ObjectId",
-          "frequency": "3/3"
+          "frequency": "4/4"
         },
         {
           "name": "userName",
@@ -10823,14 +10868,14 @@
             "String"
           ],
           "type": "String",
-          "frequency": "3/3"
+          "frequency": "4/4"
         }
       ]
     },
     {
       "name": "user_interactions",
-      "documentCount": 423,
-      "sampledCount": 423,
+      "documentCount": 794,
+      "sampledCount": 500,
       "fields": [
         {
           "name": "__v",
@@ -10839,7 +10884,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "313/423"
+          "frequency": "390/500"
         },
         {
           "name": "_id",
@@ -10848,7 +10893,7 @@
             "ObjectId"
           ],
           "type": "ObjectId",
-          "frequency": "423/423"
+          "frequency": "500/500"
         },
         {
           "name": "datasetType",
@@ -10857,7 +10902,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "170/423"
+          "frequency": "247/500"
         },
         {
           "name": "eventType",
@@ -10866,7 +10911,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "423/423"
+          "frequency": "500/500"
         },
         {
           "name": "isSynthetic",
@@ -10875,7 +10920,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "423/423"
+          "frequency": "500/500"
         },
         {
           "name": "metadata",
@@ -10884,7 +10929,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "423/423"
+          "frequency": "500/500"
         },
         {
           "name": "generator",
@@ -10893,7 +10938,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "110/423"
+          "frequency": "110/500"
         },
         {
           "name": "isSynthetic",
@@ -10902,7 +10947,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "423/423"
+          "frequency": "500/500"
         },
         {
           "name": "price",
@@ -10911,7 +10956,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "9/423"
+          "frequency": "15/500"
         },
         {
           "name": "quantity",
@@ -10920,7 +10965,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "9/423"
+          "frequency": "15/500"
         },
         {
           "name": "seed",
@@ -10929,7 +10974,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "110/423"
+          "frequency": "110/500"
         },
         {
           "name": "simulatedAt",
@@ -10938,7 +10983,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "110/423"
+          "frequency": "110/500"
         },
         {
           "name": "source",
@@ -10947,7 +10992,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "313/423"
+          "frequency": "390/500"
         },
         {
           "name": "userAgent",
@@ -10956,7 +11001,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "304/423"
+          "frequency": "375/500"
         },
         {
           "name": "orderId",
@@ -10966,7 +11011,7 @@
             "String"
           ],
           "type": "Null | String",
-          "frequency": "170/423"
+          "frequency": "247/500"
         },
         {
           "name": "productId",
@@ -10975,7 +11020,7 @@
             "ObjectId"
           ],
           "type": "ObjectId",
-          "frequency": "423/423"
+          "frequency": "500/500"
         },
         {
           "name": "sessionId",
@@ -10985,7 +11030,7 @@
             "String"
           ],
           "type": "Null | String",
-          "frequency": "423/423"
+          "frequency": "500/500"
         },
         {
           "name": "timestamp",
@@ -10994,7 +11039,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "423/423"
+          "frequency": "500/500"
         },
         {
           "name": "userId",
@@ -11004,7 +11049,7 @@
             "ObjectId"
           ],
           "type": "Null | ObjectId",
-          "frequency": "423/423"
+          "frequency": "500/500"
         },
         {
           "name": "variantId",
@@ -11014,7 +11059,7 @@
             "String"
           ],
           "type": "Null | String",
-          "frequency": "313/423"
+          "frequency": "390/500"
         }
       ]
     },
@@ -11153,8 +11198,8 @@
     },
     {
       "name": "passwordresets",
-      "documentCount": 1,
-      "sampledCount": 1,
+      "documentCount": 2,
+      "sampledCount": 2,
       "fields": [
         {
           "name": "__v",
@@ -11163,7 +11208,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "1/1"
+          "frequency": "2/2"
         },
         {
           "name": "_id",
@@ -11172,7 +11217,7 @@
             "ObjectId"
           ],
           "type": "ObjectId",
-          "frequency": "1/1"
+          "frequency": "2/2"
         },
         {
           "name": "attempts",
@@ -11181,7 +11226,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "1/1"
+          "frequency": "2/2"
         },
         {
           "name": "createdAt",
@@ -11190,7 +11235,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "1/1"
+          "frequency": "2/2"
         },
         {
           "name": "email",
@@ -11199,7 +11244,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/1"
+          "frequency": "2/2"
         },
         {
           "name": "expiresAt",
@@ -11208,7 +11253,16 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "1/1"
+          "frequency": "2/2"
+        },
+        {
+          "name": "otpExpiresAt",
+          "path": "otpExpiresAt",
+          "types": [
+            "Date"
+          ],
+          "type": "Date",
+          "frequency": "1/2"
         },
         {
           "name": "otpHash",
@@ -11217,7 +11271,25 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/1"
+          "frequency": "2/2"
+        },
+        {
+          "name": "otpLockUntil",
+          "path": "otpLockUntil",
+          "types": [
+            "Date"
+          ],
+          "type": "Date",
+          "frequency": "1/2"
+        },
+        {
+          "name": "otpRequestCount",
+          "path": "otpRequestCount",
+          "types": [
+            "Number"
+          ],
+          "type": "Number",
+          "frequency": "1/2"
         },
         {
           "name": "resetTokenExpiresAt",
@@ -11226,7 +11298,7 @@
             "Null"
           ],
           "type": "Null",
-          "frequency": "1/1"
+          "frequency": "2/2"
         },
         {
           "name": "resetTokenHash",
@@ -11235,7 +11307,7 @@
             "Null"
           ],
           "type": "Null",
-          "frequency": "1/1"
+          "frequency": "2/2"
         },
         {
           "name": "updatedAt",
@@ -11244,7 +11316,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "1/1"
+          "frequency": "2/2"
         },
         {
           "name": "verified",
@@ -11253,7 +11325,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "1/1"
+          "frequency": "2/2"
         }
       ]
     },
@@ -14118,8 +14190,8 @@
     },
     {
       "name": "guest_carts",
-      "documentCount": 6,
-      "sampledCount": 6,
+      "documentCount": 9,
+      "sampledCount": 9,
       "fields": [
         {
           "name": "_id",
@@ -14128,7 +14200,7 @@
             "ObjectId"
           ],
           "type": "ObjectId",
-          "frequency": "6/6"
+          "frequency": "9/9"
         },
         {
           "name": "createdAt",
@@ -14137,7 +14209,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "6/6"
+          "frequency": "9/9"
         },
         {
           "name": "guestCartId",
@@ -14146,7 +14218,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/6"
+          "frequency": "9/9"
         },
         {
           "name": "items",
@@ -14155,7 +14227,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "6/6"
+          "frequency": "9/9"
         },
         {
           "name": "items[]",
@@ -14164,7 +14236,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "5/6"
+          "frequency": "8/9"
         },
         {
           "name": "id",
@@ -14173,7 +14245,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "5/6"
+          "frequency": "8/9"
         },
         {
           "name": "isSelected",
@@ -14182,7 +14254,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "5/6"
+          "frequency": "8/9"
         },
         {
           "name": "productId",
@@ -14191,7 +14263,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "5/6"
+          "frequency": "8/9"
         },
         {
           "name": "qty",
@@ -14200,43 +14272,47 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "5/6"
+          "frequency": "8/9"
         },
         {
           "name": "selectedClassification",
           "path": "items[].selectedClassification",
           "types": [
-            "Null"
+            "Null",
+            "String"
           ],
-          "type": "Null",
-          "frequency": "5/6"
+          "type": "Null | String",
+          "frequency": "8/9"
         },
         {
           "name": "selectedColor",
           "path": "items[].selectedColor",
           "types": [
-            "Null"
+            "Null",
+            "String"
           ],
-          "type": "Null",
-          "frequency": "5/6"
+          "type": "Null | String",
+          "frequency": "8/9"
         },
         {
           "name": "selectedSize",
           "path": "items[].selectedSize",
           "types": [
-            "Null"
+            "Null",
+            "String"
           ],
-          "type": "Null",
-          "frequency": "5/6"
+          "type": "Null | String",
+          "frequency": "8/9"
         },
         {
           "name": "variantId",
           "path": "items[].variantId",
           "types": [
-            "Null"
+            "Null",
+            "String"
           ],
-          "type": "Null",
-          "frequency": "5/6"
+          "type": "Null | String",
+          "frequency": "8/9"
         },
         {
           "name": "updatedAt",
@@ -14245,14 +14321,14 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "6/6"
+          "frequency": "9/9"
         }
       ]
     },
     {
       "name": "payment_transactions",
-      "documentCount": 1,
-      "sampledCount": 1,
+      "documentCount": 24,
+      "sampledCount": 24,
       "fields": [
         {
           "name": "__v",
@@ -14261,7 +14337,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "1/1"
+          "frequency": "24/24"
         },
         {
           "name": "_id",
@@ -14270,7 +14346,7 @@
             "ObjectId"
           ],
           "type": "ObjectId",
-          "frequency": "1/1"
+          "frequency": "24/24"
         },
         {
           "name": "amount",
@@ -14279,7 +14355,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "1/1"
+          "frequency": "24/24"
         },
         {
           "name": "createdAt",
@@ -14288,7 +14364,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "1/1"
+          "frequency": "24/24"
         },
         {
           "name": "currency",
@@ -14297,7 +14373,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/1"
+          "frequency": "24/24"
         },
         {
           "name": "failureReason",
@@ -14306,7 +14382,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/1"
+          "frequency": "24/24"
         },
         {
           "name": "method",
@@ -14315,7 +14391,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/1"
+          "frequency": "24/24"
         },
         {
           "name": "orderCode",
@@ -14324,7 +14400,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/1"
+          "frequency": "24/24"
         },
         {
           "name": "orderId",
@@ -14333,16 +14409,17 @@
             "ObjectId"
           ],
           "type": "ObjectId",
-          "frequency": "1/1"
+          "frequency": "24/24"
         },
         {
           "name": "paidAt",
           "path": "paidAt",
           "types": [
+            "Date",
             "Null"
           ],
-          "type": "Null",
-          "frequency": "1/1"
+          "type": "Date | Null",
+          "frequency": "24/24"
         },
         {
           "name": "paymentLink",
@@ -14351,7 +14428,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/1"
+          "frequency": "24/24"
         },
         {
           "name": "provider",
@@ -14360,7 +14437,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/1"
+          "frequency": "24/24"
         },
         {
           "name": "providerTransactionId",
@@ -14369,7 +14446,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/1"
+          "frequency": "24/24"
         },
         {
           "name": "status",
@@ -14378,7 +14455,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "1/1"
+          "frequency": "24/24"
         },
         {
           "name": "updatedAt",
@@ -14387,7 +14464,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "1/1"
+          "frequency": "24/24"
         }
       ]
     },
@@ -14472,8 +14549,8 @@
     },
     {
       "name": "conversations",
-      "documentCount": 12,
-      "sampledCount": 12,
+      "documentCount": 13,
+      "sampledCount": 13,
       "fields": [
         {
           "name": "__v",
@@ -14482,7 +14559,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "12/12"
+          "frequency": "12/13"
         },
         {
           "name": "_id",
@@ -14491,7 +14568,7 @@
             "ObjectId"
           ],
           "type": "ObjectId",
-          "frequency": "12/12"
+          "frequency": "13/13"
         },
         {
           "name": "acceptedAt",
@@ -14501,17 +14578,16 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "12/12"
+          "frequency": "13/13"
         },
         {
           "name": "adminLastReadAt",
           "path": "adminLastReadAt",
           "types": [
-            "Date",
-            "Null"
+            "Date"
           ],
-          "type": "Date | Null",
-          "frequency": "12/12"
+          "type": "Date",
+          "frequency": "13/13"
         },
         {
           "name": "assignedAdminId",
@@ -14521,7 +14597,7 @@
             "ObjectId"
           ],
           "type": "Null | ObjectId",
-          "frequency": "12/12"
+          "frequency": "13/13"
         },
         {
           "name": "cancelRequest",
@@ -14530,7 +14606,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "6/12"
+          "frequency": "6/13"
         },
         {
           "name": "_id",
@@ -14539,7 +14615,7 @@
             "ObjectId"
           ],
           "type": "ObjectId",
-          "frequency": "6/12"
+          "frequency": "6/13"
         },
         {
           "name": "expiresAt",
@@ -14548,7 +14624,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "6/12"
+          "frequency": "6/13"
         },
         {
           "name": "requestedAt",
@@ -14557,7 +14633,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "6/12"
+          "frequency": "6/13"
         },
         {
           "name": "status",
@@ -14566,7 +14642,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "6/12"
+          "frequency": "6/13"
         },
         {
           "name": "channel",
@@ -14575,7 +14651,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/12"
+          "frequency": "13/13"
         },
         {
           "name": "closedAt",
@@ -14585,7 +14661,7 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "12/12"
+          "frequency": "12/13"
         },
         {
           "name": "createdAt",
@@ -14594,7 +14670,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "12/12"
+          "frequency": "13/13"
         },
         {
           "name": "customerLastReadAt",
@@ -14604,7 +14680,7 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "12/12"
+          "frequency": "12/13"
         },
         {
           "name": "guestId",
@@ -14614,7 +14690,7 @@
             "String"
           ],
           "type": "Null | String",
-          "frequency": "12/12"
+          "frequency": "13/13"
         },
         {
           "name": "internalNote",
@@ -14623,7 +14699,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/12"
+          "frequency": "13/13"
         },
         {
           "name": "internalNoteUpdatedAt",
@@ -14633,7 +14709,7 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "12/12"
+          "frequency": "12/13"
         },
         {
           "name": "internalNoteUpdatedBy",
@@ -14642,7 +14718,7 @@
             "Null"
           ],
           "type": "Null",
-          "frequency": "12/12"
+          "frequency": "12/13"
         },
         {
           "name": "lastMessageAt",
@@ -14651,7 +14727,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "12/12"
+          "frequency": "13/13"
         },
         {
           "name": "lastMessageId",
@@ -14660,7 +14736,7 @@
             "ObjectId"
           ],
           "type": "ObjectId",
-          "frequency": "12/12"
+          "frequency": "13/13"
         },
         {
           "name": "lastMessagePreview",
@@ -14669,7 +14745,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/12"
+          "frequency": "13/13"
         },
         {
           "name": "requestedAt",
@@ -14678,7 +14754,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "12/12"
+          "frequency": "13/13"
         },
         {
           "name": "source",
@@ -14687,7 +14763,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/12"
+          "frequency": "13/13"
         },
         {
           "name": "status",
@@ -14696,7 +14772,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "12/12"
+          "frequency": "13/13"
         },
         {
           "name": "unreadAdminCount",
@@ -14705,7 +14781,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "12/12"
+          "frequency": "13/13"
         },
         {
           "name": "unreadCustomerCount",
@@ -14714,7 +14790,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "12/12"
+          "frequency": "13/13"
         },
         {
           "name": "updatedAt",
@@ -14723,7 +14799,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "12/12"
+          "frequency": "13/13"
         },
         {
           "name": "userId",
@@ -14733,14 +14809,14 @@
             "ObjectId"
           ],
           "type": "Null | ObjectId",
-          "frequency": "12/12"
+          "frequency": "13/13"
         }
       ]
     },
     {
       "name": "conversation_messages",
-      "documentCount": 71,
-      "sampledCount": 71,
+      "documentCount": 75,
+      "sampledCount": 75,
       "fields": [
         {
           "name": "__v",
@@ -14749,7 +14825,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "50/71"
+          "frequency": "50/75"
         },
         {
           "name": "_id",
@@ -14758,7 +14834,7 @@
             "ObjectId"
           ],
           "type": "ObjectId",
-          "frequency": "71/71"
+          "frequency": "75/75"
         },
         {
           "name": "adminContent",
@@ -14768,7 +14844,7 @@
             "String"
           ],
           "type": "Null | String",
-          "frequency": "24/71"
+          "frequency": "24/75"
         },
         {
           "name": "attachments",
@@ -14777,7 +14853,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "50/71"
+          "frequency": "50/75"
         },
         {
           "name": "clientMessageId",
@@ -14787,7 +14863,7 @@
             "String"
           ],
           "type": "Null | String",
-          "frequency": "51/71"
+          "frequency": "51/75"
         },
         {
           "name": "content",
@@ -14796,7 +14872,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "71/71"
+          "frequency": "75/75"
         },
         {
           "name": "conversationId",
@@ -14805,7 +14881,7 @@
             "ObjectId"
           ],
           "type": "ObjectId",
-          "frequency": "71/71"
+          "frequency": "75/75"
         },
         {
           "name": "createdAt",
@@ -14814,7 +14890,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "71/71"
+          "frequency": "75/75"
         },
         {
           "name": "messageType",
@@ -14823,7 +14899,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "71/71"
+          "frequency": "75/75"
         },
         {
           "name": "orderRefId",
@@ -14832,7 +14908,7 @@
             "Null"
           ],
           "type": "Null",
-          "frequency": "50/71"
+          "frequency": "50/75"
         },
         {
           "name": "productReferences",
@@ -14841,7 +14917,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "50/71"
+          "frequency": "50/75"
         },
         {
           "name": "readByAdminAt",
@@ -14851,7 +14927,7 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "50/71"
+          "frequency": "50/75"
         },
         {
           "name": "readByCustomerAt",
@@ -14861,7 +14937,7 @@
             "Null"
           ],
           "type": "Date | Null",
-          "frequency": "51/71"
+          "frequency": "51/75"
         },
         {
           "name": "senderId",
@@ -14871,7 +14947,7 @@
             "ObjectId"
           ],
           "type": "Null | ObjectId",
-          "frequency": "51/71"
+          "frequency": "51/75"
         },
         {
           "name": "senderType",
@@ -14880,7 +14956,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "71/71"
+          "frequency": "75/75"
         },
         {
           "name": "systemEvent",
@@ -14890,7 +14966,7 @@
             "String"
           ],
           "type": "Null | String",
-          "frequency": "52/71"
+          "frequency": "55/75"
         },
         {
           "name": "updatedAt",
@@ -14899,14 +14975,14 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "71/71"
+          "frequency": "75/75"
         }
       ]
     },
     {
       "name": "chatbot_sessions",
-      "documentCount": 121,
-      "sampledCount": 121,
+      "documentCount": 8,
+      "sampledCount": 8,
       "fields": [
         {
           "name": "__v",
@@ -14915,7 +14991,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "121/121"
+          "frequency": "8/8"
         },
         {
           "name": "_id",
@@ -14924,7 +15000,7 @@
             "ObjectId"
           ],
           "type": "ObjectId",
-          "frequency": "121/121"
+          "frequency": "8/8"
         },
         {
           "name": "context",
@@ -14933,7 +15009,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "121/121"
+          "frequency": "8/8"
         },
         {
           "name": "criteria",
@@ -14942,7 +15018,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "5/121"
+          "frequency": "1/8"
         },
         {
           "name": "category",
@@ -14951,7 +15027,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "5/121"
+          "frequency": "1/8"
         },
         {
           "name": "onlyInStock",
@@ -14960,7 +15036,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "5/121"
+          "frequency": "1/8"
         },
         {
           "name": "queryText",
@@ -14969,25 +15045,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "5/121"
-        },
-        {
-          "name": "size",
-          "path": "context.criteria.size",
-          "types": [
-            "String"
-          ],
-          "type": "String",
-          "frequency": "1/121"
-        },
-        {
-          "name": "sortBy",
-          "path": "context.criteria.sortBy",
-          "types": [
-            "String"
-          ],
-          "type": "String",
-          "frequency": "2/121"
+          "frequency": "1/8"
         },
         {
           "name": "lastIntent",
@@ -14996,7 +15054,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "119/121"
+          "frequency": "8/8"
         },
         {
           "name": "lastMentionedProductId",
@@ -15005,7 +15063,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "43/121"
+          "frequency": "1/8"
         },
         {
           "name": "lastProducts",
@@ -15014,7 +15072,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "121/121"
+          "frequency": "8/8"
         },
         {
           "name": "lastProducts[]",
@@ -15023,7 +15081,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "43/121"
+          "frequency": "1/8"
         },
         {
           "name": "availableColors",
@@ -15032,7 +15090,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "43/121"
+          "frequency": "1/8"
         },
         {
           "name": "availableColors[]",
@@ -15041,7 +15099,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "42/121"
+          "frequency": "1/8"
         },
         {
           "name": "availableSizes",
@@ -15050,7 +15108,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "43/121"
+          "frequency": "1/8"
         },
         {
           "name": "availableSizes[]",
@@ -15059,7 +15117,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "42/121"
+          "frequency": "1/8"
         },
         {
           "name": "category",
@@ -15068,7 +15126,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "43/121"
+          "frequency": "1/8"
         },
         {
           "name": "colors",
@@ -15077,7 +15135,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "43/121"
+          "frequency": "1/8"
         },
         {
           "name": "colors[]",
@@ -15086,7 +15144,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "42/121"
+          "frequency": "1/8"
         },
         {
           "name": "id",
@@ -15095,7 +15153,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "43/121"
+          "frequency": "1/8"
         },
         {
           "name": "imageUrl",
@@ -15104,7 +15162,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "43/121"
+          "frequency": "1/8"
         },
         {
           "name": "inStock",
@@ -15113,7 +15171,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "43/121"
+          "frequency": "1/8"
         },
         {
           "name": "onSale",
@@ -15122,17 +15180,16 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "43/121"
+          "frequency": "1/8"
         },
         {
           "name": "originalPrice",
           "path": "context.lastProducts[].originalPrice",
           "types": [
-            "Null",
             "Number"
           ],
-          "type": "Null | Number",
-          "frequency": "43/121"
+          "type": "Number",
+          "frequency": "1/8"
         },
         {
           "name": "price",
@@ -15141,7 +15198,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "43/121"
+          "frequency": "1/8"
         },
         {
           "name": "sizes",
@@ -15150,7 +15207,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "43/121"
+          "frequency": "1/8"
         },
         {
           "name": "sizes[]",
@@ -15159,7 +15216,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "42/121"
+          "frequency": "1/8"
         },
         {
           "name": "stockSummary",
@@ -15168,7 +15225,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "43/121"
+          "frequency": "1/8"
         },
         {
           "name": "title",
@@ -15177,7 +15234,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "43/121"
+          "frequency": "1/8"
         },
         {
           "name": "titleUrl",
@@ -15186,7 +15243,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "43/121"
+          "frequency": "1/8"
         },
         {
           "name": "sizingProfile",
@@ -15195,16 +15252,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "15/121"
-        },
-        {
-          "name": "fitPreference",
-          "path": "context.sizingProfile.fitPreference",
-          "types": [
-            "String"
-          ],
-          "type": "String",
-          "frequency": "1/121"
+          "frequency": "2/8"
         },
         {
           "name": "height",
@@ -15213,16 +15261,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "2/121"
-        },
-        {
-          "name": "waist",
-          "path": "context.sizingProfile.waist",
-          "types": [
-            "Number"
-          ],
-          "type": "Number",
-          "frequency": "1/121"
+          "frequency": "1/8"
         },
         {
           "name": "weight",
@@ -15231,7 +15270,7 @@
             "Number"
           ],
           "type": "Number",
-          "frequency": "4/121"
+          "frequency": "2/8"
         },
         {
           "name": "createdAt",
@@ -15240,7 +15279,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "121/121"
+          "frequency": "8/8"
         },
         {
           "name": "expiresAt",
@@ -15249,16 +15288,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "121/121"
-        },
-        {
-          "name": "guestId",
-          "path": "guestId",
-          "types": [
-            "String"
-          ],
-          "type": "String",
-          "frequency": "3/121"
+          "frequency": "8/8"
         },
         {
           "name": "isActive",
@@ -15267,7 +15297,7 @@
             "Boolean"
           ],
           "type": "Boolean",
-          "frequency": "121/121"
+          "frequency": "8/8"
         },
         {
           "name": "messages",
@@ -15276,7 +15306,7 @@
             "Array"
           ],
           "type": "Array",
-          "frequency": "121/121"
+          "frequency": "8/8"
         },
         {
           "name": "messages[]",
@@ -15285,7 +15315,7 @@
             "Object"
           ],
           "type": "Object",
-          "frequency": "119/121"
+          "frequency": "8/8"
         },
         {
           "name": "_id",
@@ -15294,7 +15324,7 @@
             "ObjectId"
           ],
           "type": "ObjectId",
-          "frequency": "119/121"
+          "frequency": "8/8"
         },
         {
           "name": "content",
@@ -15303,7 +15333,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "119/121"
+          "frequency": "8/8"
         },
         {
           "name": "intent",
@@ -15312,7 +15342,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "119/121"
+          "frequency": "8/8"
         },
         {
           "name": "role",
@@ -15321,7 +15351,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "119/121"
+          "frequency": "8/8"
         },
         {
           "name": "timestamp",
@@ -15330,7 +15360,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "119/121"
+          "frequency": "8/8"
         },
         {
           "name": "sessionId",
@@ -15339,7 +15369,7 @@
             "String"
           ],
           "type": "String",
-          "frequency": "121/121"
+          "frequency": "8/8"
         },
         {
           "name": "updatedAt",
@@ -15348,7 +15378,7 @@
             "Date"
           ],
           "type": "Date",
-          "frequency": "121/121"
+          "frequency": "8/8"
         },
         {
           "name": "userId",
@@ -15357,7 +15387,7 @@
             "ObjectId"
           ],
           "type": "ObjectId",
-          "frequency": "92/121"
+          "frequency": "4/8"
         }
       ]
     },
@@ -15366,6 +15396,200 @@
       "documentCount": 0,
       "sampledCount": 0,
       "fields": []
+    },
+    {
+      "name": "social_links",
+      "documentCount": 3,
+      "sampledCount": 3,
+      "fields": [
+        {
+          "name": "_id",
+          "path": "_id",
+          "types": [
+            "ObjectId"
+          ],
+          "type": "ObjectId",
+          "frequency": "3/3"
+        },
+        {
+          "name": "createdAt",
+          "path": "createdAt",
+          "types": [
+            "Date"
+          ],
+          "type": "Date",
+          "frequency": "3/3"
+        },
+        {
+          "name": "isActive",
+          "path": "isActive",
+          "types": [
+            "Boolean"
+          ],
+          "type": "Boolean",
+          "frequency": "3/3"
+        },
+        {
+          "name": "platform",
+          "path": "platform",
+          "types": [
+            "String"
+          ],
+          "type": "String",
+          "frequency": "3/3"
+        },
+        {
+          "name": "updatedAt",
+          "path": "updatedAt",
+          "types": [
+            "Date"
+          ],
+          "type": "Date",
+          "frequency": "3/3"
+        },
+        {
+          "name": "url",
+          "path": "url",
+          "types": [
+            "String"
+          ],
+          "type": "String",
+          "frequency": "3/3"
+        }
+      ]
+    },
+    {
+      "name": "recommendation_impressions",
+      "documentCount": 489,
+      "sampledCount": 489,
+      "fields": [
+        {
+          "name": "__v",
+          "path": "__v",
+          "types": [
+            "Number"
+          ],
+          "type": "Number",
+          "frequency": "489/489"
+        },
+        {
+          "name": "_id",
+          "path": "_id",
+          "types": [
+            "ObjectId"
+          ],
+          "type": "ObjectId",
+          "frequency": "489/489"
+        },
+        {
+          "name": "currentProductId",
+          "path": "currentProductId",
+          "types": [
+            "String"
+          ],
+          "type": "String",
+          "frequency": "489/489"
+        },
+        {
+          "name": "productId",
+          "path": "productId",
+          "types": [
+            "ObjectId"
+          ],
+          "type": "ObjectId",
+          "frequency": "489/489"
+        },
+        {
+          "name": "recommendationContextId",
+          "path": "recommendationContextId",
+          "types": [
+            "Null",
+            "String"
+          ],
+          "type": "Null | String",
+          "frequency": "321/489"
+        },
+        {
+          "name": "sessionId",
+          "path": "sessionId",
+          "types": [
+            "String"
+          ],
+          "type": "String",
+          "frequency": "489/489"
+        },
+        {
+          "name": "shownAt",
+          "path": "shownAt",
+          "types": [
+            "Date"
+          ],
+          "type": "Date",
+          "frequency": "489/489"
+        },
+        {
+          "name": "strategy",
+          "path": "strategy",
+          "types": [
+            "String"
+          ],
+          "type": "String",
+          "frequency": "489/489"
+        },
+        {
+          "name": "userId",
+          "path": "userId",
+          "types": [
+            "Null",
+            "ObjectId"
+          ],
+          "type": "Null | ObjectId",
+          "frequency": "489/489"
+        },
+        {
+          "name": "userKey",
+          "path": "userKey",
+          "types": [
+            "String"
+          ],
+          "type": "String",
+          "frequency": "489/489"
+        }
+      ]
+    },
+    {
+      "name": "counters",
+      "documentCount": 1,
+      "sampledCount": 1,
+      "fields": [
+        {
+          "name": "_id",
+          "path": "_id",
+          "types": [
+            "String"
+          ],
+          "type": "String",
+          "frequency": "1/1"
+        },
+        {
+          "name": "seq",
+          "path": "seq",
+          "types": [
+            "Number"
+          ],
+          "type": "Number",
+          "frequency": "1/1"
+        },
+        {
+          "name": "updatedAt",
+          "path": "updatedAt",
+          "types": [
+            "Date"
+          ],
+          "type": "Date",
+          "frequency": "1/1"
+        }
+      ]
     }
   ]
 }

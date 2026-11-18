@@ -339,7 +339,7 @@
               <span class="finance-label">Trạng thái đối soát COD</span>
               <span class="finance-val">
                 <span class="badge"
-                  [ngClass]="order.payment?.codCollected ? (order.payment?.codReconciliationStatus === 'RECONCILED' ? 'badge-success' : 'badge-warning') : 'badge-neutral'">
+                  [ngClass]="isCodCollected() ? (getCodReconciliationStatus() === 'RECONCILED' ? 'badge-success' : 'badge-warning') : 'badge-neutral'">
                   {{ getCodReconciliationStatusLabel() }}
                 </span>
               </span>
@@ -348,8 +348,7 @@
             <div class="finance-item">
               <span class="finance-label">Phương thức / Trạng thái thanh toán</span>
               <span class="finance-val font-medium">
-                {{ order.payment || order.paymentMethodSnapshot?.name || '—' }} ({{
-                getPaymentStatusLabel(order.paymentStatus || order.payment?.status) }})
+                {{ getPaymentMethodDisplay() }} ({{ getPaymentStatusLabel(getEffectivePaymentStatus()) }})
               </span>
             </div>
           </div>
@@ -455,7 +454,7 @@
                     Báo lỗi hoàn tiền
                   </button>
                   <!-- Gợi ý đối soát COD nếu đơn COD chưa thu tiền -->
-                  <button *ngIf="canCodReconcile && isCodMethod() && !order?.payment?.codCollected" type="button"
+                  <button *ngIf="canCodReconcile && isCodMethod() && !isCodCollected()" type="button"
                     class="btn btn-sm btn-outline-primary" (click)="openActionModal('COD_RECONCILE', null)"
                     title="Cần đối soát COD xác nhận đã thu tiền trước khi hoàn tiền">
                     Đối soát COD ngay
@@ -803,12 +802,12 @@
 
           <div class="summary-row">
             <span class="summary-label">Hình thức thanh toán:</span>
-            <span class="summary-val font-medium">{{ order.payment || '—' }}</span>
+            <span class="summary-val font-medium">{{ getPaymentMethodDisplay() }}</span>
           </div>
 
-          <div class="summary-row" *ngIf="order.paymentStatus || order.payment?.status">
+          <div class="summary-row" *ngIf="getEffectivePaymentStatus()">
             <span class="summary-label">Trạng thái thanh toán:</span>
-            <span class="summary-val">{{ getPaymentStatusLabel(order.paymentStatus || order.payment?.status) }}</span>
+            <span class="summary-val">{{ getPaymentStatusLabel(getEffectivePaymentStatus()) }}</span>
           </div>
 
           <div class="summary-row" *ngIf="order.paymentProvider">

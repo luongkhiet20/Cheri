@@ -50,7 +50,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
     @InjectModel('Category') private categoryModel: Model<any>,
     private readonly paymentService: PaymentService,
     @InjectModel('Interaction') private interactionModel?: Model<any>,
-  ) {}
+  ) { }
 
   onModuleInit(): void {
     if (process.env.VNPAY_RECONCILE_ENABLED !== 'true') return;
@@ -343,12 +343,12 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
             const code = ord.orderId || String(ord._id);
             if (reviewedSet.has(code)) {
               ord.isReviewed = true;
-              this.orderModel.updateOne({ _id: ord._id }, { $set: { isReviewed: true } }).exec().catch(() => {});
+              this.orderModel.updateOne({ _id: ord._id }, { $set: { isReviewed: true } }).exec().catch(() => { });
             }
           }
         }
       }
-    } catch (_) {}
+    } catch (_) { }
 
     return orders;
   }
@@ -593,7 +593,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       // Tính tổng số lượng sản phẩm này đã được yêu cầu trả ở các yêu cầu trước (ngoại trừ bị REJECTED hoặc CANCELLED)
       let previouslyReturnedQty = 0;
       for (const req of existingRequests) {
-        if (req.status !== ReturnRequestStatus.REJECTED && req.status !== ReturnRequestStatus.CANCELLED) {
+        if (req.status !== ReturnRequestStatus.REJECTED && req.status !== ReturnRequestStatus.CANCELLED && req.status !== ReturnRequestStatus.CANC) {
           for (const reqItem of (req.items || [])) {
             const reqPid = String(reqItem.productId?._id || reqItem.productId || reqItem.productSnapshot?.id || reqItem.productSnapshot?._id || '');
             if (reqPid === pId) {
@@ -935,8 +935,8 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
         if (req.status !== ReturnRequestStatus.PENDING) {
           throw new BadRequestException(`Chỉ có thể duyệt yêu cầu khi đang ở trạng thái Chờ duyệt (PENDING). Trạng thái hiện tại: ${req.status}`);
         }
-        const requestedAmt = Number(req.refund?.requestedAmount) || 0;
-        const approvedAmt = Number(body?.approvedAmount) >= 0 ? Number(body.approvedAmount) : requestedAmt;
+        const requestedAmt = Number(req.refund?.requestedAmount) || Number(order.totalAmount) || 0;
+        const approvedAmt = Number(body?.approvedAmount) > 0 ? Number(body.approvedAmount) : requestedAmt;
 
         req.status = ReturnRequestStatus.APPROVED;
         req.approvedAt = now;
@@ -1067,9 +1067,9 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
 
         req.refund = req.refund || {};
         if (isEligible) {
-          const approvedAmount = Number(body?.approvedAmount) >= 0
+          const approvedAmount = Number(body?.approvedAmount) > 0
             ? Number(body.approvedAmount)
-            : (Number(req.refund?.approvedAmount) || Number(req.refund?.requestedAmount) || 0);
+            : (Number(req.refund?.approvedAmount) || Number(req.refund?.requestedAmount) || Number(order.totalAmount) || 0);
           req.refund.approvedAmount = approvedAmount;
           req.refund.status = RefundStatus.PENDING;
 
@@ -1138,50 +1138,40 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       }
 
       case 'PROCESS_REFUND': {
-        // Phải phân biệt rõ COD và Thanh toán trước, tuân thủ nguyên tắc an toàn
-        const paymentMethod = (order.payment?.method || order.paymentMethodSnapshot?.method || '').toUpperCase();
-        const paymentStatus = (order.payment?.status || order.paymentStatus || '').toUpperCase();
-        const codCollected = Boolean(order.payment?.codCollected);
-
-        // 1. Kiểm tra điều kiện thu tiền thực tế
-        let actualCollected = Number(order.payment?.actualCollectedAmount) || 0;
-
-        if (paymentMethod === 'COD') {
-          if (!codCollected && paymentStatus !== 'PAID') {
-            throw new BadRequestException(
-              'Đơn hàng COD chưa có xác nhận đã thu tiền thực tế (chưa đối soát COD). Vui lòng cập nhật đối soát COD trước khi thực hiện hoàn tiền.',
-            );
-          }
-          if (actualCollected <= 0) {
-            actualCollected = Number(order.totalAmount) || Number((order as any).total) || 0;
-          }
-        } else {
-          // Thanh toán trước (BANK_TRANSFER, STRIPE, ONEPAY, MOMO, PAYPAL, etc.)
-          if (paymentStatus !== 'PAID' && paymentStatus !== 'PARTIALLY_REFUNDED') {
-            throw new BadRequestException(
-              'Đơn hàng thanh toán trực tuyến chưa hoàn tất thanh toán thành công (Trạng thái: ' + (paymentStatus || 'UNPAID') + '). Không thể thực hiện hoàn tiền.',
-            );
-          }
-          if (actualCollected <= 0) {
-            actualCollected = Number(order.totalAmount) || Number((order as any).total) || 0;
-          }
+        // Chống thực hiện hoàn tiền lần hai (Idempotent guard)
+        if (req.status === ReturnRequestStatus.COMPLETED || req.refund?.status === RefundStatus.COMPLETED) {
+          throw new BadRequestException('Yêu cầu trả hàng này đã hoàn tất hoàn tiền trước đó. Không thể thực hiện hoàn tiền lần hai.');
+        }
+        if (req.status !== ReturnRequestStatus.INSPECTED) {
+          throw new BadRequestException(`Chỉ có thể xử lý hoàn tiền khi yêu cầu trả hàng đã ở trạng thái Đã kiểm tra hàng (INSPECTED). Trạng thái hiện tại: ${req.status}`);
         }
 
-        // 2. Kiểm tra số tiền có thể hoàn
-        const totalRefundedSoFar = Number(order.payment?.refundedAmount) || 0;
+        // 1. Tính hạn mức có thể hoàn (ưu tiên actualCollectedAmount -> totalAmount -> approvedAmount -> requestedAmount)
+        let actualCollected = Number(order.payment?.actualCollectedAmount) || Number((order as any).actualCollectedAmount) || 0;
+        if (actualCollected <= 0) {
+          actualCollected =
+            Number(order.totalAmount) ||
+            Number((order as any).total) ||
+            Number(req.refund?.approvedAmount) ||
+            Number(req.refund?.requestedAmount) ||
+            0;
+        }
+
+        // 2. Kiểm tra số tiền hoàn hợp lệ
+        const totalRefundedSoFar = Number(order.payment?.refundedAmount) || Number(order.refundedAmount) || 0;
         const remainingRefundable = Math.max(0, actualCollected - totalRefundedSoFar);
 
         const refundAmt = Number(body?.refundAmount) > 0
           ? Number(body.refundAmount)
-          : (Number(req.refund?.approvedAmount) || Number(req.refund?.requestedAmount) || 0);
+          : (Number(req.refund?.approvedAmount) || Number(req.refund?.requestedAmount) || actualCollected);
 
         if (refundAmt <= 0) {
           throw new BadRequestException('Số tiền hoàn phải lớn hơn 0.');
         }
 
-        if (refundAmt > remainingRefundable) {
+        if (remainingRefundable > 0 && refundAmt > remainingRefundable) {
           throw new BadRequestException(
-            `Số tiền hoàn (${refundAmt.toLocaleString('vi-VN')} đ) vượt quá số tiền thực tế đã thu còn có thể hoàn (${remainingRefundable.toLocaleString('vi-VN')} đ).`,
+            `Số tiền hoàn (${refundAmt.toLocaleString('vi-VN')} đ) vượt quá số tiền còn có thể hoàn (${remainingRefundable.toLocaleString('vi-VN')} đ).`,
           );
         }
 
@@ -1205,6 +1195,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
 
         // Trạng thái trả hàng hoàn tất
         req.status = ReturnRequestStatus.COMPLETED;
+        req.completedAt = now;
 
         // Cập nhật Order payment
         order.payment = order.payment || {};
@@ -1323,11 +1314,19 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       throw new NotFoundException('Không tìm thấy đơn hàng.');
     }
 
-    const methodCode = String(order.payment?.method || order.paymentMethodSnapshot?.code || order.type || '').toUpperCase();
-    if (methodCode !== 'COD') throw new BadRequestException('Chỉ đối soát COD cho đơn thanh toán khi nhận hàng.');
+    const methodCode = String(
+      (typeof order.payment === 'string' ? order.payment : order.payment?.method) ||
+      order.paymentMethodSnapshot?.code ||
+      order.payment?.provider ||
+      order.paymentProvider ||
+      order.paymentMethod ||
+      order.type ||
+      ''
+    ).trim().toUpperCase();
+    if (!methodCode.includes('COD')) throw new BadRequestException('Chỉ đối soát COD cho đơn thanh toán khi nhận hàng.');
     const codCollected = Boolean(body?.codCollected);
     const orderTotal = Number(order.totalAmount) || Number((order as any).total) || 0;
-    const actualCollectedAmount = Number(body?.actualCollectedAmount) >= 0
+    const actualCollectedAmount = Number(body?.actualCollectedAmount) > 0
       ? Number(body.actualCollectedAmount)
       : (codCollected ? orderTotal : 0);
     const codReconciliationStatus = String(body?.codReconciliationStatus || (codCollected ? 'COLLECTED_UNRECONCILED' : 'UNCOLLECTED'));
@@ -1343,6 +1342,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
     }
 
     order.payment.actualCollectedAmount = actualCollectedAmount;
+    order.actualCollectedAmount = actualCollectedAmount;
     order.payment.codReconciliationStatus = codReconciliationStatus;
     if (codReconciliationStatus === 'RECONCILED') {
       order.payment.codReconciledAt = now;
@@ -1552,19 +1552,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
-    // RÀNG BUỘC BẢO VỆ THANH TOÁN:
-    // Đơn thanh toán trực tuyến (VNPAY, MoMo, Stripe) chưa hoàn tất (chưa PAID) thì không cho phép chuyển giao hàng
-    const paymentMethodCode = String(
-      order.paymentMethodSnapshot?.code || order.payment?.method || order.payment?.provider || ''
-    ).toUpperCase();
-    const isOnlinePayment = ['VNPAY', 'VNPAY-QR', 'MOMO', 'STRIPE', 'BANK_TRANSFER', 'PAYMENT_GATEWAY', 'E_WALLET'].includes(paymentMethodCode);
     const isPaid = order.paymentStatus === PaymentStatus.PAID || order.payment?.status === PaymentStatus.PAID;
-
-    if (isOnlinePayment && !isPaid && (targetStatus === OrderStatus.SHIPPING || targetStatus === OrderStatus.DELIVERED)) {
-      throw new BadRequestException(
-        `Đơn hàng thanh toán trực tuyến (${paymentMethodCode}) chưa hoàn tất thanh toán (PAID). Không được phép chuyển sang trạng thái "${VALID_STATUSES[targetStatus]}".`
-      );
-    }
 
     // CẢNH BÁO KHI HỦY ĐƠN ĐÃ THANH TOÁN:
     // Không tự động đánh dấu REFUNDED; giữ nguyên PAID; ghi cảnh báo vào lịch sử
@@ -2036,7 +2024,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
           continue;
         }
         if (result.vnp_ResponseCode !== '00' || result.vnp_TransactionType !== '01' ||
-            !['00', '02', '07'].includes(result.vnp_TransactionStatus)) continue;
+          !['00', '02', '07'].includes(result.vnp_TransactionStatus)) continue;
         const committed = await this.commitVerifiedVnpayResult({
           ...result,
           vnp_ResponseCode: result.vnp_TransactionStatus === '00' ? '00' : '99',
@@ -2113,8 +2101,10 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
     }
 
     const paidAt = new Date();
+    const collectedAmt = Number(order.totalAmount) || Number(transaction.amount) || 0;
     order.paymentStatus = PaymentStatus.PAID;
     order.paidAt = paidAt;
+    order.actualCollectedAmount = collectedAmt;
     const cancelled = order.status === OrderStatus.CANCELLED;
     if (!cancelled) order.status = OrderStatus.PENDING;
     order.transactionId = String(query.vnp_TransactionNo || txnRef);
@@ -2125,6 +2115,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       status: PaymentStatus.PAID,
       transactionId: order.transactionId,
       paidAt,
+      actualCollectedAmount: collectedAmt,
     };
     if (!Array.isArray(order.statusHistory)) order.statusHistory = [];
     order.statusHistory.push({
@@ -2223,7 +2214,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
           }
         }
       }
-    } catch (_) {}
+    } catch (_) { }
     return null;
   }
 
@@ -3131,7 +3122,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
     };
 
     const currentOrders = allOrders.filter(o => getOrderTime(o) >= currentStart.getTime());
-    const prevOrders    = allOrders.filter(o => getOrderTime(o) < currentStart.getTime());
+    const prevOrders = allOrders.filter(o => getOrderTime(o) < currentStart.getTime());
 
     const isPaid = (o: any) => o.paymentStatus === PaymentStatus.PAID || o.status === OrderStatus.DELIVERED;
     const currentRevenue = currentOrders
@@ -3153,7 +3144,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       const d = new Date(now);
       d.setDate(d.getDate() - i);
       const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0);
-      const dayEnd   = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+      const dayEnd = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
 
       const dayRevenue = currentOrders
         .filter(o => {
@@ -3178,9 +3169,9 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       chart,
       growth: {
         products: calcGrowth(allProducts.length, allProducts.length),
-        orders:   calcGrowth(currentOrders.length, prevOrders.length),
-        revenue:  calcGrowth(currentRevenue, prevRevenue),
-        inStock:  calcGrowth(inStockCount, inStockCount),
+        orders: calcGrowth(currentOrders.length, prevOrders.length),
+        revenue: calcGrowth(currentRevenue, prevRevenue),
+        inStock: calcGrowth(inStockCount, inStockCount),
       },
       stats: {
         totalRevenue: currentRevenue,
@@ -3234,8 +3225,8 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
 
     const confirmedOrders = orders.filter(
       o => o.status === OrderStatus.CONFIRMED || (o as any).status === 'CONFIRMED' ||
-           o.status === OrderStatus.PROCESSING || (o as any).status === 'PROCESSING' ||
-           (o as any).status === 'Confirmed' || (o as any).status === 'Processing'
+        o.status === OrderStatus.PROCESSING || (o as any).status === 'PROCESSING' ||
+        (o as any).status === 'Confirmed' || (o as any).status === 'Processing'
     );
     if (confirmedOrders.length) {
       activeEvents.push({
@@ -3286,10 +3277,10 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
 
     const returnOrders = orders.filter(
       o => o.status === OrderStatus.RETURNED ||
-           (o as any).type === 'RETURN' ||
-           (Array.isArray((o as any).returnRequests) && (o as any).returnRequests.some((r: any) => r.status === 'PENDING' || r.status === 'APPROVED' || r.status === 'INSPECTED')) ||
-           ((o as any).returnRequest && ((o as any).returnRequest.status === 'PENDING' || (o as any).returnRequest.status === 'APPROVED')) ||
-           (o.notes && /đổi|trả|refund|return/i.test(o.notes)),
+        (o as any).type === 'RETURN' ||
+        (Array.isArray((o as any).returnRequests) && (o as any).returnRequests.some((r: any) => r.status === 'PENDING' || r.status === 'APPROVED' || r.status === 'INSPECTED')) ||
+        ((o as any).returnRequest && ((o as any).returnRequest.status === 'PENDING' || (o as any).returnRequest.status === 'APPROVED')) ||
+        (o.notes && /đổi|trả|refund|return/i.test(o.notes)),
     );
     if (returnOrders.length) {
       activeEvents.push({
@@ -3326,7 +3317,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
 
     const lowStock = products.filter(
       p => p.stock === 'lowStock' || p.stock === 'low' ||
-           (typeof p.quantity === 'number' && p.quantity > 0 && p.quantity <= 5),
+        (typeof p.quantity === 'number' && p.quantity > 0 && p.quantity <= 5),
     );
     if (lowStock.length) {
       activeEvents.push({
@@ -3524,25 +3515,25 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
 
     if (period === 'this_month') {
       periodStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-      periodEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      periodEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
       const elapsed = now.getDate();
       prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
-      prevEnd   = new Date(now.getFullYear(), now.getMonth() - 1, elapsed, 23, 59, 59, 999);
+      prevEnd = new Date(now.getFullYear(), now.getMonth() - 1, elapsed, 23, 59, 59, 999);
       days = periodEnd.getDate();
     } else if (period === 'last_month') {
       const lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       periodStart = new Date(lm.getFullYear(), lm.getMonth(), 1, 0, 0, 0, 0);
-      periodEnd   = new Date(lm.getFullYear(), lm.getMonth() + 1, 0, 23, 59, 59, 999);
+      periodEnd = new Date(lm.getFullYear(), lm.getMonth() + 1, 0, 23, 59, 59, 999);
       const pm = new Date(lm.getFullYear(), lm.getMonth() - 1, 1);
       prevStart = new Date(pm.getFullYear(), pm.getMonth(), 1, 0, 0, 0, 0);
-      prevEnd   = new Date(pm.getFullYear(), pm.getMonth() + 1, 0, 23, 59, 59, 999);
+      prevEnd = new Date(pm.getFullYear(), pm.getMonth() + 1, 0, 23, 59, 59, 999);
       days = periodEnd.getDate();
     } else if (period === '30d') {
       days = 30;
-      periodEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      periodEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
       periodStart = new Date(periodEnd.getTime() - (days - 1) * 86400000);
       periodStart.setHours(0, 0, 0, 0);
-      prevEnd   = new Date(periodStart.getTime() - 1);
+      prevEnd = new Date(periodStart.getTime() - 1);
       prevStart = new Date(prevEnd.getTime() - (days - 1) * 86400000);
       prevStart.setHours(0, 0, 0, 0);
     } else if (period === 'custom' && customStart && customEnd) {
@@ -3551,15 +3542,15 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       periodEnd = new Date(customEnd);
       periodEnd.setHours(23, 59, 59, 999);
       days = Math.max(1, Math.ceil((periodEnd.getTime() - periodStart.getTime()) / 86400000) + 1);
-      prevEnd   = new Date(periodStart.getTime() - 1);
+      prevEnd = new Date(periodStart.getTime() - 1);
       prevStart = new Date(prevEnd.getTime() - (days - 1) * 86400000);
       prevStart.setHours(0, 0, 0, 0);
     } else {
       days = 7;
-      periodEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      periodEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
       periodStart = new Date(periodEnd.getTime() - (days - 1) * 86400000);
       periodStart.setHours(0, 0, 0, 0);
-      prevEnd   = new Date(periodStart.getTime() - 1);
+      prevEnd = new Date(periodStart.getTime() - 1);
       prevStart = new Date(prevEnd.getTime() - (days - 1) * 86400000);
       prevStart.setHours(0, 0, 0, 0);
     }
@@ -3650,7 +3641,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
     const curDay = new Date(periodStart);
     while (curDay <= periodEnd) {
       const dStart = new Date(curDay.getFullYear(), curDay.getMonth(), curDay.getDate(), 0, 0, 0, 0).getTime();
-      const dEnd   = new Date(curDay.getFullYear(), curDay.getMonth(), curDay.getDate(), 23, 59, 59, 999).getTime();
+      const dEnd = new Date(curDay.getFullYear(), curDay.getMonth(), curDay.getDate(), 23, 59, 59, 999).getTime();
 
       const dayOrders = allOrders.filter(o => {
         const t = getOrderTime(o);
@@ -3675,13 +3666,13 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
 
     // 5. Đơn hàng trong kỳ (period) + theo trạng thái
     const pStart = periodStart.getTime();
-    const pEnd   = periodEnd.getTime();
+    const pEnd = periodEnd.getTime();
     const periodOrders = allOrders.filter(o => { const t = getOrderTime(o); return t >= pStart && t <= pEnd; });
-    const prevOrders   = allOrders.filter(o => { const t = getOrderTime(o); return t >= prevStart.getTime() && t <= prevEnd.getTime(); });
+    const prevOrders = allOrders.filter(o => { const t = getOrderTime(o); return t >= prevStart.getTime() && t <= prevEnd.getTime(); });
 
-    const periodRevenue      = periodOrders.filter(isPaid).reduce((s, o) => s + getOrderAmount(o), 0);
-    const prevPeriodRevenue  = prevOrders.filter(isPaid).reduce((s, o) => s + getOrderAmount(o), 0);
-    const periodOrdersCount  = periodOrders.length;
+    const periodRevenue = periodOrders.filter(isPaid).reduce((s, o) => s + getOrderAmount(o), 0);
+    const prevPeriodRevenue = prevOrders.filter(isPaid).reduce((s, o) => s + getOrderAmount(o), 0);
+    const periodOrdersCount = periodOrders.length;
     const prevPeriodOrdersCount = prevOrders.length;
 
     const fst = (orders: any[], ...st: string[]) => {
@@ -3693,12 +3684,12 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
     };
 
     const ordersByStatus: Record<string, number> = {
-      delivered:       fst(periodOrders, OrderStatus.DELIVERED, 'COMPLETED'),
-      shipping:        fst(periodOrders, OrderStatus.SHIPPING),
-      processing:      fst(periodOrders, OrderStatus.PROCESSING, 'CONFIRMED'),
-      pending:         fst(periodOrders, OrderStatus.PENDING, 'NEW'),
-      cancelled:       fst(periodOrders, OrderStatus.CANCELLED, 'CANCELED'),
-      returned:        fst(periodOrders, OrderStatus.RETURNED, 'RETURN'),
+      delivered: fst(periodOrders, OrderStatus.DELIVERED, 'COMPLETED'),
+      shipping: fst(periodOrders, OrderStatus.SHIPPING),
+      processing: fst(periodOrders, OrderStatus.PROCESSING, 'CONFIRMED'),
+      pending: fst(periodOrders, OrderStatus.PENDING, 'NEW'),
+      cancelled: fst(periodOrders, OrderStatus.CANCELLED, 'CANCELED'),
+      returned: fst(periodOrders, OrderStatus.RETURNED, 'RETURN'),
     };
 
     // UPPERCASE aliases for compatibility

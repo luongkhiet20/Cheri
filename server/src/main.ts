@@ -1,5 +1,5 @@
 import * as dotenv from 'dotenv';
-dotenv.config();
+dotenv.config({ override: true });
 
 import * as dns from 'node:dns';
 
@@ -18,7 +18,7 @@ import * as net from 'net';
 async function bootstrap() {
   const logger = new Logger('boostrap');
 
-  const adminPort = Number(process.env.ADMIN_PORT || process.env.PORT_ADMIN || 5000);
+  const adminPort = Number(process.env.ADMIN_PORT || process.env.PORT_ADMIN || 5001);
   const checkPort = (port: number): Promise<boolean> => {
     return new Promise((resolve) => {
       const tester = net.createServer();

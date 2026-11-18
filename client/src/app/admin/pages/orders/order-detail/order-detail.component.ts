@@ -169,21 +169,63 @@ export class OrderDetailComponent implements OnInit {
     return this.getStatusMeta(rawCode)?.label || rawCode || '—';
   }
 
-  get isPaidOrder(): boolean {
-    const root = String(this.order?.paymentStatus || '').toUpperCase();
-    const nested = String(this.order?.payment?.status || '').toUpperCase();
-    return root === 'PAID' || nested === 'PAID';
+  getPaymentObject(): any {
+    if (this.order?.payment && typeof this.order.payment === 'object') {
+      return this.order.payment;
+    }
+    if (this.order?.raw?.payment && typeof this.order.raw.payment === 'object') {
+      return this.order.raw.payment;
+    }
+    return {};
   }
 
-  getPaymentStatusLabel(status: unknown): string {
-    const root = String(this.order?.paymentStatus || '').toUpperCase();
-    const nested = String(this.order?.payment?.status || '').toUpperCase();
-    if (root === 'PAID' || nested === 'PAID') return 'Đã thanh toán';
-    if (root === 'REFUNDED' || nested === 'REFUNDED') return 'Đã hoàn tiền';
-    if (root === 'FAILED' || nested === 'FAILED') return 'Thanh toán thất bại';
-    const isCod = String(this.order?.payment?.method || this.order?.paymentMethodSnapshot?.code || '').toUpperCase().includes('COD');
-    if (isCod) return 'Chưa thu tiền';
-    return paymentStatusLabel(status);
+  getEffectivePaymentStatus(): string {
+    const pObj = this.getPaymentObject();
+    const root = String(this.order?.paymentStatus || this.order?.raw?.paymentStatus || '').trim().toUpperCase();
+    const nested = String(pObj?.status || '').trim().toUpperCase();
+    if (root === 'REFUNDED' || nested === 'REFUNDED') return 'REFUNDED';
+    if (root === 'PARTIALLY_REFUNDED' || nested === 'PARTIALLY_REFUNDED') return 'PARTIALLY_REFUNDED';
+    if (root === 'PAID' || nested === 'PAID') return 'PAID';
+    if (root === 'FAILED' || nested === 'FAILED') return 'FAILED';
+    return root || nested || 'PENDING';
+  }
+
+  getPaymentMethodDisplay(): string {
+    if (typeof this.order?.payment === 'string' && this.order.payment.trim()) {
+      return this.order.payment.trim();
+    }
+    const pObj = this.getPaymentObject();
+    return this.order?.paymentMethodSnapshot?.name
+      || this.order?.raw?.paymentMethodSnapshot?.name
+      || pObj?.method
+      || pObj?.provider
+      || this.order?.paymentProvider
+      || '—';
+  }
+
+  isCodCollected(): boolean {
+    return Boolean(this.getPaymentObject()?.codCollected);
+  }
+
+  getCodReconciliationStatus(): string {
+    return String(this.getPaymentObject()?.codReconciliationStatus || '');
+  }
+
+  get isPaidOrder(): boolean {
+    const eff = this.getEffectivePaymentStatus();
+    return eff === 'PAID';
+  }
+
+  getPaymentStatusLabel(status?: unknown): string {
+    const eff = this.getEffectivePaymentStatus();
+    if (eff === 'PAID') return 'Đã thanh toán';
+    if (eff === 'REFUNDED') return 'Đã hoàn tiền';
+    if (eff === 'PARTIALLY_REFUNDED') return 'Hoàn tiền một phần';
+    if (eff === 'FAILED') return 'Thanh toán thất bại';
+    if (this.isCodMethod()) {
+      return this.isCodCollected() ? 'Đã thu tiền' : 'Chưa thu tiền';
+    }
+    return paymentStatusLabel(status || eff);
   }
 
   isTransitionAllowed(targetStatus: string): boolean {
@@ -507,15 +549,12 @@ Bạn có chắc chắn muốn tiếp tục hủy đơn?`;
     const refunded = this.getTotalRefundedAmount();
     const remaining = this.getRemainingRefundableAmount();
 
-    const paymentStatus = (this.order.paymentStatus || this.order.payment?.status || '')
-      .toString()
-      .trim()
-      .toUpperCase();
+    const paymentStatus = this.getEffectivePaymentStatus();
     const isPaidOrRefund = ['PAID', 'PARTIALLY_REFUNDED', 'REFUNDED'].includes(paymentStatus);
 
-    const codCollected = Boolean(this.order.payment?.codCollected);
+    const codCollected = this.isCodCollected();
     const codReconciled = ['RECONCILED', 'COLLECTED_UNRECONCILED'].includes(
-      this.order.payment?.codReconciliationStatus
+      this.getCodReconciliationStatus()
     );
 
     return collected > 0 || refunded > 0 || remaining > 0 || isPaidOrRefund || codCollected || codReconciled;
@@ -597,41 +636,48 @@ Bạn có chắc chắn muốn tiếp tục hủy đơn?`;
     return Number(this.order?.totalAmount) || Number(this.order?.total) || 0;
   }
 
+  getPaymentMethodCode(): string {
+    const pObj = this.getPaymentObject();
+    const raw = pObj?.method
+      || this.order?.paymentMethodSnapshot?.code
+      || this.order?.raw?.paymentMethodSnapshot?.code
+      || this.order?.paymentMethodCode
+      || pObj?.provider
+      || this.order?.paymentProvider
+      || this.order?.paymentMethod
+      || (typeof this.order?.payment === 'string' ? this.order.payment : '');
+    return String(raw || '').trim().toUpperCase();
+  }
+
   isPrepaidMethod(): boolean {
-    const m = (this.order?.payment || this.order?.paymentMethodSnapshot?.method || '').toUpperCase();
-    return m !== 'COD';
+    return !this.isCodMethod();
   }
 
   isCodMethod(): boolean {
-    const m = (this.order?.payment || this.order?.paymentMethodSnapshot?.method || '').toUpperCase();
-    return m === 'COD';
+    return this.getPaymentMethodCode().includes('COD');
   }
 
   isActualCollectedConfirmed(): boolean {
-    if (this.isCodMethod()) {
-      return Boolean(this.order?.payment?.codCollected);
-    }
-    const st = (this.order?.paymentStatus || this.order?.payment?.status || '').toUpperCase();
-    return st === 'PAID' || st === 'PARTIALLY_REFUNDED' || st === 'REFUNDED';
+    return this.getActualCollectedAmount() > 0;
   }
 
   getActualCollectedAmount(): number {
-    if (this.isCodMethod()) {
-      if (!this.order?.payment?.codCollected) return 0;
-      return Number(this.order?.payment?.actualCollectedAmount) >= 0
-        ? Number(this.order.payment.actualCollectedAmount)
-        : this.getOrderTotal();
+    const pObj = this.getPaymentObject();
+    if (Number(pObj?.actualCollectedAmount) > 0) {
+      return Number(pObj.actualCollectedAmount);
     }
-    if (this.isActualCollectedConfirmed()) {
-      return Number(this.order?.payment?.actualCollectedAmount) >= 0
-        ? Number(this.order.payment.actualCollectedAmount)
-        : this.getOrderTotal();
+    if (Number(this.order?.actualCollectedAmount) > 0) {
+      return Number(this.order.actualCollectedAmount);
     }
-    return 0;
+    const total = this.getOrderTotal();
+    if (total > 0) return total;
+    const req = this.getActiveReturnRequest();
+    return Number(req?.refund?.approvedAmount) || Number(req?.refund?.requestedAmount) || 0;
   }
 
   getTotalRefundedAmount(): number {
-    return Number(this.order?.payment?.refundedAmount) || Number(this.order?.refundedAmount) || 0;
+    const pObj = this.getPaymentObject();
+    return Number(pObj?.refundedAmount) || Number(this.order?.refundedAmount) || Number(this.order?.raw?.refundedAmount) || 0;
   }
 
   getRemainingRefundableAmount(): number {
@@ -639,10 +685,10 @@ Bạn có chắc chắn muốn tiếp tục hủy đơn?`;
   }
 
   getCodReconciliationStatusLabel(): string {
-    const st = this.order?.payment?.codReconciliationStatus;
+    const st = this.getCodReconciliationStatus();
     if (st === 'RECONCILED') return 'Đã đối soát';
     if (st === 'COLLECTED_UNRECONCILED') return 'Đã thu tiền (chờ đối soát)';
-    if (this.order?.payment?.codCollected) return 'Đã thu tiền';
+    if (this.isCodCollected()) return 'Đã thu tiền';
     return 'Chưa thu tiền';
   }
 
@@ -748,23 +794,26 @@ Bạn có chắc chắn muốn tiếp tục hủy đơn?`;
 
   canProcessRefund(): boolean {
     if (!this.order) return false;
-    if (this.isCodMethod()) {
-      return Boolean(this.order.payment?.codCollected);
+    const req = this.getActiveReturnRequest();
+    if (req) {
+      const reqStatus = String(req.status || '').toUpperCase();
+      const refStatus = String(req.refund?.status || '').toUpperCase();
+      return reqStatus === 'INSPECTED' && refStatus !== 'COMPLETED';
     }
-    const paymentStatus = (this.order.paymentStatus || this.order.payment?.status || '').toUpperCase();
-    return paymentStatus === 'PAID' || paymentStatus === 'PARTIALLY_REFUNDED';
+    return true;
   }
 
   getRefundBlockReason(): string | null {
     if (!this.order) return null;
-    if (this.isCodMethod()) {
-      if (!this.order.payment?.codCollected) {
-        return 'Đơn hàng COD chưa có xác nhận đã thu tiền hoặc chưa đối soát COD. Vui lòng đối soát COD trước khi hoàn tiền.';
+    const req = this.getActiveReturnRequest();
+    if (req) {
+      const reqStatus = String(req.status || '').toUpperCase();
+      const refStatus = String(req.refund?.status || '').toUpperCase();
+      if (reqStatus === 'COMPLETED' || refStatus === 'COMPLETED') {
+        return 'Yêu cầu trả hàng này đã hoàn tất hoàn tiền trước đó.';
       }
-    } else {
-      const paymentStatus = (this.order.paymentStatus || this.order.payment?.status || '').toUpperCase();
-      if (paymentStatus !== 'PAID' && paymentStatus !== 'PARTIALLY_REFUNDED') {
-        return 'Đơn hàng trực tuyến chưa thanh toán thành công (Trạng thái: ' + (paymentStatus || 'CHƯA THANH TOÁN') + '). Không thể thực hiện hoàn tiền.';
+      if (reqStatus !== 'INSPECTED') {
+        return 'Chỉ có thể xử lý hoàn tiền khi yêu cầu trả hàng đã ở trạng thái Đã kiểm tra sản phẩm (INSPECTED).';
       }
     }
     return null;
@@ -772,6 +821,10 @@ Bạn có chắc chắn muốn tiếp tục hủy đơn?`;
 
   openActionModal(action: 'APPROVE' | 'REJECT' | 'CUSTOMER_SHIPPED' | 'RECEIVE_GOODS' | 'INSPECT_GOODS' | 'PROCESS_REFUND' | 'REFUND_FAILED' | 'COD_RECONCILE', req: any): void {
     if (action === 'PROCESS_REFUND') {
+      if (req?.status === 'COMPLETED' || req?.refund?.status === 'COMPLETED') {
+        this.notificationService.error('Yêu cầu trả hàng này đã hoàn tất hoàn tiền trước đó.');
+        return;
+      }
       const blockReason = this.getRefundBlockReason();
       if (blockReason) {
         this.notificationService.error(blockReason);
@@ -808,9 +861,11 @@ Bạn có chắc chắn muốn tiếp tục hủy đơn?`;
         restock: true
       };
     } else if (action === 'PROCESS_REFUND') {
-      const approved = Number(req?.refund?.approvedAmount) || Number(req?.refund?.requestedAmount) || 0;
+      const approved = Number(req?.refund?.approvedAmount) > 0
+        ? Number(req.refund.approvedAmount)
+        : (Number(req?.refund?.requestedAmount) > 0 ? Number(req.refund.requestedAmount) : this.getOrderTotal());
       const remaining = this.getRemainingRefundableAmount();
-      const defaultRefundAmt = Math.min(approved, remaining > 0 ? remaining : approved);
+      const defaultRefundAmt = remaining > 0 ? Math.min(approved, remaining) : approved;
       this.refundForm = {
         refundAmount: defaultRefundAmt,
         transactionId: `RFD-${this.order?.orderId || 'TX'}-${Date.now().toString().slice(-4)}`,
@@ -886,6 +941,12 @@ Bạn có chắc chắn muốn tiếp tục hủy đơn?`;
       if (this.refundForm.refundAmount <= 0) {
         this.modalLoading = false;
         this.modalErrorMessage = 'Số tiền hoàn phải lớn hơn 0.';
+        return;
+      }
+      const maxRefundable = this.getRemainingRefundableAmount();
+      if (maxRefundable > 0 && this.refundForm.refundAmount > maxRefundable) {
+        this.modalLoading = false;
+        this.modalErrorMessage = `Số tiền hoàn không được vượt quá số tiền còn có thể hoàn tối đa (${maxRefundable.toLocaleString('vi-VN')} đ).`;
         return;
       }
       payload = { ...payload, ...this.refundForm };

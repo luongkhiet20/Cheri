@@ -297,10 +297,116 @@ export class UpdateOrderStatusComponent implements OnChanges {
     return found ? found.label : (val || '—');
   }
 
+  getPaymentObject(): any {
+    if (this.order?.payment && typeof this.order.payment === 'object') {
+      return this.order.payment;
+    }
+    if (this.order?.raw?.payment && typeof this.order.raw.payment === 'object') {
+      return this.order.raw.payment;
+    }
+    return {};
+  }
+
+  getPaymentMethodCode(): string {
+    const pObj = this.getPaymentObject();
+    const raw = pObj?.method
+      || this.order?.paymentMethodSnapshot?.code
+      || this.order?.raw?.paymentMethodSnapshot?.code
+      || this.order?.paymentMethodCode
+      || pObj?.provider
+      || this.order?.paymentProvider
+      || this.order?.paymentMethod
+      || (typeof this.order?.payment === 'string' ? this.order.payment : '');
+    return String(raw || '').trim().toUpperCase();
+  }
+
+  isCodMethod(): boolean {
+    return this.getPaymentMethodCode().includes('COD');
+  }
+
+  isCodCollected(): boolean {
+    return Boolean(this.getPaymentObject()?.codCollected);
+  }
+
+  getEffectivePaymentStatus(): string {
+    const pObj = this.getPaymentObject();
+    const root = String(this.order?.paymentStatus || this.order?.raw?.paymentStatus || '').trim().toUpperCase();
+    const nested = String(pObj?.status || '').trim().toUpperCase();
+    if (root === 'REFUNDED' || nested === 'REFUNDED') return 'REFUNDED';
+    if (root === 'PARTIALLY_REFUNDED' || nested === 'PARTIALLY_REFUNDED') return 'PARTIALLY_REFUNDED';
+    if (root === 'PAID' || nested === 'PAID') return 'PAID';
+    if (root === 'FAILED' || nested === 'FAILED') return 'FAILED';
+    return root || nested || 'PENDING';
+  }
+
+  getRemainingRefundableAmount(): number {
+    const pObj = this.getPaymentObject();
+    const req = this.activeReturnReq;
+    const total = Number(pObj?.actualCollectedAmount) > 0
+      ? Number(pObj.actualCollectedAmount)
+      : (Number(this.order?.totalAmount ?? this.order?.total ?? 0) || Number(req?.refund?.approvedAmount) || Number(req?.refund?.requestedAmount) || 0);
+    const refunded = Number(pObj?.refundedAmount) || Number(this.order?.refundedAmount) || 0;
+    return Math.max(0, total - refunded);
+  }
+
+  canProcessRefund(): boolean {
+    if (!this.order || !this.activeReturnReq) return false;
+    const reqStatus = String(this.activeReturnReq.status || '').toUpperCase();
+    const refStatus = String(this.activeReturnReq.refund?.status || '').toUpperCase();
+    return reqStatus === 'INSPECTED' && refStatus !== 'COMPLETED';
+  }
+
+  getRefundBlockReason(): string | null {
+    if (!this.order || !this.activeReturnReq) return null;
+    const reqStatus = String(this.activeReturnReq.status || '').toUpperCase();
+    const refStatus = String(this.activeReturnReq.refund?.status || '').toUpperCase();
+    if (reqStatus === 'COMPLETED' || refStatus === 'COMPLETED') {
+      return 'Yêu cầu trả hàng này đã hoàn tất hoàn tiền trước đó.';
+    }
+    if (reqStatus !== 'INSPECTED') {
+      return 'Chỉ có thể xử lý hoàn tiền khi yêu cầu trả hàng đã ở trạng thái Đã kiểm tra hàng (INSPECTED).';
+    }
+    return null;
+  }
+
+  onQuickCodReconcile(): void {
+    if (!this.order || this.isProcessingReturn) return;
+    const orderId = this.order._id || this.order.id || this.order.orderId;
+    const totalAmount = Number(this.order.totalAmount ?? this.order.total ?? 0);
+    this.isProcessingReturn = true;
+    this.returnErrorMessage = '';
+    this.apiService.updateCodReconciliation(orderId, {
+      codCollected: true,
+      actualCollectedAmount: totalAmount,
+      codReconciliationStatus: 'RECONCILED',
+      notes: 'Đã nhận tiền đối soát thu hộ COD từ đơn vị vận chuyển.'
+    }).subscribe({
+      next: (res: any) => {
+        this.isProcessingReturn = false;
+        if (res && res.data) {
+          this.order = res.data;
+        } else {
+          const pObj = this.getPaymentObject();
+          pObj.codCollected = true;
+          pObj.codReconciliationStatus = 'RECONCILED';
+          pObj.actualCollectedAmount = totalAmount;
+          pObj.status = 'PAID';
+          this.order.paymentStatus = 'PAID';
+        }
+        this.notificationService.success('Đã xác nhận thu tiền & đối soát COD thành công. Bạn có thể tiếp tục hoàn tiền.');
+        this.cdr.markForCheck();
+      },
+      error: (err: any) => {
+        this.isProcessingReturn = false;
+        this.returnErrorMessage = err?.error?.message || err?.message || 'Không thể cập nhật đối soát COD.';
+        this.notificationService.error(this.returnErrorMessage);
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
   get isPaidOrder(): boolean {
-    const root = String(this.order?.paymentStatus || '').toUpperCase();
-    const nested = String(this.order?.payment?.status || '').toUpperCase();
-    return root === 'PAID' || nested === 'PAID';
+    return this.getEffectivePaymentStatus() === 'PAID';
   }
 
   get showCancelPaidWarning(): boolean {
@@ -450,9 +556,21 @@ export class UpdateOrderStatusComponent implements OnChanges {
         };
         break;
 
-      case 'PROCESS_REFUND':
+      case 'PROCESS_REFUND': {
+        const blockReason = this.getRefundBlockReason();
+        if (blockReason) {
+          this.returnErrorMessage = blockReason;
+          this.notificationService.error(blockReason);
+          return;
+        }
         if (Number(this.refundAmount) <= 0) {
           this.returnErrorMessage = 'Số tiền hoàn phải lớn hơn 0 đ.';
+          return;
+        }
+        const maxRefund = this.getRemainingRefundableAmount();
+        if (maxRefund > 0 && Number(this.refundAmount) > maxRefund) {
+          this.returnErrorMessage = `Số tiền hoàn không được vượt quá số tiền còn có thể hoàn tối đa (${maxRefund.toLocaleString('vi-VN')} đ).`;
+          this.notificationService.error(this.returnErrorMessage);
           return;
         }
         payload = {
@@ -464,6 +582,7 @@ export class UpdateOrderStatusComponent implements OnChanges {
           notes: this.refundNotes
         };
         break;
+      }
 
       default:
         payload = {};

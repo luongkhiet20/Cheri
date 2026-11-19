@@ -6,7 +6,7 @@ import { GoogleUserDto } from '../dto/google-user.dto';
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   constructor() {
-    const serverUrl = (process.env.SERVER_URL || 'http://localhost:4000').replace(/\/+$/, '');
+    const serverUrl = (process.env.SERVER_URL || 'https://localhost:4000').replace(/\/+$/, '');
     super({
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,

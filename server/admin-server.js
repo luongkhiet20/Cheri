@@ -50,7 +50,7 @@ const uploadPaymentImage = multer({
 const allowedOrigins = [
   'https://cheri-three.vercel.app',
   'http://localhost:3000',
-  'http://localhost:4000',
+  'https://localhost:4000',
   process.env.ORIGIN
 ].filter(Boolean);
 
@@ -392,11 +392,11 @@ function formatProduct(p, lang = 'vi') {
   const fallbackData = p.en || p.vi || {};
 
   const name = langData.title || fallbackData.title || p.title || (p.titleUrl ? p.titleUrl.replace(/-/g, ' ') : 'Sản phẩm chưa đặt tên');
-  
+
   const regularPrice = Number(langData.regularPrice || fallbackData.regularPrice || p.regularPrice) || 0;
   const salePrice = Number(langData.salePrice || fallbackData.salePrice || p.salePrice) || regularPrice;
   const price = salePrice || regularPrice || 0;
-  
+
   let quantity = 0;
   if (p.variants && Array.isArray(p.variants) && p.variants.length > 0) {
     quantity = p.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
@@ -1617,14 +1617,14 @@ app.post('/api/products', async (req, res) => {
 
     const normalizedVariants = Array.isArray(body.variants)
       ? body.variants.map((v, idx) => ({
-          classification: v.classification ? String(v.classification).trim() : '',
-          color: v.color ? String(v.color).trim() : '',
-          size: v.size ? String(v.size).trim() : '',
-          sku: v.sku ? String(v.sku).trim().toUpperCase() : `SKU-${idx + 1}`,
-          price: Number(v.price || 0),
-          discountPrice: Number(v.discountPrice !== undefined ? v.discountPrice : (v.price || 0)),
-          stock: Number(v.stock !== undefined ? v.stock : 0)
-        }))
+        classification: v.classification ? String(v.classification).trim() : '',
+        color: v.color ? String(v.color).trim() : '',
+        size: v.size ? String(v.size).trim() : '',
+        sku: v.sku ? String(v.sku).trim().toUpperCase() : `SKU-${idx + 1}`,
+        price: Number(v.price || 0),
+        discountPrice: Number(v.discountPrice !== undefined ? v.discountPrice : (v.price || 0)),
+        stock: Number(v.stock !== undefined ? v.stock : 0)
+      }))
       : [];
 
     // Validation: Price rules
@@ -1778,14 +1778,14 @@ app.put('/api/products/:id', async (req, res) => {
 
     const normalizedVariants = Array.isArray(body.variants)
       ? body.variants.map((v, idx) => ({
-          classification: v.classification ? String(v.classification).trim() : '',
-          color: v.color ? String(v.color).trim() : '',
-          size: v.size ? String(v.size).trim() : '',
-          sku: v.sku ? String(v.sku).trim().toUpperCase() : `SKU-${idx + 1}`,
-          price: Number(v.price || 0),
-          discountPrice: Number(v.discountPrice !== undefined ? v.discountPrice : (v.price || 0)),
-          stock: Number(v.stock !== undefined ? v.stock : 0)
-        }))
+        classification: v.classification ? String(v.classification).trim() : '',
+        color: v.color ? String(v.color).trim() : '',
+        size: v.size ? String(v.size).trim() : '',
+        sku: v.sku ? String(v.sku).trim().toUpperCase() : `SKU-${idx + 1}`,
+        price: Number(v.price || 0),
+        discountPrice: Number(v.discountPrice !== undefined ? v.discountPrice : (v.price || 0)),
+        stock: Number(v.stock !== undefined ? v.stock : 0)
+      }))
       : (existing.variants || []);
 
     // Validation: Price rules
@@ -2664,7 +2664,7 @@ function queryFormattedOrders(formattedOrders, query = {}, paymentMethodCodeById
 // 4.0 POST /api/admin/orders (Create normalized guest order from Admin)
 const ADMIN_ORDER_ID_MAX_ATTEMPTS = 5;
 
-class AdminOrderValidationError extends Error {}
+class AdminOrderValidationError extends Error { }
 
 function requireAdminOrderString(value, message) {
   if (typeof value !== 'string' || !value.trim()) {
@@ -5476,8 +5476,8 @@ const updatePageHandler = async (req, res) => {
     const isPublished = body.isPublished !== undefined
       ? !!body.isPublished
       : (body.status !== undefined
-          ? (body.status === 'published' || body.status === 'active' || body.status === 'Đã xuất bản')
-          : (existing.status === 'published' || existing.vi?.visibility !== false));
+        ? (body.status === 'published' || body.status === 'active' || body.status === 'Đã xuất bản')
+        : (existing.status === 'published' || existing.vi?.visibility !== false));
 
     const contentHTML = vi.contentHTML !== undefined
       ? vi.contentHTML

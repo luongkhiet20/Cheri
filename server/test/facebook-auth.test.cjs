@@ -16,7 +16,7 @@ test('Facebook OAuth Configuration & Environment', () => {
 
 test('Facebook Strategy Scopes & Profile Fields Logic', () => {
   const FacebookStrategy = require('passport-facebook').Strategy;
-  const serverUrl = (process.env.SERVER_URL || 'http://localhost:4000').replace(/\/+$/, '');
+  const serverUrl = (process.env.SERVER_URL || 'https://localhost:4000').replace(/\/+$/, '');
 
   const strategy = new FacebookStrategy(
     {
@@ -99,7 +99,7 @@ test('Facebook OAuth endpoint redirection & scopes', async () => {
 
   const checkEndpoint = () => {
     return new Promise((resolve, reject) => {
-      const req = http.get('http://localhost:4000/api/auth/facebook', (res) => {
+      const req = http.get('https://localhost:4000/api/auth/facebook', (res) => {
         resolve({
           statusCode: res.statusCode,
           location: res.headers.location,
@@ -117,7 +117,7 @@ test('Facebook OAuth endpoint redirection & scopes', async () => {
   assert.equal(parsedUrl.hostname, 'www.facebook.com');
   assert.ok(parsedUrl.pathname.includes('/dialog/oauth'));
   assert.equal(parsedUrl.searchParams.get('client_id'), '2602642513490929');
-  assert.equal(parsedUrl.searchParams.get('redirect_uri'), 'http://localhost:4000/api/auth/facebook/callback');
+  assert.equal(parsedUrl.searchParams.get('redirect_uri'), 'https://localhost:4000/api/auth/facebook/callback');
   assert.equal(parsedUrl.searchParams.get('scope'), 'email,public_profile');
   assert.equal(parsedUrl.searchParams.get('response_type'), 'code');
 });

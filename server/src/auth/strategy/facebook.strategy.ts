@@ -33,7 +33,7 @@ export class FacebookStrategy extends PassportStrategy(
     const serverUrl = (
       configService?.get<string>('SERVER_URL') ||
       process.env.SERVER_URL ||
-      'http://localhost:4000'
+      'https://localhost:4000'
     ).replace(/\/+$/, '');
 
     super({

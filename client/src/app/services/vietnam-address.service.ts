@@ -92,14 +92,14 @@ const FALLBACK_PROVINCES: AdministrativeUnit[] = [
   providedIn: 'root'
 })
 export class VietnamAddressService {
-  private readonly internalApiUrl = (environment.apiUrl || 'http://localhost:4000') + '/api/orders/address';
+  private readonly internalApiUrl = (environment.apiUrl || 'https://localhost:4000') + '/api/orders/address';
   private readonly publicApiV1Url = 'https://provinces.open-api.vn/api/v1';
 
   private provincesCache$?: Observable<AdministrativeUnit[]>;
   private districtsCache = new Map<string, Observable<AdministrativeUnit[]>>();
   private wardsCache = new Map<string, Observable<AdministrativeUnit[]>>();
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   /**
    * Lấy danh sách Tỉnh / Thành phố

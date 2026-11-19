@@ -611,7 +611,7 @@ export class AuthService {
         const filename = `avatar-${user._id}-${Date.now()}${ext}`;
         const filePath = path.join(uploadDir, filename);
         fs.writeFileSync(filePath, file.buffer);
-        const serverUrl = process.env.SERVER_URL || 'http://localhost:4000';
+        const serverUrl = process.env.SERVER_URL || 'https://localhost:4000';
         avatarUrl = `${serverUrl}/uploads/avatars/${filename}`;
       } catch (fsErr: any) {
         console.warn('Local file write failed, fallback to data URI:', fsErr?.message || fsErr);

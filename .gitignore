@@ -82,3 +82,5 @@ dist
 
 # Public builded files
 public
+
+*.pem

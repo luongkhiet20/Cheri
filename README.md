@@ -39,7 +39,7 @@ Mở file `.env` và kiểm tra/cập nhật các thông số cần thiết:
 ```env
 # Cấu hình Server (Backend)
 PORT=4000
-SERVER_URL="http://localhost:4000"
+SERVER_URL="https://localhost:4000"
 
 # Cấu hình Client (Frontend)
 ORIGIN="http://localhost:3000"
@@ -68,7 +68,7 @@ Mở **2 cửa sổ Terminal**:
 ```bash
 npm run start:dev
 ```
-- API Server khách hàng chạy tại: `http://localhost:4000`
+- API Server khách hàng chạy tại: `https://localhost:4000`
 - Tự động kích hoạt **Admin API Server** tại: `http://localhost:5000` (nếu chưa chạy).
 - Tự động restart khi sửa code (`--watch`).
 

@@ -25,9 +25,10 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { Logger } from '@nestjs/common';
 import { setAppDB } from './setAppDB';
-
 import { fork } from 'child_process';
 import * as net from 'net';
+import * as fs from 'fs';
+import * as path from 'path';
 
 async function bootstrap() {
   const logger = new Logger('bootstrap');
@@ -73,7 +74,14 @@ async function bootstrap() {
     fork(adminPath, [], { stdio: 'inherit' });
   }
 
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const httpsOptions = {
+    key: fs.readFileSync(path.join(__dirname, '..', 'localhost-key.pem')),
+    cert: fs.readFileSync(path.join(__dirname, '..', 'localhost.pem')),
+  };
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    httpsOptions,
+  });
   setAppDB(app);
 
   const port = process.env.PORT || 4000;

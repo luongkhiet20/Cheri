@@ -16,7 +16,6 @@ Hệ thống E-Commerce full-stack hiện đại kết hợp giữa **NestJS 11*
 - **Giỏ hàng & Wishlist**: Quản lý giỏ hàng trực quan, lưu sản phẩm yêu thích.
 - **Đa dạng cổng thanh toán**:
   - Tiền mặt khi nhận hàng (COD).
-  - Cổng thanh toán quốc tế **Stripe**.
   - Cổng thanh toán nội địa **VNPay** (hỗ trợ Sandbox test card, IPN xác thực giao dịch tự động).
 - **Theo dõi đơn hàng & Hoàn trả**:
   - Tra cứu mã vận đơn với timeline trạng thái chi tiết theo thời gian thực.

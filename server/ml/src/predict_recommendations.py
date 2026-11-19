@@ -11,6 +11,7 @@ Implements:
 import sys
 import json
 import math
+import random
 import argparse
 import logging
 from datetime import datetime, timezone, timedelta
@@ -1188,6 +1189,33 @@ def build_candidate_features(
     return df_feats[FEATURE_COLUMNS].fillna(0.0)
 
 
+def shuffle_display_order(
+    recommendations: List[Dict[str, Any]],
+    rng_seed: Optional[int] = None,
+) -> List[Dict[str, Any]]:
+    """
+    Randomly shuffles the display order of the final selected recommendations list
+    strictly AFTER candidate selection, scoring, and diversity re-ranking are completed.
+
+    Guarantees:
+      - Does not alter the set of selected products (no new items added, none dropped).
+      - Strictly preserves all product attributes, 'score', '_mlScore', 'rank', '_mlRank',
+        'selection_group', and 'reason'.
+      - Re-indexes 'display_rank' = 1, 2, ..., N to accurately reflect the new display positions.
+    """
+    if not recommendations or len(recommendations) <= 1:
+        return recommendations
+
+    shuffled = [dict(item) for item in recommendations]
+    rng = random.Random(rng_seed)
+    rng.shuffle(shuffled)
+
+    for idx, item in enumerate(shuffled, start=1):
+        item["display_rank"] = idx
+
+    return shuffled
+
+
 def recommend(
     user_id: Optional[str] = None,
     current_product_id: Optional[str] = None,
@@ -1373,6 +1401,8 @@ def recommend(
                     ),
                 })
 
+            final_recs = shuffle_display_order(recs, rng_seed=rng_seed)
+
             return {
                 "status": "success",
                 "strategy": strategy,
@@ -1386,8 +1416,8 @@ def recommend(
                 "priority_count": div_summary["priority_count"],
                 "exploration_count": div_summary["exploration_count"],
                 "diversification_note": div_summary["note"],
-                "count": len(recs),
-                "recommendations": recs,
+                "count": len(final_recs),
+                "recommendations": final_recs,
             }
         except Exception as e:
             logger.error(f"Inference error during ML prediction: {e}. Falling back to rule-based.")
@@ -1406,14 +1436,15 @@ def recommend(
             enable_exploration=True,
         )
         if len(cat_recs) >= top_n:
+            final_recs = shuffle_display_order(cat_recs[:top_n], rng_seed=rng_seed)
             return {
                 "status": "success",
                 "strategy": "fallback_category",
                 "model_used": "None",
                 "current_product_id": current_product_id,
                 "recommendation_context_id": recommendation_context_id,
-                "count": len(cat_recs),
-                "recommendations": cat_recs[:top_n],
+                "count": len(final_recs),
+                "recommendations": final_recs,
             }
         elif cat_recs:
             needed = top_n - len(cat_recs)
@@ -1457,14 +1488,15 @@ def recommend(
                         padded.append(r_copy)
                         existing_ids.add(r["product_id"])
 
+            final_recs = shuffle_display_order(padded, rng_seed=rng_seed)
             return {
                 "status": "success",
                 "strategy": "fallback_category",
                 "model_used": "None",
                 "current_product_id": current_product_id,
                 "recommendation_context_id": recommendation_context_id,
-                "count": len(padded),
-                "recommendations": padded,
+                "count": len(final_recs),
+                "recommendations": final_recs,
             }
 
     # -------------------------------------------------------------
@@ -1479,14 +1511,15 @@ def recommend(
         purchased_products=purchased_products,
         enable_exploration=True,
     )
+    final_recs = shuffle_display_order(pop_recs, rng_seed=rng_seed)
     return {
         "status": "success",
         "strategy": "fallback_popularity",
         "model_used": "None",
         "current_product_id": current_product_id,
         "recommendation_context_id": recommendation_context_id,
-        "count": len(pop_recs),
-        "recommendations": pop_recs,
+        "count": len(final_recs),
+        "recommendations": final_recs,
     }
 
 
@@ -1500,6 +1533,7 @@ def main():
     parser.add_argument("--allow-sandbox", action="store_true", help="Allow inference with sandbox model for technical testing")
     parser.add_argument("--allow-bootstrap", action="store_true", help="Allow inference with bootstrap model authorized server-side")
     parser.add_argument("--context-id", "--recommendation-context-id", dest="context_id", type=str, default=None, help="Recommendation Context ID for isolating impression exposure scope")
+    parser.add_argument("--rng-seed", "--seed", dest="rng_seed", type=int, default=None, help="Optional RNG seed for deterministic shuffle and sampling")
     args = parser.parse_args()
 
     result = recommend(
@@ -1511,6 +1545,7 @@ def main():
         allow_sandbox=args.allow_sandbox,
         allow_bootstrap=args.allow_bootstrap,
         recommendation_context_id=args.context_id,
+        rng_seed=args.rng_seed,
     )
 
     # Print strict JSON to stdout so consumer (NestJS) can read safely
